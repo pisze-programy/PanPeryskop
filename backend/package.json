@@ -1,0 +1,21 @@
+{
+  "name": "panperyskop-backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply panperyskop-db",
+    "db:create": "wrangler d1 execute panperyskop-db --file=./schema/schema.sql",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "nanoid": "^6.0.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250103.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.118.0"
+  }
+}

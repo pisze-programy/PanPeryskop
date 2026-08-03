@@ -1,0 +1,15 @@
+import Foundation
+
+struct AppUser: Codable {
+    let user_id: String
+    let session_token: String
+    let role: String
+    let is_new: Bool
+}
+
+struct AuthResponse: Codable {
+    let session_token: String
+    let user_id: String
+    let role: String
+    let is_new: Bool
+}

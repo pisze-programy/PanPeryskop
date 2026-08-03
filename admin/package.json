@@ -1,0 +1,14 @@
+{
+  "name": "panperyskop-admin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "queue": "node src/cli.js queue",
+    "approve": "node src/cli.js approve",
+    "reject": "node src/cli.js reject"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0"
+  }
+}

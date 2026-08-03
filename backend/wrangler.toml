@@ -1,0 +1,17 @@
+name = "panperyskop-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "panperyskop-db"
+database_id = "panperyskop-db"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "panperyskop-media"
+
+[env.prod]
+[env.prod.vars]
+ENVIRONMENT = "production"
+CORS_ORIGIN = "panperyskop://app"

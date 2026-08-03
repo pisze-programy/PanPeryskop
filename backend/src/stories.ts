@@ -5,7 +5,21 @@ import { Post, HeatmapCell, POPULARITY_WEIGHTS } from './models';
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
 
 function mediaUrl(_c: { env: Env }, key: string): string {
-  return `https://pub-panperyskop.r2.dev/${key}`;
+  return `https://panperyskop-api.dev-4cb.workers.dev/media/${key}`;
+}
+
+function storyJson(p: Post & { author_name: string }, c: { env: Env }): any {
+  return {
+    ...p,
+    liked: false,
+    watched: false,
+    author_name: p.author_name || 'unknown',
+    author_avatar_url: (p as any).author_avatar_key
+      ? mediaUrl(c, (p as any).author_avatar_key)
+      : null,
+    media_url: p.media_key ? mediaUrl(c, p.media_key) : null,
+    thumb_url: p.thumb_key ? mediaUrl(c, p.thumb_key) : (p.media_key ? mediaUrl(c, p.media_key) : null),
+  };
 }
 
 storiesRoutes.get('/', async (c) => {
@@ -28,7 +42,7 @@ storiesRoutes.get('/', async (c) => {
     if (user) {
       const { results } = await db
         .prepare(
-          `SELECT p.*, u.device_id as author_name
+          `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key
            FROM posts p
            JOIN users u ON p.user_id = u.id
            WHERE p.lat BETWEEN ? AND ?
@@ -36,30 +50,21 @@ storiesRoutes.get('/', async (c) => {
            AND p.status = 'approved'
            AND p.expires_at > ?
            AND p.id NOT IN (SELECT post_id FROM views WHERE user_id = ?)
-           ORDER BY (p.views_count * ${WV} + p.likes_count * ${WL} + p.shares_count * ${WS})
-           * POWER(${DECAY}, MAX(0, (? - p.created_at) / 3600000.0))
-           DESC
+           ORDER BY (p.views_count * ${WV} + p.likes_count * ${WL} + p.shares_count * ${WS}) DESC
            LIMIT 50`
         )
-        .bind(swLat, neLat, swLng, neLng, now, user.id, now)
-        .all<Post & { author_name: string }>();
+        .bind(swLat, neLat, swLng, neLng, now, user.id)
+        .all<Post & { author_name: string; author_avatar_key: string | null }>();
 
       return c.json({
-        stories: (results as any[]).map((p) => ({
-          ...p,
-          liked: false,
-          watched: false,
-          author_name: p.author_name || 'unknown',
-          media_url: p.media_key ? mediaUrl(c, p.media_key) : null,
-          thumb_url: p.thumb_key ? mediaUrl(c, p.thumb_key) : (p.media_key ? mediaUrl(c, p.media_key) : null),
-        })),
+        stories: (results as any[]).map((p) => storyJson(p, c)),
       });
     }
   }
 
   const { results } = await db
     .prepare(
-      `SELECT p.*, u.device_id as author_name
+      `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key
        FROM posts p
        JOIN users u ON p.user_id = u.id
        WHERE p.lat BETWEEN ? AND ?
@@ -71,17 +76,10 @@ storiesRoutes.get('/', async (c) => {
        LIMIT 50`
     )
     .bind(swLat, neLat, swLng, neLng, now)
-    .all<Post & { author_name: string }>();
+    .all<Post & { author_name: string; author_avatar_key: string | null }>();
 
   return c.json({
-    stories: (results as any[]).map((p) => ({
-      ...p,
-      liked: false,
-      watched: false,
-      author_name: p.author_name || 'unknown',
-      media_url: p.media_key ? mediaUrl(c, p.media_key) : null,
-      thumb_url: p.thumb_key ? mediaUrl(c, p.thumb_key) : (p.media_key ? mediaUrl(c, p.media_key) : null),
-    })),
+    stories: (results as any[]).map((p) => storyJson(p, c)),
   });
 });
 

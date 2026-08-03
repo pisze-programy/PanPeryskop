@@ -5,6 +5,7 @@ settings:
   CURRENT_PROJECT_VERSION: 1
   DEVELOPMENT_TEAM: ""
   SWIFT_VERSION: "6.0"
+  INFOPLIST_KEY_CFBundleDisplayName: "Pan Peryskop"
 
 options:
   bundleIdPrefix: com.panperyskop
@@ -13,18 +14,15 @@ options:
   xcodeVersion: "16.0"
 
 packages:
-  MapLibre:
-    url: https://github.com/maplibre/maplibre-native
-    from: 6.12.0
   LazyPager:
     url: https://github.com/gh123man/SwiftUI-LazyPager
     from: 1.0.0
   KeychainAccess:
     url: https://github.com/kishikawakatsumi/KeychainAccess
-    from: 4.2.2
-  Kingfisher:
-    url: https://github.com/onevcat/Kingfisher
-    from: 8.0.0
+    from: 4.2.0
+  YPImagePicker:
+    url: https://github.com/Yummypets/YPImagePicker
+    from: 5.4.0
 
 targets:
   PanPeryskop:
@@ -33,20 +31,30 @@ targets:
     sources:
       - path: PanPeryskop
     dependencies:
-      - package: MapLibre
       - package: LazyPager
+        product: LazyPager
       - package: KeychainAccess
-      - package: Kingfisher
+        product: KeychainAccess
+      - package: YPImagePicker
+        product: YPImagePicker
     info:
       path: PanPeryskop/Info.plist
+      properties:
+        CFBundleURLTypes:
+          - CFBundleURLName: com.panperyskop
+            CFBundleURLSchemes:
+              - panperyskop
     settings:
       base:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UIRequiresFullScreen: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: ["UIInterfaceOrientationPortrait","UIInterfaceOrientationPortraitUpsideDown","UIInterfaceOrientationLandscapeLeft","UIInterfaceOrientationLandscapeRight"]
         INFOPLIST_KEY_NSCameraUsageDescription: "Potrzebujemy dostępu do aparatu, aby nagrywać treści."
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Zapisujemy kopię zapasową nagrania w Twojej galerii."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy."
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Potrzebujemy mikrofonu do nagrywania filmów."
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Używamy Twojej lokalizacji do przypinania treści."
         GENERATE_INFOPLIST_FILE: YES

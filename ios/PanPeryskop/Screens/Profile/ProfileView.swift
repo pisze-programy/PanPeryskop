@@ -1,19 +1,21 @@
 import SwiftUI
+import PhotosUI
+import AVFoundation
 
 struct ProfileView: View {
-    @Binding var isPresented: Int
     @EnvironmentObject private var authManager: AuthManager
 
+    @State private var avatarItem: PhotosPickerItem?
+    @State private var uploadingAvatar = false
+
     var body: some View {
-        NavigationStack {
+        ScrollView {
             VStack(spacing: 24) {
                 Spacer().frame(height: 40)
 
-                Image(systemName: "person.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundColor(.accentColor)
+                avatarSection
 
-                Text("PanPeryskop")
+                Text("Pan Peryskop")
                     .font(.title)
                     .fontWeight(.bold)
 
@@ -23,19 +25,7 @@ struct ProfileView: View {
                         .foregroundColor(.secondary)
                 }
 
-                VStack(spacing: 12) {
-                    Label("Treści widoczne przez 24 godziny", systemImage: "clock")
-                    Label("Twoja lokalizacja jest przypisywana automatycznie", systemImage: "location.fill")
-                    Label("Publikujesz za darmo i bez rejestracji", systemImage: "lock.open.fill")
-                }
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding()
-                .background(.regularMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal)
-
-                Spacer()
+                PermissionCardsView()
 
                 Button(role: .destructive) {
                     authManager.logout()
@@ -46,17 +36,94 @@ struct ProfileView: View {
                 }
                 .padding(.horizontal, 32)
 
-                Spacer().frame(height: 20)
+                Spacer().frame(height: 120)
             }
-            .navigationTitle("Profil")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Zamknij") {
-                        withAnimation { isPresented = 0 }
+        }
+    }
+
+    private var avatarSection: some View {
+        ZStack(alignment: .bottomTrailing) {
+            AvatarView(url: authManager.avatarUrl, size: 100)
+
+            PhotosPicker(selection: $avatarItem, matching: .images) {
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 30, height: 30)
+                    if uploadingAvatar {
+                        ProgressView().tint(.white).scaleEffect(0.7)
+                    } else {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
                     }
                 }
             }
+            .offset(x: 4, y: 4)
+        }
+        .onChange(of: avatarItem) { _, newItem in
+            guard let newItem else { return }
+            Task { await uploadAvatar(from: newItem) }
+        }
+    }
+
+    @MainActor
+    private func uploadAvatar(from item: PhotosPickerItem) async {
+        uploadingAvatar = true
+        defer { uploadingAvatar = false }
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else { return }
+            let image = UIImage(data: data)
+            guard let image else { return }
+            let resized = image.resized(to: 512)
+            guard let jpeg = resized.jpegData(compressionQuality: 0.8) else { return }
+            let url = try await APIClient.uploadAvatar(jpeg)
+            authManager.avatarUrl = url
+        } catch {
+            print("Failed to upload avatar:", error)
+        }
+    }
+}
+
+struct AvatarView: View {
+    let url: String?
+    var size: CGFloat = 100
+
+    var body: some View {
+        Group {
+            if let url, let avatarURL = URL(string: url) {
+                AsyncImage(url: avatarURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    default:
+                        placeholder
+                    }
+                }
+            } else {
+                placeholder
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+    }
+
+    private var placeholder: some View {
+        Image(systemName: "person.circle.fill")
+            .resizable()
+            .scaledToFill()
+            .foregroundColor(.accentColor)
+    }
+}
+
+extension UIImage {
+    func resized(to maxDim: CGFloat) -> UIImage {
+        let scale = min(maxDim / size.width, maxDim / size.height, 1)
+        guard scale < 1 else { return self }
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            draw(in: CGRect(origin: .zero, size: newSize))
         }
     }
 }

@@ -26,7 +26,7 @@ adminRoutes.get('/queue', async (c) => {
   return c.json(
     (results as any[]).map((p) => ({
       ...p,
-      media_url: p.media_key ? `https://pub-panperyskop.r2.dev/${p.media_key}` : null,
+      media_url: p.media_key ? `https://panperyskop-api.dev-4cb.workers.dev/media/${p.media_key}` : null,
     }))
   );
 });

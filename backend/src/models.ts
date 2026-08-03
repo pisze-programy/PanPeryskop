@@ -6,6 +6,7 @@ export interface User {
   session_token: string;
   role: 'user' | 'admin';
   created_at: number;
+  avatar_key: string | null;
 }
 
 export interface Post {

@@ -2,33 +2,44 @@ import SwiftUI
 
 struct OnboardingView: View {
     @EnvironmentObject var authManager: AuthManager
+    @Binding var pendingStoryId: String?
     @State private var isLoading = false
     @State private var errorMessage: String?
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.1, green: 0.1, blue: 0.35), Color(red: 0.05, green: 0.05, blue: 0.15)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            Color(.systemBackground)
+                .ignoresSafeArea()
 
             VStack(spacing: 32) {
                 Spacer()
 
-                Image(systemName: "binoculars.fill")
-                    .font(.system(size: 72))
-                    .foregroundColor(.white)
+                Image("Logo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 140, height: 140)
+                    .clipShape(Circle())
+                    .shadow(color: .primary.opacity(0.15), radius: 10, x: 0, y: 4)
 
-                Text("PanPeryskop")
+                Text("Pan Peryskop")
                     .font(.system(size: 42, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
 
                 Text("Zobacz co się dzieje\nw Twoim mieście")
                     .font(.title3)
                     .multilineTextAlignment(.center)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    Label("Treści widoczne przez 24 godziny", systemImage: "clock")
+                    Label("Twoja lokalizacja jest przypisywana automatycznie", systemImage: "location.fill")
+                    Label("Publikujesz za darmo i bez rejestracji", systemImage: "lock.open.fill")
+                }
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 40)
+                .padding(.vertical, 8)
 
                 Spacer()
 
@@ -40,10 +51,9 @@ struct OnboardingView: View {
                 }
 
                 Button(action: { Task { await performLogin() } }) {
-                    HStack {
+                    HStack(spacing: 8) {
                         if isLoading {
                             ProgressView()
-                                .tint(.white)
                         }
                         Text("Wejdź do aplikacji")
                             .font(.headline)

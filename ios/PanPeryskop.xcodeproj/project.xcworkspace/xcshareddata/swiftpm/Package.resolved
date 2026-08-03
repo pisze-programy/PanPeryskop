@@ -1,0 +1,51 @@
+{
+  "originHash" : "e4a6d3bd4340f77b37f9bad012185ad134321061f6e42e32beff52bec777011c",
+  "pins" : [
+    {
+      "identity" : "keychainaccess",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kishikawakatsumi/KeychainAccess",
+      "state" : {
+        "revision" : "84e546727d66f1adc5439debad16270d0fdd04e7",
+        "version" : "4.2.2"
+      }
+    },
+    {
+      "identity" : "prynttrimmerview",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/HHK1/PryntTrimmerView",
+      "state" : {
+        "revision" : "ac1b60a22c7e6a6514de7a66d2f3d5b537c956d5",
+        "version" : "4.0.2"
+      }
+    },
+    {
+      "identity" : "stevia",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/freshOS/Stevia",
+      "state" : {
+        "revision" : "6192b6216f821b7132e9b772108f25af8cf8ebc5",
+        "version" : "6.2.2"
+      }
+    },
+    {
+      "identity" : "swiftui-lazypager",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gh123man/SwiftUI-LazyPager",
+      "state" : {
+        "revision" : "be4b1952c1054e8b7802863005184eefd42104bd",
+        "version" : "1.2.1"
+      }
+    },
+    {
+      "identity" : "ypimagepicker",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Yummypets/YPImagePicker",
+      "state" : {
+        "revision" : "7148991d39861d22f9e409087ca98ec95789eae9",
+        "version" : "5.4.0"
+      }
+    }
+  ],
+  "version" : 3
+}

@@ -1,7 +1,8 @@
 import Foundation
+import KeychainAccess
 
 struct APIClient {
-    static let baseURL = "https://panperyskop-api.workers.dev"
+    static let baseURL = "https://panperyskop-api.dev-4cb.workers.dev"
 
     static func authHeaders() -> [String: String] {
         var headers = ["Content-Type": "application/json"]
@@ -28,6 +29,15 @@ struct APIClient {
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = authHeaders()
         request.httpBody = try JSONEncoder().encode(body)
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    static func postEmptyBody<T: Decodable>(_ path: String) async throws -> T {
+        let url = URL(string: "\(baseURL)\(path)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders()
         let (data, _) = try await URLSession.shared.data(for: request)
         return try JSONDecoder().decode(T.self, from: data)
     }
@@ -73,5 +83,29 @@ struct APIClient {
 
         let (data, _) = try await URLSession.shared.data(for: request)
         return try JSONDecoder().decode(CreatePostResponse.self, from: data)
+    }
+
+    static func uploadAvatar(_ jpeg: Data) async throws -> String {
+        struct AvatarResponse: Codable { let avatar_url: String }
+        let url = URL(string: "\(baseURL)/users/avatar")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        if let token = try? KeychainAccess.Keychain(service: "com.panperyskop.auth").get("session_token") {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"avatar.jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(jpeg)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(AvatarResponse.self, from: data).avatar_url
     }
 }

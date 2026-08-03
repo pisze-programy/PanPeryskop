@@ -5,6 +5,32 @@ import { gridCellId, TTL_MS } from './models';
 
 export const postsRoutes = new Hono<{ Bindings: Env }>();
 
+function detectMediaType(data: Uint8Array): string | null {
+  if (data.length >= 4 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (data.length >= 8 && data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e && data[3] === 0x47) {
+    return 'image/png';
+  }
+  if (
+    data.length >= 12 &&
+    data[4] === 0x66 && data[5] === 0x74 && data[6] === 0x79 && data[7] === 0x70 &&
+    (new TextDecoder().decode(data.subarray(8, 12)) === 'heic' ||
+     new TextDecoder().decode(data.subarray(8, 12)) === 'heix' ||
+     new TextDecoder().decode(data.subarray(8, 12)) === 'mif1')
+  ) {
+    return 'image/heic';
+  }
+  if (
+    data.length >= 12 &&
+    data[4] === 0x66 && data[5] === 0x74 && data[6] === 0x79 && data[7] === 0x70 &&
+    new TextDecoder().decode(data.subarray(8, 12)) === 'mp42'
+  ) {
+    return 'video/mp4';
+  }
+  return null;
+}
+
 postsRoutes.post('/', async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
@@ -27,11 +53,21 @@ postsRoutes.post('/', async (c) => {
 
     const file = form.file as File | undefined;
     if (file && (type === 'photo' || type === 'video')) {
+      const fileData = new Uint8Array(await file.arrayBuffer());
+      const detectedType = detectMediaType(fileData);
+      if (!detectedType) {
+        return c.json({ error: 'Invalid media file' }, 400);
+      }
+      const isPhoto = type === 'photo' && detectedType.startsWith('image/');
+      const isVideo = type === 'video' && detectedType.startsWith('video/');
+      if (!isPhoto && !isVideo) {
+        return c.json({ error: 'Media type does not match post type' }, 400);
+      }
       const postId = nanoid(24);
-      const ext = file.name?.split('.').pop() || 'bin';
+      const ext = detectedType === 'image/jpeg' ? 'jpg' : detectedType === 'image/heic' ? 'heic' : detectedType.split('/')[1];
       const key = `posts/${postId}/media.${ext}`;
-      await c.env.MEDIA.put(key, await file.arrayBuffer(), {
-        httpMetadata: { contentType: file.type },
+      await c.env.MEDIA.put(key, fileData, {
+        httpMetadata: { contentType: detectedType },
       });
       mediaKey = key;
       const result = await doSavePost(c.env, user, postId, type, lat, lng, description, mediaKey, thumbKey);
@@ -113,15 +149,32 @@ async function doSavePost(
 postsRoutes.get('/:id', async (c) => {
   const db = c.env.DB;
   const post = await db
-    .prepare('SELECT * FROM posts WHERE id = ? AND status = ? AND expires_at > ?')
+    .prepare(
+      `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key
+       FROM posts p
+       JOIN users u ON p.user_id = u.id
+       WHERE p.id = ? AND p.status = ? AND p.expires_at > ?`
+    )
     .bind(c.req.param('id'), 'approved', Date.now())
     .first();
 
   if (!post) return c.json({ error: 'Not found' }, 404);
 
   const mediaUrl = post.media_key
-    ? `https://pub-panperyskop.r2.dev/${post.media_key}`
+    ? `https://panperyskop-api.dev-4cb.workers.dev/media/${post.media_key}`
     : null;
 
-  return c.json({ ...post, media_url: mediaUrl });
+  return c.json({
+    ...post,
+    liked: false,
+    watched: false,
+    author_name: post.author_name || 'unknown',
+    author_avatar_url: post.author_avatar_key
+      ? `https://panperyskop-api.dev-4cb.workers.dev/media/${post.author_avatar_key}`
+      : null,
+    media_url: mediaUrl,
+    thumb_url: post.thumb_key
+      ? `https://panperyskop-api.dev-4cb.workers.dev/media/${post.thumb_key}`
+      : mediaUrl,
+  });
 });

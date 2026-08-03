@@ -8,6 +8,12 @@ class MapViewModel: ObservableObject {
     @Published var selectedRegionPosts: [Post] = []
     @Published var isLoading = false
 
+    private var serverPosts: [Post] = []
+
+    var allPosts: [Post] {
+        serverPosts + PendingStore.shared.posts
+    }
+
     let defaultCenter = CLLocationCoordinate2D(latitude: 52.4064, longitude: 16.9252)
     let defaultZoom: Double = 12
 
@@ -32,7 +38,8 @@ class MapViewModel: ObservableObject {
         ]
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)
-            posts = resp.stories
+            serverPosts = resp.stories
+            posts = allPosts
         } catch {
             print("Failed to load stories:", error)
         }
@@ -60,6 +67,8 @@ class MapViewModel: ObservableObject {
     }
 
     func markWatched(_ postId: String) async {
+        let isPending = PendingStore.shared.posts.map(\.id).contains(postId)
+        if isPending { return }
         do {
             try await APIClient.postEmpty("/actions/\(postId)/watched")
             posts.removeAll { $0.id == postId }
@@ -72,7 +81,7 @@ class MapViewModel: ObservableObject {
     func toggleLike(_ postId: String) async -> Bool {
         do {
             struct LikeResp: Codable { let liked: Bool }
-            let resp: LikeResp = try await APIClient.post("/actions/\(postId)/like", body: EmptyBody())
+            let resp: LikeResp = try await APIClient.postEmptyBody("/actions/\(postId)/like")
             if let idx = posts.firstIndex(where: { $0.id == postId }) {
                 var updated = posts[idx]
                 updated = Post(
@@ -84,7 +93,8 @@ class MapViewModel: ObservableObject {
                     views_count: updated.views_count, shares_count: updated.shares_count,
                     grid_cell_id: updated.grid_cell_id,
                     liked: resp.liked, watched: updated.watched,
-                    author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url
+                    author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
+                    author_avatar_url: updated.author_avatar_url
                 )
                 posts[idx] = updated
             }
@@ -102,6 +112,19 @@ class MapViewModel: ObservableObject {
             print("Failed to share:", error)
         }
     }
-}
 
-struct EmptyBody: Codable {}
+    func ensurePost(id: String) async -> Post? {
+        if let existing = posts.first(where: { $0.id == id }) {
+            return existing
+        }
+        do {
+            let post: Post = try await APIClient.get("/posts/\(id)")
+            serverPosts.append(post)
+            posts = allPosts
+            return post
+        } catch {
+            print("Failed to fetch post \(id):", error)
+            return nil
+        }
+    }
+}

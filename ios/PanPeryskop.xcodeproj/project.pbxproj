@@ -7,15 +7,58 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		107EED2E8B9754ECB995B3DF /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 62E60A31C2421F71CE67D919 /* KeychainAccess */; };
-		13A1D4F80977B8D1EA84DB82 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = 1EC36C3FA684B1A36C1FF5E3 /* MapLibre */; };
-		24B2FF9A64C3A7F84F3AD6C5 /* LazyPager in Frameworks */ = {isa = PBXBuildFile; productRef = 4A677370EF0D1A3DA130B241 /* LazyPager */; };
-		4F1DE6D265333AD7AC276477 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 4D0FB1CFCAC61003104FD108 /* Kingfisher */; };
+		0B5FB84553B5857D8ECEB1DC /* PendingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26B39C8507608E9E09A4C87D /* PendingStore.swift */; };
+		0D51FDA1694C2ECA08DA3F5E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1F6D48B0D6B33CDCFC980CBD /* Assets.xcassets */; };
+		107EED2E8B9754ECB995B3DF /* YPImagePicker in Frameworks */ = {isa = PBXBuildFile; productRef = 5A701F52FD63A75ECBD6B80F /* YPImagePicker */; };
+		13A1D4F80977B8D1EA84DB82 /* LazyPager in Frameworks */ = {isa = PBXBuildFile; productRef = 4A677370EF0D1A3DA130B241 /* LazyPager */; };
+		24B2FF9A64C3A7F84F3AD6C5 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 62E60A31C2421F71CE67D919 /* KeychainAccess */; };
+		39384BA69A2B393C766B6E6E /* MapViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E2581E6150C834401927100 /* MapViewModel.swift */; };
+		440C2CC483A9E17757501ADA /* DescriptionStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44766F2DE7DFC8576566A0AF /* DescriptionStepView.swift */; };
+		44DCBF845465155C6A877FEE /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBA35634291A3B8F365D85D /* ProfileView.swift */; };
+		4B4F1CC0CF0CA5F623869733 /* MediaCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9D108F77E19B9CD9251305B /* MediaCaptureView.swift */; };
+		5B74FDF4D5FE18C2F20CE69B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */; };
+		704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 702099485B19214D722CB2AB /* AuthManager.swift */; };
+		754F1CC10080AB411D634F01 /* StoriesBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6147B282F994991944E0A4BF /* StoriesBarView.swift */; };
+		81278E185580240B9B994F86 /* GridCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76751FD8CEDD58B368DBE212 /* GridCell.swift */; };
+		8A92D89BDF126E969C43FAE7 /* PermissionCardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */; };
+		8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 063211FB7EC797AEFD489DE6 /* ToastManager.swift */; };
+		8E82AAB2424095D2D1ECDBA7 /* PermissionGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D6796591AD82A922A91F5E /* PermissionGateView.swift */; };
+		9920ED1276D0819A568362B5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE2CB33037E6D96F692E131 /* ContentView.swift */; };
+		B75E0DBA2194C2670F968BDD /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0C2297077E1CF861F55EF2 /* User.swift */; };
+		BD0BAA4861F1F934B6E3FEF7 /* MapKitMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1057374311D0AF3FDAC2B2FF /* MapKitMapView.swift */; };
+		BF0F79BCD34011F89D63D19D /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11E724A06F70ED3DA7B0F5 /* MapView.swift */; };
+		C0E44758121DAEDF631C5FA1 /* Post.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9FE43E3CC773AD637F3A523 /* Post.swift */; };
+		C80A8E2C26F7DF70940D2A66 /* PanPeryskopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF363C9DF35DD8CFF0D626AB /* PanPeryskopApp.swift */; };
+		CA6B53CF05EDBC94617C3745 /* StoryFullScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD807EFE91A16807FF11C921 /* StoryFullScreenView.swift */; };
+		D9702F1880D277CD3D4CE45E /* AddContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B96C79BC78BFB8995717B7 /* AddContentView.swift */; };
+		EF416FDD5F47F902E0511EB7 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FEA4CA8A5185D280CA5E6B /* APIClient.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		063211FB7EC797AEFD489DE6 /* ToastManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastManager.swift; sourceTree = "<group>"; };
+		0AE2CB33037E6D96F692E131 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1057374311D0AF3FDAC2B2FF /* MapKitMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapKitMapView.swift; sourceTree = "<group>"; };
+		11FEA4CA8A5185D280CA5E6B /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		1F6D48B0D6B33CDCFC980CBD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		26B39C8507608E9E09A4C87D /* PendingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingStore.swift; sourceTree = "<group>"; };
+		44766F2DE7DFC8576566A0AF /* DescriptionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStepView.swift; sourceTree = "<group>"; };
+		6147B282F994991944E0A4BF /* StoriesBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoriesBarView.swift; sourceTree = "<group>"; };
+		6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		702099485B19214D722CB2AB /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		76751FD8CEDD58B368DBE212 /* GridCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridCell.swift; sourceTree = "<group>"; };
 		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8E2581E6150C834401927100 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
+		9C0C2297077E1CF861F55EF2 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		BB11E724A06F70ED3DA7B0F5 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
+		C8D6796591AD82A922A91F5E /* PermissionGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGateView.swift; sourceTree = "<group>"; };
+		C9FE43E3CC773AD637F3A523 /* Post.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Post.swift; sourceTree = "<group>"; };
+		CD807EFE91A16807FF11C921 /* StoryFullScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryFullScreenView.swift; sourceTree = "<group>"; };
+		CF363C9DF35DD8CFF0D626AB /* PanPeryskopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanPeryskopApp.swift; sourceTree = "<group>"; };
+		D6B96C79BC78BFB8995717B7 /* AddContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContentView.swift; sourceTree = "<group>"; };
+		D9D108F77E19B9CD9251305B /* MediaCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCaptureView.swift; sourceTree = "<group>"; };
+		DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCardsView.swift; sourceTree = "<group>"; };
 		F1660BA1D3400C29F149C24C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FFBA35634291A3B8F365D85D /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -23,22 +66,74 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				13A1D4F80977B8D1EA84DB82 /* MapLibre in Frameworks */,
-				24B2FF9A64C3A7F84F3AD6C5 /* LazyPager in Frameworks */,
-				107EED2E8B9754ECB995B3DF /* KeychainAccess in Frameworks */,
-				4F1DE6D265333AD7AC276477 /* Kingfisher in Frameworks */,
+				13A1D4F80977B8D1EA84DB82 /* LazyPager in Frameworks */,
+				24B2FF9A64C3A7F84F3AD6C5 /* KeychainAccess in Frameworks */,
+				107EED2E8B9754ECB995B3DF /* YPImagePicker in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		03C9264C174503E6DBF93416 /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */,
+				1BE4A3B91AC5913E661ECD09 /* AddContent */,
+				CD81F3AFD58D7BF569E9A72A /* Map */,
+				8FB460A6FDFAE52E5F9B14A1 /* Profile */,
+				CC2A2109E5C61CA9318318FC /* Stories */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
 		07B8FF87A61E75745B82EDAC = {
 			isa = PBXGroup;
 			children = (
 				E5C7870980264F060A5E9A86 /* PanPeryskop */,
 				8DC87279968CB465F2F73985 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		1BE4A3B91AC5913E661ECD09 /* AddContent */ = {
+			isa = PBXGroup;
+			children = (
+				D6B96C79BC78BFB8995717B7 /* AddContentView.swift */,
+				44766F2DE7DFC8576566A0AF /* DescriptionStepView.swift */,
+				D9D108F77E19B9CD9251305B /* MediaCaptureView.swift */,
+				C8D6796591AD82A922A91F5E /* PermissionGateView.swift */,
+			);
+			path = AddContent;
+			sourceTree = "<group>";
+		};
+		42C0B8DB1C4AF2E246CDE3AF /* App */ = {
+			isa = PBXGroup;
+			children = (
+				0AE2CB33037E6D96F692E131 /* ContentView.swift */,
+				CF363C9DF35DD8CFF0D626AB /* PanPeryskopApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		52A84047D3D5BB28DB9B94B0 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				76751FD8CEDD58B368DBE212 /* GridCell.swift */,
+				C9FE43E3CC773AD637F3A523 /* Post.swift */,
+				9C0C2297077E1CF861F55EF2 /* User.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		61D903EC53D4436295C771C2 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				11FEA4CA8A5185D280CA5E6B /* APIClient.swift */,
+				702099485B19214D722CB2AB /* AuthManager.swift */,
+				26B39C8507608E9E09A4C87D /* PendingStore.swift */,
+				063211FB7EC797AEFD489DE6 /* ToastManager.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 		8DC87279968CB465F2F73985 /* Products */ = {
@@ -49,19 +144,45 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		8FB460A6FDFAE52E5F9B14A1 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */,
+				FFBA35634291A3B8F365D85D /* ProfileView.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		CC2A2109E5C61CA9318318FC /* Stories */ = {
+			isa = PBXGroup;
+			children = (
+				6147B282F994991944E0A4BF /* StoriesBarView.swift */,
+				CD807EFE91A16807FF11C921 /* StoryFullScreenView.swift */,
+			);
+			path = Stories;
+			sourceTree = "<group>";
+		};
+		CD81F3AFD58D7BF569E9A72A /* Map */ = {
+			isa = PBXGroup;
+			children = (
+				1057374311D0AF3FDAC2B2FF /* MapKitMapView.swift */,
+				BB11E724A06F70ED3DA7B0F5 /* MapView.swift */,
+				8E2581E6150C834401927100 /* MapViewModel.swift */,
+			);
+			path = Map;
+			sourceTree = "<group>";
+		};
 		E5C7870980264F060A5E9A86 /* PanPeryskop */ = {
 			isa = PBXGroup;
 			children = (
+				1F6D48B0D6B33CDCFC980CBD /* Assets.xcassets */,
 				F1660BA1D3400C29F149C24C /* Info.plist */,
+				42C0B8DB1C4AF2E246CDE3AF /* App */,
+				52A84047D3D5BB28DB9B94B0 /* Models */,
+				03C9264C174503E6DBF93416 /* Screens */,
+				61D903EC53D4436295C771C2 /* Services */,
 			);
 			path = PanPeryskop;
-			sourceTree = "<group>";
-		};
-		"TEMP_738BB16E-8851-4C15-9091-3BC7086D98F1" /* Screens */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Screens;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -72,6 +193,7 @@
 			buildConfigurationList = DCCB64F4AFCADA4ABDF00E92 /* Build configuration list for PBXNativeTarget "PanPeryskop" */;
 			buildPhases = (
 				218C78375E8CCBBBBB5E8418 /* Sources */,
+				6C92A86337D02EBA1FD920D7 /* Resources */,
 				E0E293922A893CA9E6435B3A /* Frameworks */,
 			);
 			buildRules = (
@@ -80,10 +202,9 @@
 			);
 			name = PanPeryskop;
 			packageProductDependencies = (
-				1EC36C3FA684B1A36C1FF5E3 /* MapLibre */,
 				4A677370EF0D1A3DA130B241 /* LazyPager */,
 				62E60A31C2421F71CE67D919 /* KeychainAccess */,
-				4D0FB1CFCAC61003104FD108 /* Kingfisher */,
+				5A701F52FD63A75ECBD6B80F /* YPImagePicker */,
 			);
 			productName = PanPeryskop;
 			productReference = 8A37A2C635C84DB527D13F1A /* PanPeryskop.app */;
@@ -114,9 +235,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F4B76D6ABBFB2973FB083892 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
-				7290AAB87515F88D8B5775DE /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				DC6045FECF41B0F0A1BC485D /* XCRemoteSwiftPackageReference "SwiftUI-LazyPager" */,
-				63C532D8846C63CCDE430C26 /* XCRemoteSwiftPackageReference "maplibre-native" */,
+				1724C6EDEE2FC8BE4B65FC68 /* XCRemoteSwiftPackageReference "YPImagePicker" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8DC87279968CB465F2F73985 /* Products */;
@@ -128,11 +248,43 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		6C92A86337D02EBA1FD920D7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0D51FDA1694C2ECA08DA3F5E /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		218C78375E8CCBBBBB5E8418 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EF416FDD5F47F902E0511EB7 /* APIClient.swift in Sources */,
+				D9702F1880D277CD3D4CE45E /* AddContentView.swift in Sources */,
+				704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */,
+				9920ED1276D0819A568362B5 /* ContentView.swift in Sources */,
+				440C2CC483A9E17757501ADA /* DescriptionStepView.swift in Sources */,
+				81278E185580240B9B994F86 /* GridCell.swift in Sources */,
+				BD0BAA4861F1F934B6E3FEF7 /* MapKitMapView.swift in Sources */,
+				BF0F79BCD34011F89D63D19D /* MapView.swift in Sources */,
+				39384BA69A2B393C766B6E6E /* MapViewModel.swift in Sources */,
+				4B4F1CC0CF0CA5F623869733 /* MediaCaptureView.swift in Sources */,
+				5B74FDF4D5FE18C2F20CE69B /* OnboardingView.swift in Sources */,
+				C80A8E2C26F7DF70940D2A66 /* PanPeryskopApp.swift in Sources */,
+				0B5FB84553B5857D8ECEB1DC /* PendingStore.swift in Sources */,
+				8A92D89BDF126E969C43FAE7 /* PermissionCardsView.swift in Sources */,
+				8E82AAB2424095D2D1ECDBA7 /* PermissionGateView.swift in Sources */,
+				C0E44758121DAEDF631C5FA1 /* Post.swift in Sources */,
+				44DCBF845465155C6A877FEE /* ProfileView.swift in Sources */,
+				754F1CC10080AB411D634F01 /* StoriesBarView.swift in Sources */,
+				CA6B53CF05EDBC94617C3745 /* StoryFullScreenView.swift in Sources */,
+				8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */,
+				B75E0DBA2194C2670F968BDD /* User.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -147,13 +299,21 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PanPeryskop/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Potrzebujemy dostępu do aparatu, aby nagrywać treści.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używamy Twojej lokalizacji do przypinania treści.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Potrzebujemy mikrofonu do nagrywania filmów.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Zapisujemy kopię zapasową nagrania w Twojej galerii.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = (
+					UIInterfaceOrientationPortrait,
+					UIInterfaceOrientationPortraitUpsideDown,
+					UIInterfaceOrientationLandscapeLeft,
+					UIInterfaceOrientationLandscapeRight,
+				);
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -172,13 +332,21 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PanPeryskop/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Potrzebujemy dostępu do aparatu, aby nagrywać treści.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używamy Twojej lokalizacji do przypinania treści.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Potrzebujemy mikrofonu do nagrywania filmów.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Zapisujemy kopię zapasową nagrania w Twojej galerii.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = (
+					UIInterfaceOrientationPortrait,
+					UIInterfaceOrientationPortraitUpsideDown,
+					UIInterfaceOrientationLandscapeLeft,
+					UIInterfaceOrientationLandscapeRight,
+				);
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -236,6 +404,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Pan Peryskop";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -301,6 +470,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Pan Peryskop";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -338,20 +508,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		63C532D8846C63CCDE430C26 /* XCRemoteSwiftPackageReference "maplibre-native" */ = {
+		1724C6EDEE2FC8BE4B65FC68 /* XCRemoteSwiftPackageReference "YPImagePicker" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/maplibre/maplibre-native";
+			repositoryURL = "https://github.com/Yummypets/YPImagePicker";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 6.12.0;
-			};
-		};
-		7290AAB87515F88D8B5775DE /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/onevcat/Kingfisher";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 8.0.0;
+				minimumVersion = 5.4.0;
 			};
 		};
 		DC6045FECF41B0F0A1BC485D /* XCRemoteSwiftPackageReference "SwiftUI-LazyPager" */ = {
@@ -367,26 +529,21 @@
 			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 4.2.2;
+				minimumVersion = 4.2.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		1EC36C3FA684B1A36C1FF5E3 /* MapLibre */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 63C532D8846C63CCDE430C26 /* XCRemoteSwiftPackageReference "maplibre-native" */;
-			productName = MapLibre;
-		};
 		4A677370EF0D1A3DA130B241 /* LazyPager */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = DC6045FECF41B0F0A1BC485D /* XCRemoteSwiftPackageReference "SwiftUI-LazyPager" */;
 			productName = LazyPager;
 		};
-		4D0FB1CFCAC61003104FD108 /* Kingfisher */ = {
+		5A701F52FD63A75ECBD6B80F /* YPImagePicker */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7290AAB87515F88D8B5775DE /* XCRemoteSwiftPackageReference "Kingfisher" */;
-			productName = Kingfisher;
+			package = 1724C6EDEE2FC8BE4B65FC68 /* XCRemoteSwiftPackageReference "YPImagePicker" */;
+			productName = YPImagePicker;
 		};
 		62E60A31C2421F71CE67D919 /* KeychainAccess */ = {
 			isa = XCSwiftPackageProductDependency;

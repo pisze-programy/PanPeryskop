@@ -21,6 +21,7 @@ struct Post: Codable, Identifiable, Equatable {
     let author_name: String
     let media_url: String?
     let thumb_url: String?
+    let author_avatar_url: String?
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lng)
@@ -28,6 +29,17 @@ struct Post: Codable, Identifiable, Equatable {
 
     var isExpired: Bool {
         Int64(Date().timeIntervalSince1970 * 1000) > expires_at
+    }
+
+    var resolvedMediaURL: URL? {
+        if let url = media_url { return URL(string: url) }
+        if let key = media_key { return URL(string: "\(APIClient.baseURL)/media/\(key)") }
+        return nil
+    }
+
+    var resolvedThumbURL: URL? {
+        if let url = thumb_url { return URL(string: url) }
+        return resolvedMediaURL
     }
 
     static func == (lhs: Post, rhs: Post) -> Bool { lhs.id == rhs.id }
@@ -52,6 +64,7 @@ struct CreatePostResponse: Codable {
     let id: String
     let type: String
     let status: String
+    let media_key: String?
     let created_at: Int64
     let expires_at: Int64
 }

@@ -5,7 +5,7 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "panperyskop-db"
-database_id = "panperyskop-db"
+database_id = "c9fed854-29bc-4ea7-9242-d0a7bc6abee0"
 
 [[r2_buckets]]
 binding = "MEDIA"

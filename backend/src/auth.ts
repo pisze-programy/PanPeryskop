@@ -30,6 +30,9 @@ authRoutes.post('/device', async (c) => {
       session_token,
       user_id: existing.id,
       role: existing.role,
+      avatar_url: existing.avatar_key
+        ? `https://panperyskop-api.dev-4cb.workers.dev/media/${existing.avatar_key}`
+        : null,
       is_new: false,
     });
   }
@@ -42,7 +45,7 @@ authRoutes.post('/device', async (c) => {
     .bind(id, device_id, session_token, 'user', now)
     .run();
 
-  return c.json({ session_token, user_id: id, role: 'user', is_new: true }, 201);
+  return c.json({ session_token, user_id: id, role: 'user', avatar_url: null, is_new: true }, 201);
 });
 
 export async function authenticate(

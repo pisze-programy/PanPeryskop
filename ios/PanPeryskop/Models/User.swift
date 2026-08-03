@@ -5,6 +5,7 @@ struct AppUser: Codable {
     let session_token: String
     let role: String
     let is_new: Bool
+    let avatar_url: String?
 }
 
 struct AuthResponse: Codable {
@@ -12,4 +13,5 @@ struct AuthResponse: Codable {
     let user_id: String
     let role: String
     let is_new: Bool
+    let avatar_url: String?
 }

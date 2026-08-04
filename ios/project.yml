@@ -21,8 +21,7 @@ packages:
     url: https://github.com/kishikawakatsumi/KeychainAccess
     from: 4.2.0
   YPImagePicker:
-    url: https://github.com/Yummypets/YPImagePicker
-    from: 5.4.0
+    path: vendor/YPImagePicker
 
 targets:
   PanPeryskop:
@@ -56,5 +55,5 @@ targets:
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Zapisujemy kopię zapasową nagrania w Twojej galerii."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy."
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Potrzebujemy mikrofonu do nagrywania filmów."
-        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Używamy Twojej lokalizacji do przypinania treści."
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać treści do miejsc."
         GENERATE_INFOPLIST_FILE: YES

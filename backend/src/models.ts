@@ -51,12 +51,19 @@ export function gridCellId(lat: number, lng: number, cellSize: number = 0.002): 
 
 export const POPULARITY_WEIGHTS = {
   views: 1,
-  likes: 3,
-  shares: 5,
+  likes: 5,
+  shares: 6,
   decay: 0.99,
 };
 
+export const ENGAGEMENT_BONUS_FACTOR = 1.0;
+
 const HOUR_MS = 3_600_000;
+
+export function engagementRatio(post: Post): number {
+  const views = Math.max(post.views_count, 1);
+  return post.likes_count / views;
+}
 
 export function popularityScore(post: Post): number {
   const ageH = Math.max(0, (Date.now() - post.created_at) / HOUR_MS);
@@ -64,7 +71,8 @@ export function popularityScore(post: Post): number {
     POPULARITY_WEIGHTS.views * post.views_count +
     POPULARITY_WEIGHTS.likes * post.likes_count +
     POPULARITY_WEIGHTS.shares * post.shares_count;
-  return raw * Math.pow(POPULARITY_WEIGHTS.decay, ageH);
+  const engagement = 1 + ENGAGEMENT_BONUS_FACTOR * engagementRatio(post);
+  return raw * engagement * Math.pow(POPULARITY_WEIGHTS.decay, ageH);
 }
 
 export const TTL_HOURS = 24;

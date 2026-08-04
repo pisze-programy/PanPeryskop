@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import YPImagePicker
 
 struct MediaCaptureView: UIViewControllerRepresentable {
@@ -13,7 +14,6 @@ struct MediaCaptureView: UIViewControllerRepresentable {
         config.showsVideoTrimmer = false
         config.screens = [.photo, .video]
         config.startOnScreen = .photo
-        config.shouldSaveNewPicturesToAlbum = true
         config.albumName = "Pan Peryskop"
         config.hidesStatusBar = true
         config.hidesCancelButton = false
@@ -36,6 +36,10 @@ struct MediaCaptureView: UIViewControllerRepresentable {
         config.colors.tintColor = .systemBlue
 
         config.fonts.menuItemFont = .systemFont(ofSize: 15, weight: .medium)
+        config.fonts.cameraTimeElapsedFont = .boldSystemFont(ofSize: 14)
+
+        config.icons.captureVideoImage = VideoCaptureIcons.ready
+        config.icons.captureVideoOnImage = VideoCaptureIcons.recording
 
         config.wordings.cameraTitle = "Aparat"
         config.wordings.next = "Dalej"
@@ -76,4 +80,47 @@ enum MediaResult {
     case photo(data: Data, fromCamera: Bool)
     case video(data: Data, fromCamera: Bool, thumbData: Data)
     case cancelled
+}
+
+enum VideoCaptureIcons {
+    static let size: CGFloat = 84
+
+    static var ready: UIImage {
+        render { ctx, rect in
+            let ring = UIBezierPath(ovalIn: rect.insetBy(dx: 3, dy: 3))
+            ring.lineWidth = 4
+            UIColor.white.setStroke()
+            ring.stroke()
+
+            let fill = UIBezierPath(ovalIn: rect.insetBy(dx: 9, dy: 9))
+            UIColor.systemRed.setFill()
+            fill.fill()
+        }
+    }
+
+    static var recording: UIImage {
+        render { ctx, rect in
+            let ring = UIBezierPath(ovalIn: rect.insetBy(dx: 3, dy: 3))
+            ring.lineWidth = 4
+            UIColor.white.setStroke()
+            ring.stroke()
+
+            let square = UIBezierPath(
+                roundedRect: CGRect(x: rect.midX - 18, y: rect.midY - 18, width: 36, height: 36),
+                cornerRadius: 6
+            )
+            UIColor.systemRed.setFill()
+            square.fill()
+        }
+    }
+
+    private static func render(_ draw: (UIGraphicsImageRendererContext, CGRect) -> Void) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(
+            size: CGSize(width: size, height: size),
+            format: .init()
+        )
+        return renderer.image { ctx in
+            draw(ctx, CGRect(x: 0, y: 0, width: size, height: size))
+        }
+    }
 }

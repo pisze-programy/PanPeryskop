@@ -31,7 +31,10 @@
 		C80A8E2C26F7DF70940D2A66 /* PanPeryskopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF363C9DF35DD8CFF0D626AB /* PanPeryskopApp.swift */; };
 		CA6B53CF05EDBC94617C3745 /* StoryFullScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD807EFE91A16807FF11C921 /* StoryFullScreenView.swift */; };
 		D9702F1880D277CD3D4CE45E /* AddContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B96C79BC78BFB8995717B7 /* AddContentView.swift */; };
+		DCA8A572B7CEBBBBAE9492B7 /* FaveLikeButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364467F234AEB3E0D0E2513C /* FaveLikeButton.swift */; };
+		DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBDD7756E22141DD95593257 /* City.swift */; };
 		EF416FDD5F47F902E0511EB7 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FEA4CA8A5185D280CA5E6B /* APIClient.swift */; };
+		FF623E777239A2DC2C912B37 /* CityListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F76F226243E1E3B5C14FE6F5 /* CityListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,12 +44,14 @@
 		11FEA4CA8A5185D280CA5E6B /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		1F6D48B0D6B33CDCFC980CBD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		26B39C8507608E9E09A4C87D /* PendingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingStore.swift; sourceTree = "<group>"; };
+		364467F234AEB3E0D0E2513C /* FaveLikeButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaveLikeButton.swift; sourceTree = "<group>"; };
+		4243C0678522339A2173990C /* YPImagePicker */ = {isa = PBXFileReference; lastKnownFileType = folder; name = YPImagePicker; path = vendor/YPImagePicker; sourceTree = SOURCE_ROOT; };
 		44766F2DE7DFC8576566A0AF /* DescriptionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStepView.swift; sourceTree = "<group>"; };
 		6147B282F994991944E0A4BF /* StoriesBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoriesBarView.swift; sourceTree = "<group>"; };
 		6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		702099485B19214D722CB2AB /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		76751FD8CEDD58B368DBE212 /* GridCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridCell.swift; sourceTree = "<group>"; };
-		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E2581E6150C834401927100 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
 		9C0C2297077E1CF861F55EF2 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		BB11E724A06F70ED3DA7B0F5 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
@@ -58,6 +63,8 @@
 		D9D108F77E19B9CD9251305B /* MediaCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCaptureView.swift; sourceTree = "<group>"; };
 		DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCardsView.swift; sourceTree = "<group>"; };
 		F1660BA1D3400C29F149C24C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F76F226243E1E3B5C14FE6F5 /* CityListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityListView.swift; sourceTree = "<group>"; };
+		FBDD7756E22141DD95593257 /* City.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = City.swift; sourceTree = "<group>"; };
 		FFBA35634291A3B8F365D85D /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -90,6 +97,7 @@
 		07B8FF87A61E75745B82EDAC = {
 			isa = PBXGroup;
 			children = (
+				47474A9108ACCDF7E2C4B210 /* Packages */,
 				E5C7870980264F060A5E9A86 /* PanPeryskop */,
 				8DC87279968CB465F2F73985 /* Products */,
 			);
@@ -115,9 +123,18 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		47474A9108ACCDF7E2C4B210 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				4243C0678522339A2173990C /* YPImagePicker */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
 		52A84047D3D5BB28DB9B94B0 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				FBDD7756E22141DD95593257 /* City.swift */,
 				76751FD8CEDD58B368DBE212 /* GridCell.swift */,
 				C9FE43E3CC773AD637F3A523 /* Post.swift */,
 				9C0C2297077E1CF861F55EF2 /* User.swift */,
@@ -156,6 +173,7 @@
 		CC2A2109E5C61CA9318318FC /* Stories */ = {
 			isa = PBXGroup;
 			children = (
+				364467F234AEB3E0D0E2513C /* FaveLikeButton.swift */,
 				6147B282F994991944E0A4BF /* StoriesBarView.swift */,
 				CD807EFE91A16807FF11C921 /* StoryFullScreenView.swift */,
 			);
@@ -165,6 +183,7 @@
 		CD81F3AFD58D7BF569E9A72A /* Map */ = {
 			isa = PBXGroup;
 			children = (
+				F76F226243E1E3B5C14FE6F5 /* CityListView.swift */,
 				1057374311D0AF3FDAC2B2FF /* MapKitMapView.swift */,
 				BB11E724A06F70ED3DA7B0F5 /* MapView.swift */,
 				8E2581E6150C834401927100 /* MapViewModel.swift */,
@@ -218,11 +237,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
-				TargetAttributes = {
-					B2CAE5D22E6E40FA50591BB7 = {
-						DevelopmentTeam = "";
-					};
-				};
 			};
 			buildConfigurationList = 9D82191E0BB8E5BB3492A853 /* Build configuration list for PBXProject "PanPeryskop" */;
 			developmentRegion = en;
@@ -236,7 +250,7 @@
 			packageReferences = (
 				F4B76D6ABBFB2973FB083892 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
 				DC6045FECF41B0F0A1BC485D /* XCRemoteSwiftPackageReference "SwiftUI-LazyPager" */,
-				1724C6EDEE2FC8BE4B65FC68 /* XCRemoteSwiftPackageReference "YPImagePicker" */,
+				FDDD76CB329425548FCD3F5E /* XCLocalSwiftPackageReference "vendor/YPImagePicker" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8DC87279968CB465F2F73985 /* Products */;
@@ -267,8 +281,11 @@
 				EF416FDD5F47F902E0511EB7 /* APIClient.swift in Sources */,
 				D9702F1880D277CD3D4CE45E /* AddContentView.swift in Sources */,
 				704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */,
+				DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */,
+				FF623E777239A2DC2C912B37 /* CityListView.swift in Sources */,
 				9920ED1276D0819A568362B5 /* ContentView.swift in Sources */,
 				440C2CC483A9E17757501ADA /* DescriptionStepView.swift in Sources */,
+				DCA8A572B7CEBBBBAE9492B7 /* FaveLikeButton.swift in Sources */,
 				81278E185580240B9B994F86 /* GridCell.swift in Sources */,
 				BD0BAA4861F1F934B6E3FEF7 /* MapKitMapView.swift in Sources */,
 				BF0F79BCD34011F89D63D19D /* MapView.swift in Sources */,
@@ -296,10 +313,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PanPeryskop/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Potrzebujemy dostępu do aparatu, aby nagrywać treści.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używamy Twojej lokalizacji do przypinania treści.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać treści do miejsc.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Potrzebujemy mikrofonu do nagrywania filmów.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Zapisujemy kopię zapasową nagrania w Twojej galerii.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy.";
@@ -307,12 +325,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = (
-					UIInterfaceOrientationPortrait,
-					UIInterfaceOrientationPortraitUpsideDown,
-					UIInterfaceOrientationLandscapeLeft,
-					UIInterfaceOrientationLandscapeRight,
-				);
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -329,10 +342,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PanPeryskop/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Potrzebujemy dostępu do aparatu, aby nagrywać treści.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używamy Twojej lokalizacji do przypinania treści.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać treści do miejsc.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Potrzebujemy mikrofonu do nagrywania filmów.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Zapisujemy kopię zapasową nagrania w Twojej galerii.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy.";
@@ -340,12 +354,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = (
-					UIInterfaceOrientationPortrait,
-					UIInterfaceOrientationPortraitUpsideDown,
-					UIInterfaceOrientationLandscapeLeft,
-					UIInterfaceOrientationLandscapeRight,
-				);
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -507,15 +516,14 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		1724C6EDEE2FC8BE4B65FC68 /* XCRemoteSwiftPackageReference "YPImagePicker" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Yummypets/YPImagePicker";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.4.0;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		FDDD76CB329425548FCD3F5E /* XCLocalSwiftPackageReference "vendor/YPImagePicker" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = vendor/YPImagePicker;
 		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
 		DC6045FECF41B0F0A1BC485D /* XCRemoteSwiftPackageReference "SwiftUI-LazyPager" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/gh123man/SwiftUI-LazyPager";
@@ -542,7 +550,6 @@
 		};
 		5A701F52FD63A75ECBD6B80F /* YPImagePicker */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1724C6EDEE2FC8BE4B65FC68 /* XCRemoteSwiftPackageReference "YPImagePicker" */;
 			productName = YPImagePicker;
 		};
 		62E60A31C2421F71CE67D919 /* KeychainAccess */ = {

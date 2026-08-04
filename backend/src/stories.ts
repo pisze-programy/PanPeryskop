@@ -8,6 +8,12 @@ function mediaUrl(_c: { env: Env }, key: string): string {
   return `https://panperyskop-api.dev-4cb.workers.dev/media/${key}`;
 }
 
+// Mirrors models.popularityScore so ORDER BY matches the ranking algorithm.
+function popularityExpr(): string {
+  const { views: WV, likes: WL, shares: WS } = POPULARITY_WEIGHTS;
+  return `(p.views_count * ${WV} + p.likes_count * ${WL} + p.shares_count * ${WS}) * (1 + (CAST(p.likes_count AS REAL) / MAX(p.views_count, 1)))`;
+}
+
 function storyJson(p: Post & { author_name: string }, c: { env: Env }): any {
   return {
     ...p,
@@ -31,11 +37,6 @@ storiesRoutes.get('/', async (c) => {
   const neLng = parseFloat(q.ne_lng || '0');
   const now = Date.now();
 
-  const WV = POPULARITY_WEIGHTS.views;
-  const WL = POPULARITY_WEIGHTS.likes;
-  const WS = POPULARITY_WEIGHTS.shares;
-  const DECAY = POPULARITY_WEIGHTS.decay;
-
   const authHeader = c.req.header('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const user = await authenticate(c);
@@ -48,9 +49,10 @@ storiesRoutes.get('/', async (c) => {
            WHERE p.lat BETWEEN ? AND ?
            AND p.lng BETWEEN ? AND ?
            AND p.status = 'approved'
+           AND p.type != 'text'
            AND p.expires_at > ?
            AND p.id NOT IN (SELECT post_id FROM views WHERE user_id = ?)
-           ORDER BY (p.views_count * ${WV} + p.likes_count * ${WL} + p.shares_count * ${WS}) DESC
+           ORDER BY ${popularityExpr()} DESC
            LIMIT 50`
         )
         .bind(swLat, neLat, swLng, neLng, now, user.id)
@@ -70,9 +72,9 @@ storiesRoutes.get('/', async (c) => {
        WHERE p.lat BETWEEN ? AND ?
        AND p.lng BETWEEN ? AND ?
        AND p.status = 'approved'
+       AND p.type != 'text'
        AND p.expires_at > ?
-       ORDER BY (p.views_count * ${WV} + p.likes_count * ${WL} + p.shares_count * ${WS})
-       DESC
+       ORDER BY ${popularityExpr()} DESC
        LIMIT 50`
     )
     .bind(swLat, neLat, swLng, neLng, now)

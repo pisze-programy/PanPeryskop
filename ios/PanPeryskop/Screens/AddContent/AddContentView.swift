@@ -5,6 +5,7 @@ struct AddContentView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var captureResult: MediaResult?
     @State private var showPermissionGate = false
+    @State private var showPicker = false
 
     var body: some View {
         NavigationStack {
@@ -16,7 +17,7 @@ struct AddContentView: View {
                     )
                 } else if let result = captureResult {
                     descriptionStep(for: result)
-                } else {
+                } else if showPicker {
                     MediaCaptureView { result in
                         switch result {
                         case .cancelled:
@@ -26,20 +27,46 @@ struct AddContentView: View {
                         }
                     }
                     .ignoresSafeArea()
+                } else {
+                    loadingView
                 }
             }
         }
-        .onAppear { precheckPermissions() }
+        .onAppear {
+            precheckPermissions()
+            // Let the sheet animation finish before building the camera
+            // (YPImagePicker construction + AVCaptureSession is heavy).
+            Task {
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                guard !Task.isCancelled else { return }
+                showPicker = true
+            }
+        }
+    }
+
+    private var loadingView: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(spacing: 16) {
+                ProgressView()
+                    .tint(.white)
+                    .scaleEffect(1.4)
+                Text("Włączanie aparatu…")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
     }
 
     private func precheckPermissions() {
         #if targetEnvironment(simulator)
         return
-        #endif
+        #else
         let camStatus = AVCaptureDevice.authorizationStatus(for: .video)
         if camStatus == .denied || camStatus == .restricted {
             showPermissionGate = true
         }
+        #endif
     }
 
     @ViewBuilder

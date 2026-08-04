@@ -107,11 +107,9 @@ struct StoryFullScreenView: View {
                             }
                         }
                         Spacer()
-                        VStack(spacing: 32) {
+                        VStack(spacing: 20) {
                             let liked = likedStates[currentPost.id] ?? currentPost.liked
-                            ActionButton(icon: liked ? "heart.fill" : "heart",
-                                         count: liked ? currentPost.likes_count + 1 : currentPost.likes_count,
-                                         color: liked ? .red : .white) {
+                            FaveLikeButton(isLiked: liked) { newValue in
                                 Task {
                                     let result = await viewModel.toggleLike(currentPost.id)
                                     likedStates[currentPost.id] = result
@@ -127,7 +125,7 @@ struct StoryFullScreenView: View {
                             } label: {
                                 VStack(spacing: 4) {
                                     Image(systemName: "arrowshape.turn.up.right.fill")
-                                        .font(.title2)
+                                        .font(.system(size: 26, weight: .semibold))
                                         .foregroundColor(.white)
                                     if currentPost.shares_count > 0 {
                                         Text("\(currentPost.shares_count)")
@@ -135,12 +133,16 @@ struct StoryFullScreenView: View {
                                             .foregroundColor(.white)
                                     }
                                 }
-                                .frame(width: 42, height: 42)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Circle())
+                                .frame(width: 56, height: 56)
+                                .contentShape(Circle())
                             }
-                            ActionButton(icon: "eye.fill", count: currentPost.views_count, color: .white) {}
+                            .buttonStyle(.plain)
                         }
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 10)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
+                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 80)
@@ -223,7 +225,6 @@ struct StoryFullScreenView: View {
     }
 
     private func advanceOrExit() {
-        let pendingRemaining = posts.indices.contains(currentIndex + 1) && !isPending(posts[currentIndex + 1])
         let hasMore = currentIndex + 1 < posts.count
         if hasMore { currentIndex += 1 }
         else { exitViewer() }
@@ -256,10 +257,6 @@ struct StoryContent: View {
                     placeholderView
                 }
             }
-        } else if post.type == .text {
-            Text(post.description)
-                .font(.title2).foregroundColor(.white).padding()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             placeholderView
         }
@@ -300,42 +297,6 @@ struct StoryVideoPlayer: View {
             .onChange(of: paused) { _, isPaused in
                 if isPaused { player?.pause() } else { player?.play() }
             }
-    }
-}
-
-struct ActionButton: View {
-    let icon: String
-    let count: Int
-    let color: Color
-    let action: (() -> Void)?
-
-    init(icon: String, count: Int, color: Color, action: (() -> Void)? = nil) {
-        self.icon = icon
-        self.count = count
-        self.color = color
-        self.action = action
-    }
-
-    var body: some View {
-        if let action {
-            Button(action: action) { label }
-        } else {
-            label
-        }
-    }
-
-    private var label: some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(color)
-                .frame(width: 42, height: 42)
-                .background(.ultraThinMaterial)
-                .clipShape(Circle())
-            if count > 0 {
-                Text("\(count)").font(.caption).foregroundColor(.white)
-            }
-        }
     }
 }
 

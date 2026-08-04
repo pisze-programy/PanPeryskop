@@ -5,8 +5,8 @@ import CoreLocation
 class MapViewModel: ObservableObject {
     @Published var posts: [Post] = []
     @Published var heatmapCells: [GridCell] = []
-    @Published var selectedRegionPosts: [Post] = []
     @Published var isLoading = false
+    @Published var selectedCity: City = .poznan
 
     private var serverPosts: [Post] = []
 
@@ -14,10 +14,20 @@ class MapViewModel: ObservableObject {
         serverPosts + PendingStore.shared.posts
     }
 
-    let defaultCenter = CLLocationCoordinate2D(latitude: 52.4064, longitude: 16.9252)
-    let defaultZoom: Double = 12
+    var defaultCenter: CLLocationCoordinate2D { selectedCity.center }
+    var defaultZoom: Double { 12 }
 
     private var debounceTask: Task<Void, Never>?
+
+    func selectCity(_ city: City) {
+        selectedCity = city
+        let region = city.region
+        let swLat = region.center.latitude - region.span.latitudeDelta / 2
+        let swLng = region.center.longitude - region.span.longitudeDelta / 2
+        let neLat = region.center.latitude + region.span.latitudeDelta / 2
+        let neLng = region.center.longitude + region.span.longitudeDelta / 2
+        fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
+    }
 
     func fetchStories(swLat: Double, swLng: Double, neLat: Double, neLng: Double) {
         debounceTask?.cancel()
@@ -38,7 +48,7 @@ class MapViewModel: ObservableObject {
         ]
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)
-            serverPosts = resp.stories
+            serverPosts = resp.stories.filter { $0.type != .text }
             posts = allPosts
         } catch {
             print("Failed to load stories:", error)
@@ -60,19 +70,12 @@ class MapViewModel: ObservableObject {
         }
     }
 
-    func selectRegion(lat: Double, lng: Double) {
-        selectedRegionPosts = posts.filter { post in
-            abs(post.lat - lat) < 0.0005 && abs(post.lng - lng) < 0.0005
-        }
-    }
-
     func markWatched(_ postId: String) async {
         let isPending = PendingStore.shared.posts.map(\.id).contains(postId)
         if isPending { return }
         do {
             try await APIClient.postEmpty("/actions/\(postId)/watched")
             posts.removeAll { $0.id == postId }
-            selectedRegionPosts.removeAll { $0.id == postId }
         } catch {
             print("Failed to mark watched:", error)
         }

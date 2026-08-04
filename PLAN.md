@@ -239,6 +239,27 @@ Weights (`WV=1, WL=3, WS=5, DECAY=0.99`) configurable via env vars. Server retur
 
 ---
 
+## 8a. Location — iteration 1 (implemented)
+
+**Scope:** native blue-dot user marker on the Map tab with live updates; **no camera follow** (marker updates without affecting the current map view), no heading UI, no distance-to-stories UI, no trail yet.
+
+- **MapKit API (iOS 17+ content-builder Map):** no `.showsUserLocation` / `.userTrackingMode` modifiers on the modern API. Use `UserAnnotation()` in the Map content builder — renders the blue dot and updates live, independent of the camera. Camera stays a static `.region(Poznań)`; the user pans freely, the marker just moves (and leaves the viewport when you walk away).
+- **UI:** no follow control; the "Wróć do centrum" pill (appears when panned > 0.025° from Poznań center) is unchanged.
+- **Permission:** reuses the existing `WhenInUse` prompt (already granted during Add Content). Updated `NSLocationWhenInUseUsageDescription` text in `project.yml`; regenerate with `xcodegen generate --spec ios/project.yml`.
+- **Battery (foreground-only, this iteration):** no custom `CLLocationManager` — MapKit powers the dot itself; location active only while the map is visible. No follow = no extra camera work.
+- **v2 (deferred):** heading captured in Add Content data (`startUpdatingHeading` only during capture, then stop), trail overlay (`MapPolyline` in user color), nearest-stories distance. If a custom `CLLocationManager` becomes necessary: `desiredAccuracy = .HundredMeters` (+ `Reduced` fallback), `distanceFilter` 10–50 m, `pausesLocationUpdatesAutomatically = true`, `activityType = .other`, start/stop bound to the Map tab lifecycle, never `kCLLocationAccuracyBestForNavigation`.
+
+## 8b. City pill → city list (implemented)
+
+- **Pill (top center)** is now a `Button` (label = `selectedCity.name` + chevron) → presents a native bottom sheet (`CityListView`, `.presentationDetents([.medium, .large])`).
+- **CityListView** has two sections: **"Aktywne"** = Poznań (tappable, checkmark when selected) and **"Wkrótce"** = 10 top Polish cities (disabled, clock icon). Static data in `Models/City.swift` (`City.poznan` + `City.soon`, coordinates + city-level span 0.05°).
+- **Selection flow:** `viewModel.selectCity(city)` (sets `@Published selectedCity`, triggers debounced bbox fetch) + `NotificationCenter` `.flyToCity` → `MapKitMapView` fly-to `withAnimation(.easeInOut(duration: 1.2))`.
+- **Return pill is universal** ("Wróć do centrum", no city name) and targets the *selected* city center — `checkDistance` and `.returnToCenter` use the dynamic `center` (= `selectedCity.center`). Choosing the same city also scrolls to its center.
+- **Interruptible animation:** pill is hidden the moment fly-to starts; `.onMapCameraChange(.onEnd)` after settle re-runs `checkDistance` — if the user interrupts the flight (pan far from the new center), the pill reappears and returns to the newly selected city center. (Verify settle-detection on a physical device; `.onEnd` fires once per camera settle.)
+- Regenerate project with `xcodegen generate --spec ios/project.yml` after adding files.
+
+---
+
 ## 9. Open items / deferred
 
 - App Store release (needs $99 Apple Developer account; store description TBD: "PanPeryskop — zobacz co się dzieje w mieście").

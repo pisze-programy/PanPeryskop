@@ -15,6 +15,7 @@ struct MapKitMapView: View {
     let onTapPost: (Post) -> Void
 
     @State private var camera: MapCameraPosition
+    @State private var isChangingCity = false
 
     init(
         center: CLLocationCoordinate2D,
@@ -47,6 +48,8 @@ struct MapKitMapView: View {
     var body: some View {
         MapReader { proxy in
             Map(position: $camera, bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: 20000)) {
+                UserAnnotation()
+
                 ForEach(heatmapCells) { cell in
                     let color = heatColor(cell.heat)
                     let alpha = min(1.0, Double(cell.heat) / 10.0)
@@ -74,12 +77,16 @@ struct MapKitMapView: View {
                 let neLat = region.center.latitude + region.span.latitudeDelta / 2
                 let neLng = region.center.longitude + region.span.longitudeDelta / 2
                 onRegionChange(swLat, swLng, neLat, neLng)
-                checkDistance(from: region.center)
+                handleCameraSettled(at: region.center)
             }
             .onTapGesture { pos in
                 guard let coord = proxy.convert(pos, from: .local) else { return }
                 let nearest = nearestCell(to: coord)
                 if let cell = nearest { onTapHeatCell(cell) }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .flyToCity)) { note in
+                guard let city = note.object as? City else { return }
+                flyTo(city: city)
             }
             .onReceive(NotificationCenter.default.publisher(for: .returnToCenter)) { _ in
                 withAnimation(.easeInOut(duration: 0.5)) {
@@ -96,6 +103,19 @@ struct MapKitMapView: View {
                 }
             }
         }
+    }
+
+    private func flyTo(city: City) {
+        isChangingCity = true
+        withAnimation(.easeInOut(duration: 1.2)) {
+            showReturnPill = false
+            camera = .region(city.region)
+        }
+    }
+
+    private func handleCameraSettled(at coord: CLLocationCoordinate2D) {
+        isChangingCity = false
+        checkDistance(from: coord)
     }
 
     private func checkDistance(from coord: CLLocationCoordinate2D) {
@@ -145,6 +165,8 @@ struct SinglePostPin: View {
 
     @State private var bounceOffset: CGFloat = 0
 
+    private static let ttlHours: TimeInterval = 24
+
     private var isMine: Bool { currentUserId != nil && post.user_id == currentUserId }
     private var isHighlighted: Bool { !isMine && !post.watched }
 
@@ -152,11 +174,16 @@ struct SinglePostPin: View {
         Double(Date().timeIntervalSince1970 - TimeInterval(post.created_at) / 1000) / 3600
     }
 
-    private var borderColor: Color {
+    private var ringColor: Color {
         guard isHighlighted else { return .white.opacity(0.5) }
         if ageHours > 20 { return .red }
         if ageHours > 12 { return .yellow }
         return .white
+    }
+
+    private func progress(at date: Date) -> Double {
+        let elapsed = date.timeIntervalSince1970 - TimeInterval(post.created_at) / 1000
+        return min(max(elapsed / (Self.ttlHours * 3600), 0), 1)
     }
 
     private var bounceAmount: CGFloat {
@@ -169,13 +196,26 @@ struct SinglePostPin: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             ZStack {
-                Circle()
-                    .fill(Color.black.opacity(0.25))
-                    .frame(width: 52, height: 52)
-                    .overlay(
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    let progress = progress(at: context.date)
+                    ZStack {
                         Circle()
-                            .stroke(borderColor, lineWidth: 2.5)
-                    )
+                            .fill(Color.black.opacity(0.25))
+                        Circle()
+                            .stroke(ringColor.opacity(0.25), lineWidth: 3)
+                        Circle()
+                            .trim(from: progress, to: 1)
+                            .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                    }
+                }
+                .frame(width: 52, height: 52)
+                .onAppear { startBounce() }
+                .onChange(of: post.id) { _, _ in
+                    bounceOffset = 0
+                    startBounce()
+                }
+
                 if let url = post.resolvedThumbURL {
                     AsyncImage(url: url) { phase in
                         switch phase {
@@ -192,20 +232,15 @@ struct SinglePostPin: View {
                             fallbackIcon
                         }
                     }
-                    .frame(width: 46, height: 46)
+                    .frame(width: 44, height: 44)
                     .clipShape(Circle())
                 } else {
                     fallbackIcon
-                        .frame(width: 46, height: 46)
+                        .frame(width: 44, height: 44)
                         .clipShape(Circle())
                 }
             }
             .offset(y: bounceOffset)
-            .onAppear { startBounce() }
-            .onChange(of: post.id) { _, _ in
-                bounceOffset = 0
-                startBounce()
-            }
 
             if isPending {
                 Image(systemName: "lock.fill")
@@ -277,14 +312,15 @@ struct PostCluster: Identifiable {
 }
 
 private func makeClusters(_ posts: [Post], pendingIds: Set<String>) -> [PostCluster] {
+    let mediaPosts = posts.filter { $0.type != .text }
     let radius = 0.0008
     var used = Set<String>()
     var clusters: [PostCluster] = []
 
-    for post in posts {
+    for post in mediaPosts {
         guard !used.contains(post.id) else { continue }
         var nearby = [post]
-        for other in posts {
+        for other in mediaPosts {
             guard !used.contains(other.id), other.id != post.id else { continue }
             if dist(post.lat, post.lng, other.lat, other.lng) < radius {
                 nearby.append(other)

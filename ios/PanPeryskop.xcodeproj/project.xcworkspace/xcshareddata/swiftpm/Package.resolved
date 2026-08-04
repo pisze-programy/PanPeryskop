@@ -2,6 +2,15 @@
   "object": {
     "pins": [
       {
+        "package": "FYVideoCompressor",
+        "repositoryURL": "https://github.com/T2Je/FYVideoCompressor",
+        "state": {
+          "branch": null,
+          "revision": "9a932d3b90291be8072d56cc34fee8f69f844ac8",
+          "version": "0.0.9"
+        }
+      },
+      {
         "package": "KeychainAccess",
         "repositoryURL": "https://github.com/kishikawakatsumi/KeychainAccess",
         "state": {
@@ -29,7 +38,7 @@
         }
       },
       {
-        "package": "SwiftUI-LazyPager",
+        "package": "LazyPager",
         "repositoryURL": "https://github.com/gh123man/SwiftUI-LazyPager",
         "state": {
           "branch": null,

@@ -24,6 +24,7 @@ struct AddContentView: View {
                             dismiss()
                         case .photo, .video:
                             captureResult = result
+                            ToastManager.shared.show("Gotowe!")
                         }
                     }
                     .ignoresSafeArea()
@@ -68,8 +69,8 @@ struct AddContentView: View {
         switch result {
         case .photo(let data, let fromCamera):
             DescriptionStepView(mediaType: .photo, mediaData: data, fromCamera: fromCamera)
-        case .video(let data, let fromCamera, _):
-            DescriptionStepView(mediaType: .video, mediaData: data, fromCamera: fromCamera)
+        case .video(let url, let fromCamera, let thumbData):
+            DescriptionStepView(mediaType: .video, mediaData: thumbData, fromCamera: fromCamera, videoURL: url)
         case .cancelled:
             EmptyView()
         }

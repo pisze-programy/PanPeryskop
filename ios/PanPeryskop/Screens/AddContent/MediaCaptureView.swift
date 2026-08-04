@@ -55,12 +55,15 @@ struct MediaCaptureView: UIViewControllerRepresentable {
                 return
             }
             if let photo = items.singlePhoto {
-                let data = photo.image.jpegData(compressionQuality: 0.9) ?? Data()
+                let data = MediaCompressor.optimizePhoto(photo.image)
+                    ?? photo.image.jpegData(compressionQuality: 0.8)
+                    ?? Data()
                 onFinish(.photo(data: data, fromCamera: photo.fromCamera))
             } else if let video = items.singleVideo {
-                let data = (try? Data(contentsOf: video.url)) ?? Data()
-                let thumb = video.thumbnail.jpegData(compressionQuality: 0.8) ?? Data()
-                onFinish(.video(data: data, fromCamera: video.fromCamera, thumbData: thumb))
+                let thumb = MediaCompressor.thumbnailData(video.thumbnail)
+                    ?? video.thumbnail.jpegData(compressionQuality: 0.8)
+                    ?? Data()
+                onFinish(.video(url: video.url, fromCamera: video.fromCamera, thumbData: thumb))
             } else {
                 onFinish(.cancelled)
             }
@@ -74,7 +77,7 @@ struct MediaCaptureView: UIViewControllerRepresentable {
 
 enum MediaResult {
     case photo(data: Data, fromCamera: Bool)
-    case video(data: Data, fromCamera: Bool, thumbData: Data)
+    case video(url: URL, fromCamera: Bool, thumbData: Data)
     case cancelled
 }
 

@@ -266,6 +266,12 @@ Weights (`WV=1, WL=3, WS=5, DECAY=0.99`) configurable via env vars. Server retur
 - **Group tap → viewer:** group stories (unseen) by popularity first, then remaining region stories by popularity. **Single pin tap:** clicked story first, then remaining region stories. `ContentView` drives the viewer from `@State storyPosts`.
 - **Seen model (replaces "watched → hidden"):** a story is marked seen when its media fully loads in the preview AND the user advances or closes the viewer (`markSeen` in `StoryFullScreenView`; pending/my posts never marked). Seen pins stay on the map but **dimmed (`opacity` 0.4) + red `eye.slash.fill` badge, non-clickable**. Seen posts are **excluded from groups** (not counted, not in group viewer). Requires backend `/stories` to return seen posts with `watched: true` (LEFT JOIN `views`).
 
+## 8d. Media compression on upload (implemented)
+
+- **Photos:** on-device — downscale to max 2048px + JPEG q0.8 (`MediaCompressor.optimizePhoto`) → ~300–600 KB (was full-res JPEG).
+- **Videos:** on-device re-encode right after capture, **in the background (invisible)** — `T2Je/FYVideoCompressor` (MIT, ~73★, SPM) via `MediaCompressor.compressVideo` (≤720p, ~4 Mbps, 30 fps, audio 96k → ~30 MB for 60 s). `DescriptionStepView` starts compression on appear; `publish()` awaits it (falls back to original file on failure). Recording limit stays 60 s.
+- **Backend guard:** `POST /posts` rejects files > 100 MB (413) — Cloudflare Worker request-limit safety net. No backend transcoding (Workers can't run ffmpeg).
+
 ---
 
 ## 9. Open items / deferred

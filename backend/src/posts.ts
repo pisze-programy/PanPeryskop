@@ -52,6 +52,9 @@ postsRoutes.post('/', async (c) => {
     description = (form.description as string) || '';
 
     const file = form.file as File | undefined;
+    if (file && file.size > 100 * 1024 * 1024) {
+      return c.json({ error: 'File too large (max 100MB)' }, 413);
+    }
     if (file && (type === 'photo' || type === 'video')) {
       const fileData = new Uint8Array(await file.arrayBuffer());
       const detectedType = detectMediaType(fileData);

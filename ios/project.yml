@@ -20,6 +20,9 @@ packages:
   KeychainAccess:
     url: https://github.com/kishikawakatsumi/KeychainAccess
     from: 4.2.0
+  FYVideoCompressor:
+    url: https://github.com/T2Je/FYVideoCompressor
+    from: 0.0.6
   YPImagePicker:
     path: vendor/YPImagePicker
 
@@ -34,6 +37,8 @@ targets:
         product: LazyPager
       - package: KeychainAccess
         product: KeychainAccess
+      - package: FYVideoCompressor
+        product: FYVideoCompressor
       - package: YPImagePicker
         product: YPImagePicker
     info:

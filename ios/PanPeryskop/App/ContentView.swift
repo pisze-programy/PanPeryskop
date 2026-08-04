@@ -9,12 +9,18 @@ struct ContentView: View {
     @StateObject private var mapViewModel = MapViewModel()
     @State private var showStoryViewer = false
     @State private var selectedStoryIndex = 0
+    @State private var storyPosts: [Post] = []
 
     var body: some View {
         ZStack(alignment: .bottom) {
             if selectedTab == 0 {
-                MapScreen(viewModel: mapViewModel, showStoryViewer: $showStoryViewer, selectedStoryIndex: $selectedStoryIndex)
-                    .environmentObject(authManager)
+                MapScreen(
+                    viewModel: mapViewModel,
+                    showStoryViewer: $showStoryViewer,
+                    selectedStoryIndex: $selectedStoryIndex,
+                    storyPosts: $storyPosts
+                )
+                .environmentObject(authManager)
             } else {
                 ProfileView()
                     .environmentObject(authManager)
@@ -22,7 +28,7 @@ struct ContentView: View {
 
             if showStoryViewer {
                 StoryFullScreenView(
-                    posts: mapViewModel.posts,
+                    posts: storyPosts,
                     startIndex: selectedStoryIndex,
                     isPresented: $showStoryViewer,
                     viewModel: mapViewModel
@@ -88,12 +94,11 @@ struct ContentView: View {
         selectedTab = 0
         do {
             if let post = await mapViewModel.ensurePost(id: id) {
-                if let idx = mapViewModel.posts.firstIndex(where: { $0.id == post.id }) {
-                    selectedStoryIndex = idx
-                    NotificationCenter.default.post(name: .scrollToPost, object: post)
-                    try? await Task.sleep(nanoseconds: 700_000_000)
-                    showStoryViewer = true
-                }
+                storyPosts = mapViewModel.viewerPosts(for: post)
+                selectedStoryIndex = 0
+                NotificationCenter.default.post(name: .scrollToPost, object: post)
+                try? await Task.sleep(nanoseconds: 700_000_000)
+                showStoryViewer = true
             } else {
                 ToastManager.shared.show("Błąd: Spróbuj ponownie")
             }

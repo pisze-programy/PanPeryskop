@@ -1,14 +1,38 @@
 import SwiftUI
 import CoreLocation
+import Combine
 
 @MainActor
 class MapViewModel: ObservableObject {
     @Published var posts: [Post] = []
-    @Published var heatmapCells: [GridCell] = []
     @Published var isLoading = false
     @Published var selectedCity: City = .poznan
 
     private var serverPosts: [Post] = []
+    private var pendingCancellable: AnyCancellable?
+    var currentUserId: String?
+    private var viewport: Viewport?
+    private var knownPostIds: Set<String> = []
+    private var pollingTask: Task<Void, Never>?
+    private var isFetchingStories = false
+    private var isRegionFetchPending = false
+    private var isCityTransitionPending = false
+    private var cityTransitionTask: Task<Void, Never>?
+
+    private struct Viewport {
+        let swLat: Double
+        let swLng: Double
+        let neLat: Double
+        let neLng: Double
+    }
+
+    init() {
+        pendingCancellable = PendingStore.shared.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refreshPosts()
+            }
+    }
 
     var allPosts: [Post] {
         serverPosts + PendingStore.shared.posts
@@ -16,6 +40,10 @@ class MapViewModel: ObservableObject {
 
     var defaultCenter: CLLocationCoordinate2D { selectedCity.center }
     var defaultZoom: Double { 12 }
+
+    private func refreshPosts() {
+        posts = allPosts
+    }
 
     private var debounceTask: Task<Void, Never>?
 
@@ -27,19 +55,38 @@ class MapViewModel: ObservableObject {
         let neLat = region.center.latitude + region.span.latitudeDelta / 2
         let neLng = region.center.longitude + region.span.longitudeDelta / 2
         fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
+        startCityTransition()
+    }
+
+    private func startCityTransition() {
+        isCityTransitionPending = true
+        cityTransitionTask?.cancel()
+        cityTransitionTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard !Task.isCancelled else { return }
+            self?.isCityTransitionPending = false
+        }
     }
 
     func fetchStories(swLat: Double, swLng: Double, neLat: Double, neLng: Double) {
+        viewport = Viewport(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
+        isRegionFetchPending = true
         debounceTask?.cancel()
         debounceTask = Task {
             try? await Task.sleep(nanoseconds: 500_000_000)
             guard !Task.isCancelled else { return }
-            await loadStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
-            await loadHeatmap(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
+            if let fetched = await loadStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng) {
+                knownPostIds = Set(fetched.map(\.id))
+            }
+            isRegionFetchPending = false
         }
     }
 
-    private func loadStories(swLat: Double, swLng: Double, neLat: Double, neLng: Double) async {
+    @discardableResult
+    private func loadStories(swLat: Double, swLng: Double, neLat: Double, neLng: Double) async -> [Post]? {
+        guard !isFetchingStories else { return nil }
+        isFetchingStories = true
+        defer { isFetchingStories = false }
         let params = [
             "sw_lat": String(swLat),
             "sw_lng": String(swLng),
@@ -48,26 +95,61 @@ class MapViewModel: ObservableObject {
         ]
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)
-            serverPosts = resp.stories.filter { $0.type != .text }
+            let fetched = resp.stories.filter { $0.type != .text }
+            serverPosts = fetched
             posts = allPosts
+            return fetched
         } catch {
             print("Failed to load stories:", error)
+            return nil
         }
     }
 
-    private func loadHeatmap(swLat: Double, swLng: Double, neLat: Double, neLng: Double) async {
-        let params = [
-            "sw_lat": String(swLat),
-            "sw_lng": String(swLng),
-            "ne_lat": String(neLat),
-            "ne_lng": String(neLng),
-        ]
-        do {
-            let cells: [GridCell] = try await APIClient.get("/stories/heatmap", params: params)
-            heatmapCells = cells
-        } catch {
-            print("Failed to load heatmap:", error)
+    private static let pollInterval: UInt64 = 20_000_000_000
+
+    func startPolling() {
+        stopPolling()
+        pollingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: Self.pollInterval)
+                guard !Task.isCancelled else { return }
+                guard let self else { return }
+                await self.pollStories()
+            }
         }
+    }
+
+    func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
+    }
+
+    private func pollStories() async {
+        guard let viewport, !isRegionFetchPending, !isCityTransitionPending else { return }
+        guard let fetched = await loadStories(
+            swLat: viewport.swLat, swLng: viewport.swLng,
+            neLat: viewport.neLat, neLng: viewport.neLng
+        ) else { return }
+        guard !Task.isCancelled else { return }
+        let pendingIds = Set(PendingStore.shared.posts.map(\.id))
+        let hasNew = fetched.contains {
+            !knownPostIds.contains($0.id)
+                && !pendingIds.contains($0.id)
+                && $0.user_id != currentUserId
+        }
+        knownPostIds.formUnion(fetched.map(\.id))
+        if hasNew {
+            ToastManager.shared.show("Nowe!")
+        }
+    }
+
+    func viewerPosts(for clicked: Post) -> [Post] {
+        [clicked] + posts.filter { $0.id != clicked.id && !$0.watched }
+    }
+
+    func viewerPosts(forCluster clusterPosts: [Post]) -> [Post] {
+        let clusterIds = Set(clusterPosts.map(\.id))
+        return clusterPosts.filter { !$0.watched } + posts.filter { !clusterIds.contains($0.id) && !$0.watched }
     }
 
     func markWatched(_ postId: String) async {
@@ -75,10 +157,27 @@ class MapViewModel: ObservableObject {
         if isPending { return }
         do {
             try await APIClient.postEmpty("/actions/\(postId)/watched")
-            posts.removeAll { $0.id == postId }
+            if let idx = serverPosts.firstIndex(where: { $0.id == postId }) {
+                serverPosts[idx] = withWatched(true, serverPosts[idx])
+                posts = allPosts
+            }
         } catch {
             print("Failed to mark watched:", error)
         }
+    }
+
+    private func withWatched(_ watched: Bool, _ post: Post) -> Post {
+        Post(
+            id: post.id, user_id: post.user_id, type: post.type,
+            lat: post.lat, lng: post.lng, description: post.description,
+            media_key: post.media_key, thumb_key: post.thumb_key,
+            created_at: post.created_at, expires_at: post.expires_at,
+            likes_count: post.likes_count, views_count: post.views_count, shares_count: post.shares_count,
+            grid_cell_id: post.grid_cell_id,
+            liked: post.liked, watched: watched,
+            author_name: post.author_name, media_url: post.media_url, thumb_url: post.thumb_url,
+            author_avatar_url: post.author_avatar_url
+        )
     }
 
     func toggleLike(_ postId: String) async -> Bool {

@@ -4,15 +4,14 @@ import MapKit
 struct MapKitMapView: View {
     let center: CLLocationCoordinate2D
     let zoom: Double
-    let heatmapCells: [GridCell]
     let posts: [Post]
     let pendingIds: Set<String>
     let currentUserId: String?
     @Binding var showReturnPill: Bool
     let centerThreshold: Double
     let onRegionChange: (Double, Double, Double, Double) -> Void
-    let onTapHeatCell: (GridCell) -> Void
     let onTapPost: (Post) -> Void
+    let onTapCluster: (PostCluster) -> Void
 
     @State private var camera: MapCameraPosition
     @State private var isChangingCity = false
@@ -20,53 +19,48 @@ struct MapKitMapView: View {
     init(
         center: CLLocationCoordinate2D,
         zoom: Double,
-        heatmapCells: [GridCell],
         posts: [Post],
         pendingIds: Set<String>,
         currentUserId: String?,
         showReturnPill: Binding<Bool>,
         centerThreshold: Double,
         onRegionChange: @escaping (Double, Double, Double, Double) -> Void,
-        onTapHeatCell: @escaping (GridCell) -> Void,
-        onTapPost: @escaping (Post) -> Void
+        onTapPost: @escaping (Post) -> Void,
+        onTapCluster: @escaping (PostCluster) -> Void
     ) {
         self.center = center
         self.zoom = zoom
-        self.heatmapCells = heatmapCells
         self.posts = posts
         self.pendingIds = pendingIds
         self.currentUserId = currentUserId
         self._showReturnPill = showReturnPill
         self.centerThreshold = centerThreshold
         self.onRegionChange = onRegionChange
-        self.onTapHeatCell = onTapHeatCell
         self.onTapPost = onTapPost
+        self.onTapCluster = onTapCluster
         let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05))
         self._camera = State(initialValue: .region(region))
     }
 
     var body: some View {
-        MapReader { proxy in
+        MapReader { _ in
             Map(position: $camera, bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: 20000)) {
                 UserAnnotation()
 
-                ForEach(heatmapCells) { cell in
-                    let color = heatColor(cell.heat)
-                    let alpha = min(1.0, Double(cell.heat) / 10.0)
-                    let coords = makeCoords(lat: cell.lat, lng: cell.lng, size: 0.0008)
-                    MapPolygon(coordinates: coords)
-                        .foregroundStyle(color.opacity(alpha * 0.4))
-                        .stroke(color.opacity(0.8), lineWidth: 0.5)
-                }
-
                 ForEach(makeClusters(posts, pendingIds: pendingIds)) { cluster in
-                    Annotation(cluster.label, coordinate: cluster.coord) {
+                    Annotation(coordinate: cluster.coord, anchor: .center) {
                         ClusterBadge(
                             cluster: cluster,
                             currentUserId: currentUserId,
-                            onTap: { onTapPost(cluster.singlePost!) }
+                            onTap: {
+                                if cluster.count == 1, let post = cluster.singlePost {
+                                    onTapPost(post)
+                                } else {
+                                    onTapCluster(cluster)
+                                }
+                            }
                         )
-                    }
+                    } label: { EmptyView() }
                 }
             }
             .mapStyle(.standard(pointsOfInterest: .excludingAll))
@@ -78,11 +72,6 @@ struct MapKitMapView: View {
                 let neLng = region.center.longitude + region.span.longitudeDelta / 2
                 onRegionChange(swLat, swLng, neLat, neLng)
                 handleCameraSettled(at: region.center)
-            }
-            .onTapGesture { pos in
-                guard let coord = proxy.convert(pos, from: .local) else { return }
-                let nearest = nearestCell(to: coord)
-                if let cell = nearest { onTapHeatCell(cell) }
             }
             .onReceive(NotificationCenter.default.publisher(for: .flyToCity)) { note in
                 guard let city = note.object as? City else { return }
@@ -124,16 +113,6 @@ struct MapKitMapView: View {
             showReturnPill = d > centerThreshold
         }
     }
-
-    private func nearestCell(to coord: CLLocationCoordinate2D) -> GridCell? {
-        var best: GridCell?
-        var bestD = Double.infinity
-        for cell in heatmapCells {
-            let d = dist(cell.lat, cell.lng, coord.latitude, coord.longitude)
-            if d < bestD { bestD = d; best = cell }
-        }
-        return bestD < 0.001 ? best : nil
-    }
 }
 
 struct ClusterBadge: View {
@@ -143,17 +122,19 @@ struct ClusterBadge: View {
 
     var body: some View {
         if cluster.count == 1, let post = cluster.singlePost {
-            Button(action: onTap) {
+            if post.watched {
                 SinglePostPin(post: post, isPending: cluster.isPending, currentUserId: currentUserId)
+            } else {
+                Button(action: onTap) {
+                    SinglePostPin(post: post, isPending: cluster.isPending, currentUserId: currentUserId)
+                }
+                .buttonStyle(.plain)
+            }
+        } else {
+            Button(action: onTap) {
+                ClusterPin(cluster: cluster)
             }
             .buttonStyle(.plain)
-        } else {
-            Text("\(cluster.count)")
-                .font(.caption)
-                .padding(8)
-                .background(Color.accentColor)
-                .foregroundColor(.white)
-                .clipShape(Circle())
         }
     }
 }
@@ -240,9 +221,19 @@ struct SinglePostPin: View {
                         .clipShape(Circle())
                 }
             }
+            .opacity(post.watched ? 0.4 : 1)
+            .saturation(post.watched ? 0.3 : 1)
             .offset(y: bounceOffset)
 
-            if isPending {
+            if post.watched {
+                Image(systemName: "eye.slash.fill")
+                    .font(.system(size: 9))
+                    .foregroundColor(.red)
+                    .padding(3)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+                    .offset(x: 6, y: -6)
+            } else if isPending {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 9))
                     .foregroundColor(.orange)
@@ -278,27 +269,62 @@ private func iconForType(_ type: Post.MediaType) -> String {
     return "photo.fill"
 }
 
-private func heatColor(_ heat: Int) -> Color {
-    if heat >= 10 { return .red }
-    if heat >= 5 { return .orange }
-    if heat >= 2 { return .yellow }
-    return .mint
-}
-
-private func makeCoords(lat: Double, lng: Double, size: Double) -> [CLLocationCoordinate2D] {
-    return [
-        CLLocationCoordinate2D(latitude: lat - size, longitude: lng - size),
-        CLLocationCoordinate2D(latitude: lat - size, longitude: lng + size),
-        CLLocationCoordinate2D(latitude: lat + size, longitude: lng + size),
-        CLLocationCoordinate2D(latitude: lat + size, longitude: lng - size),
-        CLLocationCoordinate2D(latitude: lat - size, longitude: lng - size),
-    ]
-}
-
 private func dist(_ lat1: Double, _ lng1: Double, _ lat2: Double, _ lng2: Double) -> Double {
     let dlat = lat1 - lat2
     let dlng = lng1 - lng2
     return sqrt(dlat * dlat + dlng * dlng)
+}
+
+struct ClusterPin: View {
+    let cluster: PostCluster
+
+    private static let ttlHours: TimeInterval = 24
+
+    private var oldest: Post {
+        cluster.posts.min(by: { $0.created_at < $1.created_at }) ?? cluster.posts[0]
+    }
+
+    private var ageHours: Double {
+        Double(Date().timeIntervalSince1970 - TimeInterval(oldest.created_at) / 1000) / 3600
+    }
+
+    private var ringColor: Color {
+        if ageHours > 20 { return .red }
+        if ageHours > 12 { return .yellow }
+        return .white
+    }
+
+    private func progress(at date: Date) -> Double {
+        let elapsed = date.timeIntervalSince1970 - TimeInterval(oldest.created_at) / 1000
+        return min(max(elapsed / (Self.ttlHours * 3600), 0), 1)
+    }
+
+    var body: some View {
+        ZStack {
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                let progress = progress(at: context.date)
+                ZStack {
+                    Circle()
+                        .fill(Color.black.opacity(0.25))
+                    Circle()
+                        .stroke(ringColor.opacity(0.25), lineWidth: 3)
+                    Circle()
+                        .trim(from: progress, to: 1)
+                        .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                }
+            }
+            .frame(width: 52, height: 52)
+
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 44, height: 44)
+
+            Text("\(cluster.count)")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundColor(.white)
+        }
+    }
 }
 
 struct PostCluster: Identifiable {
@@ -306,9 +332,8 @@ struct PostCluster: Identifiable {
     let coord: CLLocationCoordinate2D
     let count: Int
     let singlePost: Post?
-    let postType: Post.MediaType
+    let posts: [Post]
     let isPending: Bool
-    var label: String { singlePost?.type.rawValue.capitalized ?? "\(count)" }
 }
 
 private func makeClusters(_ posts: [Post], pendingIds: Set<String>) -> [PostCluster] {
@@ -320,10 +345,12 @@ private func makeClusters(_ posts: [Post], pendingIds: Set<String>) -> [PostClus
     for post in mediaPosts {
         guard !used.contains(post.id) else { continue }
         var nearby = [post]
-        for other in mediaPosts {
-            guard !used.contains(other.id), other.id != post.id else { continue }
-            if dist(post.lat, post.lng, other.lat, other.lng) < radius {
-                nearby.append(other)
+        if !post.watched {
+            for other in mediaPosts {
+                guard !used.contains(other.id), other.id != post.id, !other.watched else { continue }
+                if dist(post.lat, post.lng, other.lat, other.lng) < radius {
+                    nearby.append(other)
+                }
             }
         }
         nearby.forEach { used.insert($0.id) }
@@ -335,15 +362,9 @@ private func makeClusters(_ posts: [Post], pendingIds: Set<String>) -> [PostClus
             coord: CLLocationCoordinate2D(latitude: avgLat, longitude: avgLng),
             count: nearby.count,
             singlePost: nearby.count == 1 ? nearby.first : nil,
-            postType: typeOf(nearby),
+            posts: nearby,
             isPending: anyPending
         ))
     }
     return clusters
-}
-
-private func typeOf(_ posts: [Post]) -> Post.MediaType {
-    if posts.contains(where: { $0.type == .video }) { return .video }
-    if posts.contains(where: { $0.type == .photo }) { return .photo }
-    return .text
 }

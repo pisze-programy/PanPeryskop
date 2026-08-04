@@ -10,6 +10,7 @@ import UIKit
 
 internal class YPVideoCaptureVC: UIViewController, YPPermissionCheckable {
     var didCaptureVideo: ((URL) -> Void)?
+    var onModeSwitch: (() -> Void)?
     
     private let videoHelper = YPVideoCaptureHelper()
     private let v = YPCameraView(overlayView: nil)
@@ -43,6 +44,9 @@ internal class YPVideoCaptureVC: UIViewController, YPPermissionCheckable {
         v.timeElapsedLabel.isHidden = false // Show the time elapsed label since we're in the video screen.
         setupButtons()
         linkButtons()
+
+        v.modeSelector.setSelected(1)
+        v.modeSelector.onSelect = { [weak self] _ in self?.onModeSwitch?() }
         
         // Focus
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(focusTapped(_:)))
@@ -55,6 +59,7 @@ internal class YPVideoCaptureVC: UIViewController, YPPermissionCheckable {
 
     func start() {
         v.loadingIndicator.startAnimating()
+        v.modeSelector.setSelected(1)
         self.videoHelper.start(previewView: v.previewViewContainer,
                                withVideoRecordingLimit: YPConfig.video.recordingTimeLimit) { [weak self] in
             DispatchQueue.main.async {

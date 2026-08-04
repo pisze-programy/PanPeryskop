@@ -14,11 +14,11 @@ function popularityExpr(): string {
   return `(p.views_count * ${WV} + p.likes_count * ${WL} + p.shares_count * ${WS}) * (1 + (CAST(p.likes_count AS REAL) / MAX(p.views_count, 1)))`;
 }
 
-function storyJson(p: Post & { author_name: string }, c: { env: Env }): any {
+function storyJson(p: Post & { author_name: string; watched?: number }, c: { env: Env }): any {
   return {
     ...p,
     liked: false,
-    watched: false,
+    watched: (p as any).watched === 1,
     author_name: p.author_name || 'unknown',
     author_avatar_url: (p as any).author_avatar_key
       ? mediaUrl(c, (p as any).author_avatar_key)
@@ -43,20 +43,21 @@ storiesRoutes.get('/', async (c) => {
     if (user) {
       const { results } = await db
         .prepare(
-          `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key
+          `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key,
+                  CASE WHEN v.post_id IS NOT NULL THEN 1 ELSE 0 END as watched
            FROM posts p
            JOIN users u ON p.user_id = u.id
+           LEFT JOIN views v ON v.post_id = p.id AND v.user_id = ?
            WHERE p.lat BETWEEN ? AND ?
            AND p.lng BETWEEN ? AND ?
            AND p.status = 'approved'
            AND p.type != 'text'
            AND p.expires_at > ?
-           AND p.id NOT IN (SELECT post_id FROM views WHERE user_id = ?)
            ORDER BY ${popularityExpr()} DESC
            LIMIT 50`
         )
-        .bind(swLat, neLat, swLng, neLng, now, user.id)
-        .all<Post & { author_name: string; author_avatar_key: string | null }>();
+        .bind(user.id, swLat, neLat, swLng, neLng, now)
+        .all<Post & { author_name: string; author_avatar_key: string | null; watched: number }>();
 
       return c.json({
         stories: (results as any[]).map((p) => storyJson(p, c)),

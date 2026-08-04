@@ -5,10 +5,13 @@ struct MapScreen: View {
     @ObservedObject var viewModel: MapViewModel
     @Binding var showStoryViewer: Bool
     @Binding var selectedStoryIndex: Int
+    @Binding var storyPosts: [Post]
     @EnvironmentObject private var authManager: AuthManager
 
     @State private var showReturnPill = false
     @State private var showCityList = false
+
+    @Environment(\.scenePhase) private var scenePhase
 
     let centerThreshold: Double = 0.025
 
@@ -17,7 +20,6 @@ struct MapScreen: View {
             MapKitMapView(
                 center: viewModel.defaultCenter,
                 zoom: viewModel.defaultZoom,
-                heatmapCells: viewModel.heatmapCells,
                 posts: viewModel.posts,
                 pendingIds: Set(PendingStore.shared.posts.map(\.id)),
                 currentUserId: authManager.userId,
@@ -26,12 +28,16 @@ struct MapScreen: View {
                 onRegionChange: { swLat, swLng, neLat, neLng in
                     viewModel.fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
                 },
-                onTapHeatCell: { _ in },
                 onTapPost: { post in
-                    if let idx = viewModel.posts.firstIndex(where: { $0.id == post.id }) {
-                        selectedStoryIndex = idx
-                        showStoryViewer = true
-                    }
+                    guard !post.watched else { return }
+                    storyPosts = viewModel.viewerPosts(for: post)
+                    selectedStoryIndex = 0
+                    showStoryViewer = true
+                },
+                onTapCluster: { cluster in
+                    storyPosts = viewModel.viewerPosts(forCluster: cluster.posts)
+                    selectedStoryIndex = 0
+                    showStoryViewer = true
                 }
             )
             .ignoresSafeArea()
@@ -60,17 +66,6 @@ struct MapScreen: View {
                     Spacer()
                 }
                 .padding(.top, 12)
-
-                StoriesBarView(
-                    posts: viewModel.posts.filter {
-                        !PendingStore.shared.posts.map(\.id).contains($0.id)
-                    },
-                    onTapStory: { index in
-                        selectedStoryIndex = index
-                        showStoryViewer = true
-                    }
-                )
-                .padding(.top, 8)
 
                 Spacer()
             }
@@ -101,6 +96,8 @@ struct MapScreen: View {
             }
         }
         .onAppear {
+            viewModel.currentUserId = authManager.userId
+            viewModel.startPolling()
             let region = viewModel.selectedCity.region
             viewModel.fetchStories(
                 swLat: region.center.latitude - region.span.latitudeDelta / 2,
@@ -108,6 +105,19 @@ struct MapScreen: View {
                 neLat: region.center.latitude + region.span.latitudeDelta / 2,
                 neLng: region.center.longitude + region.span.longitudeDelta / 2
             )
+        }
+        .onDisappear {
+            viewModel.stopPolling()
+        }
+        .onChange(of: authManager.userId) { _, newValue in
+            viewModel.currentUserId = newValue
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                viewModel.startPolling()
+            } else {
+                viewModel.stopPolling()
+            }
         }
         .sheet(isPresented: $showCityList) {
             CityListView(selectedCity: viewModel.selectedCity) { city in

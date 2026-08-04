@@ -258,6 +258,14 @@ Weights (`WV=1, WL=3, WS=5, DECAY=0.99`) configurable via env vars. Server retur
 - **Interruptible animation:** pill is hidden the moment fly-to starts; `.onMapCameraChange(.onEnd)` after settle re-runs `checkDistance` — if the user interrupts the flight (pan far from the new center), the pill reappears and returns to the newly selected city center. (Verify settle-detection on a physical device; `.onEnd` fires once per camera settle.)
 - Regenerate project with `xcodegen generate --spec ios/project.yml` after adding files.
 
+## 8c. Map pins / seen model (implemented)
+
+- **Heatmap boundaries removed** (iOS + fetch; `Models/GridCell.swift` deleted, backend `/stories/heatmap` stays unused).
+- **Horizontal 9:16 stories bar removed** — entry to stories is only via map pins/groups (`StoriesBarView.swift` deleted; `StoryAvatar`/`StoryDateFormatter` moved into `StoryFullScreenView.swift`).
+- **Group pins:** round pin = uniform accent color + bold count `N` (no thumbnail, no lock), wrapped in a TTL ring animated for the **oldest member** (TimelineView). `Annotation` uses no title label (fixes duplicate count).
+- **Group tap → viewer:** group stories (unseen) by popularity first, then remaining region stories by popularity. **Single pin tap:** clicked story first, then remaining region stories. `ContentView` drives the viewer from `@State storyPosts`.
+- **Seen model (replaces "watched → hidden"):** a story is marked seen when its media fully loads in the preview AND the user advances or closes the viewer (`markSeen` in `StoryFullScreenView`; pending/my posts never marked). Seen pins stay on the map but **dimmed (`opacity` 0.4) + red `eye.slash.fill` badge, non-clickable**. Seen posts are **excluded from groups** (not counted, not in group viewer). Requires backend `/stories` to return seen posts with `watched: true` (LEFT JOIN `views`).
+
 ---
 
 ## 9. Open items / deferred

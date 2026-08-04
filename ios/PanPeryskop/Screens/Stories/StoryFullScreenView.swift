@@ -15,6 +15,7 @@ struct StoryFullScreenView: View {
     @State private var likedStates: [String: Bool] = [:]
     @State private var shareItem: ShareItem?
     @State private var paused = false
+    @State private var loadedIDs: Set<String> = []
 
     init(posts: [Post], startIndex: Int, isPresented: Binding<Bool>, viewModel: MapViewModel) {
         self.posts = posts
@@ -29,7 +30,9 @@ struct StoryFullScreenView: View {
             Color.black.ignoresSafeArea()
 
             LazyPager(data: posts, page: $currentIndex, direction: .vertical) { post in
-                StoryContent(post: post, videoFinished: $videoFinished, paused: $paused)
+                StoryContent(post: post, videoFinished: $videoFinished, paused: $paused) { loaded in
+                    loadedIDs.insert(loaded.id)
+                }
             }
             .onTap { hideUI.toggle() }
             .zoomable(min: 1, max: 3)
@@ -45,7 +48,7 @@ struct StoryFullScreenView: View {
                 handlePageChange(old: currentIndex, new: newIdx)
             }
             .onChange(of: videoFinished) { _, finished in
-                if finished { markCurrentWatched(); advanceOrExit() }
+                if finished { markSeen(currentIndex); advanceOrExit() }
             }
 
             if !hideUI {
@@ -200,27 +203,17 @@ struct StoryFullScreenView: View {
         progressFraction = 0
         videoFinished = false
         paused = false
-        if old < new { markWatched(old) }
+        if old < new { markSeen(old) }
         let nxt = posts.indices.contains(new) ? posts[new] : nil
         if nxt?.type == .photo || nxt?.type == .text {
             photoTimer = startPhotoTimer()
         }
     }
 
-    private func markCurrentWatched() {
-        guard currentIndex < posts.count else { return }
-        let post = posts[currentIndex]
-        guard !isPending(post) else {
-            advanceOrExit()
-            return
-        }
-        Task { await viewModel.markWatched(post.id) }
-    }
-
-    private func markWatched(_ index: Int) {
-        guard index < posts.count else { return }
+    private func markSeen(_ index: Int) {
+        guard posts.indices.contains(index) else { return }
         let post = posts[index]
-        guard !isPending(post) else { return }
+        guard !isPending(post), loadedIDs.contains(post.id) else { return }
         Task { await viewModel.markWatched(post.id) }
     }
 
@@ -231,6 +224,7 @@ struct StoryFullScreenView: View {
     }
 
     private func exitViewer() {
+        markSeen(currentIndex)
         photoTimer?.cancel()
         isPresented = false
     }
@@ -240,15 +234,19 @@ struct StoryContent: View {
     let post: Post
     @Binding var videoFinished: Bool
     @Binding var paused: Bool
+    let onLoaded: (Post) -> Void
 
     var body: some View {
         if post.type == .video, let url = post.resolvedMediaURL {
-            StoryVideoPlayer(url: url, finished: $videoFinished, paused: $paused)
+            StoryVideoPlayer(url: url, finished: $videoFinished, paused: $paused) {
+                onLoaded(post)
+            }
         } else if let url = post.resolvedMediaURL {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
                     image.resizable().aspectRatio(contentMode: .fit)
+                        .onAppear { onLoaded(post) }
                 case .failure:
                     placeholderView
                 case .empty:
@@ -276,8 +274,11 @@ struct StoryVideoPlayer: View {
     let url: URL
     @Binding var finished: Bool
     @Binding var paused: Bool
+    let onReady: () -> Void
     @State private var player: AVPlayer?
     @State private var observer: Any?
+    @State private var statusObserver: NSKeyValueObservation?
+    @State private var didReportReady = false
 
     var body: some View {
         VideoPlayer(player: player)
@@ -289,10 +290,19 @@ struct StoryVideoPlayer: View {
                     forName: .AVPlayerItemDidPlayToEndTime,
                     object: p.currentItem, queue: .main
                 ) { _ in Task { @MainActor in finished = true } }
+                if let item = p.currentItem {
+                    statusObserver = item.observe(\.status, options: [.initial, .new]) { item, _ in
+                        if item.status == .readyToPlay, !didReportReady {
+                            didReportReady = true
+                            DispatchQueue.main.async { onReady() }
+                        }
+                    }
+                }
             }
             .onDisappear {
                 player?.pause()
                 if let obs = observer { NotificationCenter.default.removeObserver(obs) }
+                statusObserver?.invalidate()
             }
             .onChange(of: paused) { _, isPaused in
                 if isPaused { player?.pause() } else { player?.play() }
@@ -340,5 +350,46 @@ enum DeepLink {
         guard let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
               comps.scheme == scheme, comps.host == host else { return nil }
         return comps.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+}
+
+struct StoryAvatar: View {
+    let url: String?
+    let size: CGFloat
+
+    var body: some View {
+        Group {
+            if let url, let avatarURL = URL(string: url) {
+                AsyncImage(url: avatarURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    default:
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                }
+            } else {
+                Image(systemName: "person.crop.circle.fill")
+                    .resizable()
+                    .foregroundColor(.white.opacity(0.8))
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+    }
+}
+
+enum StoryDateFormatter {
+    static let formatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "pl_PL")
+        f.dateFormat = "d MMM HH:mm"
+        return f
+    }()
+
+    static func format(_ ms: Int64) -> String {
+        formatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
     }
 }

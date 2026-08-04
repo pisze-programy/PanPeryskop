@@ -80,7 +80,10 @@ open class YPPickerVC: YPBottomPager, YPBottomPagerDelegate {
                                                                videoURL: videoURL,
                                                                fromCamera: true))])
             }
+            videoVC?.onModeSwitch = { [weak self] in self?.showPage(0) }
         }
+
+        cameraVC?.onModeSwitch = { [weak self] in self?.showPage(1) }
         
         // Show screens
         var vcs = [UIViewController]()

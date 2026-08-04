@@ -34,13 +34,7 @@ struct AddContentView: View {
         }
         .onAppear {
             precheckPermissions()
-            // Let the sheet animation finish before building the camera
-            // (YPImagePicker construction + AVCaptureSession is heavy).
-            Task {
-                try? await Task.sleep(nanoseconds: 450_000_000)
-                guard !Task.isCancelled else { return }
-                showPicker = true
-            }
+            showPicker = true
         }
     }
 

@@ -12,6 +12,7 @@ import Photos
 
 internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, YPPermissionCheckable {
     var didCapturePhoto: ((UIImage) -> Void)?
+    var onModeSwitch: (() -> Void)?
     let v: YPCameraView!
 
     private let photoCapture = YPPhotoCaptureHelper()
@@ -51,6 +52,9 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
         // Prevent flip and shot button clicked at the same time
         v.shotButton.isExclusiveTouch = true
         v.flipButton.isExclusiveTouch = true
+
+        v.modeSelector.setSelected(0)
+        v.modeSelector.onSelect = { [weak self] _ in self?.onModeSwitch?() }
         
         // Focus
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.focusTapped(_:)))
@@ -65,6 +69,7 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
     
     func start() {
         v.loadingIndicator.startAnimating()
+        v.modeSelector.setSelected(0)
         doAfterCameraPermissionCheck { [weak self] in
             guard let previewContainer = self?.v.previewViewContainer else {
                 return

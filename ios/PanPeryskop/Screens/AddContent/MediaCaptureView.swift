@@ -19,7 +19,7 @@ struct MediaCaptureView: UIViewControllerRepresentable {
         config.hidesCancelButton = false
         config.maxCameraZoomFactor = 3
         config.isScrollToChangeModesEnabled = true
-        config.hidesBottomBar = false
+        config.hidesBottomBar = true
         config.usesFrontCamera = false
 
         config.video.recordingTimeLimit = 60
@@ -49,24 +49,20 @@ struct MediaCaptureView: UIViewControllerRepresentable {
         config.wordings.cancel = "Anuluj"
 
         let picker = YPImagePicker(configuration: config)
-        picker.didFinishPicking { [picker] items, cancelled in
+        picker.didFinishPicking { items, cancelled in
             if cancelled {
-                picker.dismiss(animated: true) { onFinish(.cancelled) }
+                onFinish(.cancelled)
                 return
             }
             if let photo = items.singlePhoto {
                 let data = photo.image.jpegData(compressionQuality: 0.9) ?? Data()
-                picker.dismiss(animated: true) {
-                    onFinish(.photo(data: data, fromCamera: photo.fromCamera))
-                }
+                onFinish(.photo(data: data, fromCamera: photo.fromCamera))
             } else if let video = items.singleVideo {
                 let data = (try? Data(contentsOf: video.url)) ?? Data()
                 let thumb = video.thumbnail.jpegData(compressionQuality: 0.8) ?? Data()
-                picker.dismiss(animated: true) {
-                    onFinish(.video(data: data, fromCamera: video.fromCamera, thumbData: thumb))
-                }
+                onFinish(.video(data: data, fromCamera: video.fromCamera, thumbData: thumb))
             } else {
-                picker.dismiss(animated: true) { onFinish(.cancelled) }
+                onFinish(.cancelled)
             }
         }
 

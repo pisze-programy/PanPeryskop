@@ -18,8 +18,6 @@
 		4B4F1CC0CF0CA5F623869733 /* MediaCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9D108F77E19B9CD9251305B /* MediaCaptureView.swift */; };
 		5B74FDF4D5FE18C2F20CE69B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */; };
 		704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 702099485B19214D722CB2AB /* AuthManager.swift */; };
-		754F1CC10080AB411D634F01 /* StoriesBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6147B282F994991944E0A4BF /* StoriesBarView.swift */; };
-		81278E185580240B9B994F86 /* GridCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76751FD8CEDD58B368DBE212 /* GridCell.swift */; };
 		8A92D89BDF126E969C43FAE7 /* PermissionCardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */; };
 		8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 063211FB7EC797AEFD489DE6 /* ToastManager.swift */; };
 		8E82AAB2424095D2D1ECDBA7 /* PermissionGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D6796591AD82A922A91F5E /* PermissionGateView.swift */; };
@@ -47,10 +45,8 @@
 		364467F234AEB3E0D0E2513C /* FaveLikeButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaveLikeButton.swift; sourceTree = "<group>"; };
 		4243C0678522339A2173990C /* YPImagePicker */ = {isa = PBXFileReference; lastKnownFileType = folder; name = YPImagePicker; path = vendor/YPImagePicker; sourceTree = SOURCE_ROOT; };
 		44766F2DE7DFC8576566A0AF /* DescriptionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStepView.swift; sourceTree = "<group>"; };
-		6147B282F994991944E0A4BF /* StoriesBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoriesBarView.swift; sourceTree = "<group>"; };
 		6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		702099485B19214D722CB2AB /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
-		76751FD8CEDD58B368DBE212 /* GridCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridCell.swift; sourceTree = "<group>"; };
 		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E2581E6150C834401927100 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
 		9C0C2297077E1CF861F55EF2 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
@@ -135,7 +131,6 @@
 			isa = PBXGroup;
 			children = (
 				FBDD7756E22141DD95593257 /* City.swift */,
-				76751FD8CEDD58B368DBE212 /* GridCell.swift */,
 				C9FE43E3CC773AD637F3A523 /* Post.swift */,
 				9C0C2297077E1CF861F55EF2 /* User.swift */,
 			);
@@ -174,7 +169,6 @@
 			isa = PBXGroup;
 			children = (
 				364467F234AEB3E0D0E2513C /* FaveLikeButton.swift */,
-				6147B282F994991944E0A4BF /* StoriesBarView.swift */,
 				CD807EFE91A16807FF11C921 /* StoryFullScreenView.swift */,
 			);
 			path = Stories;
@@ -286,7 +280,6 @@
 				9920ED1276D0819A568362B5 /* ContentView.swift in Sources */,
 				440C2CC483A9E17757501ADA /* DescriptionStepView.swift in Sources */,
 				DCA8A572B7CEBBBBAE9492B7 /* FaveLikeButton.swift in Sources */,
-				81278E185580240B9B994F86 /* GridCell.swift in Sources */,
 				BD0BAA4861F1F934B6E3FEF7 /* MapKitMapView.swift in Sources */,
 				BF0F79BCD34011F89D63D19D /* MapView.swift in Sources */,
 				39384BA69A2B393C766B6E6E /* MapViewModel.swift in Sources */,
@@ -298,7 +291,6 @@
 				8E82AAB2424095D2D1ECDBA7 /* PermissionGateView.swift in Sources */,
 				C0E44758121DAEDF631C5FA1 /* Post.swift in Sources */,
 				44DCBF845465155C6A877FEE /* ProfileView.swift in Sources */,
-				754F1CC10080AB411D634F01 /* StoriesBarView.swift in Sources */,
 				CA6B53CF05EDBC94617C3745 /* StoryFullScreenView.swift in Sources */,
 				8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */,
 				B75E0DBA2194C2670F968BDD /* User.swift in Sources */,

@@ -11,7 +11,6 @@ struct Post: Codable, Identifiable, Equatable {
     let media_key: String?
     let thumb_key: String?
     let created_at: Int64
-    let expires_at: Int64
     let likes_count: Int
     let views_count: Int
     let shares_count: Int
@@ -23,18 +22,26 @@ struct Post: Codable, Identifiable, Equatable {
     let media_url: String?
     let thumb_url: String?
     let author_avatar_url: String?
+    let is_sponsored: Bool?
+    let link_url: String?
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
 
+    static let ttlMs: Int64 = 24 * 3_600_000
+
+    /// Server-side visibility window: [created_at, created_at + 24h].
     var isExpired: Bool {
-        Int64(Date().timeIntervalSince1970 * 1000) > expires_at
+        created_at < Int64(Date().timeIntervalSince1970 * 1000) - Self.ttlMs
     }
 
-    /// Legacy posts may lack expires_at (0) — treat them as not expired rather than hiding them.
+    var isFutureDated: Bool {
+        created_at > Int64(Date().timeIntervalSince1970 * 1000)
+    }
+
     var isStillValid: Bool {
-        expires_at == 0 || !isExpired
+        !isExpired && !isFutureDated
     }
 
     var resolvedMediaURL: URL? {
@@ -67,19 +74,12 @@ struct Post: Codable, Identifiable, Equatable {
     static func == (lhs: Post, rhs: Post) -> Bool { lhs.id == rhs.id }
 
     enum MediaType: String, Codable {
-        case photo, video, text
+        case photo, video
     }
 }
 
 struct PostListResponse: Codable {
     let stories: [Post]
-}
-
-struct TextPostRequest: Codable {
-    let type: String
-    let lat: Double
-    let lng: Double
-    let description: String
 }
 
 struct CreatePostResponse: Codable {
@@ -89,5 +89,6 @@ struct CreatePostResponse: Codable {
     let media_key: String?
     let thumb_key: String?
     let created_at: Int64
-    let expires_at: Int64
+    let is_sponsored: Bool?
+    let link_url: String?
 }

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
-import { Post, HeatmapCell, POPULARITY_WEIGHTS } from './models';
+import { Post, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS } from './models';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
 
@@ -17,6 +17,7 @@ function popularityExpr(): string {
 function storyJson(p: Post & { author_name: string; watched?: number }, c: { env: Env }): any {
   return {
     ...p,
+    is_sponsored: (p as any).is_sponsored === 1,
     liked: false,
     watched: (p as any).watched === 1,
     author_name: p.author_name || 'unknown',
@@ -36,6 +37,7 @@ storiesRoutes.get('/', async (c) => {
   const neLat = parseFloat(q.ne_lat || '0');
   const neLng = parseFloat(q.ne_lng || '0');
   const now = Date.now();
+  const windowStart = now - TTL_MS;
 
   const authHeader = c.req.header('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
@@ -51,12 +53,11 @@ storiesRoutes.get('/', async (c) => {
            WHERE p.lat BETWEEN ? AND ?
            AND p.lng BETWEEN ? AND ?
            AND p.status = 'approved'
-           AND p.type != 'text'
-           AND p.expires_at > ?
+           AND p.created_at >= ? AND p.created_at <= ?
            ORDER BY ${popularityExpr()} DESC
            LIMIT 50`
         )
-        .bind(user.id, swLat, neLat, swLng, neLng, now)
+        .bind(user.id, swLat, neLat, swLng, neLng, windowStart, now)
         .all<Post & { author_name: string; author_avatar_key: string | null; watched: number }>();
 
       const { results: pendingResults } = await db
@@ -70,12 +71,11 @@ storiesRoutes.get('/', async (c) => {
            AND p.lat BETWEEN ? AND ?
            AND p.lng BETWEEN ? AND ?
            AND p.status = 'pending'
-           AND p.type != 'text'
-           AND p.expires_at > ?
+           AND p.created_at >= ? AND p.created_at <= ?
            ORDER BY p.created_at DESC
            LIMIT 50`
         )
-        .bind(user.id, user.id, swLat, neLat, swLng, neLng, now)
+        .bind(user.id, user.id, swLat, neLat, swLng, neLng, windowStart, now)
         .all<Post & { author_name: string; author_avatar_key: string | null; watched: number }>();
 
       return c.json({
@@ -92,12 +92,11 @@ storiesRoutes.get('/', async (c) => {
        WHERE p.lat BETWEEN ? AND ?
        AND p.lng BETWEEN ? AND ?
        AND p.status = 'approved'
-       AND p.type != 'text'
-       AND p.expires_at > ?
+       AND p.created_at >= ? AND p.created_at <= ?
        ORDER BY ${popularityExpr()} DESC
        LIMIT 50`
     )
-    .bind(swLat, neLat, swLng, neLng, now)
+    .bind(swLat, neLat, swLng, neLng, windowStart, now)
     .all<Post & { author_name: string; author_avatar_key: string | null }>();
 
   return c.json({
@@ -113,6 +112,7 @@ storiesRoutes.get('/heatmap', async (c) => {
   const neLat = parseFloat(q.ne_lat || '0');
   const neLng = parseFloat(q.ne_lng || '0');
   const now = Date.now();
+  const windowStart = now - TTL_MS;
 
   const { results } = await db
     .prepare(
@@ -121,11 +121,11 @@ storiesRoutes.get('/heatmap', async (c) => {
        WHERE lat BETWEEN ? AND ?
        AND lng BETWEEN ? AND ?
        AND status = 'approved'
-       AND expires_at > ?
+       AND created_at >= ? AND created_at <= ?
        GROUP BY grid_cell_id
        HAVING COUNT(*) > 0`
     )
-    .bind(swLat, neLat, swLng, neLng, now)
+    .bind(swLat, neLat, swLng, neLng, windowStart, now)
     .all<HeatmapCell>();
 
   return c.json(results);

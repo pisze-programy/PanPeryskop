@@ -286,9 +286,7 @@ struct SinglePostPin: View {
 }
 
 private func iconForType(_ type: Post.MediaType) -> String {
-    if type == .video { return "video.fill" }
-    if type == .text { return "doc.text.fill" }
-    return "photo.fill"
+    type == .video ? "video.fill" : "photo.fill"
 }
 
 private func dist(_ lat1: Double, _ lng1: Double, _ lat2: Double, _ lng2: Double) -> Double {
@@ -359,7 +357,7 @@ struct PostCluster: Identifiable {
 }
 
 private func makeClusters(_ posts: [Post], pendingIds: Set<String>) -> [PostCluster] {
-    let mediaPosts = posts.filter { $0.type != .text }
+    let mediaPosts = posts
     let radius = 0.0008
     var used = Set<String>()
     var clusters: [PostCluster] = []

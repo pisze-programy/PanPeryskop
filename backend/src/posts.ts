@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { nanoid } from 'nanoid';
-import { gridCellId, TTL_MS } from './models';
+import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS } from './models';
 
 export const postsRoutes = new Hono<{ Bindings: Env }>();
+
+const MAX_EXTERNAL_ID_LEN = 200;
 
 function detectMediaType(data: Uint8Array): string | null {
   if (data.length >= 4 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) {
@@ -31,87 +33,108 @@ function detectMediaType(data: Uint8Array): string | null {
   return null;
 }
 
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 postsRoutes.post('/', async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-  let type: string;
-  let lat: number;
-  let lng: number;
-  let description: string;
-  let mediaKey: string | null = null;
-  let thumbKey: string | null = null;
-
   const contentType = c.req.header('Content-Type') || '';
-
-  if (contentType.includes('multipart/form-data')) {
-    const form = await c.req.parseBody();
-    type = (form.type as string) || 'photo';
-    lat = parseFloat(form.lat as string);
-    lng = parseFloat(form.lng as string);
-    description = (form.description as string) || '';
-
-    const file = form.file as File | undefined;
-    if (file && file.size > 100 * 1024 * 1024) {
-      return c.json({ error: 'File too large (max 100MB)' }, 413);
-    }
-    if (file && (type === 'photo' || type === 'video')) {
-      const fileData = new Uint8Array(await file.arrayBuffer());
-      const detectedType = detectMediaType(fileData);
-      if (!detectedType) {
-        return c.json({ error: 'Invalid media file' }, 400);
-      }
-      const isPhoto = type === 'photo' && detectedType.startsWith('image/');
-      const isVideo = type === 'video' && detectedType.startsWith('video/');
-      if (!isPhoto && !isVideo) {
-        return c.json({ error: 'Media type does not match post type' }, 400);
-      }
-      const postId = nanoid(24);
-      const ext = detectedType === 'image/jpeg' ? 'jpg' : detectedType === 'image/heic' ? 'heic' : detectedType.split('/')[1];
-      const key = `posts/${postId}/media.${ext}`;
-      await c.env.MEDIA.put(key, fileData, {
-        httpMetadata: { contentType: detectedType },
-      });
-      mediaKey = key;
-
-      const thumb = form.thumb as File | undefined;
-      if (thumb && thumb.size > 0 && thumb.size <= 2 * 1024 * 1024) {
-        const thumbData = new Uint8Array(await thumb.arrayBuffer());
-        thumbKey = `posts/${postId}/thumb.jpg`;
-        await c.env.MEDIA.put(thumbKey, thumbData, {
-          httpMetadata: { contentType: 'image/jpeg' },
-        });
-      }
-
-      const result = await doSavePost(c.env, user, postId, type, lat, lng, description, mediaKey, thumbKey);
-      return c.json(result, 201);
-    }
-
-    if (type === 'text') {
-      const result = await doSavePost(c.env, user, nanoid(24), type, lat, lng, description, null, null);
-      return c.json(result, 201);
-    }
-
-    return c.json({ error: 'Missing media for photo/video' }, 400);
-  }
-
-  const body = await c.req.json<{
-    type?: string;
-    lat?: number;
-    lng?: number;
-    description?: string;
-  }>();
-  type = body.type || 'text';
-  lat = body.lat ?? 0;
-  lng = body.lng ?? 0;
-  description = body.description || '';
-
-  if (type !== 'text') {
+  if (!contentType.includes('multipart/form-data')) {
     return c.json({ error: 'Media posts must use multipart/form-data' }, 400);
   }
 
-  const result = await doSavePost(c.env, user, nanoid(24), type, lat, lng, description, null, null);
-  return c.json(result, 201);
+  const form = await c.req.parseBody();
+
+  const type = (form.type as string) || 'photo';
+  if (type !== 'photo' && type !== 'video') {
+    return c.json({ error: 'Invalid post type' }, 400);
+  }
+
+  const lat = parseFloat(form.lat as string);
+  const lng = parseFloat(form.lng as string);
+  const description = (form.description as string) || '';
+  if (!isFinite(lat) || !isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return c.json({ error: 'Invalid coordinates' }, 400);
+  }
+
+  // created_at is server-authoritative for app posts. Seed may pass an explicit
+  // (future) instant so events become visible inside the [now-24h, now] window.
+  const now = Date.now();
+  let createdAt = now;
+  if (form.created_at) {
+    const v = parseInt(form.created_at as string, 10);
+    if (!isFinite(v)) return c.json({ error: 'Invalid created_at' }, 400);
+    if (v < now - TTL_MS) return c.json({ error: 'created_at too far in the past' }, 400);
+    if (v > now + MAX_LOOKAHEAD_MS) return c.json({ error: 'created_at too far in the future' }, 400);
+    createdAt = v;
+  }
+
+  const isSponsored = form.is_sponsored === '1' || form.is_sponsored === 'true';
+
+  let linkUrl: string | null = null;
+  if (form.link_url) {
+    const lv = (form.link_url as string).trim();
+    if (!isValidHttpUrl(lv)) return c.json({ error: 'Invalid link_url' }, 400);
+    linkUrl = lv;
+  }
+
+  let externalId: string | null = null;
+  if (form.external_id) {
+    const ev = (form.external_id as string).trim();
+    if (!ev || ev.length > MAX_EXTERNAL_ID_LEN) return c.json({ error: 'Invalid external_id' }, 400);
+    externalId = ev;
+  }
+
+  const file = form.file as File | undefined;
+  if (!file || file.size === 0) return c.json({ error: 'Missing media file' }, 400);
+  if (file.size > 100 * 1024 * 1024) return c.json({ error: 'File too large (max 100MB)' }, 413);
+
+  const fileData = new Uint8Array(await file.arrayBuffer());
+  const detectedType = detectMediaType(fileData);
+  if (!detectedType) return c.json({ error: 'Invalid media file' }, 400);
+  const isPhoto = type === 'photo' && detectedType.startsWith('image/');
+  const isVideo = type === 'video' && detectedType.startsWith('video/');
+  if (!isPhoto && !isVideo) return c.json({ error: 'Media type does not match post type' }, 400);
+
+  // Upsert by external_id keeps the post id (and media path) stable across re-seeds.
+  let postId = nanoid(24);
+  let isUpdate = false;
+  if (externalId) {
+    const existing = await c.env.DB
+      .prepare('SELECT id FROM posts WHERE external_id = ?')
+      .bind(externalId)
+      .first<{ id: string }>();
+    if (existing) {
+      postId = existing.id;
+      isUpdate = true;
+    }
+  }
+
+  const ext = detectedType === 'image/jpeg' ? 'jpg' : detectedType === 'image/heic' ? 'heic' : detectedType.split('/')[1];
+  const mediaKey = `posts/${postId}/media.${ext}`;
+  await c.env.MEDIA.put(mediaKey, fileData, { httpMetadata: { contentType: detectedType } });
+
+  let thumbKey: string | null = null;
+  const thumb = form.thumb as File | undefined;
+  if (thumb && thumb.size > 0 && thumb.size <= 2 * 1024 * 1024) {
+    const thumbData = new Uint8Array(await thumb.arrayBuffer());
+    thumbKey = `posts/${postId}/thumb.jpg`;
+    await c.env.MEDIA.put(thumbKey, thumbData, { httpMetadata: { contentType: 'image/jpeg' } });
+  }
+
+  const result = await doSavePost(
+    c.env, user, postId, type, lat, lng, description,
+    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate
+  );
+  return c.json(result, isUpdate ? 200 : 201);
 });
 
 async function doSavePost(
@@ -123,21 +146,35 @@ async function doSavePost(
   lng: number,
   description: string,
   mediaKey: string | null,
-  thumbKey: string | null
+  thumbKey: string | null,
+  createdAt: number,
+  isSponsored: boolean,
+  linkUrl: string | null,
+  externalId: string | null,
+  isUpdate: boolean
 ) {
   const db = env.DB;
-  const now = Date.now();
-  const cellId = gridCellId(lat, lng);
+  const sponsored = isSponsored ? 1 : 0;
 
-  await db
-    .prepare(
-      `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, expires_at, grid_cell_id)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`
-    )
-    .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, now, now + TTL_MS, cellId)
-    .run();
-
-  if (type !== 'text') {
+  if (isUpdate) {
+    await db
+      .prepare(
+        `UPDATE posts
+         SET type = ?, lat = ?, lng = ?, description = ?, media_key = ?, thumb_key = ?,
+             is_sponsored = ?, link_url = ?, created_at = ?, external_id = ?
+         WHERE id = ?`
+      )
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, linkUrl, createdAt, externalId, postId)
+      .run();
+  } else {
+    const cellId = gridCellId(lat, lng);
+    await db
+      .prepare(
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, link_url, external_id)
+         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, linkUrl, externalId)
+      .run();
     await db
       .prepare(
         'INSERT INTO grid_cells (id, lat, lng, heat) VALUES (?, ?, ?, 1) ON CONFLICT(id) DO UPDATE SET heat = heat + 1'
@@ -155,21 +192,25 @@ async function doSavePost(
     status: 'pending',
     media_key: mediaKey,
     thumb_key: thumbKey,
-    created_at: now,
-    expires_at: now + TTL_MS,
+    created_at: createdAt,
+    is_sponsored: isSponsored,
+    link_url: linkUrl,
+    external_id: externalId,
   };
 }
 
 postsRoutes.get('/:id', async (c) => {
   const db = c.env.DB;
+  const now = Date.now();
   const post = await db
     .prepare(
       `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key
        FROM posts p
        JOIN users u ON p.user_id = u.id
-       WHERE p.id = ? AND p.status = ? AND p.expires_at > ?`
+       WHERE p.id = ? AND p.status = 'approved'
+       AND p.created_at >= ? AND p.created_at <= ?`
     )
-    .bind(c.req.param('id'), 'approved', Date.now())
+    .bind(c.req.param('id'), now - TTL_MS, now)
     .first();
 
   if (!post) return c.json({ error: 'Not found' }, 404);
@@ -180,6 +221,7 @@ postsRoutes.get('/:id', async (c) => {
 
   return c.json({
     ...post,
+    is_sponsored: post.is_sponsored === 1,
     liked: false,
     watched: false,
     author_name: post.author_name || 'unknown',

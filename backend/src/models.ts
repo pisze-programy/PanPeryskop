@@ -12,7 +12,7 @@ export interface User {
 export interface Post {
   id: string;
   user_id: string;
-  type: 'photo' | 'video' | 'text';
+  type: 'photo' | 'video';
   lat: number;
   lng: number;
   description: string;
@@ -21,11 +21,13 @@ export interface Post {
   thumb_key: string | null;
   duration_ms: number | null;
   created_at: number;
-  expires_at: number;
   likes_count: number;
   views_count: number;
   shares_count: number;
   grid_cell_id: string | null;
+  is_sponsored: boolean;
+  link_url: string | null;
+  external_id: string | null;
 }
 
 export interface Story extends Omit<Post, 'status'> {
@@ -77,5 +79,8 @@ export function popularityScore(post: Post): number {
 
 export const TTL_HOURS = 24;
 export const TTL_MS = TTL_HOURS * HOUR_MS;
+
+// Seed may schedule posts up to this far into the future (created_at window).
+export const MAX_LOOKAHEAD_MS = 366 * 24 * HOUR_MS;
 
 export const ADMIN_SECRET = 'panperyskop-admin-dev';

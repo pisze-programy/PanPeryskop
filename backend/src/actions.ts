@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
+import { TTL_MS } from './models';
 
 export const actionsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -11,8 +12,8 @@ actionsRoutes.post('/:id/like', async (c) => {
   const postId = c.req.param('id');
 
   const post = await db
-    .prepare('SELECT status, user_id FROM posts WHERE id = ? AND expires_at > ?')
-    .bind(postId, Date.now())
+    .prepare('SELECT status, user_id FROM posts WHERE id = ? AND created_at >= ? AND created_at <= ?')
+    .bind(postId, Date.now() - TTL_MS, Date.now())
     .first<{ status: string; user_id: string }>();
   if (!post) return c.json({ error: 'Not found' }, 404);
   // Pending posts are private to their author.
@@ -43,8 +44,8 @@ actionsRoutes.post('/:id/share', async (c) => {
   const postId = c.req.param('id');
 
   const post = await db
-    .prepare('SELECT status, user_id FROM posts WHERE id = ? AND expires_at > ?')
-    .bind(postId, Date.now())
+    .prepare('SELECT status, user_id FROM posts WHERE id = ? AND created_at >= ? AND created_at <= ?')
+    .bind(postId, Date.now() - TTL_MS, Date.now())
     .first<{ status: string; user_id: string }>();
   if (!post) return c.json({ error: 'Not found' }, 404);
   // Pending posts are private to their author.
@@ -65,8 +66,8 @@ actionsRoutes.post('/:id/watched', async (c) => {
   const postId = c.req.param('id');
 
   const post = await db
-    .prepare('SELECT status, user_id FROM posts WHERE id = ? AND expires_at > ?')
-    .bind(postId, Date.now())
+    .prepare('SELECT status, user_id FROM posts WHERE id = ? AND created_at >= ? AND created_at <= ?')
+    .bind(postId, Date.now() - TTL_MS, Date.now())
     .first<{ status: string; user_id: string }>();
   if (!post) return c.json({ error: 'Not found' }, 404);
   // Pending posts are private to their author.

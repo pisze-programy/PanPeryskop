@@ -135,10 +135,9 @@ class MapViewModel: ObservableObject {
         ]
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)
-            let fetched = resp.stories.filter { $0.type != .text }
-            serverPosts = fetched
+            serverPosts = resp.stories
             posts = allPosts
-            return fetched
+            return resp.stories
         } catch {
             print("Failed to load stories:", error)
             return nil
@@ -227,12 +226,13 @@ class MapViewModel: ObservableObject {
             id: post.id, user_id: post.user_id, type: post.type,
             lat: post.lat, lng: post.lng, description: post.description,
             media_key: post.media_key, thumb_key: post.thumb_key,
-            created_at: post.created_at, expires_at: post.expires_at,
+            created_at: post.created_at,
             likes_count: post.likes_count, views_count: post.views_count, shares_count: post.shares_count,
             grid_cell_id: post.grid_cell_id,
             liked: post.liked, watched: watched, status: post.status,
             author_name: post.author_name, media_url: post.media_url, thumb_url: post.thumb_url,
-            author_avatar_url: post.author_avatar_url
+            author_avatar_url: post.author_avatar_url,
+            is_sponsored: post.is_sponsored, link_url: post.link_url
         )
     }
 
@@ -246,13 +246,14 @@ class MapViewModel: ObservableObject {
                     id: updated.id, user_id: updated.user_id, type: updated.type,
                     lat: updated.lat, lng: updated.lng, description: updated.description,
                     media_key: updated.media_key, thumb_key: updated.thumb_key,
-                    created_at: updated.created_at, expires_at: updated.expires_at,
+                    created_at: updated.created_at,
                     likes_count: resp.liked ? updated.likes_count + 1 : max(0, updated.likes_count - 1),
                     views_count: updated.views_count, shares_count: updated.shares_count,
                     grid_cell_id: updated.grid_cell_id,
                     liked: resp.liked, watched: updated.watched, status: updated.status,
                     author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
-                    author_avatar_url: updated.author_avatar_url
+                    author_avatar_url: updated.author_avatar_url,
+                    is_sponsored: updated.is_sponsored, link_url: updated.link_url
                 )
                 posts[idx] = updated
             }

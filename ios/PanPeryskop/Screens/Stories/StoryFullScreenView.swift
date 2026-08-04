@@ -96,6 +96,14 @@ struct StoryFullScreenView: View {
                                         .font(.caption)
                                         .foregroundColor(.orange)
                                 }
+                                if currentPost.is_sponsored == true {
+                                    Image(systemName: "megaphone.fill")
+                                        .font(.caption2)
+                                        .foregroundColor(.yellow)
+                                    Text("Sponsorowane")
+                                        .font(.caption)
+                                        .foregroundColor(.yellow)
+                                }
                             }
                             Text(currentPost.description)
                                 .font(.callout)
@@ -111,6 +119,22 @@ struct StoryFullScreenView: View {
                                 Text(StoryDateFormatter.format(currentPost.created_at))
                                     .font(.caption)
                                     .foregroundColor(.white.opacity(0.5))
+                            }
+                            if currentPost.is_sponsored == true,
+                               let link = currentPost.link_url,
+                               let url = URL(string: link) {
+                                Button {
+                                    UIApplication.shared.open(url)
+                                } label: {
+                                    Label("Więcej informacji", systemImage: "arrow.up.right.square")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(.ultraThinMaterial)
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         Spacer()
@@ -215,7 +239,7 @@ struct StoryFullScreenView: View {
         paused = false
         if old < new { markSeen(old) }
         let nxt = posts.indices.contains(new) ? posts[new] : nil
-        if nxt?.type == .photo || nxt?.type == .text {
+        if nxt?.type == .photo {
             photoTimer = startPhotoTimer()
         }
     }

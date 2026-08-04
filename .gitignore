@@ -22,6 +22,9 @@ node_modules/
 backend/.wrangler/
 backend/dist/
 
+# Seed media (posters/videos) — never commit these
+admin/seed/media/
+
 # Env
 .env
 *.env.local

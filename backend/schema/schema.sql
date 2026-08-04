@@ -18,14 +18,17 @@ CREATE TABLE IF NOT EXISTS posts (
   thumb_key     TEXT,
   duration_ms   INTEGER,
   created_at    INTEGER NOT NULL,
-  expires_at    INTEGER NOT NULL,
   likes_count   INTEGER NOT NULL DEFAULT 0,
   views_count   INTEGER NOT NULL DEFAULT 0,
   shares_count  INTEGER NOT NULL DEFAULT 0,
-  grid_cell_id  TEXT
+  grid_cell_id  TEXT,
+  is_sponsored  INTEGER NOT NULL DEFAULT 0,
+  link_url      TEXT,
+  external_id   TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_posts_bbox ON posts(lat, lng, expires_at, status);
+CREATE INDEX IF NOT EXISTS idx_posts_bbox ON posts(lat, lng, created_at, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_external_id ON posts(external_id) WHERE external_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
 CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id, created_at);
 

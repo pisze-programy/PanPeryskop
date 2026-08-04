@@ -9,7 +9,6 @@ struct DescriptionStepView: View {
     let fromCamera: Bool
     var videoURL: URL?
 
-    @EnvironmentObject private var authManager: AuthManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var description = ""
@@ -208,22 +207,11 @@ struct DescriptionStepView: View {
             }
             let mimeType = mediaType == .video ? "video/mp4" : "image/jpeg"
             let ext = mediaType == .video ? "mp4" : "jpg"
-            let resp = try await APIClient.uploadMedia(
+            try await APIClient.uploadMedia(
                 "/posts", fileData: data, fileName: "capture.\(ext)", mimeType: mimeType,
                 thumbData: thumb,
                 fields: ["type": mediaType.rawValue, "lat": String(lat), "lng": String(lng), "description": description]
             )
-            PendingStore.shared.save(Post(
-                id: resp.id, user_id: authManager.userId ?? "local",
-                type: mediaType,
-                lat: lat, lng: lng, description: description,
-                media_key: resp.media_key, thumb_key: resp.thumb_key,
-                created_at: resp.created_at, expires_at: resp.expires_at,
-                likes_count: 0, views_count: 0, shares_count: 0,
-                grid_cell_id: nil,
-                liked: false, watched: false, author_name: "Ty",
-                media_url: nil, thumb_url: nil, author_avatar_url: nil
-            ))
             await MainActor.run {
                 ToastManager.shared.show("Zapisano!")
                 dismiss()

@@ -181,7 +181,7 @@ struct StoryFullScreenView: View {
     }
 
     private func isPending(_ post: Post) -> Bool {
-        PendingStore.shared.posts.map(\.id).contains(post.id)
+        post.status == "pending"
     }
 
     private func mediaURL(for post: Post) -> URL? {
@@ -223,7 +223,7 @@ struct StoryFullScreenView: View {
     private func markSeen(_ index: Int) {
         guard posts.indices.contains(index) else { return }
         let post = posts[index]
-        guard !isPending(post), loadedIDs.contains(post.id) else { return }
+        guard loadedIDs.contains(post.id) else { return }
         Task { await viewModel.markWatched(post.id) }
     }
 

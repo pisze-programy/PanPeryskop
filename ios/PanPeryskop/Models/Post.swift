@@ -18,6 +18,7 @@ struct Post: Codable, Identifiable, Equatable {
     let grid_cell_id: String?
     let liked: Bool
     let watched: Bool
+    let status: String
     let author_name: String
     let media_url: String?
     let thumb_url: String?
@@ -31,20 +32,36 @@ struct Post: Codable, Identifiable, Equatable {
         Int64(Date().timeIntervalSince1970 * 1000) > expires_at
     }
 
+    /// Legacy posts may lack expires_at (0) — treat them as not expired rather than hiding them.
+    var isStillValid: Bool {
+        expires_at == 0 || !isExpired
+    }
+
     var resolvedMediaURL: URL? {
         if let url = media_url { return URL(string: url) }
         if let key = media_key { return URL(string: "\(APIClient.baseURL)/media/\(key)") }
         return nil
     }
 
+    /// Derive the server thumbnail key for posts created before thumbnails existed
+    /// (`posts/{id}/media.ext` → `posts/{id}/thumb.jpg` — the backend always stores thumb.jpg).
+    private var derivedThumbKey: String? {
+        guard let key = media_key, let lastSlash = key.lastIndex(of: "/") else { return nil }
+        return String(key[key.startIndex..<lastSlash]) + "/thumb.jpg"
+    }
+
     var resolvedThumbURL: URL? {
-        if let url = thumb_url { return URL(string: url) }
+        if let url = thumb_url, URL(string: url) != resolvedMediaURL {
+            return URL(string: url)
+        }
         if let key = thumb_key { return URL(string: "\(APIClient.baseURL)/media/\(key)") }
-        return resolvedMediaURL
+        if let key = derivedThumbKey { return URL(string: "\(APIClient.baseURL)/media/\(key)") }
+        if type == .photo { return resolvedMediaURL }
+        return nil
     }
 
     var hasThumb: Bool {
-        thumb_url != nil || thumb_key != nil
+        resolvedThumbURL != nil
     }
 
     static func == (lhs: Post, rhs: Post) -> Bool { lhs.id == rhs.id }

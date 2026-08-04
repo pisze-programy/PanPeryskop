@@ -86,6 +86,7 @@ struct ContentView: View {
         .sheet(isPresented: $showAddContent) {
             AddContentView()
                 .environmentObject(authManager)
+                .onDisappear { mapViewModel.refreshCurrentRegion() }
         }
     }
 

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import AVFoundation
 import YPImagePicker
 
 struct MediaCaptureView: UIViewControllerRepresentable {
@@ -21,9 +22,12 @@ struct MediaCaptureView: UIViewControllerRepresentable {
         config.isScrollToChangeModesEnabled = true
         config.hidesBottomBar = true
         config.usesFrontCamera = false
+        config.silentMode = true
 
         config.video.recordingTimeLimit = 60
         config.video.minimumTimeLimit = 3
+        config.video.compression = AVAssetExportPreset1280x720
+        config.video.recordingSizeLimit = 200 * 1024 * 1024
         config.library.maxNumberOfItems = 1
         config.library.mediaType = .photoAndVideo
 

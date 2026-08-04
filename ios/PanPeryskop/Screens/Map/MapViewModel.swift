@@ -1,7 +1,6 @@
 import SwiftUI
 import CoreLocation
 import MapKit
-import Combine
 
 struct MapBBox {
     let swLat: Double
@@ -21,7 +20,6 @@ class MapViewModel: ObservableObject {
     @Published var selectedCity: City = .poznan
 
     private var serverPosts: [Post] = []
-    private var pendingCancellable: AnyCancellable?
     var currentUserId: String?
     private var viewport: MapBBox?
     private var knownPostIds: Set<String> = []
@@ -44,11 +42,6 @@ class MapViewModel: ObservableObject {
     init() {
         let savedCityId = UserDefaults.standard.string(forKey: MapPrefs.cityId)
         selectedCity = City.all.first { $0.id == savedCityId } ?? .poznan
-        pendingCancellable = PendingStore.shared.objectWillChange
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.refreshPosts()
-            }
     }
 
     var restoredViewport: MKCoordinateRegion? {
@@ -79,14 +72,15 @@ class MapViewModel: ObservableObject {
     }
 
     var allPosts: [Post] {
-        serverPosts + PendingStore.shared.posts
+        serverPosts.filter { $0.isStillValid }
     }
 
     var defaultCenter: CLLocationCoordinate2D { selectedCity.center }
     var defaultZoom: Double { 12 }
 
-    private func refreshPosts() {
-        posts = allPosts
+    func refreshCurrentRegion() {
+        guard let viewport else { return }
+        fetchStories(swLat: viewport.swLat, swLng: viewport.swLng, neLat: viewport.neLat, neLng: viewport.neLng)
     }
 
     private var debounceTask: Task<Void, Never>?
@@ -177,10 +171,8 @@ class MapViewModel: ObservableObject {
             neLat: viewport.neLat, neLng: viewport.neLng
         ) else { return }
         guard !Task.isCancelled else { return }
-        let pendingIds = Set(PendingStore.shared.posts.map(\.id))
         let hasNew = fetched.contains {
             !knownPostIds.contains($0.id)
-                && !pendingIds.contains($0.id)
                 && $0.user_id != currentUserId
         }
         knownPostIds.formUnion(fetched.map(\.id))
@@ -219,8 +211,6 @@ class MapViewModel: ObservableObject {
     }
 
     func markWatched(_ postId: String) async {
-        let isPending = PendingStore.shared.posts.map(\.id).contains(postId)
-        if isPending { return }
         do {
             try await APIClient.postEmpty("/actions/\(postId)/watched")
             if let idx = serverPosts.firstIndex(where: { $0.id == postId }) {
@@ -240,7 +230,7 @@ class MapViewModel: ObservableObject {
             created_at: post.created_at, expires_at: post.expires_at,
             likes_count: post.likes_count, views_count: post.views_count, shares_count: post.shares_count,
             grid_cell_id: post.grid_cell_id,
-            liked: post.liked, watched: watched,
+            liked: post.liked, watched: watched, status: post.status,
             author_name: post.author_name, media_url: post.media_url, thumb_url: post.thumb_url,
             author_avatar_url: post.author_avatar_url
         )
@@ -260,7 +250,7 @@ class MapViewModel: ObservableObject {
                     likes_count: resp.liked ? updated.likes_count + 1 : max(0, updated.likes_count - 1),
                     views_count: updated.views_count, shares_count: updated.shares_count,
                     grid_cell_id: updated.grid_cell_id,
-                    liked: resp.liked, watched: updated.watched,
+                    liked: resp.liked, watched: updated.watched, status: updated.status,
                     author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
                     author_avatar_url: updated.author_avatar_url
                 )

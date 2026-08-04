@@ -194,7 +194,7 @@ struct SinglePostPin: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topLeading) {
             ZStack {
                 TimelineView(.periodic(from: .now, by: 30)) { context in
                     let progress = progress(at: context.date)
@@ -244,18 +244,21 @@ struct SinglePostPin: View {
             .saturation(post.watched ? 0.3 : 1)
             .offset(y: bounceOffset)
 
+            if isPending {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9))
+                    .foregroundColor(.orange)
+                    .padding(3)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+                    .offset(x: -6, y: -6)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
             if post.watched {
                 Image(systemName: "eye.slash.fill")
                     .font(.system(size: 9))
                     .foregroundColor(.red)
-                    .padding(3)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
-                    .offset(x: 6, y: -6)
-            } else if isPending {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 9))
-                    .foregroundColor(.orange)
                     .padding(3)
                     .background(.ultraThinMaterial)
                     .clipShape(Circle())

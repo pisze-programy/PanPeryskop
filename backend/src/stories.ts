@@ -59,8 +59,27 @@ storiesRoutes.get('/', async (c) => {
         .bind(user.id, swLat, neLat, swLng, neLng, now)
         .all<Post & { author_name: string; author_avatar_key: string | null; watched: number }>();
 
+      const { results: pendingResults } = await db
+        .prepare(
+          `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key,
+                  CASE WHEN v.post_id IS NOT NULL THEN 1 ELSE 0 END as watched
+           FROM posts p
+           JOIN users u ON p.user_id = u.id
+           LEFT JOIN views v ON v.post_id = p.id AND v.user_id = ?
+           WHERE p.user_id = ?
+           AND p.lat BETWEEN ? AND ?
+           AND p.lng BETWEEN ? AND ?
+           AND p.status = 'pending'
+           AND p.type != 'text'
+           AND p.expires_at > ?
+           ORDER BY p.created_at DESC
+           LIMIT 50`
+        )
+        .bind(user.id, user.id, swLat, neLat, swLng, neLng, now)
+        .all<Post & { author_name: string; author_avatar_key: string | null; watched: number }>();
+
       return c.json({
-        stories: (results as any[]).map((p) => storyJson(p, c)),
+        stories: [...(results as any[]), ...(pendingResults as any[])].map((p) => storyJson(p, c)),
       });
     }
   }

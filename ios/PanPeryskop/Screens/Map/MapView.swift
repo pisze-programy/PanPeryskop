@@ -21,7 +21,7 @@ struct MapScreen: View {
                 center: viewModel.defaultCenter,
                 zoom: viewModel.defaultZoom,
                 posts: viewModel.posts,
-                pendingIds: Set(PendingStore.shared.posts.map(\.id)),
+                pendingIds: Set(viewModel.posts.filter { $0.status == "pending" }.map(\.id)),
                 currentUserId: authManager.userId,
                 showReturnPill: $showReturnPill,
                 centerThreshold: centerThreshold,

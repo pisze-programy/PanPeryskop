@@ -189,6 +189,9 @@ class YPVideoCaptureHelper: NSObject {
                 if let orientation = orientation, connection.isVideoOrientationSupported {
                     connection.videoOrientation = orientation
                 }
+                if connection.isVideoStabilizationSupported {
+                    connection.preferredVideoStabilizationMode = .auto
+                }
                 strongSelf.videoOutput.startRecording(to: outputURL, recordingDelegate: strongSelf)
             }
         }

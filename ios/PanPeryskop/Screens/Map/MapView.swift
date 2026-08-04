@@ -25,17 +25,21 @@ struct MapScreen: View {
                 currentUserId: authManager.userId,
                 showReturnPill: $showReturnPill,
                 centerThreshold: centerThreshold,
+                initialRegion: viewModel.initialRegion,
                 onRegionChange: { swLat, swLng, neLat, neLng in
                     viewModel.fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
                 },
-                onTapPost: { post in
+                onCameraSettled: { region in
+                    viewModel.saveViewport(region)
+                },
+                onTapPost: { post, bbox in
                     guard !post.watched else { return }
-                    storyPosts = viewModel.viewerPosts(for: post)
+                    storyPosts = viewModel.viewerPosts(for: post, in: bbox)
                     selectedStoryIndex = 0
                     showStoryViewer = true
                 },
-                onTapCluster: { cluster in
-                    storyPosts = viewModel.viewerPosts(forCluster: cluster.posts)
+                onTapCluster: { cluster, bbox in
+                    storyPosts = viewModel.viewerPosts(forCluster: cluster.posts, in: bbox)
                     selectedStoryIndex = 0
                     showStoryViewer = true
                 }
@@ -98,7 +102,7 @@ struct MapScreen: View {
         .onAppear {
             viewModel.currentUserId = authManager.userId
             viewModel.startPolling()
-            let region = viewModel.selectedCity.region
+            let region = viewModel.initialRegion
             viewModel.fetchStories(
                 swLat: region.center.latitude - region.span.latitudeDelta / 2,
                 swLng: region.center.longitude - region.span.longitudeDelta / 2,

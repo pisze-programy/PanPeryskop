@@ -268,9 +268,13 @@ Weights (`WV=1, WL=3, WS=5, DECAY=0.99`) configurable via env vars. Server retur
 
 ## 8d. Media compression on upload (implemented)
 
-- **Photos:** on-device — downscale to max 2048px + JPEG q0.8 (`MediaCompressor.optimizePhoto`) → ~300–600 KB (was full-res JPEG).
+- **Photos:** on-device — downscale to max 1080px + JPEG q0.8 (`MediaCompressor.optimizePhoto`) → ~150–400 KB (was full-res).
 - **Videos:** on-device re-encode right after capture, **in the background (invisible)** — `T2Je/FYVideoCompressor` (MIT, ~73★, SPM) via `MediaCompressor.compressVideo` (≤720p, ~4 Mbps, 30 fps, audio 96k → ~30 MB for 60 s). `DescriptionStepView` starts compression on appear; `publish()` awaits it (falls back to original file on failure). Recording limit stays 60 s.
-- **Backend guard:** `POST /posts` rejects files > 100 MB (413) — Cloudflare Worker request-limit safety net. No backend transcoding (Workers can't run ffmpeg).
+- **Thumbnails (photo + video):** uploaded with the post (multipart `thumb`, 320px JPEG), stored as `posts/{id}/thumb.jpg`, `thumb_key` persisted + returned; `Post.resolvedThumbURL` falls back to `thumb_key` so pending pins show a real thumbnail immediately.
+- **`UIImage.resized(to:)` fix:** renders at `format.scale = 1` (pixel-based) — previously the renderer used the device 3× scale so "2048" produced full-res output. Avatar now 128px q0.7.
+- **HTTP Range (inline `app.all('/media/*')` in `index.ts`):** R2 range reads + `206 Partial Content`/`Content-Range`/`Accept-Ranges` — required by AVPlayer for remote MP4 streaming (files in R2 were always valid; without Range the app could not play them).
+- **Backend guard:** `POST /posts` rejects files > 100 MB (413). No backend transcoding (Workers can't run ffmpeg).
+- **Backfill (done via `admin/scripts/backfill-media.mjs`):** existing photos re-compressed to 1080px, thumbnails generated for all posts (photo: `sips`; video: `ffmpeg` frame), `thumb_key` updated in D1, corrupt 73-byte photo removed. Requires wrangler with the `dev-4cb` account (the deployed Worker's account — local login differed).
 
 ---
 

@@ -200,17 +200,24 @@ struct DescriptionStepView: View {
 
         do {
             let data = try await dataForUpload()
+            let thumb: Data?
+            if mediaType == .photo {
+                thumb = MediaCompressor.thumbnailData(UIImage(data: mediaData) ?? UIImage())
+            } else {
+                thumb = mediaData
+            }
             let mimeType = mediaType == .video ? "video/mp4" : "image/jpeg"
             let ext = mediaType == .video ? "mp4" : "jpg"
             let resp = try await APIClient.uploadMedia(
                 "/posts", fileData: data, fileName: "capture.\(ext)", mimeType: mimeType,
+                thumbData: thumb,
                 fields: ["type": mediaType.rawValue, "lat": String(lat), "lng": String(lng), "description": description]
             )
             PendingStore.shared.save(Post(
                 id: resp.id, user_id: authManager.userId ?? "local",
                 type: mediaType,
                 lat: lat, lng: lng, description: description,
-                media_key: resp.media_key, thumb_key: nil,
+                media_key: resp.media_key, thumb_key: resp.thumb_key,
                 created_at: resp.created_at, expires_at: resp.expires_at,
                 likes_count: 0, views_count: 0, shares_count: 0,
                 grid_cell_id: nil,

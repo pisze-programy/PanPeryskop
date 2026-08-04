@@ -9,7 +9,6 @@ struct StoryFullScreenView: View {
 
     @State private var currentIndex: Int
     @State private var photoTimer: Task<Void, Never>?
-    @State private var videoFinished = false
     @State private var hideUI = false
     @State private var progressFraction: Double = 0
     @State private var likedStates: [String: Bool] = [:]
@@ -30,10 +29,18 @@ struct StoryFullScreenView: View {
             Color.black.ignoresSafeArea()
 
             LazyPager(data: posts, page: $currentIndex, direction: .vertical) { post in
-                StoryContent(post: post, videoFinished: $videoFinished, paused: $paused) { loaded in
-                    loadedIDs.insert(loaded.id)
-                }
+                StoryContent(
+                    post: post,
+                    isActive: post.id == currentPost.id,
+                    paused: $paused,
+                    onLoaded: { loadedIDs.insert($0.id) },
+                    onFinished: { handleStoryFinished(post) },
+                    onProgress: { fraction in
+                        if post.id == currentPost.id { progressFraction = fraction }
+                    }
+                )
             }
+            .settings { $0.preloadAmount = 1; $0.overscrollThreshold = 0.05 }
             .onTap { hideUI.toggle() }
             .zoomable(min: 1, max: 3)
             .overscroll { position in
@@ -44,11 +51,8 @@ struct StoryFullScreenView: View {
                 }
             }
             .ignoresSafeArea()
-            .onChange(of: currentIndex) { _, newIdx in
-                handlePageChange(old: currentIndex, new: newIdx)
-            }
-            .onChange(of: videoFinished) { _, finished in
-                if finished { markSeen(currentIndex); advanceOrExit() }
+            .onChange(of: currentIndex) { oldIdx, newIdx in
+                handlePageChange(old: oldIdx, new: newIdx)
             }
 
             if !hideUI {
@@ -188,20 +192,26 @@ struct StoryFullScreenView: View {
 
     private func startPhotoTimer() -> Task<Void, Never>? {
         if posts.isEmpty || currentPost.type == .video { return nil }
+        let post = currentPost
         return Task {
             for step in 0...60 {
                 try? await Task.sleep(nanoseconds: 100_000_000)
                 guard !Task.isCancelled else { return }
                 await MainActor.run { progressFraction = Double(step) / 60.0 }
             }
-            await MainActor.run { videoFinished = true }
+            await MainActor.run { handleStoryFinished(post) }
         }
+    }
+
+    private func handleStoryFinished(_ post: Post) {
+        guard post.id == currentPost.id else { return }
+        markSeen(currentIndex)
+        advanceOrExit()
     }
 
     private func handlePageChange(old: Int, new: Int) {
         photoTimer?.cancel()
         progressFraction = 0
-        videoFinished = false
         paused = false
         if old < new { markSeen(old) }
         let nxt = posts.indices.contains(new) ? posts[new] : nil
@@ -232,14 +242,42 @@ struct StoryFullScreenView: View {
 
 struct StoryContent: View {
     let post: Post
-    @Binding var videoFinished: Bool
+    let isActive: Bool
     @Binding var paused: Bool
     let onLoaded: (Post) -> Void
+    let onFinished: () -> Void
+    let onProgress: (Double) -> Void
+
+    @State private var showThumb = true
 
     var body: some View {
         if post.type == .video, let url = post.resolvedMediaURL {
-            StoryVideoPlayer(url: url, finished: $videoFinished, paused: $paused) {
-                onLoaded(post)
+            ZStack {
+                StoryVideoPlayer(
+                    url: url,
+                    isActive: isActive,
+                    paused: $paused,
+                    onFinished: onFinished,
+                    onStarted: { showThumb = false },
+                    onReady: { onLoaded(post) },
+                    onProgress: onProgress
+                )
+                if showThumb, post.hasThumb, let thumbURL = post.resolvedThumbURL {
+                    AsyncImage(url: thumbURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        case .failure:
+                            Color.clear
+                        case .empty:
+                            Color.black
+                        @unknown default:
+                            Color.clear
+                        }
+                    }
+                    .allowsHitTesting(false)
+                }
             }
         } else if let url = post.resolvedMediaURL {
             AsyncImage(url: url) { phase in
@@ -250,13 +288,30 @@ struct StoryContent: View {
                 case .failure:
                     placeholderView
                 case .empty:
-                    ProgressView().tint(.white)
+                    thumbPlaceholder
                 @unknown default:
                     placeholderView
                 }
             }
         } else {
             placeholderView
+        }
+    }
+
+    private var thumbPlaceholder: some View {
+        Group {
+            if post.hasThumb, let thumbURL = post.resolvedThumbURL {
+                AsyncImage(url: thumbURL) { tp in
+                    switch tp {
+                    case .success(let thumb):
+                        thumb.resizable().aspectRatio(contentMode: .fit)
+                    default:
+                        ProgressView().tint(.white)
+                    }
+                }
+            } else {
+                ProgressView().tint(.white)
+            }
         }
     }
 
@@ -272,41 +327,88 @@ struct StoryContent: View {
 
 struct StoryVideoPlayer: View {
     let url: URL
-    @Binding var finished: Bool
+    let isActive: Bool
     @Binding var paused: Bool
+    let onFinished: () -> Void
+    let onStarted: () -> Void
     let onReady: () -> Void
+    let onProgress: (Double) -> Void
     @State private var player: AVPlayer?
     @State private var observer: Any?
     @State private var statusObserver: NSKeyValueObservation?
+    @State private var timeObserver: NSKeyValueObservation?
+    @State private var timeObserverToken: Any?
     @State private var didReportReady = false
+    @State private var didReportStarted = false
 
     var body: some View {
         VideoPlayer(player: player)
             .onAppear {
+                guard player == nil else { return }
                 let p = AVPlayer(url: url)
-                p.play()
                 player = p
                 observer = NotificationCenter.default.addObserver(
                     forName: .AVPlayerItemDidPlayToEndTime,
                     object: p.currentItem, queue: .main
-                ) { _ in Task { @MainActor in finished = true } }
+                ) { _ in Task { @MainActor in onFinished() } }
                 if let item = p.currentItem {
                     statusObserver = item.observe(\.status, options: [.initial, .new]) { item, _ in
-                        if item.status == .readyToPlay, !didReportReady {
-                            didReportReady = true
-                            DispatchQueue.main.async { onReady() }
+                        DispatchQueue.main.async {
+                            if item.status == .readyToPlay, !didReportReady {
+                                didReportReady = true
+                                onReady()
+                            }
                         }
                     }
                 }
+                timeObserver = p.observe(\.timeControlStatus, options: [.new]) { player, _ in
+                    DispatchQueue.main.async {
+                        if player.timeControlStatus == .playing,
+                           let item = player.currentItem,
+                           item.isPlaybackLikelyToKeepUp,
+                           !didReportStarted {
+                            didReportStarted = true
+                            onStarted()
+                        }
+                    }
+                }
+                let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
+                timeObserverToken = p.addPeriodicTimeObserver(
+                    forInterval: interval, queue: .main
+                ) { [weak p] time in
+                    guard let p, let item = p.currentItem, item.duration.seconds > 0 else { return }
+                    onProgress(min(max(time.seconds / item.duration.seconds, 0), 1))
+                }
+                if isActive && !paused { p.play() }
             }
             .onDisappear {
-                player?.pause()
-                if let obs = observer { NotificationCenter.default.removeObserver(obs) }
-                statusObserver?.invalidate()
+                teardown()
+            }
+            .onChange(of: isActive) { _, active in
+                if active && !paused { player?.play() } else { player?.pause() }
             }
             .onChange(of: paused) { _, isPaused in
-                if isPaused { player?.pause() } else { player?.play() }
+                if isPaused { player?.pause() } else if isActive { player?.play() }
             }
+    }
+
+    private func teardown() {
+        player?.pause()
+        if let token = timeObserverToken {
+            player?.removeTimeObserver(token)
+        }
+        timeObserverToken = nil
+        if let obs = observer {
+            NotificationCenter.default.removeObserver(obs)
+        }
+        observer = nil
+        statusObserver?.invalidate()
+        statusObserver = nil
+        timeObserver?.invalidate()
+        timeObserver = nil
+        player = nil
+        didReportReady = false
+        didReportStarted = false
     }
 }
 

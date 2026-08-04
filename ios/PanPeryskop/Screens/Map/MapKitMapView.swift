@@ -9,11 +9,14 @@ struct MapKitMapView: View {
     let currentUserId: String?
     @Binding var showReturnPill: Bool
     let centerThreshold: Double
+    let initialRegion: MKCoordinateRegion
     let onRegionChange: (Double, Double, Double, Double) -> Void
-    let onTapPost: (Post) -> Void
-    let onTapCluster: (PostCluster) -> Void
+    let onCameraSettled: (MKCoordinateRegion) -> Void
+    let onTapPost: (Post, MapBBox) -> Void
+    let onTapCluster: (PostCluster, MapBBox) -> Void
 
     @State private var camera: MapCameraPosition
+    @State private var visibleRegion: MKCoordinateRegion
     @State private var isChangingCity = false
 
     init(
@@ -24,9 +27,11 @@ struct MapKitMapView: View {
         currentUserId: String?,
         showReturnPill: Binding<Bool>,
         centerThreshold: Double,
+        initialRegion: MKCoordinateRegion,
         onRegionChange: @escaping (Double, Double, Double, Double) -> Void,
-        onTapPost: @escaping (Post) -> Void,
-        onTapCluster: @escaping (PostCluster) -> Void
+        onCameraSettled: @escaping (MKCoordinateRegion) -> Void,
+        onTapPost: @escaping (Post, MapBBox) -> Void,
+        onTapCluster: @escaping (PostCluster, MapBBox) -> Void
     ) {
         self.center = center
         self.zoom = zoom
@@ -35,11 +40,13 @@ struct MapKitMapView: View {
         self.currentUserId = currentUserId
         self._showReturnPill = showReturnPill
         self.centerThreshold = centerThreshold
+        self.initialRegion = initialRegion
         self.onRegionChange = onRegionChange
+        self.onCameraSettled = onCameraSettled
         self.onTapPost = onTapPost
         self.onTapCluster = onTapCluster
-        let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05))
-        self._camera = State(initialValue: .region(region))
+        self._camera = State(initialValue: .region(initialRegion))
+        self._visibleRegion = State(initialValue: initialRegion)
     }
 
     var body: some View {
@@ -53,10 +60,11 @@ struct MapKitMapView: View {
                             cluster: cluster,
                             currentUserId: currentUserId,
                             onTap: {
+                                let bbox = bbox(from: visibleRegion)
                                 if cluster.count == 1, let post = cluster.singlePost {
-                                    onTapPost(post)
+                                    onTapPost(post, bbox)
                                 } else {
-                                    onTapCluster(cluster)
+                                    onTapCluster(cluster, bbox)
                                 }
                             }
                         )
@@ -66,11 +74,13 @@ struct MapKitMapView: View {
             .mapStyle(.standard(pointsOfInterest: .excludingAll))
             .onMapCameraChange(frequency: .onEnd) { ctx in
                 let region = ctx.region
+                visibleRegion = region
                 let swLat = region.center.latitude - region.span.latitudeDelta / 2
                 let swLng = region.center.longitude - region.span.longitudeDelta / 2
                 let neLat = region.center.latitude + region.span.latitudeDelta / 2
                 let neLng = region.center.longitude + region.span.longitudeDelta / 2
                 onRegionChange(swLat, swLng, neLat, neLng)
+                onCameraSettled(region)
                 handleCameraSettled(at: region.center)
             }
             .onReceive(NotificationCenter.default.publisher(for: .flyToCity)) { note in
@@ -112,6 +122,15 @@ struct MapKitMapView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             showReturnPill = d > centerThreshold
         }
+    }
+
+    private func bbox(from region: MKCoordinateRegion) -> MapBBox {
+        MapBBox(
+            swLat: region.center.latitude - region.span.latitudeDelta / 2,
+            swLng: region.center.longitude - region.span.longitudeDelta / 2,
+            neLat: region.center.latitude + region.span.latitudeDelta / 2,
+            neLng: region.center.longitude + region.span.longitudeDelta / 2
+        )
     }
 }
 

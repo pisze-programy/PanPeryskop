@@ -75,8 +75,8 @@ struct ProfileView: View {
             guard let data = try await item.loadTransferable(type: Data.self) else { return }
             let image = UIImage(data: data)
             guard let image else { return }
-            let resized = image.resized(to: 512)
-            guard let jpeg = resized.jpegData(compressionQuality: 0.8) else { return }
+            let resized = image.resized(to: 128)
+            guard let jpeg = resized.jpegData(compressionQuality: 0.7) else { return }
             let url = try await APIClient.uploadAvatar(jpeg)
             authManager.avatarUrl = url
         } catch {
@@ -118,12 +118,15 @@ struct AvatarView: View {
 
 extension UIImage {
     func resized(to maxDim: CGFloat) -> UIImage {
-        let scale = min(maxDim / size.width, maxDim / size.height, 1)
-        guard scale < 1 else { return self }
-        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let pixelSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let s = min(maxDim / pixelSize.width, maxDim / pixelSize.height, 1)
+        guard s < 1 else { return self }
+        let target = CGSize(width: pixelSize.width * s, height: pixelSize.height * s)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: target, format: format)
         return renderer.image { _ in
-            draw(in: CGRect(origin: .zero, size: newSize))
+            draw(in: CGRect(origin: .zero, size: target))
         }
     }
 }

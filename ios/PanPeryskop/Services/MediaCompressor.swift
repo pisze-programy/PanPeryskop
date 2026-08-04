@@ -2,14 +2,14 @@ import UIKit
 import FYVideoCompressor
 
 enum MediaCompressor {
-    static func optimizePhoto(_ image: UIImage, maxDimension: CGFloat = 2048) -> Data? {
+    static func optimizePhoto(_ image: UIImage, maxDimension: CGFloat = 1080) -> Data? {
         let resized = image.resized(to: maxDimension)
         return resized.jpegData(compressionQuality: 0.8)
     }
 
     static func thumbnailData(_ image: UIImage, maxDimension: CGFloat = 320) -> Data? {
         let resized = image.resized(to: maxDimension)
-        return resized.jpegData(compressionQuality: 0.8)
+        return resized.jpegData(compressionQuality: 0.7)
     }
 
     static func compressVideo(from sourceURL: URL) async throws -> URL {

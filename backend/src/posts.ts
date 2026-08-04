@@ -73,6 +73,16 @@ postsRoutes.post('/', async (c) => {
         httpMetadata: { contentType: detectedType },
       });
       mediaKey = key;
+
+      const thumb = form.thumb as File | undefined;
+      if (thumb && thumb.size > 0 && thumb.size <= 2 * 1024 * 1024) {
+        const thumbData = new Uint8Array(await thumb.arrayBuffer());
+        thumbKey = `posts/${postId}/thumb.jpg`;
+        await c.env.MEDIA.put(thumbKey, thumbData, {
+          httpMetadata: { contentType: 'image/jpeg' },
+        });
+      }
+
       const result = await doSavePost(c.env, user, postId, type, lat, lng, description, mediaKey, thumbKey);
       return c.json(result, 201);
     }
@@ -144,6 +154,7 @@ async function doSavePost(
     description,
     status: 'pending',
     media_key: mediaKey,
+    thumb_key: thumbKey,
     created_at: now,
     expires_at: now + TTL_MS,
   };

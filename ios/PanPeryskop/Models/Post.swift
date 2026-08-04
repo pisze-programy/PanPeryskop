@@ -39,7 +39,12 @@ struct Post: Codable, Identifiable, Equatable {
 
     var resolvedThumbURL: URL? {
         if let url = thumb_url { return URL(string: url) }
+        if let key = thumb_key { return URL(string: "\(APIClient.baseURL)/media/\(key)") }
         return resolvedMediaURL
+    }
+
+    var hasThumb: Bool {
+        thumb_url != nil || thumb_key != nil
     }
 
     static func == (lhs: Post, rhs: Post) -> Bool { lhs.id == rhs.id }
@@ -65,6 +70,7 @@ struct CreatePostResponse: Codable {
     let type: String
     let status: String
     let media_key: String?
+    let thumb_key: String?
     let created_at: Int64
     let expires_at: Int64
 }

@@ -1,6 +1,18 @@
 import SwiftUI
 import CoreLocation
+import MapKit
 import Combine
+
+struct MapBBox {
+    let swLat: Double
+    let swLng: Double
+    let neLat: Double
+    let neLng: Double
+
+    func contains(lat: Double, lng: Double) -> Bool {
+        lat >= swLat && lat <= neLat && lng >= swLng && lng <= neLng
+    }
+}
 
 @MainActor
 class MapViewModel: ObservableObject {
@@ -11,7 +23,7 @@ class MapViewModel: ObservableObject {
     private var serverPosts: [Post] = []
     private var pendingCancellable: AnyCancellable?
     var currentUserId: String?
-    private var viewport: Viewport?
+    private var viewport: MapBBox?
     private var knownPostIds: Set<String> = []
     private var pollingTask: Task<Void, Never>?
     private var isFetchingStories = false
@@ -19,19 +31,51 @@ class MapViewModel: ObservableObject {
     private var isCityTransitionPending = false
     private var cityTransitionTask: Task<Void, Never>?
 
-    private struct Viewport {
-        let swLat: Double
-        let swLng: Double
-        let neLat: Double
-        let neLng: Double
+    private enum MapPrefs {
+        static let cityId = "map.last_city_id"
+        static let vpLat = "map.viewport.lat"
+        static let vpLng = "map.viewport.lng"
+        static let vpSpanLat = "map.viewport.span_lat"
+        static let vpSpanLng = "map.viewport.span_lng"
+
+        static var viewportKeys: [String] { [vpLat, vpLng, vpSpanLat, vpSpanLng] }
     }
 
     init() {
+        let savedCityId = UserDefaults.standard.string(forKey: MapPrefs.cityId)
+        selectedCity = City.all.first { $0.id == savedCityId } ?? .poznan
         pendingCancellable = PendingStore.shared.objectWillChange
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.refreshPosts()
             }
+    }
+
+    var restoredViewport: MKCoordinateRegion? {
+        let d = UserDefaults.standard
+        guard d.object(forKey: MapPrefs.vpLat) != nil else { return nil }
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: d.double(forKey: MapPrefs.vpLat),
+                longitude: d.double(forKey: MapPrefs.vpLng)
+            ),
+            span: MKCoordinateSpan(
+                latitudeDelta: d.double(forKey: MapPrefs.vpSpanLat),
+                longitudeDelta: d.double(forKey: MapPrefs.vpSpanLng)
+            )
+        )
+    }
+
+    var initialRegion: MKCoordinateRegion {
+        restoredViewport ?? selectedCity.region
+    }
+
+    func saveViewport(_ region: MKCoordinateRegion) {
+        let d = UserDefaults.standard
+        d.set(region.center.latitude, forKey: MapPrefs.vpLat)
+        d.set(region.center.longitude, forKey: MapPrefs.vpLng)
+        d.set(region.span.latitudeDelta, forKey: MapPrefs.vpSpanLat)
+        d.set(region.span.longitudeDelta, forKey: MapPrefs.vpSpanLng)
     }
 
     var allPosts: [Post] {
@@ -49,6 +93,8 @@ class MapViewModel: ObservableObject {
 
     func selectCity(_ city: City) {
         selectedCity = city
+        UserDefaults.standard.set(city.id, forKey: MapPrefs.cityId)
+        MapPrefs.viewportKeys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
         let region = city.region
         let swLat = region.center.latitude - region.span.latitudeDelta / 2
         let swLng = region.center.longitude - region.span.longitudeDelta / 2
@@ -69,7 +115,7 @@ class MapViewModel: ObservableObject {
     }
 
     func fetchStories(swLat: Double, swLng: Double, neLat: Double, neLng: Double) {
-        viewport = Viewport(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
+        viewport = MapBBox(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
         isRegionFetchPending = true
         debounceTask?.cancel()
         debounceTask = Task {
@@ -143,13 +189,33 @@ class MapViewModel: ObservableObject {
         }
     }
 
-    func viewerPosts(for clicked: Post) -> [Post] {
-        [clicked] + posts.filter { $0.id != clicked.id && !$0.watched }
+    func visiblePosts(in bbox: MapBBox) -> [Post] {
+        posts.filter { bbox.contains(lat: $0.lat, lng: $0.lng) && !$0.watched }
     }
 
-    func viewerPosts(forCluster clusterPosts: [Post]) -> [Post] {
+    func viewerPosts(for clicked: Post, in bbox: MapBBox) -> [Post] {
+        [clicked] + visiblePosts(in: bbox).filter { $0.id != clicked.id }
+    }
+
+    func viewerPosts(forCluster clusterPosts: [Post], in bbox: MapBBox) -> [Post] {
         let clusterIds = Set(clusterPosts.map(\.id))
-        return clusterPosts.filter { !$0.watched } + posts.filter { !clusterIds.contains($0.id) && !$0.watched }
+        return clusterPosts.filter { !$0.watched } + visiblePosts(in: bbox).filter { !clusterIds.contains($0.id) }
+    }
+
+    func viewerPosts(for clicked: Post) -> [Post] {
+        let bbox: MapBBox
+        if let viewport {
+            bbox = viewport
+        } else {
+            let region = selectedCity.region
+            bbox = MapBBox(
+                swLat: region.center.latitude - region.span.latitudeDelta / 2,
+                swLng: region.center.longitude - region.span.longitudeDelta / 2,
+                neLat: region.center.latitude + region.span.latitudeDelta / 2,
+                neLng: region.center.longitude + region.span.longitudeDelta / 2
+            )
+        }
+        return viewerPosts(for: clicked, in: bbox)
     }
 
     func markWatched(_ postId: String) async {

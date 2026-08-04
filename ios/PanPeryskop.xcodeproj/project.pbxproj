@@ -43,6 +43,7 @@
 		0AF85F0B111F42C315E257A2 /* MediaCompressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCompressor.swift; sourceTree = "<group>"; };
 		1057374311D0AF3FDAC2B2FF /* MapKitMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapKitMapView.swift; sourceTree = "<group>"; };
 		11FEA4CA8A5185D280CA5E6B /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		1C034880D4F034B9E69C2EED /* LazyPager */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LazyPager; path = vendor/LazyPager; sourceTree = SOURCE_ROOT; };
 		1F6D48B0D6B33CDCFC980CBD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		26B39C8507608E9E09A4C87D /* PendingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingStore.swift; sourceTree = "<group>"; };
 		364467F234AEB3E0D0E2513C /* FaveLikeButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaveLikeButton.swift; sourceTree = "<group>"; };
@@ -50,7 +51,7 @@
 		44766F2DE7DFC8576566A0AF /* DescriptionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStepView.swift; sourceTree = "<group>"; };
 		6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		702099485B19214D722CB2AB /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
-		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E2581E6150C834401927100 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
 		9C0C2297077E1CF861F55EF2 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		BB11E724A06F70ED3DA7B0F5 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
@@ -126,6 +127,7 @@
 		47474A9108ACCDF7E2C4B210 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
+				1C034880D4F034B9E69C2EED /* LazyPager */,
 				4243C0678522339A2173990C /* YPImagePicker */,
 			);
 			name = Packages;
@@ -237,6 +239,11 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					B2CAE5D22E6E40FA50591BB7 = {
+						DevelopmentTeam = 3UKH2QRFKZ;
+					};
+				};
 			};
 			buildConfigurationList = 9D82191E0BB8E5BB3492A853 /* Build configuration list for PBXProject "PanPeryskop" */;
 			developmentRegion = en;
@@ -250,7 +257,7 @@
 			packageReferences = (
 				3E4D182D36DBB16871BA4EF4 /* XCRemoteSwiftPackageReference "FYVideoCompressor" */,
 				F4B76D6ABBFB2973FB083892 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
-				DC6045FECF41B0F0A1BC485D /* XCRemoteSwiftPackageReference "SwiftUI-LazyPager" */,
+				8AD969F7942CFF7D09173F7F /* XCLocalSwiftPackageReference "vendor/LazyPager" */,
 				FDDD76CB329425548FCD3F5E /* XCLocalSwiftPackageReference "vendor/YPImagePicker" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -313,7 +320,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PanPeryskop/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Potrzebujemy dostępu do aparatu, aby nagrywać treści.";
@@ -325,7 +331,12 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = (
+					UIInterfaceOrientationPortrait,
+					UIInterfaceOrientationPortraitUpsideDown,
+					UIInterfaceOrientationLandscapeLeft,
+					UIInterfaceOrientationLandscapeRight,
+				);
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -342,7 +353,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PanPeryskop/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Potrzebujemy dostępu do aparatu, aby nagrywać treści.";
@@ -354,7 +364,12 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = (
+					UIInterfaceOrientationPortrait,
+					UIInterfaceOrientationPortraitUpsideDown,
+					UIInterfaceOrientationLandscapeLeft,
+					UIInterfaceOrientationLandscapeRight,
+				);
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -402,7 +417,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -462,7 +477,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -517,6 +532,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		8AD969F7942CFF7D09173F7F /* XCLocalSwiftPackageReference "vendor/LazyPager" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = vendor/LazyPager;
+		};
 		FDDD76CB329425548FCD3F5E /* XCLocalSwiftPackageReference "vendor/YPImagePicker" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = vendor/YPImagePicker;
@@ -532,14 +551,6 @@
 				minimumVersion = 0.0.6;
 			};
 		};
-		DC6045FECF41B0F0A1BC485D /* XCRemoteSwiftPackageReference "SwiftUI-LazyPager" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/gh123man/SwiftUI-LazyPager";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
 		F4B76D6ABBFB2973FB083892 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
@@ -553,7 +564,6 @@
 /* Begin XCSwiftPackageProductDependency section */
 		4A677370EF0D1A3DA130B241 /* LazyPager */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = DC6045FECF41B0F0A1BC485D /* XCRemoteSwiftPackageReference "SwiftUI-LazyPager" */;
 			productName = LazyPager;
 		};
 		5A701F52FD63A75ECBD6B80F /* YPImagePicker */ = {

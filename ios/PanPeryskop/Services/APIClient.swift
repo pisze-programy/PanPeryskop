@@ -55,6 +55,7 @@ struct APIClient {
         fileData: Data,
         fileName: String,
         mimeType: String,
+        thumbData: Data?,
         fields: [String: String]
     ) async throws -> CreatePostResponse {
         let url = URL(string: "\(baseURL)\(path)")!
@@ -77,7 +78,15 @@ struct APIClient {
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
         body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
         body.append(fileData)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        body.append("\r\n".data(using: .utf8)!)
+        if let thumbData {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"thumb\"; filename=\"thumb.jpg\"\r\n".data(using: .utf8)!)
+            body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+            body.append(thumbData)
+            body.append("\r\n".data(using: .utf8)!)
+        }
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
         request.httpBody = body
 

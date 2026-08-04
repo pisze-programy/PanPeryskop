@@ -36,15 +36,6 @@
           "revision": "6192b6216f821b7132e9b772108f25af8cf8ebc5",
           "version": "6.2.2"
         }
-      },
-      {
-        "package": "LazyPager",
-        "repositoryURL": "https://github.com/gh123man/SwiftUI-LazyPager",
-        "state": {
-          "branch": null,
-          "revision": "be4b1952c1054e8b7802863005184eefd42104bd",
-          "version": "1.2.1"
-        }
       }
     ]
   },

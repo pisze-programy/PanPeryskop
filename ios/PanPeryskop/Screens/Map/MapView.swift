@@ -101,12 +101,8 @@ struct MapScreen: View {
 
             VStack {
                 Spacer()
-                HStack {
-                    categoryPill
-                    Spacer()
-                }
-                .padding(.leading, 16)
-                .padding(.bottom, 112)
+                categoryPill
+                    .padding(.bottom, 112)
             }
         }
         .onAppear {
@@ -151,14 +147,14 @@ struct MapScreen: View {
                 } label: {
                     Text(cat.label)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(viewModel.feedCategory == cat ? Color.white : Color.primary)
+                        .foregroundColor(.primary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background {
                             if viewModel.feedCategory == cat {
                                 Capsule()
-                                    .fill(.tint)
-                                    .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+                                    .fill(Color(.systemGray5))
+                                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                             }
                         }
                 }

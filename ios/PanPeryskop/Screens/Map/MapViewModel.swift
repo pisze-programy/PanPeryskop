@@ -80,7 +80,7 @@ class MapViewModel: ObservableObject {
     }
 
     var allPosts: [Post] {
-        serverPosts.filter { $0.isStillValid && $0.category == feedCategory.rawValue }
+        serverPosts.filter { $0.isStillValid && ($0.category ?? "live") == feedCategory.rawValue }
     }
 
     var defaultCenter: CLLocationCoordinate2D { selectedCity.center }

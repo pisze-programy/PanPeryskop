@@ -95,7 +95,7 @@ struct MapScreen: View {
                         .shadow(radius: 4)
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .padding(.bottom, 120)
+                    .padding(.bottom, 176)
                 }
             }
 

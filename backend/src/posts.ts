@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { nanoid } from 'nanoid';
-import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS } from './models';
+import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, POST_TYPE_SET, STATUS_APPROVED, STATUS_PENDING, PostRow } from './models';
+import { strField, fileField, ParsedForm } from './form';
 
 export const postsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -51,16 +52,16 @@ postsRoutes.post('/', async (c) => {
     return c.json({ error: 'Media posts must use multipart/form-data' }, 400);
   }
 
-  const form = await c.req.parseBody();
+  const form = await c.req.parseBody() as ParsedForm;
 
-  const type = (form.type as string) || 'photo';
-  if (type !== 'photo' && type !== 'video') {
+  const type = strField(form, 'type') ?? 'photo';
+  if (!POST_TYPE_SET.has(type)) {
     return c.json({ error: 'Invalid post type' }, 400);
   }
 
-  const lat = parseFloat(form.lat as string);
-  const lng = parseFloat(form.lng as string);
-  const description = (form.description as string) || '';
+  const lat = parseFloat(strField(form, 'lat') ?? '');
+  const lng = parseFloat(strField(form, 'lng') ?? '');
+  const description = strField(form, 'description') ?? '';
   if (!isFinite(lat) || !isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
     return c.json({ error: 'Invalid coordinates' }, 400);
   }
@@ -69,31 +70,34 @@ postsRoutes.post('/', async (c) => {
   // (future) instant so events become visible inside the [now-24h, now] window.
   const now = Date.now();
   let createdAt = now;
-  if (form.created_at) {
-    const v = parseInt(form.created_at as string, 10);
+  const createdAtRaw = strField(form, 'created_at');
+  if (createdAtRaw !== undefined) {
+    const v = parseInt(createdAtRaw, 10);
     if (!isFinite(v)) return c.json({ error: 'Invalid created_at' }, 400);
     if (v < now - TTL_MS) return c.json({ error: 'created_at too far in the past' }, 400);
     if (v > now + MAX_LOOKAHEAD_MS) return c.json({ error: 'created_at too far in the future' }, 400);
     createdAt = v;
   }
 
-  const isSponsored = form.is_sponsored === '1' || form.is_sponsored === 'true';
+  const isSponsored = strField(form, 'is_sponsored') === '1' || strField(form, 'is_sponsored') === 'true';
 
   let linkUrl: string | null = null;
-  if (form.link_url) {
-    const lv = (form.link_url as string).trim();
+  const linkUrlRaw = strField(form, 'link_url');
+  if (linkUrlRaw) {
+    const lv = linkUrlRaw.trim();
     if (!isValidHttpUrl(lv)) return c.json({ error: 'Invalid link_url' }, 400);
     linkUrl = lv;
   }
 
   let externalId: string | null = null;
-  if (form.external_id) {
-    const ev = (form.external_id as string).trim();
+  const externalIdRaw = strField(form, 'external_id');
+  if (externalIdRaw) {
+    const ev = externalIdRaw.trim();
     if (!ev || ev.length > MAX_EXTERNAL_ID_LEN) return c.json({ error: 'Invalid external_id' }, 400);
     externalId = ev;
   }
 
-  const file = form.file as File | undefined;
+  const file = fileField(form, 'file');
   if (!file || file.size === 0) return c.json({ error: 'Missing media file' }, 400);
   if (file.size > 100 * 1024 * 1024) return c.json({ error: 'File too large (max 100MB)' }, 413);
 
@@ -123,7 +127,7 @@ postsRoutes.post('/', async (c) => {
   await c.env.MEDIA.put(mediaKey, fileData, { httpMetadata: { contentType: detectedType } });
 
   let thumbKey: string | null = null;
-  const thumb = form.thumb as File | undefined;
+  const thumb = fileField(form, 'thumb');
   if (thumb && thumb.size > 0 && thumb.size <= 2 * 1024 * 1024) {
     const thumbData = new Uint8Array(await thumb.arrayBuffer());
     thumbKey = `posts/${postId}/thumb.jpg`;
@@ -173,7 +177,7 @@ async function doSavePost(
     await db
       .prepare(
         `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id)
-         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_PENDING}', ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId)
       .run();
@@ -191,7 +195,7 @@ async function doSavePost(
     lat,
     lng,
     description,
-    status: 'pending',
+    status: STATUS_PENDING,
     media_key: mediaKey,
     thumb_key: thumbKey,
     created_at: createdAt,
@@ -210,11 +214,11 @@ postsRoutes.get('/:id', async (c) => {
       `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key
        FROM posts p
        JOIN users u ON p.user_id = u.id
-       WHERE p.id = ? AND p.status = 'approved'
+       WHERE p.id = ? AND p.status = '${STATUS_APPROVED}'
        AND p.created_at >= ? AND p.created_at <= ?`
     )
     .bind(c.req.param('id'), now - TTL_MS, now)
-    .first();
+    .first<PostRow & { author_name: string; author_avatar_key: string | null }>();
 
   if (!post) return c.json({ error: 'Not found' }, 404);
 

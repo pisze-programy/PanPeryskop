@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
+import { fileField, ParsedForm } from './form';
 
 export const usersRoutes = new Hono<{ Bindings: Env }>();
 
@@ -26,8 +27,8 @@ usersRoutes.post('/avatar', async (c) => {
     return c.json({ error: 'Expected multipart/form-data' }, 400);
   }
 
-  const form = await c.req.parseBody();
-  const file = form.file as File | undefined;
+  const form = await c.req.parseBody() as ParsedForm;
+  const file = fileField(form, 'file');
   if (!file) return c.json({ error: 'Missing file' }, 400);
 
   const data = new Uint8Array(await file.arrayBuffer());

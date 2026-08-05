@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
-import { Post, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET } from './models';
+import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED, STATUS_PENDING } from './models';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
 
@@ -14,28 +14,55 @@ function popularityExpr(): string {
   return `(p.views_count * ${WV} + p.likes_count * ${WL} + p.shares_count * ${WS}) * (1 + (CAST(p.likes_count AS REAL) / MAX(p.views_count, 1)))`;
 }
 
-function storyJson(p: Post & { author_name: string; watched?: number }, c: { env: Env }): any {
+// Map a D1 row to the public story shape. No `as any` — the row type carries the
+// raw 0/1 integers and we coerce explicitly.
+function storyJson(r: StoryRow, c: { env: Env }): any {
   return {
-    ...p,
-    is_sponsored: (p as any).is_sponsored === 1,
+    id: r.id,
+    user_id: r.user_id,
+    type: r.type,
+    lat: r.lat,
+    lng: r.lng,
+    description: r.description,
+    status: r.status,
+    media_key: r.media_key,
+    thumb_key: r.thumb_key,
+    duration_ms: r.duration_ms,
+    created_at: r.created_at,
+    likes_count: r.likes_count,
+    views_count: r.views_count,
+    shares_count: r.shares_count,
+    grid_cell_id: r.grid_cell_id,
+    is_sponsored: r.is_sponsored === 1,
+    category: r.category,
+    link_url: r.link_url,
+    external_id: r.external_id,
     liked: false,
-    watched: (p as any).watched === 1,
-    author_name: p.author_name || 'unknown',
-    author_avatar_url: (p as any).author_avatar_key
-      ? mediaUrl(c, (p as any).author_avatar_key)
-      : null,
-    media_url: p.media_key ? mediaUrl(c, p.media_key) : null,
-    thumb_url: p.thumb_key ? mediaUrl(c, p.thumb_key) : (p.media_key ? mediaUrl(c, p.media_key) : null),
+    watched: (r.watched ?? 0) === 1,
+    author_name: r.author_name || 'unknown',
+    author_avatar_url: r.author_avatar_key ? mediaUrl(c, r.author_avatar_key) : null,
+    media_url: r.media_key ? mediaUrl(c, r.media_key) : null,
+    thumb_url: r.thumb_key ? mediaUrl(c, r.thumb_key) : (r.media_key ? mediaUrl(c, r.media_key) : null),
   };
+}
+
+type Query = Record<string, string | undefined>;
+
+// Validate the bbox query params; missing/invalid -> null (caller returns 400).
+function parseBBox(q: Query): { swLat: number; swLng: number; neLat: number; neLng: number } | null {
+  const num = (v: string | undefined) => (v === undefined ? NaN : parseFloat(v));
+  const swLat = num(q.sw_lat), swLng = num(q.sw_lng), neLat = num(q.ne_lat), neLng = num(q.ne_lng);
+  if (!isFinite(swLat) || !isFinite(swLng) || !isFinite(neLat) || !isFinite(neLng)) return null;
+  if (neLat <= swLat || neLng <= swLng) return null;
+  return { swLat, swLng, neLat, neLng };
 }
 
 storiesRoutes.get('/', async (c) => {
   const db = c.env.DB;
   const q = c.req.query();
-  const swLat = parseFloat(q.sw_lat || '0');
-  const swLng = parseFloat(q.sw_lng || '0');
-  const neLat = parseFloat(q.ne_lat || '0');
-  const neLng = parseFloat(q.ne_lng || '0');
+  const bbox = parseBBox(q);
+  if (!bbox) return c.json({ error: 'Invalid or missing bbox' }, 400);
+  const { swLat, swLng, neLat, neLng } = bbox;
   const now = Date.now();
   const windowStart = now - TTL_MS;
   const category = q.category && POST_CATEGORY_SET.has(q.category) ? q.category : null;
@@ -54,14 +81,14 @@ storiesRoutes.get('/', async (c) => {
            LEFT JOIN views v ON v.post_id = p.id AND v.user_id = ?
            WHERE p.lat BETWEEN ? AND ?
            AND p.lng BETWEEN ? AND ?
-           AND p.status = 'approved'
+           AND p.status = '${STATUS_APPROVED}'
            AND p.created_at >= ? AND p.created_at <= ?
            ${catCond}
            ORDER BY ${popularityExpr()} DESC
            LIMIT 50`
         )
         .bind(user.id, swLat, neLat, swLng, neLng, windowStart, now, ...(category ? [category] : []))
-        .all<Post & { author_name: string; author_avatar_key: string | null; watched: number }>();
+        .all<StoryRow>();
 
       const { results: pendingResults } = await db
         .prepare(
@@ -73,17 +100,17 @@ storiesRoutes.get('/', async (c) => {
            WHERE p.user_id = ?
            AND p.lat BETWEEN ? AND ?
            AND p.lng BETWEEN ? AND ?
-           AND p.status = 'pending'
+           AND p.status = '${STATUS_PENDING}'
            AND p.created_at >= ? AND p.created_at <= ?
            ${catCond}
            ORDER BY p.created_at DESC
            LIMIT 50`
         )
         .bind(user.id, user.id, swLat, neLat, swLng, neLng, windowStart, now, ...(category ? [category] : []))
-        .all<Post & { author_name: string; author_avatar_key: string | null; watched: number }>();
+        .all<StoryRow>();
 
       return c.json({
-        stories: [...(results as any[]), ...(pendingResults as any[])].map((p) => storyJson(p, c)),
+        stories: [...results, ...pendingResults].map((p) => storyJson(p, c)),
       });
     }
   }
@@ -95,27 +122,26 @@ storiesRoutes.get('/', async (c) => {
        JOIN users u ON p.user_id = u.id
        WHERE p.lat BETWEEN ? AND ?
        AND p.lng BETWEEN ? AND ?
-       AND p.status = 'approved'
+       AND p.status = '${STATUS_APPROVED}'
        AND p.created_at >= ? AND p.created_at <= ?
        ${catCond}
        ORDER BY ${popularityExpr()} DESC
        LIMIT 50`
     )
     .bind(swLat, neLat, swLng, neLng, windowStart, now, ...(category ? [category] : []))
-    .all<Post & { author_name: string; author_avatar_key: string | null }>();
+    .all<StoryRow>();
 
   return c.json({
-    stories: (results as any[]).map((p) => storyJson(p, c)),
+    stories: results.map((p) => storyJson(p, c)),
   });
 });
 
 storiesRoutes.get('/heatmap', async (c) => {
   const db = c.env.DB;
   const q = c.req.query();
-  const swLat = parseFloat(q.sw_lat || '0');
-  const swLng = parseFloat(q.sw_lng || '0');
-  const neLat = parseFloat(q.ne_lat || '0');
-  const neLng = parseFloat(q.ne_lng || '0');
+  const bbox = parseBBox(q);
+  if (!bbox) return c.json({ error: 'Invalid or missing bbox' }, 400);
+  const { swLat, swLng, neLat, neLng } = bbox;
   const now = Date.now();
   const windowStart = now - TTL_MS;
 
@@ -125,7 +151,7 @@ storiesRoutes.get('/heatmap', async (c) => {
        FROM posts
        WHERE lat BETWEEN ? AND ?
        AND lng BETWEEN ? AND ?
-       AND status = 'approved'
+       AND status = '${STATUS_APPROVED}'
        AND created_at >= ? AND created_at <= ?
        GROUP BY grid_cell_id
        HAVING COUNT(*) > 0`

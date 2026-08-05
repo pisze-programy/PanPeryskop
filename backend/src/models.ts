@@ -31,10 +31,51 @@ export interface Post {
   external_id: string | null;
 }
 
+// D1 row shape — SQLite returns 0/1 for boolean columns.
+export interface PostRow {
+  id: string;
+  user_id: string;
+  type: string;
+  lat: number;
+  lng: number;
+  description: string;
+  status: string;
+  media_key: string | null;
+  thumb_key: string | null;
+  duration_ms: number | null;
+  created_at: number;
+  likes_count: number;
+  views_count: number;
+  shares_count: number;
+  grid_cell_id: string | null;
+  is_sponsored: number;
+  category: string;
+  link_url: string | null;
+  external_id: string | null;
+}
+
+// A post row joined with author info (and optional watched flag) for /stories.
+export interface StoryRow extends PostRow {
+  author_name: string;
+  author_avatar_key: string | null;
+  watched?: number;
+}
+
 // Content category enum — NOT driven by is_sponsored (which is visual only).
 export const POST_CATEGORIES = ['live', 'events'] as const;
 export type PostCategory = (typeof POST_CATEGORIES)[number];
 export const POST_CATEGORY_SET: ReadonlySet<string> = new Set<string>(POST_CATEGORIES);
+
+// Media types and moderation statuses — single source of truth.
+export const POST_TYPES = ['photo', 'video'] as const;
+export type PostType = (typeof POST_TYPES)[number];
+export const POST_TYPE_SET: ReadonlySet<string> = new Set<string>(POST_TYPES);
+
+export const STATUS_PENDING = 'pending';
+export const STATUS_APPROVED = 'approved';
+export const STATUS_REJECTED = 'rejected';
+export const POST_STATUSES = [STATUS_PENDING, STATUS_APPROVED, STATUS_REJECTED] as const;
+export type PostStatus = (typeof POST_STATUSES)[number];
 
 export interface Story extends Omit<Post, 'status'> {
   liked: boolean;

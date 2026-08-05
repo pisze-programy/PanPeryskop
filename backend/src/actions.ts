@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
-import { TTL_MS } from './models';
+import { TTL_MS, STATUS_APPROVED } from './models';
 
 export const actionsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -17,7 +17,7 @@ actionsRoutes.post('/:id/like', async (c) => {
     .first<{ status: string; user_id: string }>();
   if (!post) return c.json({ error: 'Not found' }, 404);
   // Pending posts are private to their author.
-  if (post.status !== 'approved' && post.user_id !== user.id) {
+  if (post.status !== STATUS_APPROVED && post.user_id !== user.id) {
     return c.json({ error: 'Not found' }, 404);
   }
 
@@ -49,7 +49,7 @@ actionsRoutes.post('/:id/share', async (c) => {
     .first<{ status: string; user_id: string }>();
   if (!post) return c.json({ error: 'Not found' }, 404);
   // Pending posts are private to their author.
-  if (post.status !== 'approved' && post.user_id !== user.id) {
+  if (post.status !== STATUS_APPROVED && post.user_id !== user.id) {
     return c.json({ error: 'Not found' }, 404);
   }
 
@@ -71,7 +71,7 @@ actionsRoutes.post('/:id/watched', async (c) => {
     .first<{ status: string; user_id: string }>();
   if (!post) return c.json({ error: 'Not found' }, 404);
   // Pending posts are private to their author.
-  if (post.status !== 'approved' && post.user_id !== user.id) {
+  if (post.status !== STATUS_APPROVED && post.user_id !== user.id) {
     return c.json({ error: 'Not found' }, 404);
   }
 
@@ -82,7 +82,7 @@ actionsRoutes.post('/:id/watched', async (c) => {
     await db.prepare('INSERT INTO views (user_id, post_id, created_at) VALUES (?, ?, ?)')
       .bind(user.id, postId, Date.now()).run();
     // Do not count the author's own pending post as a public view.
-    if (post.status === 'approved') {
+    if (post.status === STATUS_APPROVED) {
       await db.prepare('UPDATE posts SET views_count = views_count + 1 WHERE id = ?')
         .bind(postId).run();
     }

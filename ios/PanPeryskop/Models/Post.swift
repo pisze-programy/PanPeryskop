@@ -23,6 +23,7 @@ struct Post: Codable, Identifiable, Equatable {
     let thumb_url: String?
     let author_avatar_url: String?
     let is_sponsored: Bool?
+    let category: String?
     let link_url: String?
 
     var coordinate: CLLocationCoordinate2D {

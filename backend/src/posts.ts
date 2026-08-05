@@ -155,25 +155,27 @@ async function doSavePost(
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
+  // Category is assigned server-side: seed (has external_id) -> 'events', app -> 'live'.
+  const category = externalId ? 'events' : 'live';
 
   if (isUpdate) {
     await db
       .prepare(
         `UPDATE posts
          SET type = ?, lat = ?, lng = ?, description = ?, media_key = ?, thumb_key = ?,
-             is_sponsored = ?, link_url = ?, created_at = ?, external_id = ?
+             is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, linkUrl, createdAt, externalId, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, link_url, external_id)
-         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id)
+         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, linkUrl, externalId)
+      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId)
       .run();
     await db
       .prepare(
@@ -194,6 +196,7 @@ async function doSavePost(
     thumb_key: thumbKey,
     created_at: createdAt,
     is_sponsored: isSponsored,
+    category,
     link_url: linkUrl,
     external_id: externalId,
   };

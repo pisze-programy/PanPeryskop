@@ -26,9 +26,14 @@ export interface Post {
   shares_count: number;
   grid_cell_id: string | null;
   is_sponsored: boolean;
+  category: string;
   link_url: string | null;
   external_id: string | null;
 }
+
+// Content category enum — NOT driven by is_sponsored (which is visual only).
+export const POST_CATEGORIES = ['live', 'events'] as const;
+export type PostCategory = (typeof POST_CATEGORIES)[number];
 
 export interface Story extends Omit<Post, 'status'> {
   liked: boolean;

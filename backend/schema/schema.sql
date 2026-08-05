@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS posts (
   shares_count  INTEGER NOT NULL DEFAULT 0,
   grid_cell_id  TEXT,
   is_sponsored  INTEGER NOT NULL DEFAULT 0,
+  category      TEXT NOT NULL DEFAULT 'live',
   link_url      TEXT,
   external_id   TEXT
 );

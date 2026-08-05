@@ -38,6 +38,8 @@ storiesRoutes.get('/', async (c) => {
   const neLng = parseFloat(q.ne_lng || '0');
   const now = Date.now();
   const windowStart = now - TTL_MS;
+  const category = q.category === 'live' || q.category === 'events' ? q.category : null;
+  const catCond = category ? 'AND p.category = ?' : '';
 
   const authHeader = c.req.header('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
@@ -54,10 +56,11 @@ storiesRoutes.get('/', async (c) => {
            AND p.lng BETWEEN ? AND ?
            AND p.status = 'approved'
            AND p.created_at >= ? AND p.created_at <= ?
+           ${catCond}
            ORDER BY ${popularityExpr()} DESC
            LIMIT 50`
         )
-        .bind(user.id, swLat, neLat, swLng, neLng, windowStart, now)
+        .bind(user.id, swLat, neLat, swLng, neLng, windowStart, now, ...(category ? [category] : []))
         .all<Post & { author_name: string; author_avatar_key: string | null; watched: number }>();
 
       const { results: pendingResults } = await db
@@ -72,10 +75,11 @@ storiesRoutes.get('/', async (c) => {
            AND p.lng BETWEEN ? AND ?
            AND p.status = 'pending'
            AND p.created_at >= ? AND p.created_at <= ?
+           ${catCond}
            ORDER BY p.created_at DESC
            LIMIT 50`
         )
-        .bind(user.id, user.id, swLat, neLat, swLng, neLng, windowStart, now)
+        .bind(user.id, user.id, swLat, neLat, swLng, neLng, windowStart, now, ...(category ? [category] : []))
         .all<Post & { author_name: string; author_avatar_key: string | null; watched: number }>();
 
       return c.json({
@@ -93,10 +97,11 @@ storiesRoutes.get('/', async (c) => {
        AND p.lng BETWEEN ? AND ?
        AND p.status = 'approved'
        AND p.created_at >= ? AND p.created_at <= ?
+       ${catCond}
        ORDER BY ${popularityExpr()} DESC
        LIMIT 50`
     )
-    .bind(swLat, neLat, swLng, neLng, windowStart, now)
+    .bind(swLat, neLat, swLng, neLng, windowStart, now, ...(category ? [category] : []))
     .all<Post & { author_name: string; author_avatar_key: string | null }>();
 
   return c.json({

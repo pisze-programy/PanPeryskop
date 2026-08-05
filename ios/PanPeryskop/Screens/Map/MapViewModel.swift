@@ -13,11 +13,19 @@ struct MapBBox {
     }
 }
 
+/// Content category shown on the map. Matches the backend `category` enum.
+enum FeedCategory: String, CaseIterable, Identifiable {
+    case events, live
+    var id: String { rawValue }
+    var label: String { self == .events ? "Wydarzenia" : "Live" }
+}
+
 @MainActor
 class MapViewModel: ObservableObject {
     @Published var posts: [Post] = []
     @Published var isLoading = false
     @Published var selectedCity: City = .poznan
+    @Published var feedCategory: FeedCategory = .events
 
     private var serverPosts: [Post] = []
     var currentUserId: String?
@@ -72,7 +80,7 @@ class MapViewModel: ObservableObject {
     }
 
     var allPosts: [Post] {
-        serverPosts.filter { $0.isStillValid }
+        serverPosts.filter { $0.isStillValid && $0.category == feedCategory.rawValue }
     }
 
     var defaultCenter: CLLocationCoordinate2D { selectedCity.center }
@@ -81,6 +89,12 @@ class MapViewModel: ObservableObject {
     func refreshCurrentRegion() {
         guard let viewport else { return }
         fetchStories(swLat: viewport.swLat, swLng: viewport.swLng, neLat: viewport.neLat, neLng: viewport.neLng)
+    }
+
+    func selectFeedCategory(_ category: FeedCategory) {
+        guard feedCategory != category else { return }
+        feedCategory = category
+        refreshCurrentRegion()
     }
 
     private var debounceTask: Task<Void, Never>?
@@ -132,6 +146,7 @@ class MapViewModel: ObservableObject {
             "sw_lng": String(swLng),
             "ne_lat": String(neLat),
             "ne_lng": String(neLng),
+            "category": feedCategory.rawValue,
         ]
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)
@@ -232,7 +247,7 @@ class MapViewModel: ObservableObject {
             liked: post.liked, watched: watched, status: post.status,
             author_name: post.author_name, media_url: post.media_url, thumb_url: post.thumb_url,
             author_avatar_url: post.author_avatar_url,
-            is_sponsored: post.is_sponsored, link_url: post.link_url
+            is_sponsored: post.is_sponsored, category: post.category, link_url: post.link_url
         )
     }
 
@@ -253,7 +268,7 @@ class MapViewModel: ObservableObject {
                     liked: resp.liked, watched: updated.watched, status: updated.status,
                     author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
                     author_avatar_url: updated.author_avatar_url,
-                    is_sponsored: updated.is_sponsored, link_url: updated.link_url
+                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url
                 )
                 posts[idx] = updated
             }

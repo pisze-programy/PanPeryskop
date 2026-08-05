@@ -98,6 +98,16 @@ struct MapScreen: View {
                     .padding(.bottom, 120)
                 }
             }
+
+            VStack {
+                Spacer()
+                HStack {
+                    categoryPill
+                    Spacer()
+                }
+                .padding(.leading, 16)
+                .padding(.bottom, 112)
+            }
         }
         .onAppear {
             viewModel.currentUserId = authManager.userId
@@ -129,6 +139,36 @@ struct MapScreen: View {
                 NotificationCenter.default.post(name: .flyToCity, object: city)
             }
         }
+    }
+
+    private var categoryPill: some View {
+        HStack(spacing: 4) {
+            ForEach(FeedCategory.allCases) { cat in
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                        viewModel.selectFeedCategory(cat)
+                    }
+                } label: {
+                    Text(cat.label)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(viewModel.feedCategory == cat ? Color.white : Color.primary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background {
+                            if viewModel.feedCategory == cat {
+                                Capsule()
+                                    .fill(.tint)
+                                    .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
+        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
     }
 }
 

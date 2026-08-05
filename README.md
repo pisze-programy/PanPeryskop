@@ -31,6 +31,12 @@ open ios/PanPeryskop.xcodeproj
 cd admin && npm install && node src/cli.js queue
 ```
 
+## Event seeding
+- **Automated import (current):** see `admin/seed/SEED-PLAYBOOK.md` (agent
+  playbook — local, gitignored). Shortcut: `SEED.md` at repo root.
+- Scripts: `admin/src/seed-import.mjs` (fetch → candidates) and
+  `admin/src/seed-ingest.mjs` (upload → pending).
+
 ## API (Worker)
 
 | Endpoint | Description |

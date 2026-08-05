@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:8787';
+const BASE_URL = process.env.BASE_URL || 'https://panperyskop-api.dev-4cb.workers.dev';
 const ADMIN_SECRET = process.env.ADMIN_SECRET || 'panperyskop-admin-dev';
 
 const headers = {

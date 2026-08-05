@@ -7,22 +7,19 @@ struct City: Identifiable, Hashable {
     let lat: Double
     let lng: Double
     let span: MKCoordinateSpan
-    let isActive: Bool
 
     init(
         id: String,
         name: String,
         lat: Double,
         lng: Double,
-        span: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05),
-        isActive: Bool = false
+        span: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     ) {
         self.id = id
         self.name = name
         self.lat = lat
         self.lng = lng
         self.span = span
-        self.isActive = isActive
     }
 
     var center: CLLocationCoordinate2D {
@@ -34,9 +31,9 @@ struct City: Identifiable, Hashable {
     }
 
     static let all: [City] = [
-        City(id: "poznan", name: "Poznań", lat: 52.4064, lng: 16.9252, isActive: true),
-        City(id: "warszawa", name: "Warszawa", lat: 52.2297, lng: 21.0122, isActive: true),
-        City(id: "gdansk", name: "Gdańsk", lat: 54.3520, lng: 18.6466, isActive: true),
+        City(id: "poznan", name: "Poznań", lat: 52.4064, lng: 16.9252),
+        City(id: "warszawa", name: "Warszawa", lat: 52.2297, lng: 21.0122),
+        City(id: "gdansk", name: "Gdańsk", lat: 54.3520, lng: 18.6466),
         City(id: "krakow", name: "Kraków", lat: 50.0647, lng: 19.9450),
         City(id: "lodz", name: "Łódź", lat: 51.7592, lng: 19.4560),
         City(id: "wroclaw", name: "Wrocław", lat: 51.1079, lng: 17.0385),
@@ -46,9 +43,6 @@ struct City: Identifiable, Hashable {
         City(id: "katowice", name: "Katowice", lat: 50.2649, lng: 19.0238),
         City(id: "bialystok", name: "Białystok", lat: 53.1325, lng: 23.1688),
     ]
-
-    static var active: [City] { all.filter(\.isActive) }
-    static var soon: [City] { all.filter { !$0.isActive } }
 
     static let poznan = all[0]
 

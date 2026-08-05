@@ -25,6 +25,12 @@ backend/dist/
 # Seed media (posters/videos) — never commit these
 admin/seed/media/
 
+# Operational agent playbook — not for the public repo
+admin/seed/SEED-PLAYBOOK.md
+
+# Source-access importer (contains Algolia key / internal goingapp API / Cloudinary sig)
+admin/src/seed-import.mjs
+
 # Env
 .env
 *.env.local

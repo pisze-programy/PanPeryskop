@@ -34,6 +34,7 @@ export interface Post {
 // Content category enum — NOT driven by is_sponsored (which is visual only).
 export const POST_CATEGORIES = ['live', 'events'] as const;
 export type PostCategory = (typeof POST_CATEGORIES)[number];
+export const POST_CATEGORY_SET: ReadonlySet<string> = new Set<string>(POST_CATEGORIES);
 
 export interface Story extends Omit<Post, 'status'> {
   liked: boolean;

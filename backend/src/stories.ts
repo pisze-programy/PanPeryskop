@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
-import { Post, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORIES } from './models';
+import { Post, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET } from './models';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
 
@@ -38,7 +38,7 @@ storiesRoutes.get('/', async (c) => {
   const neLng = parseFloat(q.ne_lng || '0');
   const now = Date.now();
   const windowStart = now - TTL_MS;
-  const category = (POST_CATEGORIES as readonly string[]).includes(q.category || '') ? q.category : null;
+  const category = q.category && POST_CATEGORY_SET.has(q.category) ? q.category : null;
   const catCond = category ? 'AND p.category = ?' : '';
 
   const authHeader = c.req.header('Authorization');

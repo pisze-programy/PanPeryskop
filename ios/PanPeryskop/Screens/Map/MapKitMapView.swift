@@ -5,7 +5,6 @@ struct MapKitMapView: View {
     let center: CLLocationCoordinate2D
     let zoom: Double
     let posts: [Post]
-    let pendingIds: Set<String>
     let currentUserId: String?
     @Binding var showReturnPill: Bool
     let centerThreshold: Double
@@ -23,7 +22,6 @@ struct MapKitMapView: View {
         center: CLLocationCoordinate2D,
         zoom: Double,
         posts: [Post],
-        pendingIds: Set<String>,
         currentUserId: String?,
         showReturnPill: Binding<Bool>,
         centerThreshold: Double,
@@ -36,7 +34,6 @@ struct MapKitMapView: View {
         self.center = center
         self.zoom = zoom
         self.posts = posts
-        self.pendingIds = pendingIds
         self.currentUserId = currentUserId
         self._showReturnPill = showReturnPill
         self.centerThreshold = centerThreshold
@@ -85,7 +82,7 @@ struct MapKitMapView: View {
             ) {
                 UserAnnotation()
 
-                ForEach(makeClusters(posts, pendingIds: pendingIds)) { cluster in
+                ForEach(makeClusters(posts)) { cluster in
                     Annotation(coordinate: cluster.coord, anchor: .center) {
                         ClusterBadge(
                             cluster: cluster,
@@ -174,10 +171,10 @@ struct ClusterBadge: View {
     var body: some View {
         if cluster.count == 1, let post = cluster.singlePost {
             if post.watched {
-                SinglePostPin(post: post, isPending: cluster.isPending, currentUserId: currentUserId)
+                SinglePostPin(post: post, currentUserId: currentUserId)
             } else {
                 Button(action: onTap) {
-                    SinglePostPin(post: post, isPending: cluster.isPending, currentUserId: currentUserId)
+                    SinglePostPin(post: post, currentUserId: currentUserId)
                 }
                 .buttonStyle(.plain)
             }
@@ -192,7 +189,6 @@ struct ClusterBadge: View {
 
 struct SinglePostPin: View {
     let post: Post
-    let isPending: Bool
     let currentUserId: String?
 
     @State private var bounceOffset: CGFloat = 0
@@ -275,16 +271,6 @@ struct SinglePostPin: View {
             .opacity(post.watched ? 0.4 : 1)
             .saturation(post.watched ? 0.3 : 1)
             .offset(y: bounceOffset)
-
-            if isPending {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 9))
-                    .foregroundColor(.orange)
-                    .padding(3)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
-                    .offset(x: -6, y: -6)
-            }
         }
         .overlay(alignment: .topTrailing) {
             if post.watched {
@@ -385,10 +371,9 @@ struct PostCluster: Identifiable {
     let count: Int
     let singlePost: Post?
     let posts: [Post]
-    let isPending: Bool
 }
 
-private func makeClusters(_ posts: [Post], pendingIds: Set<String>) -> [PostCluster] {
+private func makeClusters(_ posts: [Post]) -> [PostCluster] {
     let mediaPosts = posts
     let radius = 0.0008
     var used = Set<String>()
@@ -408,14 +393,12 @@ private func makeClusters(_ posts: [Post], pendingIds: Set<String>) -> [PostClus
         nearby.forEach { used.insert($0.id) }
         let avgLat = nearby.map(\.lat).reduce(0, +) / Double(nearby.count)
         let avgLng = nearby.map(\.lng).reduce(0, +) / Double(nearby.count)
-        let anyPending = nearby.contains(where: { pendingIds.contains($0.id) })
         clusters.append(PostCluster(
             id: post.id,
             coord: CLLocationCoordinate2D(latitude: avgLat, longitude: avgLng),
             count: nearby.count,
             singlePost: nearby.count == 1 ? nearby.first : nil,
-            posts: nearby,
-            isPending: anyPending
+            posts: nearby
         ))
     }
     return clusters

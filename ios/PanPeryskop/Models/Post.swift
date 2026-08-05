@@ -14,10 +14,11 @@ struct Post: Codable, Identifiable, Equatable {
     let likes_count: Int
     let views_count: Int
     let shares_count: Int
+    let dislikes_count: Int
     let grid_cell_id: String?
     let liked: Bool
+    let disliked: Bool
     let watched: Bool
-    let status: String
     let author_name: String
     let media_url: String?
     let thumb_url: String?
@@ -86,7 +87,6 @@ struct PostListResponse: Codable {
 struct CreatePostResponse: Codable {
     let id: String
     let type: String
-    let status: String
     let media_key: String?
     let thumb_key: String?
     let created_at: Int64

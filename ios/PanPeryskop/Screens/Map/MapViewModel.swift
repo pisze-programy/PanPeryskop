@@ -243,8 +243,9 @@ class MapViewModel: ObservableObject {
             media_key: post.media_key, thumb_key: post.thumb_key,
             created_at: post.created_at,
             likes_count: post.likes_count, views_count: post.views_count, shares_count: post.shares_count,
+            dislikes_count: post.dislikes_count,
             grid_cell_id: post.grid_cell_id,
-            liked: post.liked, watched: watched, status: post.status,
+            liked: post.liked, disliked: post.disliked, watched: watched,
             author_name: post.author_name, media_url: post.media_url, thumb_url: post.thumb_url,
             author_avatar_url: post.author_avatar_url,
             is_sponsored: post.is_sponsored, category: post.category, link_url: post.link_url
@@ -264,8 +265,9 @@ class MapViewModel: ObservableObject {
                     created_at: updated.created_at,
                     likes_count: resp.liked ? updated.likes_count + 1 : max(0, updated.likes_count - 1),
                     views_count: updated.views_count, shares_count: updated.shares_count,
+                    dislikes_count: updated.dislikes_count,
                     grid_cell_id: updated.grid_cell_id,
-                    liked: resp.liked, watched: updated.watched, status: updated.status,
+                    liked: resp.liked, disliked: updated.disliked, watched: updated.watched,
                     author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
                     author_avatar_url: updated.author_avatar_url,
                     is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url
@@ -275,6 +277,34 @@ class MapViewModel: ObservableObject {
             return resp.liked
         } catch {
             print("Failed to toggle like:", error)
+            return false
+        }
+    }
+
+    func toggleDislike(_ postId: String) async -> Bool {
+        do {
+            struct DislikeResp: Codable { let disliked: Bool }
+            let resp: DislikeResp = try await APIClient.postEmptyBody("/actions/\(postId)/dislike")
+            if let idx = posts.firstIndex(where: { $0.id == postId }) {
+                var updated = posts[idx]
+                updated = Post(
+                    id: updated.id, user_id: updated.user_id, type: updated.type,
+                    lat: updated.lat, lng: updated.lng, description: updated.description,
+                    media_key: updated.media_key, thumb_key: updated.thumb_key,
+                    created_at: updated.created_at,
+                    likes_count: updated.likes_count, views_count: updated.views_count, shares_count: updated.shares_count,
+                    dislikes_count: resp.disliked ? updated.dislikes_count + 1 : max(0, updated.dislikes_count - 1),
+                    grid_cell_id: updated.grid_cell_id,
+                    liked: updated.liked, disliked: resp.disliked, watched: updated.watched,
+                    author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
+                    author_avatar_url: updated.author_avatar_url,
+                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url
+                )
+                posts[idx] = updated
+            }
+            return resp.disliked
+        } catch {
+            print("Failed to toggle dislike:", error)
             return false
         }
     }

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { nanoid } from 'nanoid';
-import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, POST_TYPE_SET, STATUS_APPROVED, STATUS_PENDING, PostRow } from './models';
+import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, POST_TYPE_SET, STATUS_APPROVED, PostRow } from './models';
 import { strField, fileField, ParsedForm } from './form';
 
 export const postsRoutes = new Hono<{ Bindings: Env }>();
@@ -177,7 +177,7 @@ async function doSavePost(
     await db
       .prepare(
         `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id)
-         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_PENDING}', ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId)
       .run();
@@ -195,7 +195,7 @@ async function doSavePost(
     lat,
     lng,
     description,
-    status: STATUS_PENDING,
+    status: STATUS_APPROVED,
     media_key: mediaKey,
     thumb_key: thumbKey,
     created_at: createdAt,
@@ -211,7 +211,8 @@ postsRoutes.get('/:id', async (c) => {
   const now = Date.now();
   const post = await db
     .prepare(
-      `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key
+      `SELECT p.*, COALESCE(NULLIF(u.username, ''), u.device_id) as author_name,
+              u.avatar_key as author_avatar_key
        FROM posts p
        JOIN users u ON p.user_id = u.id
        WHERE p.id = ? AND p.status = '${STATUS_APPROVED}'
@@ -230,6 +231,7 @@ postsRoutes.get('/:id', async (c) => {
     ...post,
     is_sponsored: post.is_sponsored === 1,
     liked: false,
+    disliked: false,
     watched: false,
     author_name: post.author_name || 'unknown',
     author_avatar_url: post.author_avatar_key

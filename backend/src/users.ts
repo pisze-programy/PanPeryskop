@@ -1,8 +1,17 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { fileField, ParsedForm } from './form';
+import { PostRow, TTL_MS, normalizeUsername } from './models';
 
 export const usersRoutes = new Hono<{ Bindings: Env }>();
+
+function avatarUrl(key: string | null): string | null {
+  return key ? `https://panperyskop-api.dev-4cb.workers.dev/media/${key}` : null;
+}
+
+function mediaUrl(key: string | null): string | null {
+  return key ? `https://panperyskop-api.dev-4cb.workers.dev/media/${key}` : null;
+}
 
 usersRoutes.get('/me', async (c) => {
   const user = await authenticate(c);
@@ -12,10 +21,64 @@ usersRoutes.get('/me', async (c) => {
     user_id: user.id,
     device_id: user.device_id,
     role: user.role,
-    avatar_url: user.avatar_key
-      ? `https://panperyskop-api.dev-4cb.workers.dev/media/${user.avatar_key}`
-      : null,
+    username: user.username,
+    avatar_url: avatarUrl(user.avatar_key),
   });
+});
+
+usersRoutes.patch('/me', async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const body = await c.req.json<{ username?: unknown }>();
+  if (typeof body.username !== 'string') {
+    return c.json({ error: 'username is required' }, 400);
+  }
+
+  const username = normalizeUsername(body.username);
+  if (!username) {
+    return c.json({ error: 'username must be 3-30 characters' }, 400);
+  }
+
+  await c.env.DB.prepare('UPDATE users SET username = ? WHERE id = ?').bind(username, user.id).run();
+
+  return c.json({ username });
+});
+
+usersRoutes.get('/me/posts', async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const now = Date.now();
+  const { results } = await c.env.DB
+    .prepare(
+      `SELECT id, type, description, status, created_at, likes_count, views_count, shares_count,
+              media_key, thumb_key, rejection_reason
+       FROM posts
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 200`
+    )
+    .bind(user.id)
+    .all<PostRow>();
+
+  return c.json(
+    results.map((p) => ({
+      id: p.id,
+      type: p.type,
+      description: p.description,
+      status: p.status,
+      created_at: p.created_at,
+      likes_count: p.likes_count,
+      views_count: p.views_count,
+      shares_count: p.shares_count,
+      media_url: mediaUrl(p.media_key),
+      thumb_url: mediaUrl(p.thumb_key ?? p.media_key),
+      rejection_reason: p.rejection_reason,
+      is_expired: p.created_at < now - TTL_MS,
+      is_future: p.created_at > now,
+    }))
+  );
 });
 
 usersRoutes.post('/avatar', async (c) => {
@@ -41,6 +104,6 @@ usersRoutes.post('/avatar', async (c) => {
   await c.env.DB.prepare('UPDATE users SET avatar_key = ? WHERE id = ?').bind(key, user.id).run();
 
   return c.json({
-    avatar_url: `https://panperyskop-api.dev-4cb.workers.dev/media/${key}`,
+    avatar_url: avatarUrl(key),
   });
 });

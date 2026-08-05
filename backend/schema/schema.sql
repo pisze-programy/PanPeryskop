@@ -3,7 +3,10 @@ CREATE TABLE IF NOT EXISTS users (
   device_id     TEXT NOT NULL UNIQUE,
   session_token TEXT NOT NULL,
   role          TEXT NOT NULL DEFAULT 'user',
-  created_at    INTEGER NOT NULL
+  created_at    INTEGER NOT NULL,
+  username      TEXT,
+  auth_provider TEXT NOT NULL DEFAULT 'device',
+  apple_id      TEXT
 );
 
 CREATE TABLE IF NOT EXISTS posts (
@@ -25,7 +28,8 @@ CREATE TABLE IF NOT EXISTS posts (
   is_sponsored  INTEGER NOT NULL DEFAULT 0,
   category      TEXT NOT NULL DEFAULT 'live',
   link_url      TEXT,
-  external_id   TEXT
+  external_id   TEXT,
+  rejection_reason TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_bbox ON posts(lat, lng, created_at, status);

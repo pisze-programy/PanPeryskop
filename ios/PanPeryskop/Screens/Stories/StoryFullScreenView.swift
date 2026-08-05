@@ -12,6 +12,8 @@ struct StoryFullScreenView: View {
     @State private var hideUI = false
     @State private var progressFraction: Double = 0
     @State private var likedStates: [String: Bool] = [:]
+    @State private var dislikedStates: [String: Bool] = [:]
+    @State private var dislikesCounts: [String: Int] = [:]
     @State private var shareItem: ShareItem?
     @State private var paused = false
     @State private var loadedIDs: Set<String> = []
@@ -88,14 +90,6 @@ struct StoryFullScreenView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 6) {
-                                if isPending(currentPost) {
-                                    Image(systemName: "lock.fill")
-                                        .font(.caption2)
-                                        .foregroundColor(.orange)
-                                    Text("Weryfikacja")
-                                        .font(.caption)
-                                        .foregroundColor(.orange)
-                                }
                                 if currentPost.is_sponsored == true {
                                     Image(systemName: "megaphone.fill")
                                         .font(.caption2)
@@ -146,6 +140,30 @@ struct StoryFullScreenView: View {
                                     likedStates[currentPost.id] = result
                                 }
                             }
+                            let disliked = dislikedStates[currentPost.id] ?? currentPost.disliked
+                            let dislikeCount = dislikesCounts[currentPost.id] ?? currentPost.dislikes_count
+                            Button {
+                                let base = dislikeCount
+                                Task {
+                                    let result = await viewModel.toggleDislike(currentPost.id)
+                                    dislikedStates[currentPost.id] = result
+                                    dislikesCounts[currentPost.id] = max(0, base + (result ? 1 : -1))
+                                }
+                            } label: {
+                                VStack(spacing: 4) {
+                                    Image(systemName: disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                                        .font(.system(size: 26, weight: .semibold))
+                                        .foregroundColor(disliked ? .red : .white)
+                                    if dislikeCount > 0 {
+                                        Text("\(dislikeCount)")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                                .frame(width: 56, height: 56)
+                                .contentShape(Circle())
+                            }
+                            .buttonStyle(.plain)
                             Button {
                                 pausePlayback()
                                 Task { await viewModel.sharePost(currentPost.id) }
@@ -202,10 +220,6 @@ struct StoryFullScreenView: View {
 
     private var currentPost: Post {
         posts.indices.contains(currentIndex) ? posts[currentIndex] : posts[0]
-    }
-
-    private func isPending(_ post: Post) -> Bool {
-        post.status == "pending"
     }
 
     private func mediaURL(for post: Post) -> URL? {
@@ -491,19 +505,22 @@ struct StoryAvatar: View {
                     case .success(let image):
                         image.resizable().aspectRatio(contentMode: .fill)
                     default:
-                        Image(systemName: "person.crop.circle.fill")
-                            .resizable()
-                            .foregroundColor(.white.opacity(0.8))
+                        defaultAvatar
                     }
                 }
             } else {
-                Image(systemName: "person.crop.circle.fill")
-                    .resizable()
-                    .foregroundColor(.white.opacity(0.8))
+                defaultAvatar
             }
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+    }
+
+    private var defaultAvatar: some View {
+        Image("Logo")
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .scaleEffect(1.5)
     }
 }
 

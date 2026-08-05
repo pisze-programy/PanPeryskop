@@ -36,13 +36,16 @@ struct PermissionCardData {
 }
 
 struct PermissionCardsView: View {
+    var showsHeader: Bool = true
     @State private var cards: [PermissionCardData] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Uprawnienia")
-                .font(.headline)
-                .padding(.horizontal)
+            if showsHeader {
+                Text("Uprawnienia")
+                    .font(.headline)
+                    .padding(.horizontal)
+            }
 
             VStack(spacing: 10) {
                 ForEach(cards, id: \.title) { card in

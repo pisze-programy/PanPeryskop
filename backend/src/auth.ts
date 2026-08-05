@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { nanoid } from 'nanoid';
-import { User } from './models';
+import { User, defaultUsername } from './models';
 
 export const authRoutes = new Hono<{ Bindings: Env }>();
 
@@ -30,6 +30,7 @@ authRoutes.post('/device', async (c) => {
       session_token,
       user_id: existing.id,
       role: existing.role,
+      username: existing.username,
       avatar_url: existing.avatar_key
         ? `https://panperyskop-api.dev-4cb.workers.dev/media/${existing.avatar_key}`
         : null,
@@ -38,14 +39,15 @@ authRoutes.post('/device', async (c) => {
   }
 
   const id = nanoid(16);
+  const username = defaultUsername();
   await db
     .prepare(
-      'INSERT INTO users (id, device_id, session_token, role, created_at) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO users (id, device_id, session_token, role, username, auth_provider, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
     )
-    .bind(id, device_id, session_token, 'user', now)
+    .bind(id, device_id, session_token, 'user', username, 'device', now)
     .run();
 
-  return c.json({ session_token, user_id: id, role: 'user', avatar_url: null, is_new: true }, 201);
+  return c.json({ session_token, user_id: id, role: 'user', username, avatar_url: null, is_new: true }, 201);
 });
 
 export async function authenticate(

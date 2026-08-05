@@ -50,6 +50,16 @@ struct APIClient {
         let (_, _) = try await URLSession.shared.data(for: request)
     }
 
+    static func patch<T: Decodable, B: Encodable>(_ path: String, body: B) async throws -> T {
+        let url = URL(string: "\(baseURL)\(path)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.allHTTPHeaderFields = authHeaders()
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
     static func uploadMedia(
         _ path: String,
         fileData: Data,

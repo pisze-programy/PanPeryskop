@@ -7,43 +7,60 @@ struct ProfileView: View {
 
     @State private var avatarItem: PhotosPickerItem?
     @State private var uploadingAvatar = false
+    @State private var showNicknameEditor = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Spacer().frame(height: 40)
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    Spacer().frame(height: 40)
 
-                avatarSection
+                    avatarSection
 
-                Text("Pan Peryskop")
-                    .font(.title)
-                    .fontWeight(.bold)
+                    HStack(spacing: 8) {
+                        Text(authManager.displayUsername)
+                            .font(.title)
+                            .fontWeight(.bold)
+                        Button {
+                            showNicknameEditor = true
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.subheadline)
+                                .foregroundColor(.accentColor)
+                        }
+                    }
 
-                if let userId = authManager.userId {
-                    Text("ID urządzenia: \(userId.prefix(16))...")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    if let userId = authManager.userId {
+                        Text("ID urządzenia: \(userId.prefix(16))...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    menuList
+
+                    Button(role: .destructive) {
+                        authManager.logout()
+                    } label: {
+                        Label("Wyloguj się", systemImage: "rectangle.portrait.and.arrow.right")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                    }
+                    .padding(.horizontal, 32)
+
+                    Spacer().frame(height: 120)
                 }
-
-                PermissionCardsView()
-
-                Button(role: .destructive) {
-                    authManager.logout()
-                } label: {
-                    Label("Wyloguj się", systemImage: "rectangle.portrait.and.arrow.right")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                }
-                .padding(.horizontal, 32)
-
-                Spacer().frame(height: 120)
+            }
+            .navigationBarHidden(true)
+            .sheet(isPresented: $showNicknameEditor) {
+                NicknameEditView(initial: authManager.username ?? "")
+                    .environmentObject(authManager)
             }
         }
     }
 
     private var avatarSection: some View {
         ZStack(alignment: .bottomTrailing) {
-            AvatarView(url: authManager.avatarUrl, size: 100)
+            AvatarView(url: authManager.avatarDisplayURL, size: 100)
 
             PhotosPicker(selection: $avatarItem, matching: .images) {
                 ZStack {
@@ -67,6 +84,31 @@ struct ProfileView: View {
         }
     }
 
+    private var menuList: some View {
+        VStack(spacing: 10) {
+            NavigationLink {
+                MyContentView()
+            } label: {
+                ProfileMenuRow(
+                    icon: "photo.stack",
+                    title: "Moje treści",
+                    subtitle: "Twoje posty, statusy i statystyki"
+                )
+            }
+
+            NavigationLink {
+                PermissionsView()
+            } label: {
+                ProfileMenuRow(
+                    icon: "hand.raised.fill",
+                    title: "Uprawnienia",
+                    subtitle: "Aparat, mikrofon, galeria, lokalizacja"
+                )
+            }
+        }
+        .padding(.horizontal)
+    }
+
     @MainActor
     private func uploadAvatar(from item: PhotosPickerItem) async {
         uploadingAvatar = true
@@ -78,10 +120,44 @@ struct ProfileView: View {
             let resized = image.resized(to: 128)
             guard let jpeg = resized.jpegData(compressionQuality: 0.7) else { return }
             let url = try await APIClient.uploadAvatar(jpeg)
-            authManager.avatarUrl = url
+            authManager.setAvatarUrl(url)
         } catch {
             print("Failed to upload avatar:", error)
         }
+    }
+}
+
+struct ProfileMenuRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(.accentColor)
+                .frame(width: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+        }
+        .padding(12)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -97,22 +173,22 @@ struct AvatarView: View {
                     case .success(let image):
                         image.resizable().aspectRatio(contentMode: .fill)
                     default:
-                        placeholder
+                        defaultAvatar
                     }
                 }
             } else {
-                placeholder
+                defaultAvatar
             }
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
     }
 
-    private var placeholder: some View {
-        Image(systemName: "person.circle.fill")
+    private var defaultAvatar: some View {
+        Image("Logo")
             .resizable()
-            .scaledToFill()
-            .foregroundColor(.accentColor)
+            .aspectRatio(contentMode: .fill)
+            .scaleEffect(1.5)
     }
 }
 

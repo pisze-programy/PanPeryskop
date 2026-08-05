@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
-import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED, STATUS_PENDING } from './models';
+import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED } from './models';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
 
@@ -10,8 +10,8 @@ function mediaUrl(_c: { env: Env }, key: string): string {
 
 // Mirrors models.popularityScore so ORDER BY matches the ranking algorithm.
 function popularityExpr(): string {
-  const { views: WV, likes: WL, shares: WS } = POPULARITY_WEIGHTS;
-  return `(p.views_count * ${WV} + p.likes_count * ${WL} + p.shares_count * ${WS}) * (1 + (CAST(p.likes_count AS REAL) / MAX(p.views_count, 1)))`;
+  const { views: WV, likes: WL, shares: WS, dislikes: WD } = POPULARITY_WEIGHTS;
+  return `MAX(0, p.views_count * ${WV} + p.likes_count * ${WL} + p.shares_count * ${WS} - p.dislikes_count * ${WD}) * (1 + (CAST(p.likes_count AS REAL) / MAX(p.views_count, 1)))`;
 }
 
 // Map a D1 row to the public story shape. No `as any` — the row type carries the
@@ -32,12 +32,14 @@ function storyJson(r: StoryRow, c: { env: Env }): any {
     likes_count: r.likes_count,
     views_count: r.views_count,
     shares_count: r.shares_count,
+    dislikes_count: r.dislikes_count,
     grid_cell_id: r.grid_cell_id,
     is_sponsored: r.is_sponsored === 1,
     category: r.category,
     link_url: r.link_url,
     external_id: r.external_id,
     liked: false,
+    disliked: (r.disliked ?? 0) === 1,
     watched: (r.watched ?? 0) === 1,
     author_name: r.author_name || 'unknown',
     author_avatar_url: r.author_avatar_key ? mediaUrl(c, r.author_avatar_key) : null,
@@ -74,11 +76,14 @@ storiesRoutes.get('/', async (c) => {
     if (user) {
       const { results } = await db
         .prepare(
-          `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key,
-                  CASE WHEN v.post_id IS NOT NULL THEN 1 ELSE 0 END as watched
+          `SELECT p.*, COALESCE(NULLIF(u.username, ''), u.device_id) as author_name,
+                  u.avatar_key as author_avatar_key,
+                  CASE WHEN v.post_id IS NOT NULL THEN 1 ELSE 0 END as watched,
+                  CASE WHEN d.post_id IS NOT NULL THEN 1 ELSE 0 END as disliked
            FROM posts p
            JOIN users u ON p.user_id = u.id
            LEFT JOIN views v ON v.post_id = p.id AND v.user_id = ?
+           LEFT JOIN dislikes d ON d.post_id = p.id AND d.user_id = ?
            WHERE p.lat BETWEEN ? AND ?
            AND p.lng BETWEEN ? AND ?
            AND p.status = '${STATUS_APPROVED}'
@@ -87,37 +92,19 @@ storiesRoutes.get('/', async (c) => {
            ORDER BY ${popularityExpr()} DESC
            LIMIT 50`
         )
-        .bind(user.id, swLat, neLat, swLng, neLng, windowStart, now, ...(category ? [category] : []))
-        .all<StoryRow>();
-
-      const { results: pendingResults } = await db
-        .prepare(
-          `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key,
-                  CASE WHEN v.post_id IS NOT NULL THEN 1 ELSE 0 END as watched
-           FROM posts p
-           JOIN users u ON p.user_id = u.id
-           LEFT JOIN views v ON v.post_id = p.id AND v.user_id = ?
-           WHERE p.user_id = ?
-           AND p.lat BETWEEN ? AND ?
-           AND p.lng BETWEEN ? AND ?
-           AND p.status = '${STATUS_PENDING}'
-           AND p.created_at >= ? AND p.created_at <= ?
-           ${catCond}
-           ORDER BY p.created_at DESC
-           LIMIT 50`
-        )
         .bind(user.id, user.id, swLat, neLat, swLng, neLng, windowStart, now, ...(category ? [category] : []))
         .all<StoryRow>();
 
       return c.json({
-        stories: [...results, ...pendingResults].map((p) => storyJson(p, c)),
+        stories: results.map((p) => storyJson(p, c)),
       });
     }
   }
 
   const { results } = await db
     .prepare(
-      `SELECT p.*, u.device_id as author_name, u.avatar_key as author_avatar_key
+      `SELECT p.*, COALESCE(NULLIF(u.username, ''), u.device_id) as author_name,
+              u.avatar_key as author_avatar_key
        FROM posts p
        JOIN users u ON p.user_id = u.id
        WHERE p.lat BETWEEN ? AND ?

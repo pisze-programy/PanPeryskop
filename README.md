@@ -42,6 +42,10 @@ cd admin && npm install && node src/cli.js queue
 | Endpoint | Description |
 |---|---|
 | `POST /auth/device` | Login / register per device_id |
+| `GET /users/me` | Current user (username, avatar_url, role) |
+| `PATCH /users/me` | Update display name (`{username}`) |
+| `GET /users/me/posts` | All of my posts (all statuses, incl. expired) |
+| `POST /users/avatar` | Upload avatar (multipart → R2) |
 | `GET /stories?bbox=` | Active stories in region (sorted by popularity) |
 | `GET /stories/heatmap?bbox=` | Congestion heatmap grid |
 | `POST /posts` | Create post (multipart → R2, pending status) |
@@ -50,6 +54,6 @@ cd admin && npm install && node src/cli.js queue
 | `POST /actions/:id/watched` | Mark as watched (hides for user) |
 | `GET /admin/queue` | Moderation queue |
 | `POST /admin/posts/:id/approve` | Approve |
-| `POST /admin/posts/:id/reject` | Reject |
+| `POST /admin/posts/:id/reject` | Reject (optional `{reason}`) |
 
 Posts are visible for 24 hours, then automatically hidden (not deleted).

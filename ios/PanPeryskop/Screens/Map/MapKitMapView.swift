@@ -45,13 +45,44 @@ struct MapKitMapView: View {
         self.onCameraSettled = onCameraSettled
         self.onTapPost = onTapPost
         self.onTapCluster = onTapCluster
-        self._camera = State(initialValue: .region(initialRegion))
+        self._camera = State(initialValue: .camera(MapKitMapView.tiltedCamera(center: initialRegion.center, region: initialRegion)))
         self._visibleRegion = State(initialValue: initialRegion)
+    }
+
+    private static let pitchDegrees: Double = 60
+    private static let maxDistance: CLLocationDistance = 20_000
+
+    private static func cameraDistance(for region: MKCoordinateRegion) -> CLLocationDistance {
+        let meters = region.span.latitudeDelta * 111_320
+        return meters / sin(pitchDegrees * .pi / 180)
+    }
+
+    private static func tiltedCamera(center: CLLocationCoordinate2D, region: MKCoordinateRegion) -> MapCamera {
+        MapCamera(
+            centerCoordinate: center,
+            distance: cameraDistance(for: region),
+            heading: 0,
+            pitch: pitchDegrees
+        )
+    }
+
+    // Full zoom-out (max visible area), centered on the given coordinate.
+    private static func maxOutCamera(center: CLLocationCoordinate2D) -> MapCamera {
+        MapCamera(
+            centerCoordinate: center,
+            distance: maxDistance,
+            heading: 0,
+            pitch: pitchDegrees
+        )
     }
 
     var body: some View {
         MapReader { _ in
-            Map(position: $camera, bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: 20000)) {
+            Map(
+                position: $camera,
+                bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: Self.maxDistance),
+                interactionModes: [.pan, .zoom]
+            ) {
                 UserAnnotation()
 
                 ForEach(makeClusters(posts, pendingIds: pendingIds)) { cluster in
@@ -71,7 +102,7 @@ struct MapKitMapView: View {
                     } label: { EmptyView() }
                 }
             }
-            .mapStyle(.standard(pointsOfInterest: .excludingAll))
+            .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
             .onMapCameraChange(frequency: .onEnd) { ctx in
                 let region = ctx.region
                 visibleRegion = region
@@ -89,16 +120,17 @@ struct MapKitMapView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .returnToCenter)) { _ in
                 withAnimation(.easeInOut(duration: 0.5)) {
-                    camera = .region(MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)))
+                    camera = .camera(MapKitMapView.maxOutCamera(center: center))
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .scrollToPost)) { note in
                 guard let post = note.object as? Post else { return }
                 withAnimation(.easeInOut(duration: 0.6)) {
-                    camera = .region(MKCoordinateRegion(
+                    let region = MKCoordinateRegion(
                         center: post.coordinate,
                         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                    ))
+                    )
+                    camera = .camera(MapKitMapView.tiltedCamera(center: post.coordinate, region: region))
                 }
             }
         }
@@ -108,7 +140,7 @@ struct MapKitMapView: View {
         isChangingCity = true
         withAnimation(.easeInOut(duration: 1.2)) {
             showReturnPill = false
-            camera = .region(city.region)
+            camera = .camera(MapKitMapView.maxOutCamera(center: city.center))
         }
     }
 

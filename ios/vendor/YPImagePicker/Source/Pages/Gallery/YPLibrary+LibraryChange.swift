@@ -50,6 +50,7 @@ extension YPLibraryVC: PHPhotoLibraryChangeObserver {
 
             self.updateAssetSelection()
             self.mediaManager.resetCachedAssets()
+            self.updateLimitedAccessButton()
         }
     }
 

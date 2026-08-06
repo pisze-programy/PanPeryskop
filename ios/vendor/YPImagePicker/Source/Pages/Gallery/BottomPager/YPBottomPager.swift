@@ -90,7 +90,20 @@ open class YPBottomPager: UIViewController, UIScrollViewDelegate {
     func showPage(_ page: Int, animated: Bool = true) {
         let screenWidth = YPImagePickerConfiguration.screenWidth
         let x = CGFloat(page) * screenWidth
-        v.scrollView.setContentOffset(CGPoint(x: x, y: 0), animated: animated)
+        if animated {
+            // Smooth cross-fade between modes instead of the horizontal pager slide.
+            UIView.transition(
+                with: v.scrollView,
+                duration: 0.35,
+                options: [.transitionCrossDissolve],
+                animations: {
+                    self.v.scrollView.setContentOffset(CGPoint(x: x, y: 0), animated: false)
+                },
+                completion: nil
+            )
+        } else {
+            v.scrollView.setContentOffset(CGPoint(x: x, y: 0), animated: false)
+        }
         selectPage(page)
     }
 

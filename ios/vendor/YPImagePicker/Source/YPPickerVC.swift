@@ -56,11 +56,9 @@ open class YPPickerVC: YPBottomPager, YPBottomPagerDelegate {
             YPImagePickerConfiguration.shared.screens = [.library]
         }
         
-        // Library
-        if YPConfig.screens.contains(.library) {
-            libraryVC = YPLibraryVC()
-            libraryVC?.delegate = self
-        }
+        // Library — created lazily on first `openLibrary()` (camera card stack),
+        // so opening the camera does NOT build the heavy YPLibraryView upfront.
+        // It is intentionally NOT part of `screens` (no pager page / toggle).
         
         // Camera
         if YPConfig.screens.contains(.photo) {
@@ -69,6 +67,7 @@ open class YPPickerVC: YPBottomPager, YPBottomPagerDelegate {
                 self?.didSelectItems?([YPMediaItem.photo(p: YPMediaPhoto(image: img,
                                                                          fromCamera: true))])
             }
+            cameraVC?.onOpenLibrary = { [weak self] in self?.openLibrary() }
         }
         
         // Video
@@ -81,6 +80,7 @@ open class YPPickerVC: YPBottomPager, YPBottomPagerDelegate {
                                                                fromCamera: true))])
             }
             videoVC?.onModeSwitch = { [weak self] in self?.showPage(0) }
+            videoVC?.onOpenLibrary = { [weak self] in self?.openLibrary() }
         }
 
         cameraVC?.onModeSwitch = { [weak self] in self?.showPage(1) }
@@ -318,6 +318,65 @@ open class YPPickerVC: YPBottomPager, YPBottomPagerDelegate {
         self.didClose?()
     }
     
+    /// Opens the gallery from the camera card stack. The library is pushed onto
+    /// the navigation stack (not a pager page); a single tap on an item delivers
+    /// the media straight to the confirmation step.
+    ///
+    /// Photo-library access is NOT requested up front — the system prompt appears
+    /// only on the very first access (`.notDetermined`). Once granted, opening the
+    /// gallery never re-asks; in `.limited` mode the header shows the "select more"
+    /// icon so the user can manage the shared photos.
+    func openLibrary() {
+        guard let libraryVC = libraryVCOrCreate() else {
+            ypLog("YPLibraryVC deallocated")
+            return
+        }
+
+        switch PHPhotoLibrary.authorizationStatus(for: .readWrite) {
+        case .authorized, .limited:
+            pushLibrary(libraryVC)
+        case .notDetermined:
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] _ in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if PHPhotoLibrary.authorizationStatus(for: .readWrite) == .denied {
+                        self.presentPhotoAccessDeniedAlert()
+                    } else {
+                        self.pushLibrary(libraryVC)
+                    }
+                }
+            }
+        case .restricted, .denied:
+            presentPhotoAccessDeniedAlert()
+        @unknown default:
+            break
+        }
+    }
+
+    /// Creates the library VC on first use (keeps camera open light).
+    private func libraryVCOrCreate() -> YPLibraryVC? {
+        if let existing = libraryVC { return existing }
+        let vc = YPLibraryVC()
+        vc.delegate = self
+        vc.onMediaSelected = { [weak self] item in
+            self?.didSelectItems?([item])
+        }
+        libraryVC = vc
+        return vc
+    }
+
+    private func pushLibrary(_ libraryVC: YPLibraryVC) {
+        stopCurrentCamera()
+        libraryVC.initialize()
+        libraryVC.title = YPConfig.wordings.libraryTitle
+        navigationController?.pushViewController(libraryVC, animated: true)
+    }
+
+    private func presentPhotoAccessDeniedAlert() {
+        let alert = YPPermissionDeniedPopup.buildGoToSettingsAlert(cancelBlock: {})
+        present(alert, animated: true, completion: nil)
+    }
+
     // When pressing "Next"
     @objc
     func done() {

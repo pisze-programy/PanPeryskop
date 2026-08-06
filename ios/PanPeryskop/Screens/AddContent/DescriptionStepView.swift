@@ -14,8 +14,10 @@ struct DescriptionStepView: View {
     @State private var description = ""
     @State private var isLoading = false
     @State private var statusMessage: String?
+    @State private var statusIsError = false
     @State private var compressedVideoData: Data?
     @State private var compressionTask: Task<Void, Never>?
+    @State private var compressionError: Error?
     @State private var isPreviewPlaying = false
     @State private var previewPlayer: AVPlayer?
     @StateObject private var locationManager = LocationManager()
@@ -65,7 +67,7 @@ struct DescriptionStepView: View {
                     if let msg = statusMessage {
                         Text(msg)
                             .font(.caption)
-                            .foregroundColor(msg.contains("Błąd") ? .red : .green)
+                            .foregroundColor(statusIsError ? .red : .green)
                             .padding(.horizontal)
                     }
 
@@ -118,6 +120,7 @@ struct DescriptionStepView: View {
             try? FileManager.default.removeItem(at: outputURL)
             compressedVideoData = data
         } catch {
+            compressionError = error
             print("Video compression failed:", error)
         }
     }
@@ -125,6 +128,7 @@ struct DescriptionStepView: View {
     private func dataForUpload() async throws -> Data {
         if mediaType == .photo { return mediaData }
         if let task = compressionTask { await task.value }
+        if let error = compressionError { throw error }
         if let data = compressedVideoData { return data }
         guard let url = videoURL else {
             throw NSError(
@@ -196,6 +200,7 @@ struct DescriptionStepView: View {
     private func publish() async {
         isLoading = true
         statusMessage = nil
+        statusIsError = false
         Haptics.startTickLoop()
 
         let lat = locationManager.currentLocation?.coordinate.latitude ?? 52.4064
@@ -229,8 +234,19 @@ struct DescriptionStepView: View {
             }
         } catch {
             Haptics.error()
-            statusMessage = "Błąd: \(error.localizedDescription)"
+            statusMessage = errorMessage(for: error)
+            statusIsError = true
         }
+    }
+
+    private func errorMessage(for error: Error) -> String {
+        if let apiError = error as? APIError, apiError.isTooLarge {
+            return "Nagranie jest za długie"
+        }
+        if error is MediaCompressor.CompressError {
+            return "Nagranie jest za długie"
+        }
+        return "Coś poszło nie tak. Spróbuj ponownie."
     }
 }
 

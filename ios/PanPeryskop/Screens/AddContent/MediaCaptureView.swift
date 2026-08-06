@@ -26,6 +26,7 @@ struct MediaCaptureView: UIViewControllerRepresentable {
 
         config.video.recordingTimeLimit = 60
         config.video.minimumTimeLimit = 3
+        config.video.libraryTimeLimit = 300
         config.video.compression = AVAssetExportPreset1280x720
         config.video.recordingSizeLimit = 200 * 1024 * 1024
         config.library.maxNumberOfItems = 1
@@ -51,6 +52,9 @@ struct MediaCaptureView: UIViewControllerRepresentable {
         config.wordings.videoTitle = "Wideo"
         config.wordings.libraryTitle = "Galeria"
         config.wordings.cancel = "Anuluj"
+        config.wordings.videoDurationPopup.title = "Zbyt długi film"
+        config.wordings.videoDurationPopup.tooLongMessage = "Maksymalna długość filmu to %@."
+        config.wordings.videoDurationPopup.tooShortMessage = "Minimalna długość filmu to %@ sek."
 
         let picker = YPImagePicker(configuration: config)
         picker.didFinishPicking { items, cancelled in

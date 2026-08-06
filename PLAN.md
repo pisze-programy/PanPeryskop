@@ -476,6 +476,57 @@ was no longer needed. Scope:
 
 ---
 
+## 8h. Gallery via camera card stack (implemented)
+
+> **Status:** implemented 2026-08-06 (YPImagePicker is vendored locally in `ios/vendor/YPImagePicker`,
+> so it's now editable). The gallery is a feature of every camera screen — **not** a pager page/tab.
+
+**Scope & decisions (agreed):**
+- Bottom-left of the camera view (both **photo** and **video** mode) shows a subtle 2-card stack
+  (poker-card style: front = latest photo/video thumbnail, back = second latest, peeking). Standard
+  Apple size (~46 pt cards), rounded corners + white border + shadow, subtle appear animation, and a
+  quick spread-to-the-sides animation on tap before the gallery opens. Placeholder (gallery SF Symbol)
+  when there's no photo-library access or no items.
+- **Flash button removed** from the camera view (photo + video).
+- Tapping the cards opens the **library pushed onto the picker's nav stack** (not a pager page, no
+  toggle, no swipe). Selecting an item delivers **immediately** to the confirmation page
+  (`DescriptionStepView`) — no "Dalej"/"Next" step.
+- Library video limit raised to **5 min** (`libraryTimeLimit = 300`); existing too-long/too-short
+  alerts localized to Polish.
+- Backend **unchanged** (100 MB upload cap). FE adapts: `MediaCompressor.compressVideo` derives the
+  bitrate from duration to fit ~90 MB (2.4 Mbps for 5 min), retries at 60 % bitrate if the first pass
+  exceeds 100 MB, and throws a typed "too long" error when even the minimum bitrate (~1 Mbps) won't fit.
+- Errors surfaced to the user: "Nagranie jest za długie" (413 / too large / compression too long) and
+  a generic "Coś poszło nie tak. Spróbuj ponownie." for anything else (`APIClient` now inspects
+  `HTTPURLResponse.statusCode` and throws a typed `APIError`).
+
+**Permissions behavior:**
+- Cards never force the library prompt on camera open — they check `PHPhotoLibrary.authorizationStatus`.
+- Tapping the cards requests permission only when `.notDetermined`; `.limited` works; `.denied`/
+  `.restricted` shows the "Open Settings" alert (no programmatic re-prompt possible). Thumbnails
+  refresh on foreground (return from Settings).
+- **Limited access:** when the user granted only selected photos (`.limited`), the gallery's nav bar
+  shows a **"+" icon** (right side, opposite the back arrow) that re-opens the system manage-access
+  sheet (`PHPhotoLibrary.presentLimitedLibraryPicker`) so more photos can be shared on the fly; the
+  grid and button refresh via `PHPhotoLibraryChangeObserver`. The photo-library access prompt is
+  **not requested on camera open** — the system prompt appears only on the very first gallery access
+  (`.notDetermined`); after that the gallery never re-asks.
+
+**Files (vendored YPImagePicker):**
+- `Source/Helpers/LatestLibraryMediaProvider.swift` (new) — 2 newest photo/video thumbnails.
+- `Source/Pages/Photo/YPCameraView.swift` — card stack, flash removed, animations, `onOpenLibrary`.
+- `Source/Pages/Photo/YPCameraVC.swift` + `Source/Pages/Video/YPVideoCaptureVC.swift` — thumbnail
+  loading, `openLibrary`, foreground refresh, flash logic removed.
+- `Source/YPPickerVC.swift` — `libraryVC` always created; `openLibrary()` pushes it after permission;
+  single-tap delivery via `onMediaSelected`.
+- `Source/Pages/Gallery/YPLibraryVC+CollectionView.swift` — tap → immediate delivery in single mode.
+
+**Files (app):** `MediaCaptureView.swift` (5-min limit + PL wordings), `MediaCompressor.swift`
+(adaptive bitrate + `.tooLong`), `APIClient.swift` (`APIError` + status-code checks),
+`DescriptionStepView.swift` (error mapping, compression error propagation).
+
+---
+
 ## 9. Open items / deferred
 
 - App Store release (needs $99 Apple Developer account; store description TBD: "PanPeryskop — zobacz co się dzieje w mieście").

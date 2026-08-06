@@ -1,6 +1,19 @@
 import Foundation
 import KeychainAccess
 
+enum APIError: Error {
+    case server(statusCode: Int, message: String?)
+
+    var isTooLarge: Bool {
+        if case .server(let code, _) = self { return code == 413 }
+        return false
+    }
+}
+
+private struct ServerError: Decodable {
+    let error: String
+}
+
 struct APIClient {
     static let baseURL = "https://panperyskop-api.dev-4cb.workers.dev"
 
@@ -100,8 +113,16 @@ struct APIClient {
 
         request.httpBody = body
 
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
         return try JSONDecoder().decode(CreatePostResponse.self, from: data)
+    }
+
+    private static func validate(response: URLResponse?, data: Data) throws {
+        guard let http = response as? HTTPURLResponse else { return }
+        guard !(200..<300).contains(http.statusCode) else { return }
+        let message = (try? JSONDecoder().decode(ServerError.self, from: data))?.error
+        throw APIError.server(statusCode: http.statusCode, message: message)
     }
 
     static func uploadAvatar(_ jpeg: Data) async throws -> String {

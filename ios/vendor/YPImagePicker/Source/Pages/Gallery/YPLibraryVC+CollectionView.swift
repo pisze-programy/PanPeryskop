@@ -216,7 +216,19 @@ extension YPLibraryVC: UICollectionViewDelegate {
             if let previousCell = collectionView.cellForItem(at: previouslySelectedIndexPath) as? YPLibraryViewCell {
                 previousCell.isSelected = false
             }
+
+            deliverSingleSelectionIfNeeded()
         }
+    }
+
+    /// When the library is opened standalone (from the camera card stack) a single
+    /// tap on an item should jump straight to the confirmation step — no "Next".
+    private func deliverSingleSelectionIfNeeded() {
+        guard let onMediaSelected else { return }
+        guard !isMultipleSelectionEnabled, YPConfig.library.maxNumberOfItems == 1 else { return }
+        selectedMedia(photoCallback: { onMediaSelected(.photo(p: $0)) },
+                      videoCallback: { onMediaSelected(.video(v: $0)) },
+                      multipleItemsCallback: { _ in })
     }
     
     public func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {

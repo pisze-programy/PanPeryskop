@@ -21,6 +21,10 @@ internal final class YPLibraryVC: UIViewController, YPPermissionCheckable {
     internal let panGestureHelper = PanGestureHelper()
     internal var isInitialized = false
 
+    /// Delivers a picked item straight to the picker (used when the library is
+    /// opened standalone from the camera card stack — no "Next" step).
+    internal var onMediaSelected: ((YPMediaItem) -> Void)?
+
     // MARK: - Init
 
     internal override func loadView() {
@@ -114,6 +118,8 @@ internal final class YPLibraryVC: UIViewController, YPPermissionCheckable {
 
             strongSelf.updateCropInfo()
         }
+
+        updateLimitedAccessButton()
     }
     
     public override func viewDidAppear(_ animated: Bool) {
@@ -158,6 +164,33 @@ internal final class YPLibraryVC: UIViewController, YPPermissionCheckable {
         }
     }
     
+    // MARK: - Limited access
+
+    /// When the user granted only limited photo-library access, expose an icon that
+    /// re-opens the system "manage access" sheet so they can share more photos.
+    func updateLimitedAccessButton() {
+        DispatchQueue.main.async {
+            let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+            if status == .limited {
+                let button = UIBarButtonItem(
+                    image: UIImage(systemName: "plus.circle"),
+                    style: .plain,
+                    target: self,
+                    action: #selector(self.presentLimitedLibraryPicker)
+                )
+                button.accessibilityLabel = "Wybierz więcej"
+                self.navigationItem.rightBarButtonItem = button
+            } else {
+                self.navigationItem.rightBarButtonItem = nil
+            }
+        }
+    }
+
+    @objc
+    func presentLimitedLibraryPicker() {
+        PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: self)
+    }
+
     // MARK: - Multiple Selection
 
     @objc
@@ -260,6 +293,7 @@ internal final class YPLibraryVC: UIViewController, YPPermissionCheckable {
             delegate?.libraryViewHaveNoItems()
         }
 
+        updateLimitedAccessButton()
         scrollToTop()
     }
     

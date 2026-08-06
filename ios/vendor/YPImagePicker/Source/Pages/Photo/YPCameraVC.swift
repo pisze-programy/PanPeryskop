@@ -13,11 +13,13 @@ import Photos
 internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, YPPermissionCheckable {
     var didCapturePhoto: ((UIImage) -> Void)?
     var onModeSwitch: (() -> Void)?
+    var onOpenLibrary: (() -> Void)?
     let v: YPCameraView!
 
     private let photoCapture = YPPhotoCaptureHelper()
     private var isInited = false
     private var videoZoomFactor: CGFloat = 1.0
+    private var hasPlayedCardAnimation = false
 
     override internal func loadView() {
         view = v
@@ -44,15 +46,16 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
     override internal func viewDidLoad() {
         super.viewDidLoad()
 
-        v.flashButton.isHidden = true
-        v.flashButton.addTarget(self, action: #selector(flashButtonTapped), for: .touchUpInside)
-        v.shotButton.addTarget(self, action: #selector(shotButtonTapped), for: .touchUpInside)
         v.flipButton.addTarget(self, action: #selector(flipButtonTapped), for: .touchUpInside)
+        v.shotButton.addTarget(self, action: #selector(shotButtonTapped), for: .touchUpInside)
         
         // Prevent flip and shot button clicked at the same time
         v.shotButton.isExclusiveTouch = true
         v.flipButton.isExclusiveTouch = true
 
+        v.onOpenLibrary = { [weak self] in
+            self?.libraryTapped()
+        }
         v.modeSelector.setSelected(0)
         v.modeSelector.onSelect = { [weak self] _ in self?.onModeSwitch?() }
         
@@ -70,6 +73,10 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
     func start() {
         v.loadingIndicator.startAnimating()
         v.modeSelector.setSelected(0)
+        if !hasPlayedCardAnimation {
+            hasPlayedCardAnimation = true
+            v.playAppearAnimation()
+        }
         doAfterCameraPermissionCheck { [weak self] in
             guard let previewContainer = self?.v.previewViewContainer else {
                 return
@@ -79,7 +86,6 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
                 DispatchQueue.main.async {
                     self?.isInited = true
                     self?.v.loadingIndicator.stopAnimating()
-                    self?.updateFlashButtonUI()
                 }
             })
         }
@@ -129,15 +135,20 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
     
     @objc
     func flipButtonTapped() {
-        self.photoCapture.flipCamera {
-            self.updateFlashButtonUI()
-        }
+        self.photoCapture.flipCamera {}
     }
     
     @objc
     func shotButtonTapped() {
         doAfterCameraPermissionCheck { [weak self] in
             self?.shoot()
+        }
+    }
+    
+    func libraryTapped() {
+        v.animateCardsOpen { [weak self] in
+            self?.v.resetCards()
+            self?.onOpenLibrary?()
         }
     }
     
@@ -217,19 +228,5 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
         let newImage: UIImage = UIGraphicsGetImageFromCurrentImageContext()!
         UIGraphicsEndImageContext()
         return newImage
-    }
-    
-    @objc
-    func flashButtonTapped() {
-        photoCapture.device?.tryToggleTorch()
-        updateFlashButtonUI()
-    }
-    
-    func updateFlashButtonUI() {
-        DispatchQueue.main.async {
-            let flashImage = self.photoCapture.currentFlashMode.flashImage()
-            self.v.flashButton.setImage(flashImage, for: .normal)
-            self.v.flashButton.isHidden = !self.photoCapture.hasFlash
-        }
     }
 }

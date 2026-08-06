@@ -10,6 +10,7 @@ export interface User {
   username: string | null;
   auth_provider: string;
   apple_id: string | null;
+  google_id: string | null;
 }
 
 export interface Post {

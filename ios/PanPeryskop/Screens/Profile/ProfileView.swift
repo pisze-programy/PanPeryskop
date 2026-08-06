@@ -36,10 +36,16 @@ struct ProfileView: View {
                             .foregroundColor(.secondary)
                     }
 
+                    if let provider = authManager.authProvider {
+                        Text(providerLabel(provider))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
                     menuList
 
                     Button(role: .destructive) {
-                        authManager.logout()
+                        Task { await authManager.logout() }
                     } label: {
                         Label("Wyloguj się", systemImage: "rectangle.portrait.and.arrow.right")
                             .frame(maxWidth: .infinity)
@@ -107,6 +113,14 @@ struct ProfileView: View {
             }
         }
         .padding(.horizontal)
+    }
+
+    private func providerLabel(_ provider: String) -> String {
+        switch provider {
+        case "apple": return "Zalogowano przez Apple"
+        case "google": return "Zalogowano przez Google"
+        default: return "Zalogowano przez urządzenie"
+        }
     }
 
     @MainActor

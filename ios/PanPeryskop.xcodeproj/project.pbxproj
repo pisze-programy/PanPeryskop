@@ -13,6 +13,7 @@
 		13A1D4F80977B8D1EA84DB82 /* LazyPager in Frameworks */ = {isa = PBXBuildFile; productRef = 4A677370EF0D1A3DA130B241 /* LazyPager */; };
 		22654D8D1F5D231BD0E6854D /* MyContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C198549226A3AB8D8AD7C270 /* MyContentView.swift */; };
 		24B2FF9A64C3A7F84F3AD6C5 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 62E60A31C2421F71CE67D919 /* KeychainAccess */; };
+		284B3CD71E257A0347F0B2A2 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = F189511A43DE08019F262A63 /* GoogleSignIn */; };
 		2A8563B9966C62951A4E8D67 /* MediaCompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AF85F0B111F42C315E257A2 /* MediaCompressor.swift */; };
 		39384BA69A2B393C766B6E6E /* MapViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E2581E6150C834401927100 /* MapViewModel.swift */; };
 		440C2CC483A9E17757501ADA /* DescriptionStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44766F2DE7DFC8576566A0AF /* DescriptionStepView.swift */; };
@@ -26,6 +27,7 @@
 		8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 063211FB7EC797AEFD489DE6 /* ToastManager.swift */; };
 		8E82AAB2424095D2D1ECDBA7 /* PermissionGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D6796591AD82A922A91F5E /* PermissionGateView.swift */; };
 		9920ED1276D0819A568362B5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE2CB33037E6D96F692E131 /* ContentView.swift */; };
+		B403D6102AA1FE9F564CDAC4 /* GoogleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3AF72BC05A08AC8D709C38A /* GoogleSignIn.swift */; };
 		B75E0DBA2194C2670F968BDD /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0C2297077E1CF861F55EF2 /* User.swift */; };
 		BD0BAA4861F1F934B6E3FEF7 /* MapKitMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1057374311D0AF3FDAC2B2FF /* MapKitMapView.swift */; };
 		BF0F79BCD34011F89D63D19D /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11E724A06F70ED3DA7B0F5 /* MapView.swift */; };
@@ -37,6 +39,7 @@
 		DCA8A572B7CEBBBBAE9492B7 /* FaveLikeButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364467F234AEB3E0D0E2513C /* FaveLikeButton.swift */; };
 		DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBDD7756E22141DD95593257 /* City.swift */; };
 		EF416FDD5F47F902E0511EB7 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FEA4CA8A5185D280CA5E6B /* APIClient.swift */; };
+		F83DB2EE1C81C2E3A19B19B9 /* AppleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */; };
 		FF623E777239A2DC2C912B37 /* CityListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F76F226243E1E3B5C14FE6F5 /* CityListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -55,10 +58,12 @@
 		44766F2DE7DFC8576566A0AF /* DescriptionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStepView.swift; sourceTree = "<group>"; };
 		58C953E9B4F30356C1AF058A /* NicknameEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NicknameEditView.swift; sourceTree = "<group>"; };
 		6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		6D0328366619E568BB043CF9 /* SignInWithApple.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SignInWithApple.entitlements; sourceTree = "<group>"; };
 		702099485B19214D722CB2AB /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E2581E6150C834401927100 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
 		9C0C2297077E1CF861F55EF2 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
 		BB11E724A06F70ED3DA7B0F5 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		C198549226A3AB8D8AD7C270 /* MyContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyContentView.swift; sourceTree = "<group>"; };
 		C8D6796591AD82A922A91F5E /* PermissionGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGateView.swift; sourceTree = "<group>"; };
@@ -69,6 +74,7 @@
 		D9D108F77E19B9CD9251305B /* MediaCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCaptureView.swift; sourceTree = "<group>"; };
 		DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCardsView.swift; sourceTree = "<group>"; };
 		F1660BA1D3400C29F149C24C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F3AF72BC05A08AC8D709C38A /* GoogleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignIn.swift; sourceTree = "<group>"; };
 		F76F226243E1E3B5C14FE6F5 /* CityListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityListView.swift; sourceTree = "<group>"; };
 		FBDD7756E22141DD95593257 /* City.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = City.swift; sourceTree = "<group>"; };
 		FFBA35634291A3B8F365D85D /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
@@ -83,6 +89,7 @@
 				24B2FF9A64C3A7F84F3AD6C5 /* KeychainAccess in Frameworks */,
 				107EED2E8B9754ECB995B3DF /* FYVideoCompressor in Frameworks */,
 				4F1DE6D265333AD7AC276477 /* YPImagePicker in Frameworks */,
+				284B3CD71E257A0347F0B2A2 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -154,7 +161,9 @@
 			isa = PBXGroup;
 			children = (
 				11FEA4CA8A5185D280CA5E6B /* APIClient.swift */,
+				A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */,
 				702099485B19214D722CB2AB /* AuthManager.swift */,
+				F3AF72BC05A08AC8D709C38A /* GoogleSignIn.swift */,
 				0AF85F0B111F42C315E257A2 /* MediaCompressor.swift */,
 				063211FB7EC797AEFD489DE6 /* ToastManager.swift */,
 			);
@@ -206,6 +215,7 @@
 			children = (
 				1F6D48B0D6B33CDCFC980CBD /* Assets.xcassets */,
 				F1660BA1D3400C29F149C24C /* Info.plist */,
+				6D0328366619E568BB043CF9 /* SignInWithApple.entitlements */,
 				42C0B8DB1C4AF2E246CDE3AF /* App */,
 				52A84047D3D5BB28DB9B94B0 /* Models */,
 				03C9264C174503E6DBF93416 /* Screens */,
@@ -235,6 +245,7 @@
 				62E60A31C2421F71CE67D919 /* KeychainAccess */,
 				E8A9ED350A703F9EAF1CDA91 /* FYVideoCompressor */,
 				5A701F52FD63A75ECBD6B80F /* YPImagePicker */,
+				F189511A43DE08019F262A63 /* GoogleSignIn */,
 			);
 			productName = PanPeryskop;
 			productReference = 8A37A2C635C84DB527D13F1A /* PanPeryskop.app */;
@@ -265,6 +276,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3E4D182D36DBB16871BA4EF4 /* XCRemoteSwiftPackageReference "FYVideoCompressor" */,
+				B2F8455EC1BEAD73390E299B /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				F4B76D6ABBFB2973FB083892 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
 				8AD969F7942CFF7D09173F7F /* XCLocalSwiftPackageReference "vendor/LazyPager" */,
 				FDDD76CB329425548FCD3F5E /* XCLocalSwiftPackageReference "vendor/YPImagePicker" */,
@@ -297,12 +309,14 @@
 			files = (
 				EF416FDD5F47F902E0511EB7 /* APIClient.swift in Sources */,
 				D9702F1880D277CD3D4CE45E /* AddContentView.swift in Sources */,
+				F83DB2EE1C81C2E3A19B19B9 /* AppleSignIn.swift in Sources */,
 				704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */,
 				DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */,
 				FF623E777239A2DC2C912B37 /* CityListView.swift in Sources */,
 				9920ED1276D0819A568362B5 /* ContentView.swift in Sources */,
 				440C2CC483A9E17757501ADA /* DescriptionStepView.swift in Sources */,
 				DCA8A572B7CEBBBBAE9492B7 /* FaveLikeButton.swift in Sources */,
+				B403D6102AA1FE9F564CDAC4 /* GoogleSignIn.swift in Sources */,
 				BD0BAA4861F1F934B6E3FEF7 /* MapKitMapView.swift in Sources */,
 				BF0F79BCD34011F89D63D19D /* MapView.swift in Sources */,
 				39384BA69A2B393C766B6E6E /* MapViewModel.swift in Sources */,
@@ -331,6 +345,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = PanPeryskop/SignInWithApple.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PanPeryskop/Info.plist;
@@ -364,6 +379,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = PanPeryskop/SignInWithApple.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PanPeryskop/Info.plist;
@@ -563,6 +579,14 @@
 				minimumVersion = 0.0.6;
 			};
 		};
+		B2F8455EC1BEAD73390E299B /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.1.0;
+			};
+		};
 		F4B76D6ABBFB2973FB083892 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
@@ -591,6 +615,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3E4D182D36DBB16871BA4EF4 /* XCRemoteSwiftPackageReference "FYVideoCompressor" */;
 			productName = FYVideoCompressor;
+		};
+		F189511A43DE08019F262A63 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B2F8455EC1BEAD73390E299B /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

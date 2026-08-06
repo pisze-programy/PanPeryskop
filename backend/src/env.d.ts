@@ -5,4 +5,6 @@ interface Env {
   ENVIRONMENT?: string;
   CORS_ORIGIN?: string;
   MEDIA_R2_DEV?: string;
+  APPLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_ID?: string;
 }

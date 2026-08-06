@@ -7,7 +7,7 @@ See what's happening in your city — geo-anchored stories (photo, video, text) 
 - **iOS:** SwiftUI, iOS 18+
 - **Map:** MapLibre Native + OSM
 - **Backend:** Cloudflare Workers (Hono) + D1 + R2
-- **Auth:** device_id (Sign in with Apple post-MVP)
+- **Auth:** device_id + Apple/Google OAuth (id_token verification, per-device bans)
 
 ## Structure
 
@@ -42,6 +42,11 @@ cd admin && npm install && node src/cli.js queue
 | Endpoint | Description |
 |---|---|
 | `POST /auth/device` | Login / register per device_id |
+| `POST /auth/apple` | Sign in with Apple (id_token → user; dev-mode simulation) |
+| `POST /auth/google` | Sign in with Google (id_token → user; dev-mode simulation) |
+| `POST /auth/logout` | Invalidate session token server-side |
+| `POST /admin/ban` | Ban device_id permanently (blocks login + active sessions) |
+| `POST /admin/unban` | Remove device ban |
 | `GET /users/me` | Current user (username, avatar_url, role) |
 | `PATCH /users/me` | Update display name (`{username}`) |
 | `GET /users/me/posts` | All of my posts (all statuses, incl. expired) |

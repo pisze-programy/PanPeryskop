@@ -7,6 +7,7 @@ struct AppUser: Codable {
     let is_new: Bool
     let avatar_url: String?
     let username: String?
+    let auth_provider: String?
 }
 
 struct AuthResponse: Codable {
@@ -16,6 +17,7 @@ struct AuthResponse: Codable {
     let is_new: Bool
     let avatar_url: String?
     let username: String?
+    let auth_provider: String?
 }
 
 struct MeResponse: Codable {
@@ -24,4 +26,7 @@ struct MeResponse: Codable {
     let role: String
     let username: String?
     let avatar_url: String?
+    let auth_provider: String?
+    let has_apple: Bool?
+    let has_google: Bool?
 }

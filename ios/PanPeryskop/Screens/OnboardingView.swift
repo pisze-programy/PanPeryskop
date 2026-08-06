@@ -50,22 +50,28 @@ struct OnboardingView: View {
                         .padding(.horizontal)
                 }
 
-                Button(action: { Task { await performLogin() } }) {
-                    HStack(spacing: 8) {
-                        if isLoading {
-                            ProgressView()
+                VStack(spacing: 12) {
+                    AppleSignInButton(
+                        onSuccess: { result in
+                            Task { await handleAppleLogin(result) }
+                        },
+                        onError: { error in
+                            errorMessage = error.localizedDescription
                         }
-                        Text("Wejdź do aplikacji")
-                            .font(.headline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
+                    )
+                    .frame(height: 50)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    GoogleSignInButton(
+                        onSuccess: { result in
+                            Task { await handleGoogleLogin(result) }
+                        },
+                        onError: { error in
+                            errorMessage = error.localizedDescription
+                        }
+                    )
                 }
                 .padding(.horizontal, 32)
-                .disabled(isLoading)
 
                 Spacer()
                     .frame(height: 60)
@@ -73,13 +79,28 @@ struct OnboardingView: View {
         }
     }
 
-    private func performLogin() async {
+    private func handleAppleLogin(_ result: AppleSignInResult) async {
         isLoading = true
         errorMessage = nil
         do {
-            try await authManager.login()
+            try await authManager.loginWithApple(result)
+        } catch let error as AuthError where error == .banned {
+            errorMessage = "Twoje urządzenie jest zbanowane."
         } catch {
-            errorMessage = "Błąd połączenia. Spróbuj ponownie."
+            errorMessage = "Błąd logowania przez Apple. Spróbuj ponownie."
+        }
+        isLoading = false
+    }
+
+    private func handleGoogleLogin(_ result: GoogleSignInResult) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await authManager.loginWithGoogle(result)
+        } catch let error as AuthError where error == .banned {
+            errorMessage = "Twoje urządzenie jest zbanowane."
+        } catch {
+            errorMessage = "Błąd logowania przez Google. Spróbuj ponownie."
         }
         isLoading = false
     }

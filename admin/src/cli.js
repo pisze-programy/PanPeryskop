@@ -12,7 +12,7 @@ async function main() {
   const [, , cmd, id, ...rest] = process.argv;
 
   if (!cmd) {
-    console.log('Usage: cli <approve|reject> [post_id] [reason]');
+    console.log('Usage: cli <approve|reject|ban|unban> [id] [reason]');
     process.exit(1);
   }
 
@@ -29,6 +29,26 @@ async function main() {
         method: 'POST',
         headers,
         body: JSON.stringify({ reason: rest.join(' ') || null }),
+      });
+      console.log(await res.json());
+      break;
+    }
+    case 'ban': {
+      if (!id) { console.log('Usage: cli ban <device_id> [reason]'); process.exit(1); }
+      const res = await fetch(`${BASE_URL}/admin/ban`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ device_id: id, reason: rest.join(' ') || null }),
+      });
+      console.log(await res.json());
+      break;
+    }
+    case 'unban': {
+      if (!id) { console.log('Usage: cli unban <device_id>'); process.exit(1); }
+      const res = await fetch(`${BASE_URL}/admin/unban`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ device_id: id }),
       });
       console.log(await res.json());
       break;

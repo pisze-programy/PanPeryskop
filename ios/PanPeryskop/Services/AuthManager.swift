@@ -6,6 +6,7 @@ class AuthManager: ObservableObject {
     @Published var isAuthenticated = false
     @Published var sessionToken: String?
     @Published var userId: String?
+    @Published var authProvider: String?
     @Published var avatarUrl: String? {
         didSet {
             if let avatarUrl {
@@ -96,6 +97,50 @@ class AuthManager: ObservableObject {
 
         sessionToken = resp.session_token
         userId = resp.user_id
+        authProvider = resp.auth_provider ?? "device"
+        avatarUrl = resp.avatar_url
+        username = resp.username
+        try? keychain.set(resp.session_token, key: sessionTokenKey)
+        isAuthenticated = true
+    }
+
+    func loginWithApple(_ result: AppleSignInResult) async throws {
+        try await performOAuthLogin(
+            path: "/auth/apple",
+            identityToken: result.identityToken,
+            provider: "apple"
+        )
+    }
+
+    func loginWithGoogle(_ result: GoogleSignInResult) async throws {
+        try await performOAuthLogin(
+            path: "/auth/google",
+            identityToken: result.identityToken,
+            provider: "google"
+        )
+    }
+
+    private func performOAuthLogin(path: String, identityToken: String, provider: String) async throws {
+        struct OAuthBody: Encodable {
+            let device_id: String
+            let identity_token: String
+            let full_name: String?
+        }
+        let url = URL(string: "\(APIClient.baseURL)\(path)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(OAuthBody(device_id: deviceId, identity_token: identityToken, full_name: nil))
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 403 {
+            throw AuthError.banned
+        }
+        let resp = try JSONDecoder().decode(AuthResponse.self, from: data)
+
+        sessionToken = resp.session_token
+        userId = resp.user_id
+        authProvider = resp.auth_provider ?? provider
         avatarUrl = resp.avatar_url
         username = resp.username
         try? keychain.set(resp.session_token, key: sessionTokenKey)
@@ -109,6 +154,9 @@ class AuthManager: ObservableObject {
             avatarUrl = me.avatar_url
             if let name = me.username, !name.isEmpty {
                 username = name
+            }
+            if let provider = me.auth_provider {
+                authProvider = provider
             }
         } catch {
             print("Failed to refresh user:", error)
@@ -127,12 +175,30 @@ class AuthManager: ObservableObject {
         avatarVersion += 1
     }
 
-    func logout() {
+    func logout() async {
+        if let token = sessionToken {
+            var request = URLRequest(url: URL(string: "\(APIClient.baseURL)/auth/logout")!)
+            request.httpMethod = "POST"
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            _ = try? await URLSession.shared.data(for: request)
+        }
         sessionToken = nil
         userId = nil
+        authProvider = nil
         avatarUrl = nil
         username = nil
         try? keychain.remove(sessionTokenKey)
         isAuthenticated = false
+    }
+}
+
+enum AuthError: LocalizedError {
+    case banned
+
+    var errorDescription: String? {
+        switch self {
+        case .banned:
+            return "Urządzenie zbanowane"
+        }
     }
 }

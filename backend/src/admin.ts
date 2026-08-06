@@ -36,3 +36,41 @@ adminRoutes.post('/posts/:id/reject', async (c) => {
     .run();
   return c.json({ ok: true, rejection_reason: reason });
 });
+
+adminRoutes.post('/ban', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+
+  const db = c.env.DB;
+  const body = await c.req
+    .json<{ device_id?: unknown; reason?: unknown }>()
+    .catch(() => ({}) as { device_id?: unknown; reason?: unknown });
+
+  if (typeof body.device_id !== 'string' || body.device_id.length === 0) {
+    return c.json({ error: 'device_id is required' }, 400);
+  }
+
+  const reason =
+    typeof body.reason === 'string' && body.reason.trim().length > 0 ? body.reason.trim() : null;
+
+  await db
+    .prepare('INSERT INTO banned_devices (device_id, reason, banned_at) VALUES (?, ?, ?) ON CONFLICT(device_id) DO UPDATE SET reason = excluded.reason')
+    .bind(body.device_id, reason, Date.now())
+    .run();
+  return c.json({ ok: true, device_id: body.device_id, reason });
+});
+
+adminRoutes.post('/unban', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+
+  const db = c.env.DB;
+  const body = await c.req
+    .json<{ device_id?: unknown }>()
+    .catch(() => ({}) as { device_id?: unknown });
+
+  if (typeof body.device_id !== 'string' || body.device_id.length === 0) {
+    return c.json({ error: 'device_id is required' }, 400);
+  }
+
+  await db.prepare('DELETE FROM banned_devices WHERE device_id = ?').bind(body.device_id).run();
+  return c.json({ ok: true, device_id: body.device_id });
+});

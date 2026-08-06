@@ -23,6 +23,9 @@ usersRoutes.get('/me', async (c) => {
     role: user.role,
     username: user.username,
     avatar_url: avatarUrl(user.avatar_key),
+    auth_provider: user.auth_provider,
+    has_apple: Boolean(user.apple_id),
+    has_google: Boolean(user.google_id),
   });
 });
 

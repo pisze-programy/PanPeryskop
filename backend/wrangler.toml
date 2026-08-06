@@ -11,6 +11,10 @@ database_id = "c9fed854-29bc-4ea7-9242-d0a7bc6abee0"
 binding = "MEDIA"
 bucket_name = "panperyskop-media"
 
+[vars]
+APPLE_CLIENT_ID = "com.panperyskop.PanPeryskop"
+# GOOGLE_CLIENT_ID = ""  # set once an OAuth client is created in Google Cloud Console
+
 [env.prod]
 [env.prod.vars]
 ENVIRONMENT = "production"

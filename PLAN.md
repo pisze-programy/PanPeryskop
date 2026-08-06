@@ -279,7 +279,8 @@ Weights (`WV=1, WL=3, WS=5, DECAY=0.99`) configurable via env vars. Server retur
 
 ## 8e. Apple OAuth — implementation plan
 
-> **Status:** planned, before implementation. Decisions agreed 2026-08-06.
+> **Status:** implemented 2026-08-06 (backend deployed, iOS built; real Apple sign-in still
+> requires a paid Apple Developer account to activate the capability — dev simulation used).
 
 ### Identity model (agreed)
 
@@ -325,6 +326,11 @@ CREATE TABLE IF NOT EXISTS banned_devices (
 - **Dev mode (no paid account):** when `ENVIRONMENT !== 'production'`, the endpoint accepts
   the `{ device_id, apple_user_id, full_name }` variant without JWT verification
   (simulation). In production verification is always required.
+- `authenticate()` also rejects banned devices → `403 {error: 'banned'}` — a banned device
+  with an active `session_token` must not keep working (ban is enforced on every request,
+  not only at login).
+- `POST /auth/logout` — rotates/clears `session_token` server-side, so logout is real
+  invalidation, not just client keychain cleanup.
 
 **`backend/src/users.ts`:** `GET /users/me` additionally returns `auth_provider` + a
 `has_apple` flag (for the profile UI).
@@ -340,16 +346,23 @@ CREATE TABLE IF NOT EXISTS banned_devices (
   `SignInWithAppleButton` (drives `ASAuthorizationController`, the delegate returns
   `identityToken`/`fullName`/`sub`). Under `#if DEBUG` the button generates a fake
   `identityToken` (random `apple_user_id`) instead of the native sheet → same backend endpoint.
+- **Presentation (verified):** Sign in with Apple uses the **native system sheet**
+  (`ASAuthorizationController`) — no browser at all (no in-app browser, no Safari switch), no
+  redirect URI / URL scheme; the result returns directly via the delegate. The only real
+  requirement for a live `identityToken` is the entitlement (already in the project) + the
+  Sign in with Apple capability enabled on the App ID of a **paid** Apple Developer account.
+  `aud` in Apple's token = bundle ID (already set as `APPLE_CLIENT_ID` on the backend).
 - **`AuthManager`:** keychain unchanged (`device_id` stays). Add `loginWithApple()` →
   `POST /auth/apple` (via `APIClient`), store `session_token`/`user_id`/`username` as in
   `login()`; `Error 403` → dedicated "Device banned" message. Store `apple_user_id` in the
-  Keychain (for future `getCredentialState`).
+  Keychain (for future `getCredentialState`). `logout()` calls `POST /auth/logout` before
+  clearing the keychain.
 - **`APIClient`:** `authHeaders()` unchanged (same `session_token`).
 - **`OnboardingView`:** "Enter the app" replaced by the "Sign in with Apple" button (official
-  `SignInWithAppleButton`, PL localization from the system). In DEBUG a small fallback link
-  "Enter without logging in" below it (dev-only, plain `/auth/device`).
+  `SignInWithAppleButton`, PL localization from the system) + a "Continue with Google" button
+  (white, centered, rounded — official Google look). No device-login fallback link on the screen.
 - **`ProfileView`:** shows "Signed in with Apple" under the name when `has_apple`. Logout
-  unchanged.
+  goes through `POST /auth/logout` (server-side token rotation).
 
 ### 3. Testing (two devices, same Apple ID)
 
@@ -360,7 +373,8 @@ does not affect the other.
 
 1. `cd backend && npm run db:migrate` (0007) + `npx wrangler dev`.
 2. curl: `POST /auth/apple` (dev mode) → creates/logs in; `POST /auth/apple` with a banned
-   `device_id` → 403.
+   `device_id` → 403; banned device with an existing `session_token` → 403 on any
+   authenticated endpoint; `POST /auth/logout` → old token no longer works.
 3. iOS: `xcodegen generate` → build → onboarding via Apple (simulation in DEBUG), profile
    shows the login source, ban tested via CLI.
 4. `npm run typegen`/`tsc` after backend changes.
@@ -369,7 +383,8 @@ does not affect the other.
 
 ## 8f. Google OAuth alongside Apple — implementation plan
 
-> **Status:** planned, before implementation. Decisions agreed 2026-08-06. Google is added
+> **Status:** implemented 2026-08-06 (backend + iOS wired; real Google sign-in needs a real
+> `GOOGLE_CLIENT_ID` from Google Cloud Console — dev simulation used until then). Google is added
 > **alongside** Apple (plan 8e) — it does not replace it. Identity model, ban and session
 > are identical to 8e (`device_id` = identity, `google_id` nullable and non-unique, ban by
 > `device_id`).
@@ -398,6 +413,8 @@ does not affect the other.
 - **`wrangler.toml` vars:** `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID` (= bundle ID).
 - **Dev mode:** same pattern as Apple — `ENVIRONMENT !== 'production'` → simulation
   (`{ device_id, google_user_id, full_name }` without JWT verification).
+- **Provider-agnostic:** ban check in `authenticate()` and `POST /auth/logout` (see 8e) also
+  cover Google users — no per-provider logic needed.
 - **`GET /users/me`:** returns `auth_provider` + `has_apple` + `has_google` (flags for the
   profile).
 
@@ -406,8 +423,15 @@ does not affect the other.
 - **`project.yml`:** add the `GoogleSignIn` package (SPM) + `GIDClientID` and the
   `com.googleusercontent.apps.<client-id>` URL scheme (reversed client ID) in
   `info.properties`. Regenerate with xcodegen.
-- **`Services/GoogleSignIn.swift`** (new): `GIDSignIn` wrapper, returns `idToken` + name.
-  DEBUG simulation like Apple.
+- **`Services/GoogleSignIn.swift`** (new): `GIDSignIn` handler + a custom SwiftUI white button
+  (official Google look: white bg, dark text, subtle border, centered) with the official Google
+  "G" logo drawn from the official SVG paths. DEBUG simulation like Apple.
+- **Presentation (verified):** GoogleSignIn v7+ presents through **`ASWebAuthenticationSession`**
+  (in-app Safari-style modal sheet) — it does **not** switch to the Safari app. Callback is
+  intercepted in-app via the reversed client ID URL scheme; `GIDSignIn.handle(url)` in
+  `onOpenURL` is only an edge-case safety net. To actually see the sheet (vs. the DEBUG
+  simulation) you need a real `GIDClientID` + reversed-client-ID URL scheme in `Info.plist`
+  and a **Release** build.
 - **`PanPeryskopApp.swift`:** add `GIDSignIn.sharedInstance.handle(url)` to the existing
   `onOpenURL`.
 - **`AuthManager.loginWithGoogle()`** → `POST /auth/google`; `403` → "Device banned".
@@ -456,6 +480,8 @@ was no longer needed. Scope:
 
 - App Store release (needs $99 Apple Developer account; store description TBD: "PanPeryskop — zobacz co się dzieje w mieście").
 - ~~Sign in with Apple (post-MVP real auth)~~ → planned in sections 8e + 8f (Apple + Google); Apple requires a paid Apple Developer account to activate the capability.
+- Session token **TTL** + refresh tokens — deferred; current single-token model (token rotated on every login + `POST /auth/logout`) is enough for the low-value threat model of a 24h-TTL content app. Revisit if token theft or full session management (access/refresh) becomes a requirement — that is also the point where adopting better-auth (web sessions, cookies, refresh) would make sense.
+- Rate limiting on `/auth/*` + JWKS caching (defense-in-depth, deferred).
 - Multiple map styles (MVP = one simple OSM style).
 - Self-hosted OSM tile server.
 - Live streaming (post-MVP).

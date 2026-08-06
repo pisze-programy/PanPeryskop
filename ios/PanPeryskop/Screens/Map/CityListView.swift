@@ -11,6 +11,7 @@ struct CityListView: View {
             List {
                 ForEach(City.all) { city in
                     Button {
+                        Haptics.selection()
                         onSelect(city)
                         dismiss()
                     } label: {

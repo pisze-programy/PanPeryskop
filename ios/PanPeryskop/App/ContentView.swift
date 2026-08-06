@@ -41,19 +41,28 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     Spacer()
                     HStack(spacing: 40) {
-                        Button(action: { selectedTab = 0 }) {
+                        Button(action: {
+                            if selectedTab != 0 { Haptics.selection() }
+                            selectedTab = 0
+                        }) {
                             Image(systemName: "map.fill")
                                 .font(.title3)
                                 .foregroundColor(selectedTab == 0 ? .accentColor : .gray)
                         }
 
-                        Button(action: { showAddContent = true }) {
+                        Button(action: {
+                            Haptics.impact(.light)
+                            showAddContent = true
+                        }) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 44))
                                 .foregroundColor(.accentColor)
                         }
 
-                        Button(action: { selectedTab = 1 }) {
+                        Button(action: {
+                            if selectedTab != 1 { Haptics.selection() }
+                            selectedTab = 1
+                        }) {
                             Image(systemName: "person.fill")
                                 .font(.title3)
                                 .foregroundColor(selectedTab == 1 ? .accentColor : .gray)

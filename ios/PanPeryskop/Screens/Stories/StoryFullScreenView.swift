@@ -135,6 +135,7 @@ struct StoryFullScreenView: View {
                         VStack(spacing: 20) {
                             let liked = likedStates[currentPost.id] ?? currentPost.liked
                             FaveLikeButton(isLiked: liked) { newValue in
+                                if newValue { Haptics.explosion() }
                                 Task {
                                     let result = await viewModel.toggleLike(currentPost.id)
                                     likedStates[currentPost.id] = result
@@ -143,6 +144,7 @@ struct StoryFullScreenView: View {
                             let disliked = dislikedStates[currentPost.id] ?? currentPost.disliked
                             let dislikeCount = dislikesCounts[currentPost.id] ?? currentPost.dislikes_count
                             Button {
+                                Haptics.impact(.light)
                                 let base = dislikeCount
                                 Task {
                                     let result = await viewModel.toggleDislike(currentPost.id)
@@ -165,6 +167,7 @@ struct StoryFullScreenView: View {
                             }
                             .buttonStyle(.plain)
                             Button {
+                                Haptics.impact(.light)
                                 pausePlayback()
                                 Task { await viewModel.sharePost(currentPost.id) }
                                 shareItem = ShareItem(

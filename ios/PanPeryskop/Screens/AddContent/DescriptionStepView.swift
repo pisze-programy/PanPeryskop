@@ -69,7 +69,10 @@ struct DescriptionStepView: View {
                             .padding(.horizontal)
                     }
 
-                    Button(action: { Task { await publish() } }) {
+                    Button(action: {
+                        Haptics.impact(.medium)
+                        Task { await publish() }
+                    }) {
                         HStack {
                             if isLoading {
                                 ProgressView().tint(.white)
@@ -193,9 +196,15 @@ struct DescriptionStepView: View {
     private func publish() async {
         isLoading = true
         statusMessage = nil
+        Haptics.startTickLoop()
 
         let lat = locationManager.currentLocation?.coordinate.latitude ?? 52.4064
         let lng = locationManager.currentLocation?.coordinate.longitude ?? 16.9252
+
+        defer {
+            Haptics.stopTickLoop()
+            isLoading = false
+        }
 
         do {
             let data = try await dataForUpload()
@@ -213,14 +222,15 @@ struct DescriptionStepView: View {
                 fields: ["type": mediaType.rawValue, "lat": String(lat), "lng": String(lng), "description": description]
             )
             await MainActor.run {
+                Haptics.success()
+                Haptics.explosion()
                 ToastManager.shared.show("Zapisano!")
                 dismiss()
             }
         } catch {
+            Haptics.error()
             statusMessage = "Błąd: \(error.localizedDescription)"
         }
-
-        isLoading = false
     }
 }
 

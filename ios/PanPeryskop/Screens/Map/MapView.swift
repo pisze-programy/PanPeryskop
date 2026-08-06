@@ -27,11 +27,13 @@ struct MapScreen: View {
                 },
                 onTapPost: { post, bbox in
                     guard !post.watched else { return }
+                    Haptics.impact(.medium)
                     storyPosts = viewModel.viewerPosts(for: post, in: bbox)
                     selectedStoryIndex = 0
                     showStoryViewer = true
                 },
                 onTapCluster: { cluster, bbox in
+                    Haptics.impact(.medium)
                     storyPosts = viewModel.viewerPosts(forCluster: cluster.posts, in: bbox)
                     selectedStoryIndex = 0
                     showStoryViewer = true
@@ -43,6 +45,7 @@ struct MapScreen: View {
                 HStack {
                     Spacer()
                     Button {
+                        Haptics.selection()
                         showCityList = true
                     } label: {
                         HStack(spacing: 6) {
@@ -109,6 +112,8 @@ struct MapScreen: View {
         HStack(spacing: 4) {
             ForEach(FeedCategory.allCases) { cat in
                 Button {
+                    guard viewModel.feedCategory != cat else { return }
+                    Haptics.selection()
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
                         viewModel.selectFeedCategory(cat)
                     }

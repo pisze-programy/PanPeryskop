@@ -93,6 +93,16 @@ struct ProfileView: View {
     private var menuList: some View {
         VStack(spacing: 10) {
             NavigationLink {
+                SettingsView()
+            } label: {
+                ProfileMenuRow(
+                    icon: "gearshape.fill",
+                    title: "Ustawienia",
+                    subtitle: "Haptyka i inne opcje"
+                )
+            }
+
+            NavigationLink {
                 MyContentView()
             } label: {
                 ProfileMenuRow(

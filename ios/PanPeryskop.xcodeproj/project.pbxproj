@@ -11,6 +11,7 @@
 		107EED2E8B9754ECB995B3DF /* FYVideoCompressor in Frameworks */ = {isa = PBXBuildFile; productRef = E8A9ED350A703F9EAF1CDA91 /* FYVideoCompressor */; };
 		10900ACDFF97A0602C804A4B /* MyPost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AFF2D3AC0370D62EABBDC9C /* MyPost.swift */; };
 		13A1D4F80977B8D1EA84DB82 /* LazyPager in Frameworks */ = {isa = PBXBuildFile; productRef = 4A677370EF0D1A3DA130B241 /* LazyPager */; };
+		206660903D27130B55C2095D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5356FAE97C8B9C005B61765A /* SettingsView.swift */; };
 		22654D8D1F5D231BD0E6854D /* MyContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C198549226A3AB8D8AD7C270 /* MyContentView.swift */; };
 		24B2FF9A64C3A7F84F3AD6C5 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 62E60A31C2421F71CE67D919 /* KeychainAccess */; };
 		284B3CD71E257A0347F0B2A2 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = F189511A43DE08019F262A63 /* GoogleSignIn */; };
@@ -27,6 +28,7 @@
 		8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 063211FB7EC797AEFD489DE6 /* ToastManager.swift */; };
 		8E82AAB2424095D2D1ECDBA7 /* PermissionGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D6796591AD82A922A91F5E /* PermissionGateView.swift */; };
 		9920ED1276D0819A568362B5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE2CB33037E6D96F692E131 /* ContentView.swift */; };
+		A0BCF5ED3648079708069EA5 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 916F2163F2DBDBD7C763C34A /* Haptics.swift */; };
 		B403D6102AA1FE9F564CDAC4 /* GoogleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3AF72BC05A08AC8D709C38A /* GoogleSignIn.swift */; };
 		B75E0DBA2194C2670F968BDD /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0C2297077E1CF861F55EF2 /* User.swift */; };
 		BD0BAA4861F1F934B6E3FEF7 /* MapKitMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1057374311D0AF3FDAC2B2FF /* MapKitMapView.swift */; };
@@ -56,12 +58,14 @@
 		4243C0678522339A2173990C /* YPImagePicker */ = {isa = PBXFileReference; lastKnownFileType = folder; name = YPImagePicker; path = vendor/YPImagePicker; sourceTree = SOURCE_ROOT; };
 		4320E4286C200A4CE58EED67 /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
 		44766F2DE7DFC8576566A0AF /* DescriptionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStepView.swift; sourceTree = "<group>"; };
+		5356FAE97C8B9C005B61765A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		58C953E9B4F30356C1AF058A /* NicknameEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NicknameEditView.swift; sourceTree = "<group>"; };
 		6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		6D0328366619E568BB043CF9 /* SignInWithApple.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SignInWithApple.entitlements; sourceTree = "<group>"; };
 		702099485B19214D722CB2AB /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E2581E6150C834401927100 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
+		916F2163F2DBDBD7C763C34A /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		9C0C2297077E1CF861F55EF2 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
 		BB11E724A06F70ED3DA7B0F5 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
@@ -164,6 +168,7 @@
 				A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */,
 				702099485B19214D722CB2AB /* AuthManager.swift */,
 				F3AF72BC05A08AC8D709C38A /* GoogleSignIn.swift */,
+				916F2163F2DBDBD7C763C34A /* Haptics.swift */,
 				0AF85F0B111F42C315E257A2 /* MediaCompressor.swift */,
 				063211FB7EC797AEFD489DE6 /* ToastManager.swift */,
 			);
@@ -186,6 +191,7 @@
 				DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */,
 				4320E4286C200A4CE58EED67 /* PermissionsView.swift */,
 				FFBA35634291A3B8F365D85D /* ProfileView.swift */,
+				5356FAE97C8B9C005B61765A /* SettingsView.swift */,
 			);
 			path = Profile;
 			sourceTree = "<group>";
@@ -317,6 +323,7 @@
 				440C2CC483A9E17757501ADA /* DescriptionStepView.swift in Sources */,
 				DCA8A572B7CEBBBBAE9492B7 /* FaveLikeButton.swift in Sources */,
 				B403D6102AA1FE9F564CDAC4 /* GoogleSignIn.swift in Sources */,
+				A0BCF5ED3648079708069EA5 /* Haptics.swift in Sources */,
 				BD0BAA4861F1F934B6E3FEF7 /* MapKitMapView.swift in Sources */,
 				BF0F79BCD34011F89D63D19D /* MapView.swift in Sources */,
 				39384BA69A2B393C766B6E6E /* MapViewModel.swift in Sources */,
@@ -332,6 +339,7 @@
 				793C570B66E95389695354C8 /* PermissionsView.swift in Sources */,
 				C0E44758121DAEDF631C5FA1 /* Post.swift in Sources */,
 				44DCBF845465155C6A877FEE /* ProfileView.swift in Sources */,
+				206660903D27130B55C2095D /* SettingsView.swift in Sources */,
 				CA6B53CF05EDBC94617C3745 /* StoryFullScreenView.swift in Sources */,
 				8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */,
 				B75E0DBA2194C2670F968BDD /* User.swift in Sources */,

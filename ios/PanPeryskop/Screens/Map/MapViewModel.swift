@@ -83,7 +83,6 @@ class MapViewModel: ObservableObject {
         serverPosts.filter { $0.isStillValid && ($0.category ?? "live") == feedCategory.rawValue }
     }
 
-    var defaultCenter: CLLocationCoordinate2D { selectedCity.center }
     var defaultZoom: Double { 12 }
 
     func refreshCurrentRegion() {

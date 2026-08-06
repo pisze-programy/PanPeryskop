@@ -8,22 +8,16 @@ struct MapScreen: View {
     @Binding var storyPosts: [Post]
     @EnvironmentObject private var authManager: AuthManager
 
-    @State private var showReturnPill = false
     @State private var showCityList = false
 
     @Environment(\.scenePhase) private var scenePhase
 
-    let centerThreshold: Double = 0.025
-
     var body: some View {
         ZStack {
             MapKitMapView(
-                center: viewModel.defaultCenter,
                 zoom: viewModel.defaultZoom,
                 posts: viewModel.posts,
                 currentUserId: authManager.userId,
-                showReturnPill: $showReturnPill,
-                centerThreshold: centerThreshold,
                 initialRegion: viewModel.initialRegion,
                 onRegionChange: { swLat, swLng, neLat, neLng in
                     viewModel.fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
@@ -71,31 +65,6 @@ struct MapScreen: View {
                 .padding(.top, 12)
 
                 Spacer()
-            }
-
-            if showReturnPill {
-                VStack {
-                    Spacer()
-                    Button {
-                        withAnimation { showReturnPill = false }
-                        NotificationCenter.default.post(name: .returnToCenter, object: nil)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "location.fill")
-                                .font(.caption)
-                            Text("Wróć do centrum")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
-                        .shadow(radius: 4)
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .padding(.bottom, 176)
-                }
             }
 
             VStack {
@@ -168,7 +137,6 @@ struct MapScreen: View {
 }
 
 extension Notification.Name {
-    static let returnToCenter = Notification.Name("returnToCenter")
     static let flyToCity = Notification.Name("flyToCity")
     static let scrollToPost = Notification.Name("scrollToPost")
 }

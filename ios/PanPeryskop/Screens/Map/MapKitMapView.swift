@@ -2,12 +2,9 @@ import SwiftUI
 import MapKit
 
 struct MapKitMapView: View {
-    let center: CLLocationCoordinate2D
     let zoom: Double
     let posts: [Post]
     let currentUserId: String?
-    @Binding var showReturnPill: Bool
-    let centerThreshold: Double
     let initialRegion: MKCoordinateRegion
     let onRegionChange: (Double, Double, Double, Double) -> Void
     let onCameraSettled: (MKCoordinateRegion) -> Void
@@ -16,27 +13,20 @@ struct MapKitMapView: View {
 
     @State private var camera: MapCameraPosition
     @State private var visibleRegion: MKCoordinateRegion
-    @State private var isChangingCity = false
 
     init(
-        center: CLLocationCoordinate2D,
         zoom: Double,
         posts: [Post],
         currentUserId: String?,
-        showReturnPill: Binding<Bool>,
-        centerThreshold: Double,
         initialRegion: MKCoordinateRegion,
         onRegionChange: @escaping (Double, Double, Double, Double) -> Void,
         onCameraSettled: @escaping (MKCoordinateRegion) -> Void,
         onTapPost: @escaping (Post, MapBBox) -> Void,
         onTapCluster: @escaping (PostCluster, MapBBox) -> Void
     ) {
-        self.center = center
         self.zoom = zoom
         self.posts = posts
         self.currentUserId = currentUserId
-        self._showReturnPill = showReturnPill
-        self.centerThreshold = centerThreshold
         self.initialRegion = initialRegion
         self.onRegionChange = onRegionChange
         self.onCameraSettled = onCameraSettled
@@ -109,16 +99,10 @@ struct MapKitMapView: View {
                 let neLng = region.center.longitude + region.span.longitudeDelta / 2
                 onRegionChange(swLat, swLng, neLat, neLng)
                 onCameraSettled(region)
-                handleCameraSettled(at: region.center)
             }
             .onReceive(NotificationCenter.default.publisher(for: .flyToCity)) { note in
                 guard let city = note.object as? City else { return }
                 flyTo(city: city)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .returnToCenter)) { _ in
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    camera = .camera(MapKitMapView.maxOutCamera(center: center))
-                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .scrollToPost)) { note in
                 guard let post = note.object as? Post else { return }
@@ -134,22 +118,8 @@ struct MapKitMapView: View {
     }
 
     private func flyTo(city: City) {
-        isChangingCity = true
         withAnimation(.easeInOut(duration: 1.2)) {
-            showReturnPill = false
             camera = .camera(MapKitMapView.maxOutCamera(center: city.center))
-        }
-    }
-
-    private func handleCameraSettled(at coord: CLLocationCoordinate2D) {
-        isChangingCity = false
-        checkDistance(from: coord)
-    }
-
-    private func checkDistance(from coord: CLLocationCoordinate2D) {
-        let d = dist(coord.latitude, coord.longitude, center.latitude, center.longitude)
-        withAnimation(.easeInOut(duration: 0.3)) {
-            showReturnPill = d > centerThreshold
         }
     }
 

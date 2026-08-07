@@ -6,6 +6,7 @@ import { storiesRoutes } from './stories';
 import { actionsRoutes } from './actions';
 import { adminRoutes } from './admin';
 import { usersRoutes } from './users';
+import { clientErrorRoutes } from './clientErrors';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -25,6 +26,7 @@ app.route('/posts', postsRoutes);
 app.route('/stories', storiesRoutes);
 app.route('/actions', actionsRoutes);
 app.route('/admin', adminRoutes);
+app.route('/client', clientErrorRoutes);
 
 app.all('/media/*', async (c) => {
   const key = c.req.path.replace(/^\/media\//, '');

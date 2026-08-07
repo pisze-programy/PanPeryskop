@@ -11,13 +11,7 @@ struct DescriptionStepView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    @State private var description = ""
-    @State private var isLoading = false
-    @State private var statusMessage: String?
-    @State private var statusIsError = false
-    @State private var compressedVideoData: Data?
-    @State private var compressionTask: Task<Void, Never>?
-    @State private var compressionError: Error?
+    @State private var didPublish = false
     @State private var isPreviewPlaying = false
     @State private var previewPlayer: AVPlayer?
     @StateObject private var locationManager = LocationManager()
@@ -34,16 +28,6 @@ struct DescriptionStepView: View {
                         .frame(height: 120)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .padding(.horizontal)
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Opis")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        TextField("Co się dzieje?", text: $description, axis: .vertical)
-                            .lineLimit(3...5)
-                            .textFieldStyle(.roundedBorder)
-                    }
-                    .padding(.horizontal)
 
                     if locationManager.authorizationStatus == .denied || locationManager.authorizationStatus == .restricted {
                         Button {
@@ -64,31 +48,27 @@ struct DescriptionStepView: View {
                         .padding(.horizontal)
                     }
 
-                    if let msg = statusMessage {
-                        Text(msg)
+                    if !hasLocation {
+                        Text("Udostępnij dostęp do lokalizacji przed publikacją")
                             .font(.caption)
-                            .foregroundColor(statusIsError ? .red : .green)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     }
 
                     Button(action: {
                         Haptics.impact(.medium)
-                        Task { await publish() }
+                        publish()
                     }) {
-                        HStack {
-                            if isLoading {
-                                ProgressView().tint(.white)
-                            }
-                            Text("Opublikuj")
-                                .font(.headline)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.accentColor)
-                        .foregroundColor(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        Text("Opublikuj")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.accentColor)
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
-                    .disabled(isLoading)
+                    .disabled(!hasLocation)
                     .padding(.horizontal, 32)
                 }
                 .padding(.vertical, 20)
@@ -101,43 +81,32 @@ struct DescriptionStepView: View {
                 }
             }
         }
-        .onAppear { startCompressionIfNeeded() }
         .onDisappear {
-            compressionTask?.cancel()
             previewPlayer?.pause()
         }
     }
 
-    private func startCompressionIfNeeded() {
-        guard mediaType == .video, let url = videoURL, compressionTask == nil else { return }
-        compressionTask = Task { await compressVideo(from: url) }
+    private var hasLocation: Bool {
+        locationManager.currentLocation != nil
     }
 
-    private func compressVideo(from url: URL) async {
-        do {
-            let outputURL = try await MediaCompressor.compressVideo(from: url)
-            let data = try Data(contentsOf: outputURL)
-            try? FileManager.default.removeItem(at: outputURL)
-            compressedVideoData = data
-        } catch {
-            compressionError = error
-            print("Video compression failed:", error)
-        }
-    }
+    private func publish() {
+        guard !didPublish, let location = locationManager.currentLocation else { return }
+        didPublish = true
 
-    private func dataForUpload() async throws -> Data {
-        if mediaType == .photo { return mediaData }
-        if let task = compressionTask { await task.value }
-        if let error = compressionError { throw error }
-        if let data = compressedVideoData { return data }
-        guard let url = videoURL else {
-            throw NSError(
-                domain: "PanPeryskop",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Brak pliku wideo"]
-            )
+        let lat = location.coordinate.latitude
+        let lng = location.coordinate.longitude
+
+        if mediaType == .photo {
+            PendingPostsStore.shared.enqueue(photoData: mediaData, lat: lat, lng: lng, description: "")
+        } else if let url = videoURL {
+            PendingPostsStore.shared.enqueue(videoURL: url, thumbData: mediaData, lat: lat, lng: lng, description: "")
         }
-        return try Data(contentsOf: url)
+
+        Haptics.success()
+        PostUploader.shared.start()
+        ToastManager.shared.show("Publikuję!")
+        dismiss()
     }
 
     @ViewBuilder
@@ -195,58 +164,6 @@ struct DescriptionStepView: View {
         let player = AVPlayer(url: url)
         previewPlayer = player
         player.play()
-    }
-
-    private func publish() async {
-        isLoading = true
-        statusMessage = nil
-        statusIsError = false
-        Haptics.startTickLoop()
-
-        let lat = locationManager.currentLocation?.coordinate.latitude ?? 52.4064
-        let lng = locationManager.currentLocation?.coordinate.longitude ?? 16.9252
-
-        defer {
-            Haptics.stopTickLoop()
-            isLoading = false
-        }
-
-        do {
-            let data = try await dataForUpload()
-            let thumb: Data?
-            if mediaType == .photo {
-                thumb = MediaCompressor.thumbnailData(UIImage(data: mediaData) ?? UIImage())
-            } else {
-                thumb = mediaData
-            }
-            let mimeType = mediaType == .video ? "video/mp4" : "image/jpeg"
-            let ext = mediaType == .video ? "mp4" : "jpg"
-            try await APIClient.uploadMedia(
-                "/posts", fileData: data, fileName: "capture.\(ext)", mimeType: mimeType,
-                thumbData: thumb,
-                fields: ["type": mediaType.rawValue, "lat": String(lat), "lng": String(lng), "description": description]
-            )
-            await MainActor.run {
-                Haptics.success()
-                Haptics.explosion()
-                ToastManager.shared.show("Zapisano!")
-                dismiss()
-            }
-        } catch {
-            Haptics.error()
-            statusMessage = errorMessage(for: error)
-            statusIsError = true
-        }
-    }
-
-    private func errorMessage(for error: Error) -> String {
-        if let apiError = error as? APIError, apiError.isTooLarge {
-            return "Nagranie jest za długie"
-        }
-        if error is MediaCompressor.CompressError {
-            return "Nagranie jest za długie"
-        }
-        return "Coś poszło nie tak. Spróbuj ponownie."
     }
 }
 

@@ -81,6 +81,7 @@ struct ContentView: View {
         }
         .ignoresSafeArea(.keyboard)
         .task {
+            PostUploader.shared.start()
             await authManager.refreshMe()
             if let storyId = pendingStoryId {
                 pendingStoryId = nil

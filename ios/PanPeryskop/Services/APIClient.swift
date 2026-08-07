@@ -148,4 +148,23 @@ struct APIClient {
         let (data, _) = try await URLSession.shared.data(for: request)
         return try JSONDecoder().decode(AvatarResponse.self, from: data).avatar_url
     }
+
+    /// Best-effort report to the backend DLQ (`POST /client/errors`) — used for
+    /// background-upload failures and stale drops. Never throws.
+    static func reportClientError(errorType: String, message: String, meta: [String: Any]? = nil) async {
+        let deviceId = (try? KeychainAccess.Keychain(service: "com.panperyskop.auth").get("device_id")) ?? "unknown"
+        var body: [String: Any] = [
+            "device_id": deviceId,
+            "error_type": errorType,
+            "message": message,
+        ]
+        if let meta { body["meta"] = meta }
+        guard let httpBody = try? JSONSerialization.data(withJSONObject: body) else { return }
+
+        var request = URLRequest(url: URL(string: "\(baseURL)/client/errors")!)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = httpBody
+        _ = try? await URLSession.shared.data(for: request)
+    }
 }

@@ -160,13 +160,11 @@ internal class YPCameraView: UIView, UIGestureRecognizerDelegate {
 
         // Placeholder cards — Photos is never touched on the camera screen.
         // The real gallery (and its limited-access prompt) opens on tap.
-        frontCardView.backgroundColor = UIColor.systemIndigo.withAlphaComponent(0.45)
-        frontCardView.image = UIImage(systemName: "photo.on.rectangle")
-            ?? UIImage(systemName: "photo")
-        frontCardView.tintColor = .white
+        frontCardView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        frontCardView.image = UIImage(named: "GalleryCardFront")
 
-        backCardView.backgroundColor = UIColor.systemTeal.withAlphaComponent(0.3)
-        backCardView.image = nil
+        backCardView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        backCardView.image = UIImage(named: "GalleryCardBack")
         backCardView.isHidden = false
 
         libraryStackView.addSubview(libraryButton)

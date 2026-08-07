@@ -86,6 +86,7 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
                 DispatchQueue.main.async {
                     self?.isInited = true
                     self?.v.loadingIndicator.stopAnimating()
+                    YPHaptics.explosion()
                 }
             })
         }
@@ -135,6 +136,7 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
     
     @objc
     func flipButtonTapped() {
+        YPHaptics.impact(.light)
         self.photoCapture.flipCamera {}
     }
     
@@ -157,6 +159,7 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
         // causing a crash
         v.shotButton.isEnabled = false
 
+        YPHaptics.explosion()
         photoCapture.shoot { imageData in
             
             guard let shotImage = UIImage(data: imageData) else {
@@ -179,6 +182,7 @@ internal final class YPCameraVC: UIViewController, UIGestureRecognizerDelegate, 
             let noOrietationImage = image.resetOrientation()
             
             DispatchQueue.main.async {
+                YPHaptics.explosion()
                 self.didCapturePhoto?(noOrietationImage.resizedImageIfNeeded())
             }
         }

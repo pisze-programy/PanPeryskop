@@ -311,6 +311,7 @@ open class YPPickerVC: YPBottomPager, YPBottomPagerDelegate {
     
     @objc
     func close() {
+        YPHaptics.impact(.light)
         // Cancelling exporting of all videos
         if let libraryVC = libraryVC {
             libraryVC.mediaManager.forseCancelExporting()

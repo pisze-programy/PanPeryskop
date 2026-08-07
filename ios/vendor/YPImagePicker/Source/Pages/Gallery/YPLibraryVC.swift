@@ -20,6 +20,8 @@ internal final class YPLibraryVC: UIViewController, YPPermissionCheckable {
     internal var currentlySelectedIndex: Int = 0
     internal let panGestureHelper = PanGestureHelper()
     internal var isInitialized = false
+    /// Set while a picked item is being delivered, so "back" haptics are skipped.
+    internal var isDeliveringMedia = false
 
     /// Delivers a picked item straight to the picker (used when the library is
     /// opened standalone from the camera card stack — no "Next" step).
@@ -149,7 +151,10 @@ internal final class YPLibraryVC: UIViewController, YPPermissionCheckable {
     
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        
+
+        if !isDeliveringMedia {
+            YPHaptics.impact(.light)
+        }
         pausePlayer()
         NotificationCenter.default.removeObserver(self)
         PHPhotoLibrary.shared().unregisterChangeObserver(self)
@@ -188,6 +193,7 @@ internal final class YPLibraryVC: UIViewController, YPPermissionCheckable {
 
     @objc
     func presentLimitedLibraryPicker() {
+        YPHaptics.impact(.light)
         PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: self)
     }
 

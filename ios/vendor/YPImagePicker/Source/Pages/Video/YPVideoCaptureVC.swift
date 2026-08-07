@@ -74,6 +74,7 @@ internal class YPVideoCaptureVC: UIViewController, YPPermissionCheckable {
             DispatchQueue.main.async {
                 self?.v.loadingIndicator.stopAnimating()
                 self?.refreshState()
+                YPHaptics.explosion()
             }
         }
     }
@@ -101,6 +102,7 @@ internal class YPVideoCaptureVC: UIViewController, YPPermissionCheckable {
     
     @objc
     func flipButtonTapped() {
+        YPHaptics.impact(.light)
         videoHelper.flipCamera {}
     }
     
@@ -132,6 +134,8 @@ internal class YPVideoCaptureVC: UIViewController, YPPermissionCheckable {
             UIApplication.shared.isIdleTimerDisabled = true
         }
         
+        YPHaptics.success()
+        YPHaptics.explosion()
         videoHelper.startRecording()
         updateState {
             $0.isRecording = true
@@ -144,6 +148,8 @@ internal class YPVideoCaptureVC: UIViewController, YPPermissionCheckable {
             UIApplication.shared.isIdleTimerDisabled = false
         }
         
+        YPHaptics.success()
+        YPHaptics.explosion()
         videoHelper.stopRecording()
         updateState {
             $0.isRecording = false

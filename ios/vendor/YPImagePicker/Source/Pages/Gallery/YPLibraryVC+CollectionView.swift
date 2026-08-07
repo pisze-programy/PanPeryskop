@@ -226,6 +226,8 @@ extension YPLibraryVC: UICollectionViewDelegate {
     private func deliverSingleSelectionIfNeeded() {
         guard let onMediaSelected else { return }
         guard !isMultipleSelectionEnabled, YPConfig.library.maxNumberOfItems == 1 else { return }
+        isDeliveringMedia = true
+        YPHaptics.explosion()
         selectedMedia(photoCallback: { onMediaSelected(.photo(p: $0)) },
                       videoCallback: { onMediaSelected(.video(v: $0)) },
                       multipleItemsCallback: { _ in })

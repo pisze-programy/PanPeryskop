@@ -93,16 +93,6 @@ struct ProfileView: View {
     private var menuList: some View {
         VStack(spacing: 10) {
             NavigationLink {
-                SettingsView()
-            } label: {
-                ProfileMenuRow(
-                    icon: "gearshape.fill",
-                    title: "Ustawienia",
-                    subtitle: "Haptyka i inne opcje"
-                )
-            }
-
-            NavigationLink {
                 MyContentView()
             } label: {
                 ProfileMenuRow(
@@ -112,13 +102,14 @@ struct ProfileView: View {
                 )
             }
 
+            Spacer().frame(height: 12)
+
             NavigationLink {
-                PermissionsView()
+                SettingsView()
             } label: {
                 ProfileMenuRow(
-                    icon: "hand.raised.fill",
-                    title: "Uprawnienia",
-                    subtitle: "Aparat, mikrofon, galeria, lokalizacja"
+                    icon: "gearshape.fill",
+                    title: "Ustawienia"
                 )
             }
         }
@@ -154,7 +145,7 @@ struct ProfileView: View {
 struct ProfileMenuRow: View {
     let icon: String
     let title: String
-    let subtitle: String
+    var subtitle: String? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -168,9 +159,11 @@ struct ProfileMenuRow: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
 
             Spacer()

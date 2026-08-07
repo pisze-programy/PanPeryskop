@@ -63,10 +63,6 @@ struct MyContentRow: View {
                         .foregroundColor(.secondary)
                 }
 
-                Text(post.description.isEmpty ? "Bez opisu" : post.description)
-                    .font(.subheadline)
-                    .lineLimit(2)
-
                 if post.displayStatus == .rejected,
                    let reason = post.rejection_reason, !reason.isEmpty {
                     Text("Powód: \(reason)")

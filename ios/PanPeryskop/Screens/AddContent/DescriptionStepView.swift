@@ -10,6 +10,7 @@ struct DescriptionStepView: View {
     var videoURL: URL?
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var didPublish = false
     @State private var isPreviewPlaying = false
@@ -24,36 +25,36 @@ struct DescriptionStepView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .padding(.horizontal)
 
-                    captureMap
-                        .frame(height: 120)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .padding(.horizontal)
-
-                    if locationManager.authorizationStatus == .denied || locationManager.authorizationStatus == .restricted {
-                        Button {
-                            guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-                            UIApplication.shared.open(url)
-                        } label: {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                Text("Lokalizacja niedostępna — otwórz Ustawienia")
-                            }
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.orange.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                        .padding(.horizontal)
-                    }
-
-                    if !hasLocation {
-                        Text("Udostępnij dostęp do lokalizacji przed publikacją")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
+                    if hasLocation {
+                        captureMap
+                            .frame(height: 120)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                             .padding(.horizontal)
+                    } else {
+                        Button {
+                            openSettings()
+                        } label: {
+                            ZStack {
+                                Color.gray.opacity(0.3)
+
+                                HStack(spacing: 6) {
+                                    Image(systemName: "location.slash.fill")
+                                    Text("Lokalizacja niedostępna — otwórz Ustawienia")
+                                }
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            }
+                            .frame(height: 120)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(alignment: .trailing) {
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                                    .padding(.trailing, 16)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal)
                     }
 
                     Button(action: {
@@ -64,8 +65,8 @@ struct DescriptionStepView: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(Color.accentColor)
-                            .foregroundColor(.white)
+                            .background(hasLocation ? Color.accentColor : Color.gray.opacity(0.3))
+                            .foregroundColor(hasLocation ? .white : .secondary)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                     .disabled(!hasLocation)
@@ -83,6 +84,11 @@ struct DescriptionStepView: View {
         }
         .onDisappear {
             previewPlayer?.pause()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                locationManager.refresh()
+            }
         }
     }
 
@@ -141,22 +147,26 @@ struct DescriptionStepView: View {
         .clipped()
     }
 
-    private var captureCoordinate: CLLocationCoordinate2D {
+    private var captureCoordinate: CLLocationCoordinate2D? {
         locationManager.currentLocation?.coordinate
-            ?? CLLocationCoordinate2D(latitude: 52.4064, longitude: 16.9252)
     }
 
     private var captureMap: some View {
         Map(position: .constant(.region(MKCoordinateRegion(
-            center: captureCoordinate,
+            center: captureCoordinate ?? .init(latitude: 0, longitude: 0),
             span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
         )))) {
-            Annotation(coordinate: captureCoordinate, anchor: .center) {
+            Annotation(coordinate: captureCoordinate ?? .init(latitude: 0, longitude: 0), anchor: .center) {
                 CaptureLocationPin(image: UIImage(data: mediaData))
             } label: { EmptyView() }
         }
         .mapStyle(.standard(pointsOfInterest: .excludingAll))
         .allowsHitTesting(false)
+    }
+
+    private func openSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     private func startPreviewPlayer(url: URL) {
@@ -177,6 +187,32 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
         manager.requestWhenInUseAuthorization()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    /// Re-checks authorization and (re)starts location updates — used when returning
+    /// from Settings so the Summary picks up a newly granted permission.
+    func refresh() {
+        authorizationStatus = manager.authorizationStatus
+        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
+            manager.startUpdatingLocation()
+        } else {
+            manager.stopUpdatingLocation()
+        }
+    }
+
+    @objc private func appWillEnterForeground() {
+        refresh()
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {

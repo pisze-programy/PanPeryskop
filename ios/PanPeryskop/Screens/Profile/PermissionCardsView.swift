@@ -130,37 +130,45 @@ struct PermissionCard: View {
     let card: PermissionCardData
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: card.icon)
-                .font(.title3)
-                .foregroundColor(card.state.color)
-                .frame(width: 32)
+        Button {
+            openSettings()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: card.icon)
+                    .font(.title3)
+                    .foregroundColor(card.state.color)
+                    .frame(width: 32)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(card.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Text(card.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            if card.state == .denied || card.state == .restricted {
-                Button("Ustawienia") {
-                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-                    UIApplication.shared.open(url)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(card.title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Text(card.description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
                 }
-                .font(.caption)
-            } else {
+
+                Spacer()
+
                 Text(card.state.label)
                     .font(.caption)
                     .foregroundColor(card.state.color)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
             }
+            .padding(12)
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .padding(12)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .buttonStyle(.plain)
+    }
+
+    private func openSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 }

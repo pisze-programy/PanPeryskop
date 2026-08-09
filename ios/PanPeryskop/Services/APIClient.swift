@@ -3,6 +3,7 @@ import KeychainAccess
 
 enum APIError: Error {
     case server(statusCode: Int, message: String?)
+    case cooldown(retryAfterMin: Int?)
 
     var isTooLarge: Bool {
         if case .server(let code, _) = self { return code == 413 }
@@ -147,6 +148,31 @@ struct APIClient {
 
         let (data, _) = try await URLSession.shared.data(for: request)
         return try JSONDecoder().decode(AvatarResponse.self, from: data).avatar_url
+    }
+
+    static func getMediaRequests(swLat: Double, swLng: Double, neLat: Double, neLng: Double) async throws -> MediaRequestListResponse {
+        let params = [
+            "sw_lat": String(swLat),
+            "sw_lng": String(swLng),
+            "ne_lat": String(neLat),
+            "ne_lng": String(neLng),
+        ]
+        return try await get("/media-requests", params: params)
+    }
+
+    static func createMediaRequest(lat: Double, lng: Double) async throws -> MediaRequest {
+        let url = URL(string: "\(baseURL)/media-requests")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = authHeaders()
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["lat": lat, "lng": lng])
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 429 {
+            let cooldown = (try? JSONDecoder().decode(MediaRequestCooldown.self, from: data))
+            throw APIError.cooldown(retryAfterMin: cooldown?.retry_after_min)
+        }
+        try validate(response: response, data: data)
+        return try JSONDecoder().decode(CreateMediaRequestResponse.self, from: data).request
     }
 
     /// Best-effort report to the backend DLQ (`POST /client/errors`) — used for

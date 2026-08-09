@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "media-request.jpg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

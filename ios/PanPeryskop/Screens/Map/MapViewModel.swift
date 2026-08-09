@@ -23,14 +23,19 @@ enum FeedCategory: String, CaseIterable, Identifiable {
 @MainActor
 class MapViewModel: ObservableObject {
     @Published var posts: [Post] = []
+    @Published var mediaRequests: [MediaRequest] = []
     @Published var isLoading = false
     @Published var selectedCity: City = .poznan
     @Published var feedCategory: FeedCategory = .events
 
     private var serverPosts: [Post] = []
-    var currentUserId: String?
+    private var serverRequests: [MediaRequest] = []
+    var currentUserId: String? {
+        didSet { MediaNearbyNotifier.persistCurrentUserId(currentUserId) }
+    }
     private var viewport: MapBBox?
     private var knownPostIds: Set<String> = []
+    private var knownRequestIds: Set<String> = []
     private var pollingTask: Task<Void, Never>?
     private var isFetchingStories = false
     private var isRegionFetchPending = false
@@ -109,6 +114,7 @@ class MapViewModel: ObservableObject {
         let neLng = region.center.longitude + region.span.longitudeDelta / 2
         fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
         startCityTransition()
+        runMediaNearbyCheck()
     }
 
     private func startCityTransition() {
@@ -151,6 +157,19 @@ class MapViewModel: ObservableObject {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)
             serverPosts = resp.stories
             posts = allPosts
+            // Request pins ("?") are a Live-category feature — not shown in Wydarzenia.
+            if feedCategory == .live,
+               let requestsResp = try? await APIClient.getMediaRequests(
+                   swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng
+               ) {
+                serverRequests = requestsResp.requests
+                mediaRequests = serverRequests.filter { $0.isStillValid }
+                knownRequestIds = Set(mediaRequests.map(\.id))
+                ProximityMonitor.shared.sync(requests: mediaRequests, currentUserId: currentUserId)
+            } else {
+                mediaRequests = []
+                ProximityMonitor.shared.sync(requests: [], currentUserId: currentUserId)
+            }
             return resp.stories
         } catch {
             print("Failed to load stories:", error)
@@ -167,7 +186,9 @@ class MapViewModel: ObservableObject {
                 try? await Task.sleep(nanoseconds: Self.pollInterval)
                 guard !Task.isCancelled else { return }
                 guard let self else { return }
-                await self.pollStories()
+                ProximityMonitor.shared.updateLocationTrackingIfNeeded()
+                let mediaDelivered = await MediaNearbyNotifier.shared.pollForeground(city: self.selectedCity)
+                await self.pollStories(suppressToast: mediaDelivered)
             }
         }
     }
@@ -177,7 +198,16 @@ class MapViewModel: ObservableObject {
         pollingTask = nil
     }
 
-    private func pollStories() async {
+    /// Immediate media-nearby check (map appear / city switch) + location tracking sync.
+    func runMediaNearbyCheck() {
+        ProximityMonitor.shared.updateLocationTrackingIfNeeded()
+        Task { [weak self] in
+            guard let self else { return }
+            await MediaNearbyNotifier.shared.pollForeground(city: self.selectedCity)
+        }
+    }
+
+    private func pollStories(suppressToast: Bool = false) async {
         guard let viewport, !isRegionFetchPending, !isCityTransitionPending else { return }
         guard let fetched = await loadStories(
             swLat: viewport.swLat, swLng: viewport.swLng,
@@ -189,7 +219,7 @@ class MapViewModel: ObservableObject {
                 && $0.user_id != currentUserId
         }
         knownPostIds.formUnion(fetched.map(\.id))
-        if hasNew {
+        if hasNew && !suppressToast {
             ToastManager.shared.show("Nowe!")
         }
     }
@@ -330,4 +360,51 @@ class MapViewModel: ObservableObject {
             return nil
         }
     }
+
+    // MARK: - Media request pins
+
+    private static let requestCooldown: TimeInterval = 30 * 60
+    private static let requestCooldownKey = "mediaRequest.last_created_at"
+
+    /// Server-authoritative timestamp (ms) of the user's last placed pin (cache of POST /media-requests).
+    private var lastRequestCreatedAt: Int64? {
+        UserDefaults.standard.object(forKey: Self.requestCooldownKey) as? Int64
+    }
+
+    /// Seconds until the user may place another pin, based on the local cache. 0 = allowed.
+    func requestCooldownSeconds() -> TimeInterval {
+        guard let last = lastRequestCreatedAt else { return 0 }
+        let elapsed = Date().timeIntervalSince1970 - TimeInterval(last) / 1000
+        return max(0, Self.requestCooldown - elapsed)
+    }
+
+    /// Places a pin via the backend. On 429 the returned cooldown is stored in the local cache
+    /// (so the next long-press shows the informational alert without a round-trip).
+    func submitRequestPin(at coordinate: CLLocationCoordinate2D) async -> RequestDropResult {
+        do {
+            let request = try await APIClient.createMediaRequest(lat: coordinate.latitude, lng: coordinate.longitude)
+            UserDefaults.standard.set(request.created_at, forKey: Self.requestCooldownKey)
+            serverRequests.append(request)
+            mediaRequests = serverRequests.filter { $0.isStillValid }
+            ProximityMonitor.shared.sync(requests: mediaRequests, currentUserId: currentUserId)
+            return .success(request)
+        } catch APIError.cooldown(let minutes) {
+            let remaining = TimeInterval((minutes ?? 30) * 60)
+            // Encode the server-reported remaining time into the local cache:
+            // remaining = lastCreatedAt + 30min - now  →  lastCreatedAt = now - (30min - remaining)
+            let lastTs = Int64(Date().timeIntervalSince1970 * 1000) - Int64((Self.requestCooldown - remaining) * 1000)
+            UserDefaults.standard.set(lastTs, forKey: Self.requestCooldownKey)
+            return .cooldown(remainingMinutes: minutes ?? 30)
+        } catch {
+            print("Failed to place media request pin:", error)
+            return .failure
+        }
+    }
+}
+
+/// Result of placing a media-request pin.
+enum RequestDropResult {
+    case success(MediaRequest)
+    case cooldown(remainingMinutes: Int)
+    case failure
 }

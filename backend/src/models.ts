@@ -100,6 +100,14 @@ export interface HeatmapCell {
   heat: number;
 }
 
+export interface MediaRequestRow {
+  id: string;
+  user_id: string;
+  lat: number;
+  lng: number;
+  created_at: number;
+}
+
 export function gridCellId(lat: number, lng: number, cellSize: number = 0.002): string {
   const latIx = Math.floor(lat / cellSize);
   const lngIx = Math.floor(lng / cellSize);
@@ -136,6 +144,10 @@ export function popularityScore(post: Post): number {
 
 export const TTL_HOURS = 24;
 export const TTL_MS = TTL_HOURS * HOUR_MS;
+
+// Media request pins: ask-others-for-a-live-view marker.
+export const MEDIA_REQUEST_TTL_MS = 4 * HOUR_MS;
+export const MEDIA_REQUEST_COOLDOWN_MS = 30 * 60_000;
 
 // Seed may schedule posts up to this far into the future (created_at window).
 export const MAX_LOOKAHEAD_MS = 366 * 24 * HOUR_MS;

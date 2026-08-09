@@ -83,10 +83,16 @@ struct ContentView: View {
         .task {
             PostUploader.shared.start()
             await authManager.refreshMe()
-            if let storyId = pendingStoryId {
+            if let pushPost = NotificationDelegate.consumePendingPushPost() {
+                await openPushPost(pushPost)
+            } else if let storyId = pendingStoryId {
                 pendingStoryId = nil
                 await openStory(id: storyId)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openPushPost)) { note in
+            guard let payload = note.object as? PushPostPayload else { return }
+            Task { await openPushPost(payload) }
         }
         .onChange(of: pendingStoryId) { _, newId in
             guard let newId else { return }
@@ -113,6 +119,23 @@ struct ContentView: View {
             } else {
                 ToastManager.shared.show("Błąd: Spróbuj ponownie")
             }
+        }
+    }
+
+    /// Opens a post from a "new media nearby" push tap: switch the map to the post's category
+    /// (so its pin is visible), center + zoom, then open the story preview.
+    @MainActor
+    private func openPushPost(_ payload: PushPostPayload) async {
+        selectedTab = 0
+        mapViewModel.selectFeedCategory(FeedCategory(rawValue: payload.category) ?? .live)
+        if let post = await mapViewModel.ensurePost(id: payload.postId) {
+            storyPosts = mapViewModel.viewerPosts(for: post)
+            selectedStoryIndex = 0
+            NotificationCenter.default.post(name: .scrollToPost, object: post)
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            showStoryViewer = true
+        } else {
+            ToastManager.shared.show("Błąd: Spróbuj ponownie")
         }
     }
 }

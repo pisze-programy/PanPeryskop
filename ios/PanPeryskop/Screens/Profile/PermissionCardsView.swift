@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 import Photos
 import CoreLocation
+import UserNotifications
 
 enum PermissionState {
     case authorized
@@ -33,6 +34,7 @@ struct PermissionCardData {
     let title: String
     let description: String
     let state: PermissionState
+    var detail: String? = nil
 }
 
 struct PermissionCardsView: View {
@@ -80,9 +82,42 @@ struct PermissionCardsView: View {
             icon: "location.fill",
             title: "Lokalizacja",
             description: "Używamy Twojej lokalizacji do przypinania treści.",
-            state: locationState
+            state: locationState,
+            detail: locationDetail
         )
-        cards = [camera, mic, library, location]
+        let base: [PermissionCardData] = [camera, mic, library, location]
+
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let notifications = PermissionCardData(
+                icon: "bell.badge.fill",
+                title: "Powiadomienia",
+                description: "Powiadomienia o nowych mediach i prośbach o podgląd w okolicy.",
+                state: Self.notificationState(settings)
+            )
+            var all = base
+            all.append(notifications)
+            let cards = all
+            Task { @MainActor in
+                self.cards = cards
+            }
+        }
+    }
+
+    nonisolated private static func notificationState(_ settings: UNNotificationSettings) -> PermissionState {
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral: return .authorized
+        case .denied: return .denied
+        case .notDetermined: return .notDetermined
+        @unknown default: return .notDetermined
+        }
+    }
+
+    private var locationDetail: String? {
+        switch CLLocationManager.authorizationStatus() {
+        case .authorizedAlways: return "Zawsze"
+        case .authorizedWhenInUse: return "Tylko podczas używania"
+        default: return nil
+        }
     }
 
     private var cameraState: PermissionState {
@@ -152,9 +187,16 @@ struct PermissionCard: View {
 
                 Spacer()
 
-                Text(card.state.label)
-                    .font(.caption)
-                    .foregroundColor(card.state.color)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(card.state.label)
+                        .font(.caption)
+                        .foregroundColor(card.state.color)
+                    if let detail = card.detail {
+                        Text(detail)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
 
                 Image(systemName: "chevron.right")
                     .font(.footnote)

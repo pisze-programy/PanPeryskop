@@ -4,12 +4,15 @@ import MapKit
 struct MapKitMapView: View {
     let zoom: Double
     let posts: [Post]
+    let mediaRequests: [MediaRequest]
+    let previewRequestPin: CLLocationCoordinate2D?
     let currentUserId: String?
     let initialRegion: MKCoordinateRegion
     let onRegionChange: (Double, Double, Double, Double) -> Void
     let onCameraSettled: (MKCoordinateRegion) -> Void
     let onTapPost: (Post, MapBBox) -> Void
     let onTapCluster: (PostCluster, MapBBox) -> Void
+    let onRequestPinDrop: (CLLocationCoordinate2D) -> Void
 
     @State private var camera: MapCameraPosition
     @State private var visibleRegion: MKCoordinateRegion
@@ -17,21 +20,27 @@ struct MapKitMapView: View {
     init(
         zoom: Double,
         posts: [Post],
+        mediaRequests: [MediaRequest],
+        previewRequestPin: CLLocationCoordinate2D?,
         currentUserId: String?,
         initialRegion: MKCoordinateRegion,
         onRegionChange: @escaping (Double, Double, Double, Double) -> Void,
         onCameraSettled: @escaping (MKCoordinateRegion) -> Void,
         onTapPost: @escaping (Post, MapBBox) -> Void,
-        onTapCluster: @escaping (PostCluster, MapBBox) -> Void
+        onTapCluster: @escaping (PostCluster, MapBBox) -> Void,
+        onRequestPinDrop: @escaping (CLLocationCoordinate2D) -> Void
     ) {
         self.zoom = zoom
         self.posts = posts
+        self.mediaRequests = mediaRequests
+        self.previewRequestPin = previewRequestPin
         self.currentUserId = currentUserId
         self.initialRegion = initialRegion
         self.onRegionChange = onRegionChange
         self.onCameraSettled = onCameraSettled
         self.onTapPost = onTapPost
         self.onTapCluster = onTapCluster
+        self.onRequestPinDrop = onRequestPinDrop
         self._camera = State(initialValue: .camera(MapKitMapView.tiltedCamera(center: initialRegion.center, region: initialRegion)))
         self._visibleRegion = State(initialValue: initialRegion)
     }
@@ -64,7 +73,7 @@ struct MapKitMapView: View {
     }
 
     var body: some View {
-        MapReader { _ in
+        MapReader { proxy in
             Map(
                 position: $camera,
                 bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: Self.maxDistance),
@@ -88,8 +97,37 @@ struct MapKitMapView: View {
                         )
                     } label: { EmptyView() }
                 }
+
+                ForEach(mediaRequests) { request in
+                    Annotation(coordinate: request.coordinate, anchor: .center) {
+                        RequestPinBadge(request: request)
+                    } label: { EmptyView() }
+                }
+
+                if let preview = previewRequestPin {
+                    Annotation(coordinate: preview, anchor: .center) {
+                        RequestPinBadge(
+                            request: MediaRequest(
+                                id: "preview",
+                                user_id: "",
+                                lat: preview.latitude,
+                                lng: preview.longitude,
+                                created_at: Int64(Date().timeIntervalSince1970 * 1000)
+                            )
+                        )
+                    } label: { EmptyView() }
+                }
             }
             .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.5)
+                    .sequenced(before: DragGesture(minimumDistance: 0))
+                    .onEnded { value in
+                        guard case .second(true, let drag?) = value else { return }
+                        guard let coordinate = proxy.convert(drag.startLocation, from: .local) else { return }
+                        onRequestPinDrop(coordinate)
+                    }
+            )
             .onMapCameraChange(frequency: .onEnd) { ctx in
                 let region = ctx.region
                 visibleRegion = region
@@ -114,6 +152,26 @@ struct MapKitMapView: View {
                     camera = .camera(MapKitMapView.tiltedCamera(center: post.coordinate, region: region))
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .centerMapOnRequest)) { note in
+                guard let payload = note.object as? MapCenterPayload else { return }
+                centerOn(payload)
+            }
+            .onAppear {
+                if let payload = NotificationDelegate.consumePendingCenter() {
+                    centerOn(payload)
+                }
+            }
+        }
+    }
+
+    private func centerOn(_ payload: MapCenterPayload) {
+        let coordinate = CLLocationCoordinate2D(latitude: payload.lat, longitude: payload.lng)
+        withAnimation(.easeInOut(duration: 0.6)) {
+            let region = MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+            camera = .camera(MapKitMapView.tiltedCamera(center: coordinate, region: region))
         }
     }
 
@@ -275,6 +333,55 @@ struct SinglePostPin: View {
 
 private func iconForType(_ type: Post.MediaType) -> String {
     type == .video ? "video.fill" : "photo.fill"
+}
+
+/// Non-clickable "?" drop pin asking others in the area for a live view. Same shape as the media
+/// pin, TTL 4h, ring colors: white → yellow (>1h) → red (>3h).
+struct RequestPinBadge: View {
+    let request: MediaRequest
+
+    private static let ttlHours: TimeInterval = 4
+
+    private var ringColor: Color {
+        if request.ageHours > 3 { return .red }
+        if request.ageHours > 1 { return .yellow }
+        return .white
+    }
+
+    private func progress(at date: Date) -> Double {
+        let elapsed = date.timeIntervalSince1970 - TimeInterval(request.created_at) / 1000
+        return min(max(elapsed / (Self.ttlHours * 3600), 0), 1)
+    }
+
+    var body: some View {
+        ZStack {
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                let progress = progress(at: context.date)
+                ZStack {
+                    Circle()
+                        .fill(Color.black.opacity(0.25))
+                    Circle()
+                        .stroke(ringColor.opacity(0.25), lineWidth: 3)
+                    Circle()
+                        .trim(from: progress, to: 1)
+                        .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                }
+            }
+            .frame(width: 52, height: 52)
+
+            ZStack {
+                Circle()
+                    .fill(Color.white.opacity(0.95))
+                Image("MediaRequestPin")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 34, height: 34)
+            }
+            .frame(width: 44, height: 44)
+            .clipShape(Circle())
+        }
+    }
 }
 
 private func dist(_ lat1: Double, _ lng1: Double, _ lat2: Double, _ lng2: Double) -> Double {

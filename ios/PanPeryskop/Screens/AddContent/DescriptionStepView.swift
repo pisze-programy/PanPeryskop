@@ -57,6 +57,11 @@ struct DescriptionStepView: View {
                         .padding(.horizontal)
                     }
 
+                    Text("Aktywne na mapie przez 24h")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.vertical, 8)
+
                     Button(action: {
                         Haptics.impact(.medium)
                         publish()

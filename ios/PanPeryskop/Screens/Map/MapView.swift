@@ -9,6 +9,11 @@ struct MapScreen: View {
     @EnvironmentObject private var authManager: AuthManager
 
     @State private var showCityList = false
+    @State private var previewRequestPin: CLLocationCoordinate2D?
+    @State private var pendingRequestDrop: CLLocationCoordinate2D?
+    @State private var showRequestConfirmAlert = false
+    @State private var showRequestCooldownAlert = false
+    @State private var requestCooldownMinutes = 0
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -17,6 +22,8 @@ struct MapScreen: View {
             MapKitMapView(
                 zoom: viewModel.defaultZoom,
                 posts: viewModel.posts,
+                mediaRequests: viewModel.mediaRequests,
+                previewRequestPin: previewRequestPin,
                 currentUserId: authManager.userId,
                 initialRegion: viewModel.initialRegion,
                 onRegionChange: { swLat, swLng, neLat, neLng in
@@ -37,6 +44,9 @@ struct MapScreen: View {
                     storyPosts = viewModel.viewerPosts(forCluster: cluster.posts, in: bbox)
                     selectedStoryIndex = 0
                     showStoryViewer = true
+                },
+                onRequestPinDrop: { coordinate in
+                    handleRequestPinDrop(coordinate)
                 }
             )
             .ignoresSafeArea()
@@ -79,6 +89,8 @@ struct MapScreen: View {
         .onAppear {
             viewModel.currentUserId = authManager.userId
             viewModel.startPolling()
+            viewModel.runMediaNearbyCheck()
+            ProximityMonitor.shared.requestNotificationPermissionIfNeeded()
             let region = viewModel.initialRegion
             viewModel.fetchStories(
                 swLat: region.center.latitude - region.span.latitudeDelta / 2,
@@ -106,6 +118,97 @@ struct MapScreen: View {
                 NotificationCenter.default.post(name: .flyToCity, object: city)
             }
         }
+        .alert("Co tu się dzieje?", isPresented: $showRequestConfirmAlert) {
+            Button("Tak") { confirmRequestDrop() }
+            Button("Anuluj", role: .cancel) { clearPreviewRequestPin() }
+        } message: {
+            Text("Chcesz poprosić innych o udostępnienie Live w okolicy?")
+        }
+        .alert("Następny pin za chwilę", isPresented: $showRequestCooldownAlert) {
+            Button("OK", role: .cancel) { clearPreviewRequestPin() }
+        } message: {
+            Text(cooldownMessage)
+        }
+    }
+
+    private var cooldownMessage: String {
+        if requestCooldownMinutes == 1 {
+            return "Dodałeś już pin zapytania. Możesz dodać kolejny za 1 minutę."
+        }
+        return "Dodałeś już pin zapytania. Możesz dodać kolejny za \(requestCooldownMinutes) min."
+    }
+
+    private func handleRequestPinDrop(_ coordinate: CLLocationCoordinate2D) {
+        guard viewModel.feedCategory == .live else { return }
+        guard isSpotsEmpty(at: coordinate) else { return }
+        Haptics.explosion()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            previewRequestPin = coordinate
+        }
+        let cooldown = viewModel.requestCooldownSeconds()
+        if cooldown > 0 {
+            requestCooldownMinutes = max(1, Int(ceil(cooldown / 60)))
+            showRequestCooldownAlert = true
+        } else {
+            pendingRequestDrop = coordinate
+            showRequestConfirmAlert = true
+        }
+    }
+
+    private func confirmRequestDrop() {
+        guard let coordinate = pendingRequestDrop else {
+            clearPreviewRequestPin()
+            return
+        }
+        pendingRequestDrop = nil
+        ProximityMonitor.shared.requestPermissionsIfNeeded()
+        Task {
+            let result = await viewModel.submitRequestPin(at: coordinate)
+            switch result {
+            case .success:
+                Haptics.success()
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    previewRequestPin = nil
+                }
+            case .cooldown(let minutes):
+                Haptics.error()
+                requestCooldownMinutes = max(1, minutes)
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    previewRequestPin = nil
+                }
+                showRequestCooldownAlert = true
+            case .failure:
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    previewRequestPin = nil
+                }
+                ToastManager.shared.show("Coś poszło nie tak. Spróbuj ponownie.")
+            }
+        }
+    }
+
+    private func clearPreviewRequestPin() {
+        pendingRequestDrop = nil
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            previewRequestPin = nil
+        }
+    }
+
+    /// Long-press drops a request pin only on "empty" map — not over a media pin/cluster
+    /// nor over an existing request pin.
+    private func isSpotsEmpty(at coordinate: CLLocationCoordinate2D) -> Bool {
+        let tooClose = viewModel.posts.contains { post in
+            dist(post.lat, post.lng, coordinate.latitude, coordinate.longitude) < 0.0008
+        }
+        let tooCloseRequest = viewModel.mediaRequests.contains { request in
+            dist(request.lat, request.lng, coordinate.latitude, coordinate.longitude) < 0.0008
+        }
+        return !tooClose && !tooCloseRequest
+    }
+
+    private func dist(_ lat1: Double, _ lng1: Double, _ lat2: Double, _ lng2: Double) -> Double {
+        let dlat = lat1 - lat2
+        let dlng = lng1 - lng2
+        return sqrt(dlat * dlat + dlng * dlng)
     }
 
     private var categoryPill: some View {

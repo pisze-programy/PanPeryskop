@@ -22,7 +22,7 @@ struct ContentView: View {
                 )
                 .environmentObject(authManager)
             } else {
-                ProfileView()
+                ProfileView(onBack: { selectedTab = 0 })
                     .environmentObject(authManager)
             }
 
@@ -37,7 +37,7 @@ struct ContentView: View {
                 .transition(.opacity)
             }
 
-            if !showStoryViewer {
+            if selectedTab == 0 && !showStoryViewer {
                 VStack(spacing: 0) {
                     Spacer()
                     HStack(spacing: 40) {

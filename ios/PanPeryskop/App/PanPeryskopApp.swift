@@ -16,6 +16,16 @@ struct PanPeryskopApp: App {
             Self.handleMediaRefresh(task: task)
         }
         Self.scheduleMediaRefresh()
+        ProximityMonitor.shared.rehydrate()
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in
+                Self.scheduleMediaRefresh()
+            }
+        }
     }
 
     var body: some Scene {
@@ -49,6 +59,7 @@ struct PanPeryskopApp: App {
     private static func handleMediaRefresh(task: BGTask) {
         scheduleMediaRefresh()
         let handler = Task { @MainActor in
+            ProximityMonitor.shared.rehydrate()
             await MediaNearbyNotifier.shared.pollBackground()
             task.setTaskCompleted(success: true)
         }

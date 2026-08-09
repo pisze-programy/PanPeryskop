@@ -4,6 +4,7 @@ import AVFoundation
 
 struct ProfileView: View {
     @EnvironmentObject private var authManager: AuthManager
+    let onBack: () -> Void
 
     @State private var avatarItem: PhotosPickerItem?
     @State private var uploadingAvatar = false
@@ -13,7 +14,20 @@ struct ProfileView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    Spacer().frame(height: 40)
+                    HStack {
+                        Button(action: onBack) {
+                            Image(systemName: "map.fill")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .frame(width: 36, height: 36)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 12)
 
                     avatarSection
 

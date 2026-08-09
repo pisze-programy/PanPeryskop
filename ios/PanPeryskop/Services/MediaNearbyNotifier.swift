@@ -163,7 +163,7 @@ final class MediaNearbyNotifier {
         persistSeen()
 
         guard let target = closestToReference(newPosts, city: city) else { return false }
-        await ProximityMonitor.shared.deliverNewMedia(post: target, fromBackground: fromBackground)
+        await ProximityMonitor.shared.deliverNewMedia(post: target)
         return true
     }
 

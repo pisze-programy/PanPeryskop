@@ -25,6 +25,7 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
     private static let suppressOwnFreshPin: TimeInterval = 120
     private static let backgroundPushCooldown: TimeInterval = 30 * 60
     private static let backgroundPushKey = "notifications.lastBackgroundPush"
+    private static let activeRequestsKey = "proximity.active_requests"
 
     private override init() {
         super.init()
@@ -71,6 +72,41 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
         }
 
         monitoredRequests = target
+        persistActiveRequests()
+    }
+
+    /// Rehydrates monitored regions from the last persisted snapshot. Called at launch so
+    /// `didEnterRegion` still resolves request pins after the app was terminated and iOS
+    /// relaunched it in the background for a region event.
+    func rehydrate() {
+        guard let data = UserDefaults.standard.data(forKey: Self.activeRequestsKey),
+              let stored = try? JSONDecoder().decode([MediaRequest].self, from: data) else { return }
+        let active = stored
+            .filter { $0.isStillValid }
+            .sorted { $0.created_at > $1.created_at }
+
+        for request in active.prefix(Self.maxRegions) where monitoredRequests[request.id] == nil {
+            let circular = CLCircularRegion(
+                center: request.coordinate,
+                radius: Self.regionRadius,
+                identifier: request.id
+            )
+            circular.notifyOnEntry = true
+            circular.notifyOnExit = false
+            do {
+                try locationManager.startMonitoring(for: circular)
+            } catch {
+                print("ProximityMonitor: rehydrate failed to monitor \(request.id):", error)
+            }
+        }
+        monitoredRequests = Dictionary(uniqueKeysWithValues: active.prefix(Self.maxRegions).map { ($0.id, $0) })
+    }
+
+    private func persistActiveRequests() {
+        let valid = monitoredRequests.values.filter { $0.isStillValid }
+        if let data = try? JSONEncoder().encode(valid) {
+            UserDefaults.standard.set(data, forKey: Self.activeRequestsKey)
+        }
     }
 
     /// Starts/stops GPS tracking based on the notification range setting (needed only for 100/300 m).
@@ -107,9 +143,10 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
 
     // MARK: - "New media nearby" push
 
-    /// Delivers the "new media nearby" push. Foreground → live banner (no throttle).
-    /// Background → local notification throttled to 1 push / 30 min.
-    func deliverNewMedia(post: Post, fromBackground: Bool) async {
+    /// Delivers the "new media nearby" push as a real system notification (banner also while the
+    /// app is foregrounded — see `willPresent`). Foreground is live (no throttle); background runs
+    /// are throttled to 1 push / 30 min.
+    func deliverNewMedia(post: Post) async {
         let isActive = UIApplication.shared.applicationState == .active
         let isEvents = (post.category ?? "live") == "events"
         let title = isEvents ? "Nowe Wydarzenie w okolicy" : "Nowe Live w okolicy"
@@ -117,29 +154,31 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
             ? "Sprawdź co się dzieje w okolicy, nowe Wydarzenie dodane"
             : "Sprawdź co się dzieje w okolicy, nowe Live dodane"
 
-        if isActive {
-            Haptics.impact(.medium)
-            ToastManager.shared.show(body)
-        } else if canDeliverBackground() {
-            let content = UNMutableNotificationContent()
-            content.title = title
-            content.body = body
-            content.sound = .default
-            content.userInfo = [
-                "type": "media",
-                "post_id": post.id,
-                "category": post.category ?? "live",
-                "lat": post.lat,
-                "lng": post.lng,
-            ]
-            let requestID = "media-\(post.id)-\(Int(Date().timeIntervalSince1970))"
-            UNUserNotificationCenter.current().add(
-                UNNotificationRequest(identifier: requestID, content: content, trigger: nil)
-            ) { error in
-                if let error {
-                    print("ProximityMonitor: notification failed:", error)
-                }
+        if !isActive && !canDeliverBackground() {
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        content.userInfo = [
+            "type": "media",
+            "post_id": post.id,
+            "category": post.category ?? "live",
+            "lat": post.lat,
+            "lng": post.lng,
+        ]
+        let requestID = "media-\(post.id)-\(Int(Date().timeIntervalSince1970))"
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: requestID, content: content, trigger: nil)
+        ) { error in
+            if let error {
+                print("ProximityMonitor: notification failed:", error)
             }
+        }
+
+        if !isActive {
             markBackgroundDelivered()
         }
     }
@@ -187,29 +226,32 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
     private func deliver(request: MediaRequest) {
         let title = "Podgląd okolicy"
         let body = "Ktoś w Twojej okolicy prosi o podgląd na żywo."
+        let isActive = UIApplication.shared.applicationState == .active
 
-        if UIApplication.shared.applicationState == .active {
-            Haptics.impact(.medium)
-            ToastManager.shared.show(body)
-        } else if canDeliverBackground() {
-            let content = UNMutableNotificationContent()
-            content.title = title
-            content.body = body
-            content.sound = .default
-            content.userInfo = [
-                "type": "request",
-                "media_request_id": request.id,
-                "lat": request.lat,
-                "lng": request.lng,
-            ]
-            let requestID = "media-request-\(request.id)-\(Int(Date().timeIntervalSince1970))"
-            UNUserNotificationCenter.current().add(
-                UNNotificationRequest(identifier: requestID, content: content, trigger: nil)
-            ) { error in
-                if let error {
-                    print("ProximityMonitor: notification failed:", error)
-                }
+        if !isActive && !canDeliverBackground() {
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        content.userInfo = [
+            "type": "request",
+            "media_request_id": request.id,
+            "lat": request.lat,
+            "lng": request.lng,
+        ]
+        let requestID = "media-request-\(request.id)-\(Int(Date().timeIntervalSince1970))"
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: requestID, content: content, trigger: nil)
+        ) { error in
+            if let error {
+                print("ProximityMonitor: notification failed:", error)
             }
+        }
+
+        if !isActive {
             markBackgroundDelivered()
         }
     }
@@ -289,6 +331,6 @@ final class NotificationDelegate: NSObject, @preconcurrency UNUserNotificationCe
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        completionHandler([])
+        completionHandler([.banner, .sound, .list])
     }
 }

@@ -52,7 +52,7 @@ class PagerView<Element, Loader: ViewLoader, Content: View>: UIScrollView, UIScr
     }
     
     var relativeIndex: Int {
-        if absoluteOffset.isInfinite || absoluteOffset.isNaN {
+        if absoluteOffset.isInfinite || absoluteOffset.isNaN || loadedViews.isEmpty {
             return 0
         }
         var idx = Int(round(absoluteOffset))
@@ -412,6 +412,7 @@ class PagerView<Element, Loader: ViewLoader, Content: View>: UIScrollView, UIScr
     }
     
     func scrollingFinished() {
+        guard !loadedViews.isEmpty else { return }
         let newIndex = currentView.index
         
         if currentIndex != newIndex {
@@ -437,6 +438,7 @@ class PagerView<Element, Loader: ViewLoader, Content: View>: UIScrollView, UIScr
     }
 
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if loadedViews.isEmpty { return }
         
         if !scrollView.isTracking, !isRotating, (currentView.index != page.wrappedValue || page.wrappedValue != currentIndex ) {
             currentIndex = currentView.index

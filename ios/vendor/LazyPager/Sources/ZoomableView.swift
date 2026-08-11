@@ -141,6 +141,17 @@ class ZoomableView<Element, Content: View>: UIScrollView, UIScrollViewDelegate, 
             setupDoubleTapGesture()
         }
         
+        if config.pressStartedCallback != nil || config.pressEndedCallback != nil {
+            let pressHold = UILongPressGestureRecognizer(target: self, action: #selector(handlePressHold(_:)))
+            // A non-zero duration is required: with `0` the recognizer begins on
+            // touch-down and blocks the outer PagerView pan, breaking prev/next
+            // swipes. 0.2s keeps press-and-hold for pausing while letting fast
+            // swipes scroll (the recognizer fails as soon as the finger moves).
+            pressHold.minimumPressDuration = 0.2
+            pressHold.delegate = self
+            addGestureRecognizer(pressHold)
+        }
+        
         DispatchQueue.main.async {
             self.updateState()
         }
@@ -160,6 +171,17 @@ class ZoomableView<Element, Content: View>: UIScrollView, UIScrollViewDelegate, 
             minimumZoomScale = min
             maximumZoomScale = max
             self.doubleTap = doubleTap
+        }
+    }
+    
+    @objc func handlePressHold(_ recognizer: UILongPressGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            config.pressStartedCallback?()
+        case .ended, .cancelled, .failed:
+            config.pressEndedCallback?()
+        default:
+            break
         }
     }
     
@@ -368,34 +390,11 @@ class ZoomableView<Element, Content: View>: UIScrollView, UIScrollViewDelegate, 
                 return false // Prevent our pan, let PagerView handle it.
             }
         } else { // Vertical Pager
-            // If the swipe is mostly horizontal, let it happen.
-            if abs(velocity.x) > abs(velocity.y) {
-                return true
-            }
-
-            // It's a vertical swipe. Should we let our own pan gesture begin?
-
-            // If not zoomed, NO. The pager should handle all vertical movement.
-            if zoomScale <= minimumZoomScale {
-                return false // Prevent our pan, let PagerView handle it.
-            }
-
-            // If we ARE zoomed, check if we're at the vertical edges.
-            let maxOffsetY = contentSize.height - bounds.height + contentInset.bottom
-            let minOffsetY = -contentInset.top
-
-            let isAtBottomEdge = contentOffset.y >= maxOffsetY - 1.0
-            let isAtTopEdge = contentOffset.y <= minOffsetY + 1.0
-
-            // At the bottom edge and trying to swipe up (to the next page).
-            if isAtBottomEdge && velocity.y < 0 {
-                return false // Prevent our pan, let PagerView handle it.
-            }
-
-            // At the top edge and trying to swipe down (to the previous page).
-            if isAtTopEdge && velocity.y > 0 {
-                return false // Prevent our pan, let PagerView handle it.
-            }
+            // The page content is pinned to its frame in a vertical pager, so this
+            // inner pan can never scroll. Always let the outer PagerView own the
+            // drag. Previously a diagonal / horizontal start velocity could make
+            // this pan begin and swallow the swipe, leaving the pager unresponsive.
+            return false
         }
         
         // If we're not at an edge while zoomed, our pan gesture should begin.

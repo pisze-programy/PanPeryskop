@@ -42,6 +42,10 @@ struct StoryFullScreenView: View {
                 )
             }
             .settings { $0.preloadAmount = 1; $0.overscrollThreshold = 0.05 }
+            .onPress(
+                started: { pausePlayback() },
+                ended: { resumePlayback() }
+            )
             .overscroll { position in
                 if position == .beginning, currentIndex == 0 {
                     exitViewer()

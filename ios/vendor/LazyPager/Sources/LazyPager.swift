@@ -49,6 +49,12 @@ public struct Config<Element> {
     /// Called when dragging begins
     public var dragCallback: (() -> ())?
     
+    /// Called when a press-and-hold begins on the pager content (touch down)
+    public var pressStartedCallback: (() -> ())?
+    
+    /// Called when a press-and-hold ends on the pager content (touch up / cancelled)
+    public var pressEndedCallback: (() -> ())?
+    
     /// The offset used to trigger load loadMoreCallback
     public var loadMoreOn: LoadMore = .lastElement(minus: 3)
     
@@ -154,6 +160,13 @@ public extension LazyPager {
     func onDrag(_ callback: @escaping () -> ()) -> LazyPager {
         var this = self
         this.config.dragCallback = callback
+        return this
+    }
+    
+    func onPress(started: @escaping () -> (), ended: @escaping () -> ()) -> LazyPager {
+        var this = self
+        this.config.pressStartedCallback = started
+        this.config.pressEndedCallback = ended
         return this
     }
     

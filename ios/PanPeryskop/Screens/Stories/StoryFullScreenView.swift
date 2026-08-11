@@ -9,7 +9,6 @@ struct StoryFullScreenView: View {
 
     @State private var currentIndex: Int
     @State private var photoTimer: Task<Void, Never>?
-    @State private var hideUI = false
     @State private var progressFraction: Double = 0
     @State private var likedStates: [String: Bool] = [:]
     @State private var dislikedStates: [String: Bool] = [:]
@@ -43,8 +42,6 @@ struct StoryFullScreenView: View {
                 )
             }
             .settings { $0.preloadAmount = 1; $0.overscrollThreshold = 0.05 }
-            .onTap { hideUI.toggle() }
-            .zoomable(min: 1, max: 3)
             .overscroll { position in
                 if position == .beginning, currentIndex == 0 {
                     exitViewer()
@@ -57,12 +54,11 @@ struct StoryFullScreenView: View {
                 handlePageChange(old: oldIdx, new: newIdx)
             }
 
-            if !hideUI {
-                VStack {
-                    HStack {
-                        Button {
-                            exitViewer()
-                        } label: {
+            VStack {
+                HStack {
+                    Button {
+                        exitViewer()
+                    } label: {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 20, weight: .semibold))
                                 .foregroundColor(.white)
@@ -84,6 +80,10 @@ struct StoryFullScreenView: View {
                     Spacer()
                 }
                 .padding(.top, 56)
+                .background(alignment: .top) {
+                    StoryBlurBar(bottomFade: true)
+                        .frame(height: 190)
+                }
 
                 VStack {
                     Spacer()
@@ -199,8 +199,11 @@ struct StoryFullScreenView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 80)
                 }
+                .background(alignment: .bottom) {
+                    StoryBlurBar(bottomFade: false)
+                        .frame(height: 330)
+                }
             }
-        }
         .onAppear { photoTimer = startPhotoTimer() }
         .onDisappear { photoTimer?.cancel() }
         .sheet(item: $shareItem) { item in
@@ -231,14 +234,18 @@ struct StoryFullScreenView: View {
         return nil
     }
 
+    private static let photoSteps = 50
+
     private func startPhotoTimer() -> Task<Void, Never>? {
         if posts.isEmpty || currentPost.type == .video { return nil }
         let post = currentPost
+        let start = min(Int((progressFraction * Double(Self.photoSteps)).rounded(.down)), Self.photoSteps - 1)
+        guard start < Self.photoSteps else { return nil }
         return Task {
-            for step in 0...60 {
+            for step in start..<Self.photoSteps {
                 try? await Task.sleep(nanoseconds: 100_000_000)
                 guard !Task.isCancelled else { return }
-                await MainActor.run { progressFraction = Double(step) / 60.0 }
+                await MainActor.run { progressFraction = Double(step) / Double(Self.photoSteps) }
             }
             await MainActor.run { handleStoryFinished(post) }
         }
@@ -474,6 +481,28 @@ struct ActivityViewController: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+/// Subtle blurred gradient used behind the top (progress / close) and bottom
+/// (description / actions) overlays. `bottomFade: true` fades the blur out toward
+/// the bottom edge (top bar); `false` fades it out toward the top (bottom bar).
+struct StoryBlurBar: View {
+    let bottomFade: Bool
+
+    var body: some View {
+        ZStack {
+            Rectangle().fill(Color.black.opacity(0.25))
+            Rectangle().fill(.ultraThinMaterial)
+        }
+        .mask(
+            LinearGradient(
+                colors: [Color.black, Color.clear],
+                startPoint: bottomFade ? .top : .bottom,
+                endPoint: bottomFade ? .bottom : .top
+            )
+        )
+        .allowsHitTesting(false)
+    }
 }
 
 struct ShareItem: Identifiable {

@@ -85,7 +85,11 @@ class MapViewModel: ObservableObject {
     }
 
     var allPosts: [Post] {
-        serverPosts.filter { $0.isStillValid && ($0.category ?? "live") == feedCategory.rawValue }
+        serverPosts.filter {
+            $0.isStillValid
+                && ($0.category ?? "live") == feedCategory.rawValue
+                && (feedCategory != .live || !$0.watched)
+        }
     }
 
     var defaultZoom: Double { 12 }

@@ -200,6 +200,7 @@ struct ClusterBadge: View {
         if cluster.count == 1, let post = cluster.singlePost {
             if post.watched {
                 SinglePostPin(post: post, currentUserId: currentUserId)
+                    .allowsHitTesting(false)
             } else {
                 Button(action: onTap) {
                     SinglePostPin(post: post, currentUserId: currentUserId)
@@ -477,6 +478,13 @@ private func makeClusters(_ posts: [Post]) -> [PostCluster] {
             singlePost: nearby.count == 1 ? nearby.first : nil,
             posts: nearby
         ))
+    }
+    // Render seen (watched) pins first so unseen pins/groups are drawn on top and
+    // never get covered by a non-clickable seen pin at the same location.
+    clusters.sort { a, b in
+        let aWatched = a.count == 1 && a.singlePost?.watched == true
+        let bWatched = b.count == 1 && b.singlePost?.watched == true
+        return aWatched && !bWatched
     }
     return clusters
 }

@@ -19,3 +19,13 @@ APPLE_CLIENT_ID = "com.panperyskop.PanPeryskop"
 [env.prod.vars]
 ENVIRONMENT = "production"
 CORS_ORIGIN = "panperyskop://app"
+APPLE_CLIENT_ID = "com.panperyskop.PanPeryskop"
+
+[[env.prod.d1_databases]]
+binding = "DB"
+database_name = "panperyskop-db"
+database_id = "c9fed854-29bc-4ea7-9242-d0a7bc6abee0"
+
+[[env.prod.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "panperyskop-media"

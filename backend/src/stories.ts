@@ -69,6 +69,9 @@ storiesRoutes.get('/', async (c) => {
   const windowStart = now - TTL_MS;
   const category = q.category && POST_CATEGORY_SET.has(q.category) ? q.category : null;
   const catCond = category ? 'AND p.category = ?' : '';
+  // Seen (watched) media is hidden from the Live feed entirely — the map removes
+  // it locally and future fetches must not return it either.
+  const hideWatchedLive = category === 'live';
 
   const authHeader = c.req.header('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
@@ -89,6 +92,7 @@ storiesRoutes.get('/', async (c) => {
            AND p.status = '${STATUS_APPROVED}'
            AND p.created_at >= ? AND p.created_at <= ?
            ${catCond}
+           ${hideWatchedLive ? 'AND v.post_id IS NULL' : ''}
            ORDER BY ${popularityExpr()} DESC
            LIMIT 50`
         )

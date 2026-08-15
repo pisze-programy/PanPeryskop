@@ -1,11 +1,19 @@
 name = "panperyskop-api"
 main = "src/index.ts"
-compatibility_date = "2025-01-01"
+# 2026-03-24+: required by Browser Run binding's .quickAction() (kupbilecik scraping).
+compatibility_date = "2026-03-24"
+compatibility_flags = ["nodejs_compat"]
 
 # Daily event seed: load next day's events early morning Europe/Warsaw.
 # 02:00 UTC = 04:00 CEST (summer) / 03:00 CET (winter).
 [triggers]
 crons = [ "0 2 * * *" ]
+
+# Headless Chrome via Cloudflare Browser Run — used by browser-transport seed
+# providers (kupbilecik). remote=true so `wrangler dev` matches deployed CF.
+[browser]
+binding = "BROWSER"
+remote = true
 
 [[d1_databases]]
 binding = "DB"
@@ -18,6 +26,9 @@ bucket_name = "panperyskop-media"
 
 [vars]
 APPLE_CLIENT_ID = "com.panperyskop.PanPeryskop"
+# goingapp scraping. Public Algolia app id; API key + Cloudinary sig are secrets
+# (wrangler secret put ALGOLIA_API_KEY / CLOUDINARY_SIG) — never committed.
+ALGOLIA_APP_ID = "FAFFKUSLK0"
 # GOOGLE_CLIENT_ID = ""  # set once an OAuth client is created in Google Cloud Console
 
 [env.prod]

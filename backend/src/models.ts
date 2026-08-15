@@ -152,8 +152,6 @@ export const MEDIA_REQUEST_COOLDOWN_MS = 30 * 60_000;
 // Seed may schedule posts up to this far into the future (created_at window).
 export const MAX_LOOKAHEAD_MS = 366 * 24 * HOUR_MS;
 
-export const ADMIN_SECRET = 'panperyskop-admin-dev';
-
 export const USERNAME_MIN_LEN = 3;
 export const USERNAME_MAX_LEN = 30;
 

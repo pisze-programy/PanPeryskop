@@ -5,6 +5,22 @@ import { APPLE_JWKS_URL, GOOGLE_JWKS_URL, verifyIdToken } from './oauth';
 
 export const authRoutes = new Hono<{ Bindings: Env }>();
 
+// Best-effort auth event log (dashboard per-day activity). Never blocks auth.
+async function logAuthEvent(
+  db: D1Database,
+  event: 'login' | 'logout' | 'register',
+  user: { id?: string; device_id?: string } | null,
+  provider: string,
+  success = 1
+): Promise<void> {
+  try {
+    await db
+      .prepare('INSERT INTO auth_events (id, user_id, device_id, event, provider, success, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(nanoid(24), user?.id ?? null, user?.device_id ?? null, event, provider, success, Date.now())
+      .run();
+  } catch { /* ignore — telemetry must never break auth */ }
+}
+
 export async function isBanned(db: D1Database, device_id: string): Promise<boolean> {
   const row = await db
     .prepare('SELECT 1 AS banned FROM banned_devices WHERE device_id = ?')
@@ -81,6 +97,7 @@ authRoutes.post('/device', async (c) => {
   }
 
   const session = await issueSession(db, device_id);
+  await logAuthEvent(db, session.is_new ? 'register' : 'login', { id: session.user_id, device_id }, 'device');
   return c.json(toUserJson(session), session.is_new ? 201 : 200);
 });
 
@@ -159,6 +176,7 @@ async function appleOrGoogleLogin(
       .prepare(`UPDATE users SET ${idColumn} = ?, session_token = ? WHERE device_id = ?`)
       .bind(provider_id, session_token, device_id)
       .run();
+    await logAuthEvent(db, 'login', { id: existing.id, device_id }, provider);
     return c.json({
       session_token,
       user_id: existing.id,
@@ -183,6 +201,7 @@ async function appleOrGoogleLogin(
     .bind(id, device_id, session_token, 'user', username, provider, provider_id, now)
     .run();
 
+  await logAuthEvent(db, 'register', { id, device_id }, provider);
   return c.json(
     { session_token, user_id: id, role: 'user', username, auth_provider: provider, avatar_url: null, is_new: true },
     201
@@ -200,6 +219,7 @@ authRoutes.post('/logout', async (c) => {
     .prepare('UPDATE users SET session_token = ? WHERE id = ?')
     .bind(nanoid(48), user.id)
     .run();
+  await logAuthEvent(c.env.DB, 'logout', { id: user.id, device_id: user.device_id }, user.auth_provider || 'device');
   return c.json({ ok: true });
 });
 

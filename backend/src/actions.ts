@@ -74,6 +74,9 @@ actionsRoutes.post('/:id/share', async (c) => {
   if (!post || post.status !== STATUS_APPROVED) return c.json({ error: 'Not found' }, 404);
 
   await db.prepare('UPDATE posts SET shares_count = shares_count + 1 WHERE id = ?').bind(postId).run();
+  // Full share-event log (per-day chart) — best-effort.
+  await db.prepare('INSERT INTO shares (post_id, user_id, created_at) VALUES (?, ?, ?)')
+    .bind(postId, user.id, Date.now()).run().catch(() => {});
 
   return c.json({ ok: true });
 });

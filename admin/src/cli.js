@@ -1,7 +1,11 @@
 import 'dotenv/config';
 
 const BASE_URL = process.env.BASE_URL || 'https://panperyskop-api.dev-4cb.workers.dev';
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'panperyskop-admin-dev';
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
+if (!ADMIN_SECRET) {
+  console.error('ADMIN_SECRET env var is required (no dev default — see backend/wrangler secrets)');
+  process.exit(1);
+}
 
 const headers = {
   Authorization: `Bearer ${ADMIN_SECRET}`,

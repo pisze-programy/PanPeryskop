@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
-import { ADMIN_SECRET, STATUS_APPROVED, STATUS_REJECTED } from './models';
+import { STATUS_APPROVED, STATUS_REJECTED } from './models';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
-function adminAuth(c: { req: { header: (n: string) => string | undefined } }): boolean {
+function adminAuth(c: { env: Env; req: { header: (n: string) => string | undefined } }): boolean {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
-  return token === ADMIN_SECRET;
+  return Boolean(c.env.ADMIN_SECRET) && token === c.env.ADMIN_SECRET;
 }
 
 adminRoutes.post('/posts/:id/approve', async (c) => {

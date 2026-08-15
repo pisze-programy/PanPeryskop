@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "test": "tsx --test src/seed.test.ts",
     "db:migrate": "wrangler d1 migrations apply panperyskop-db",
     "db:create": "wrangler d1 execute panperyskop-db --file=./schema/schema.sql",
     "cf-typegen": "wrangler types"
@@ -15,6 +16,8 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5",
+    "@types/node": "^26.2.0",
+    "tsx": "^4",
     "typescript": "^5.7.0",
     "wrangler": "^4.118.0"
   }

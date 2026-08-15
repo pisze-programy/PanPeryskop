@@ -2,6 +2,11 @@ name = "panperyskop-api"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
+# Daily event seed: load next day's events early morning Europe/Warsaw.
+# 02:00 UTC = 04:00 CEST (summer) / 03:00 CET (winter).
+[triggers]
+crons = [ "0 2 * * *" ]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "panperyskop-db"

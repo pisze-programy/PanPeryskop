@@ -8,6 +8,8 @@ import { adminRoutes } from './admin';
 import { usersRoutes } from './users';
 import { clientErrorRoutes } from './clientErrors';
 import { mediaRequestsRoutes } from './mediaRequests';
+import { ADMIN_SECRET } from './models';
+import { runSeed, seedTomorrow } from './seed';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -71,4 +73,32 @@ app.all('/media/*', async (c) => {
 
 app.get('/health', (c) => c.json({ ok: true, ts: Date.now() }));
 
-export default app;
+// Manual seed trigger (admin-only). day = YYYY-MM-DD (default: tomorrow).
+app.post('/admin/seed', async (c) => {
+  const token = c.req.header('Authorization')?.replace('Bearer ', '');
+  if (token !== ADMIN_SECRET) return c.json({ error: 'Forbidden' }, 403);
+  const body = (await c.req.json<{ day?: string }>().catch(() => ({}))) as { day?: string };
+  const day = body?.day;
+  if (day !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+    return c.json({ error: 'Invalid day' }, 400);
+  }
+  try {
+    const result = await (day ? runSeed(c.env, day) : seedTomorrow(c.env));
+    return c.json(result, 200);
+  } catch (e) {
+    return c.json({ error: (e as Error).message }, 400);
+  }
+});
+
+export default {
+  fetch: app.fetch.bind(app),
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    // Daily seed: load tomorrow's events. Errors are caught inside runSeed per-candidate;
+    // the summary is logged for observability.
+    ctx.waitUntil(
+      seedTomorrow(env)
+        .then((r) => console.log(`seed cron: day=${r.day} ingested=${r.ingested} skipped=${r.skipped} errors=${r.errors.length}`))
+        .catch((e) => console.error(`seed cron failed: ${(e as Error).message}`))
+    );
+  },
+};

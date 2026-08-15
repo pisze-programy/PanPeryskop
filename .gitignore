@@ -34,6 +34,7 @@ admin/src/seed-import.mjs
 # Env
 .env
 *.env.local
+.dev.vars
 
 # IDE
 .idea/

@@ -32,13 +32,40 @@ export function venueKey(name: string): string {
   return flat(name);
 }
 
+// Bulk upsert without fuzzy matching — used for canonical, exact sources
+// (dzis.app venue names during buildVenueCache). Uses D1 batch (single round-trip
+// per chunk) so a ~10k-venue daily build doesn't block the seed-day message.
+// Rows keep their id, so repeated daily builds are idempotent.
+const BATCH_SIZE = 500; // keep well under D1's 1000-statement batch cap
+export async function upsertVenuesBatch(db: D1Database, venues: VenueInput[]): Promise<number> {
+  const now = Date.now();
+  let n = 0;
+  for (let i = 0; i < venues.length; i += BATCH_SIZE) {
+    const chunk = venues.slice(i, i + BATCH_SIZE);
+    const statements: D1PreparedStatement[] = [];
+    for (const v of chunk) {
+      if (!v.name || typeof v.lat !== 'number' || typeof v.lng !== 'number') continue;
+      const sources = v.provider && v.ref ? { [v.provider]: v.ref } : {};
+      statements.push(
+        db.prepare(
+          `INSERT INTO venues (id, name, aliases, lat, lng, city, sources, hit_count, first_seen, last_seen, created_at)
+           VALUES (?, ?, '[]', ?, ?, ?, ?, 1, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET lat=excluded.lat, lng=excluded.lng, city=excluded.city, last_seen=excluded.last_seen`
+        ).bind(venueKey(v.name), v.name, v.lat, v.lng, v.city || null, JSON.stringify(sources), now, now, now)
+      );
+      n++;
+    }
+    if (statements.length) await db.batch(statements);
+  }
+  return n;
+}
+
 // Upsert a venue by fuzzy-matching against existing rows. Returns the venue id
 // (existing match or newly created). Adds provider alias/ref + refreshes geo.
 export async function upsertVenue(db: D1Database, v: VenueInput): Promise<string | null> {
   if (!v.name || typeof v.lat !== 'number' || typeof v.lng !== 'number') return null;
   const now = Date.now();
-  const { results } = await db.prepare('SELECT * FROM venues').all<VenueRow>();
-  const rows = results || [];
+  const rows = await loadVenuePool(db, v.city);
 
   let best: VenueRow | null = null;
   let bestScore = 0;
@@ -87,24 +114,43 @@ export async function resolveVenueGeo(
   db: D1Database, name: string, city?: string | null
 ): Promise<{ lat: number; lng: number; id: string } | null> {
   if (!name) return null;
-  const { results } = await db.prepare('SELECT * FROM venues').all<VenueRow>();
-  const rows = results || [];
-  const cityNorm = city ? city.toLowerCase() : null;
-  const pool = cityNorm ? rows.filter((r) => (r.city || '').toLowerCase() === cityNorm) : rows;
-  const candidates = pool.length > 0 ? pool : rows; // fall back to all cities when none match
+  let rows = await loadVenuePool(db, city);
+  let match = bestVenueMatch(name, rows);
+  if (!match && city) {
+    // Fall back to the whole store when nothing matched in the given city (the
+    // city may be unknown in older rows, or the venue is genuinely elsewhere).
+    rows = await loadVenuePool(db, null);
+    match = bestVenueMatch(name, rows);
+  }
+  if (!match) return null;
+  await db.prepare('UPDATE venues SET hit_count=hit_count+1, last_seen=? WHERE id=?').bind(Date.now(), match.id).run();
+  return { lat: match.lat, lng: match.lng, id: match.id };
+}
 
+// Load the candidate venue rows: same-city rows plus any that have no city yet
+// (older rows predate city tracking). Narrowing by city keeps the fuzzy scan tiny.
+async function loadVenuePool(db: D1Database, city?: string | null): Promise<VenueRow[]> {
+  if (city) {
+    const { results } = await db.prepare("SELECT * FROM venues WHERE city = ? OR city IS NULL OR city = ''")
+      .bind(city.toLowerCase()).all<VenueRow>();
+    return results || [];
+  }
+  const { results } = await db.prepare('SELECT * FROM venues').all<VenueRow>();
+  return results || [];
+}
+
+// Best fuzzy match for a name across the given rows (name + aliases).
+function bestVenueMatch(name: string, rows: VenueRow[]): VenueRow | null {
   let best: VenueRow | null = null;
   let bestScore = 0;
-  for (const r of candidates) {
+  for (const r of rows) {
     const names = [r.name, ...safeJSON<string[]>(r.aliases, [])];
     for (const n of names) {
       const s = venueSimilarity(name, n);
       if (s > bestScore) { bestScore = s; best = r; }
     }
   }
-  if (!best || bestScore < MATCH_THRESHOLD) return null;
-  await db.prepare('UPDATE venues SET hit_count=hit_count+1, last_seen=? WHERE id=?').bind(Date.now(), best.id).run();
-  return { lat: best.lat, lng: best.lng, id: best.id };
+  return best && bestScore >= MATCH_THRESHOLD ? best : null;
 }
 
 // All venues (optionally filtered by city) for in-memory fuzzy matching (matchVenueGeo).

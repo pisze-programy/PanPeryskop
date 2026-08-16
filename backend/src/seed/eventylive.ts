@@ -6,7 +6,7 @@
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from './types';
 import { CITIES, cityById, cityBbox } from '../admin/cities';
 import { matchVenueGeo, VenueEntry } from './venueMatch';
-import { upsertVenue, listVenues } from './venueStore';
+import { upsertVenuesBatch, listVenues, venueKey } from './venueStore';
 import { DZIS_API, DZIS_LIMIT, EVL_BASE, EVL_LIST_BASE, EVL_MAX_PAGES } from './constants';
 
 const UA = { 'User-Agent': 'Mozilla/5.0' };
@@ -58,8 +58,12 @@ export function parseEvlEvent(html: string): EvlEventJson | null {
 
 // Seed the shared `venues` store from dzis.app (all cities) so parallel scopes can
 // borrow venue geo without re-fetching dzis.app, and other providers (kupbilecik,
-// going, eventylive) reuse the same locations. Idempotent — upserts only.
+// going, eventylive) reuse the same locations. Uses bulk insert with JS-side
+// dedup: dzis.app repeats the same venue across hundreds of events, so we collapse
+// by venue key BEFORE the batch — ~10k events reduce to ~1k unique venues.
 export async function buildVenueCache(ctx: SeedContext, _day: string): Promise<void> {
+  const seen = new Set<string>();
+  const collected: { name: string; lat: number; lng: number }[] = [];
   for (const cityId of CITIES.map((c) => c.id)) {
     try {
       const res = await fetch(`${DZIS_API}?city=${cityId}&limit=${DZIS_LIMIT}`, { headers: UA });
@@ -69,12 +73,17 @@ export async function buildVenueCache(ctx: SeedContext, _day: string): Promise<v
         const name = e.venue?.name;
         const g = e.venue?.geo;
         if (!name || !g?.lat || !g?.lng) continue;
-        await upsertVenue(ctx.env.DB, { name, lat: g.lat, lng: g.lng, city: cityId, provider: ProviderId.DZISAPP });
+        const key = venueKey(name);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        collected.push({ name, lat: g.lat, lng: g.lng });
       }
     } catch (e) {
       console.error(`venue-cache dzis.app ${cityId} failed: ${(e as Error).message}`);
     }
   }
+  const n = await upsertVenuesBatch(ctx.env.DB, collected.map((v) => ({ ...v, provider: ProviderId.DZISAPP })));
+  console.log(`venue-cache: ${collected.length} unique venues (from ${seen.size} keys) seeded via ${n} inserts`);
 }
 
 // Read the shared venues store for in-memory fuzzy matching (matchVenueGeo).

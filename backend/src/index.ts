@@ -11,6 +11,10 @@ import {clientErrorRoutes} from './clientErrors';
 import {mediaRequestsRoutes} from './mediaRequests';
 import {runSeed, tomorrowWarsaw} from './seed';
 import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/queue';
+import {pruneSeedData} from './seed/cleanup';
+
+const SEED_CRON = '0 2 * * *';      // 02:00 UTC daily
+const CLEANUP_CRON = '0 4 * * *';   // 04:00 UTC daily
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -105,9 +109,19 @@ export default {
   async queue(batch: MessageBatch<SeedQueueMessage>, env: Env): Promise<void> {
     await runQueue(env, batch);
   },
-  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    // Daily seed: enqueue a batch for tomorrow. The queue consumer does the heavy
-    // work with per-event retries + DLQ — no long-running single invocation.
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (controller.cron === CLEANUP_CRON) {
+      // Daily audit cleanup: drop seed audit older than 4 days (venues kept).
+      ctx.waitUntil(
+        pruneSeedData(env, 'cron')
+          .then(() => console.log('seed cleanup cron done'))
+          .catch((e) => console.error(`seed cleanup cron failed: ${(e as Error).message}`))
+      );
+      return;
+    }
+    // Daily seed (SEED_CRON): enqueue a batch for tomorrow. The queue consumer
+    // does the heavy work with per-event retries + DLQ — no long-running single
+    // invocation.
     ctx.waitUntil(
       enqueueSeedDay(env, tomorrowWarsaw(), 'cron')
         .then((batchId) => console.log(`seed cron enqueued: day=${tomorrowWarsaw()} batch=${batchId}`))

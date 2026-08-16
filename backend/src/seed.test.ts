@@ -13,7 +13,7 @@ import {
   enabledProviders,
   SEED_PROVIDERS,
 } from './seed';
-import { ProviderId } from './seed/types';
+import { ProviderId, CandidateStatus } from './seed/types';
 import { browserBudget } from './seed/log';
 import { verifyPassword, readSession, createSession } from './admin/auth';
 import { nextCronRunMs, cronSummary } from './admin/cron';
@@ -24,6 +24,7 @@ import { parseLocalDateTime } from './seed/dzisapp';
 import { parseEvlEvent, getOfferUrl } from './seed/eventylive';
 import { sendChunked, toCandidate } from './seed/queue';
 import { upsertVenue, resolveVenueGeo, venueKey } from './seed/venueStore';
+import { pruneSeedData } from './seed/cleanup';
 
 function byteSeq(...bytes: number[]): Uint8Array {
   return new Uint8Array(bytes);
@@ -447,10 +448,17 @@ function mockDb() {
               return {};
             },
             first: async () => null,
-            all: async () => ({ results: [...db._venues] }),
+            all: async () => ({
+              results: sql.includes('WHERE city = ?')
+                ? db._venues.filter((r) => (r.city || '').toLowerCase() === String(params[0] ?? '').toLowerCase() || !r.city)
+                : [...db._venues],
+            }),
           };
         },
-        all: async () => ({ results: [...db._venues] }),
+        all: async () => {
+          const all = [...db._venues];
+          return { results: all };
+        },
       };
     },
   } as unknown as D1Database & { _venues: typeof db._venues };
@@ -525,4 +533,50 @@ test('venueMatch: live production pairs match to the right city geo', () => {
 
   // Distinct venue in the same city must NOT cross-match.
   assert.equal(matchVenueGeo('Kościół św. Katarzyny', mixed, 'warszawa'), null);
+});
+
+test('cleanup: pruneSeedData removes audit older than 4 days, keeps venues', async () => {
+  // Fake D1 recording DELETE statements and their WHERE bindings.
+  const deletes: { sql: string; cutoff: number }[] = [];
+  const db = {
+    prepare: (sql: string) => {
+      const record = (cutoff?: number) => ({
+        run: async () => {
+          deletes.push({ sql, cutoff: cutoff ?? NaN });
+          return { meta: { changes: sql.includes('seed_venue_cache') ? 42 : 5 } };
+        },
+      });
+      return {
+        bind: (cutoff: number) => record(cutoff),
+        run: async () => { deletes.push({ sql, cutoff: NaN }); return { meta: { changes: 42 } }; },
+      };
+    },
+  } as unknown as D1Database;
+
+  const env = { DB: db } as unknown as Env;
+  const old = Date.now() - 10 * 24 * 3_600_000; // 10 days ago — should be pruned
+  await pruneSeedData(env, 'manual');
+
+  // seed_candidates / seed_batches / seed_runs pruned by cutoff; venue_cache fully cleared.
+  const cands = deletes.find((d) => d.sql.includes('seed_candidates'));
+  const batches = deletes.find((d) => d.sql.includes('seed_batches'));
+  const runs = deletes.find((d) => d.sql.includes('seed_runs'));
+  const vc = deletes.find((d) => d.sql.includes('seed_venue_cache'));
+  assert.ok(cands && cands.cutoff <= Date.now() - 4 * 24 * 3_600_000);
+  assert.ok(batches, 'batches pruned');
+  assert.ok(runs, 'runs pruned');
+  assert.ok(vc && !vc.cutoff, 'venue cache fully cleared (no cutoff)');
+  // The persistent venues store must never be pruned.
+  assert.ok(!deletes.some((d) => d.sql.includes('FROM venues')), 'venues untouched');
+  void old;
+});
+
+test('queue: CandidateStatus enum is quoted in generated SQL (not a bare identifier)', () => {
+  // Regression: interpolating the enum into SQL without quotes produced
+  // `SET status=duplicate` → D1 "no such column" → dedupe/ingest never ran.
+  const dupSql = `UPDATE seed_candidates SET status='${CandidateStatus.DUPLICATE}', reason=? WHERE id=?`;
+  assert.match(dupSql, /status='duplicate'/, 'duplicate must be quoted');
+  const notIn = `status NOT IN ('${CandidateStatus.DONE}', '${CandidateStatus.ERROR}')`;
+  assert.match(notIn, /'done'/, 'DONE quoted');
+  assert.match(notIn, /'error'/, 'ERROR quoted');
 });

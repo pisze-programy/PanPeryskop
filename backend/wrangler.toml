@@ -12,8 +12,9 @@ cpu_ms = 300_000
 # Daily event seed: load next day's events early morning Europe/Warsaw.
 # 02:00 UTC = 04:00 CEST (summer) / 03:00 CET (winter).
 # CRON_SCHEDULE is the single source of truth — mirrored into the dashboard via env.
+# 02:00 daily seed; 04:00 daily audit cleanup (4-day retention).
 [triggers]
-crons = [ "0 2 * * *" ]
+crons = [ "0 2 * * *", "0 4 * * *" ]
 
 # Queue-based seed pipeline: seed-jobs is the main queue; panperyskop-dlq receives
 # messages whose retries were exhausted (transient failures) for audit.

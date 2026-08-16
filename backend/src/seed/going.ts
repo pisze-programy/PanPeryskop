@@ -1,8 +1,9 @@
 // goingapp provider — 'fetch' transport. Scrapes Algolia search + place API.
 // API keys come from wrangler vars (ALGOLIA_APP_ID / ALGOLIA_API_KEY /
 // CLOUDINARY_SIG) — never hardcoded (they were previously leaked via git).
-import { SeedProvider, SeedContext, SeedCandidate } from './types';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from './types';
 import { getJson } from './http';
+import { upsertVenue } from './venueStore';
 
 const GOING_PLACE = (slug: string) => `https://api-empikbilety.prod.goingapp.eu/api/v1/place/${slug}`;
 
@@ -39,18 +40,21 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
     body: JSON.stringify({ requests: [{ indexName: 'search-main', params }] }),
   });
   if (!res.ok) throw new Error(`going algolia -> ${res.status}`);
-  const data: any = await res.json();
+  const data = (await res.json()) as { results?: { hits?: GoingHit[] }[] };
   const hits: GoingHit[] = data.results?.[0]?.hits || [];
   const out: SeedCandidate[] = [];
   for (const h of hits) {
     let place: PlaceInfo = {};
     try { place = await getJson(GOING_PLACE(h.place_slug!)); } catch { /* keep place-less */ }
+    if (typeof place.lat === 'number' && typeof place.lon === 'number' && place.name) {
+      await upsertVenue(ctx.env.DB, { name: place.name, lat: place.lat, lng: place.lon, city: place.city?.name || '', provider: ProviderId.GOING });
+    }
     const id = String(h.objectID || h.path || '').replace(/^rundates\//, '');
     const cloudPath = h.thumbnail;
     if (!cloudPath) continue;
     const enc = encodeURIComponent(cloudPath).replace(/%2F/g, '/');
     out.push({
-      source: 'going',
+      source: ProviderId.GOING,
       externalId: `going-${id}`,
       title: h.name_pl || '',
       startMs: h.start_date_timestamp ?? 0,
@@ -70,7 +74,7 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
 }
 
 export const goingProvider: SeedProvider = {
-  id: 'going',
+  id: ProviderId.GOING,
   transport: 'fetch',
   enabled: true,
   fetchCandidates: fetchGoing,

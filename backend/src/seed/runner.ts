@@ -3,10 +3,11 @@
 import { nanoid } from 'nanoid';
 import { detectMediaType, extForMediaType, doSavePost } from '../posts';
 import { TTL_MS } from '../models';
-import { SeedProvider, SeedProviderResult, SeedResult, SeedContext, RunType, SeedCandidate } from './types';
+import { SeedProvider, SeedProviderResult, SeedResult, SeedContext, RunType, SeedCandidate, ProviderId } from './types';
 import { enabledProviders } from './providers';
 import { warsawMidnightMs, tomorrowWarsaw } from './dates';
 import { buildDescription, dedupe } from './dedupe';
+import { resolveKupGeo } from './kupbilecik';
 import { writeSeedRun, browserBudget, BrowserBudget } from './log';
 import { SEED_DEVICE_ID } from './constants';
 
@@ -78,7 +79,19 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
     const provider = bySource.get(c.source);
     const providerResult = allCandidates.find((r) => r.provider === c.source)!;
     if (!provider || !providerResult) continue;
-    if (typeof c.lat !== 'number' || typeof c.lng !== 'number') { providerResult.skipped++; totalSkipped++; continue; }
+    if (typeof c.lat !== 'number' || typeof c.lng !== 'number') {
+      // kupbilecik defers geo to after dedupe (venue store → browser fallback).
+      if (c.source === ProviderId.KUPBILECIK && c.geoRef) {
+        const ctx: SeedContext = {
+          env, day, dayStart,
+          dayEnd: dayStart + 24 * 3600 * 1000 - 1, createdAt,
+          recordBrowserMs: (ms) => { providerResult.browserMs += ms; },
+        };
+        const geo = await resolveKupGeo(ctx, c.venue, c.geoRef, day, c.city);
+        if (geo.lat != null && geo.lng != null) { c.lat = geo.lat; c.lng = geo.lng; }
+      }
+      if (typeof c.lat !== 'number' || typeof c.lng !== 'number') { providerResult.skipped++; totalSkipped++; continue; }
+    }
     const ctx: SeedContext = {
       env, day, dayStart,
       dayEnd: dayStart + 24 * 3600 * 1000 - 1, createdAt,

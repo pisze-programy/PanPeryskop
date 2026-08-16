@@ -5,8 +5,29 @@
 export type ProviderTransport = 'fetch' | 'browser';
 export type RunType = 'manual' | 'cron';
 
+/** Seed providers — the string values persist to D1 (seed_candidates.provider, posts.external_id prefix). */
+export const ProviderId = {
+  GOING: 'going',
+  KUPBILECIK: 'kupbilecik',
+  DZISAPP: 'dzisapp',
+  EVENTYLIVE: 'eventylive',
+} as const;
+export type ProviderId = (typeof ProviderId)[keyof typeof ProviderId];
+
+/** Candidate lifecycle through the queue (seed_candidates.status). */
+export const CandidateStatus = {
+  PENDING: 'pending',
+  NO_MEDIA: 'no_media',
+  NO_COORDS: 'no_coords',
+  DUPLICATE: 'duplicate',
+  INGESTING: 'ingesting',
+  DONE: 'done',
+  ERROR: 'error',
+} as const;
+export type CandidateStatus = (typeof CandidateStatus)[keyof typeof CandidateStatus];
+
 export interface SeedCandidate {
-  source: string;
+  source: ProviderId;
   externalId: string;
   title: string;
   startMs: number;
@@ -18,11 +39,14 @@ export interface SeedCandidate {
   link: string;
   mediaUrl: string;
   thumbUrl: string | null;
+  /** Tickets are sold out for the target date (shown as a badge, not hidden). */
   isSoldOut?: boolean;
+  /** Provider-specific reference for deferred geo resolution (e.g. kupbilecik obiekt id). */
+  geoRef?: string | null;
 }
 
 export interface SeedProviderResult {
-  provider: string;
+  provider: ProviderId;
   transport: ProviderTransport;
   candidates: number;
   ingested: number;
@@ -57,7 +81,7 @@ export interface SeedContext {
 }
 
 export interface SeedProvider {
-  id: string;
+  id: ProviderId;
   transport: ProviderTransport;
   enabled: boolean;
   /** Fetch candidates for the target day. Must call ctx.recordBrowserMs for browser time. */

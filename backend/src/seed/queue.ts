@@ -8,13 +8,14 @@
 // Audit lives in D1 seed_batches/seed_candidates (status + reason per candidate).
 import { nanoid } from 'nanoid';
 import { enabledProviders } from './providers';
-import { SeedContext, SeedCandidate } from './types';
+import { SeedContext, SeedCandidate, ProviderId, CandidateStatus } from './types';
 import { warsawMidnightMs } from './dates';
 import { detectMediaType, extForMediaType, doSavePost } from '../posts';
 import { TTL_MS } from '../models';
 import { SEED_DEVICE_ID } from './constants';
 import { dedupe, buildDescription } from './dedupe';
 import { buildVenueCache } from './eventylive';
+import { resolveKupGeo } from './kupbilecik';
 
 export type SeedQueueMessage =
   | { type: 'seed-day'; batchId: string; day: string; runType: 'cron' | 'manual' }
@@ -141,7 +142,7 @@ async function handleFetch(env: EnvQ, m: Extract<SeedQueueMessage, { type: 'fetc
     await env.DB.prepare('UPDATE seed_batches SET scopes_done = scopes_done + 1, updated_at=? WHERE id=?').bind(now, m.batchId).run();
     const pb = await env.DB.prepare('SELECT scopes_total, scopes_done FROM seed_batches WHERE id=?').bind(m.batchId).first<{ scopes_total: number; scopes_done: number }>();
     if (pb && pb.scopes_done >= pb.scopes_total) {
-      await env.DB.prepare('UPDATE seed_batches SET status=?, updated_at=? WHERE id=?').bind('ingesting', now, m.batchId).run();
+      await env.DB.prepare('UPDATE seed_batches SET status=?, updated_at=? WHERE id=?').bind(CandidateStatus.INGESTING, now, m.batchId).run();
       await env.SEED_QUEUE.send({ type: 'dedupe', batchId: m.batchId });
     }
     return;
@@ -161,29 +162,29 @@ async function handleFetch(env: EnvQ, m: Extract<SeedQueueMessage, { type: 'fetc
   const stmt = env.DB.prepare(
     `INSERT INTO seed_candidates
       (id, batch_id, provider, scope, external_id, title, start_ms, lat, lng, city, venue, address, link, media_url, thumb_url,
-       is_sold_out, status, attempts, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?)`
+       is_sold_out, geo_ref, status, attempts, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '${CandidateStatus.PENDING}', 0, ?, ?)`
   );
   for (const c of candidates) {
     await stmt.bind(nanoid(24), m.batchId, provider.id, m.scope, c.externalId, c.title, c.startMs,
       c.lat, c.lng, c.city, c.venue, c.address, c.link, c.mediaUrl, c.thumbUrl,
-      c.isSoldOut ? 1 : 0, now, now).run();
+      c.isSoldOut ? 1 : 0, c.geoRef || null, now, now).run();
   }
 
   // Mark this scope done; when all are done, dedupe + enqueue ingest.
   await env.DB.prepare('UPDATE seed_batches SET scopes_done = scopes_done + 1, updated_at=? WHERE id=?').bind(now, m.batchId).run();
   const pb = await env.DB.prepare('SELECT scopes_total, scopes_done FROM seed_batches WHERE id=?').bind(m.batchId).first<{ scopes_total: number; scopes_done: number }>();
   if (pb && pb.scopes_done >= pb.scopes_total) {
-    await env.DB.prepare('UPDATE seed_batches SET status=?, updated_at=? WHERE id=?').bind('ingesting', now, m.batchId).run();
+    await env.DB.prepare('UPDATE seed_batches SET status=?, updated_at=? WHERE id=?').bind(CandidateStatus.INGESTING, now, m.batchId).run();
     await env.SEED_QUEUE.send({ type: 'dedupe', batchId: m.batchId });
   }
 }
 
 interface CandRow {
-  id: string; external_id: string; provider: string; title: string; start_ms: number;
+  id: string; external_id: string; provider: ProviderId; title: string; start_ms: number;
   lat: number | null; lng: number | null; city: string; venue: string; address: string;
   link: string; media_url: string | null; thumb_url: string | null;
-  status?: string; is_sold_out?: number;
+  status?: CandidateStatus; is_sold_out?: number; geo_ref?: string | null;
 }
 
 // Dedupe a batch's pending candidates, mark duplicates/no_media/no_coords, then
@@ -191,7 +192,7 @@ interface CandRow {
 // targets the same batch (no more "latest ingesting" guessing).
 async function handleDedupe(env: EnvQ, m: Extract<SeedQueueMessage, { type: 'dedupe' }>): Promise<void> {
   const { results } = await env.DB.prepare(
-    "SELECT * FROM seed_candidates WHERE batch_id=? AND status='pending'"
+    "SELECT * FROM seed_candidates WHERE batch_id=? AND status=CandidateStatus.PENDING"
   ).bind(m.batchId).all<CandRow>();
   // For dedupe identification, externalId = row.id (unique); the real
   // external_id stays on the row and is used at ingest.
@@ -203,33 +204,35 @@ async function handleDedupe(env: EnvQ, m: Extract<SeedQueueMessage, { type: 'ded
   for (const row of results || []) {
     if (!winnerRowIds.has(row.id)) {
       // duplicate (or removed by all-day collapse) — log with reason
-      await env.DB.prepare("UPDATE seed_candidates SET status='duplicate', reason=?, updated_at=? WHERE id=?")
+      await env.DB.prepare("UPDATE seed_candidates SET status=CandidateStatus.DUPLICATE, reason=?, updated_at=? WHERE id=?")
         .bind('dedupe: covered by another provider', now, row.id).run();
       continue;
     }
     if (!row.media_url) {
-      await env.DB.prepare("UPDATE seed_candidates SET status='no_media', reason='missing media url', updated_at=? WHERE id=?")
+      await env.DB.prepare("UPDATE seed_candidates SET status=CandidateStatus.NO_MEDIA, reason='missing media url', updated_at=? WHERE id=?")
         .bind(now, row.id).run();
       continue;
     }
-    if (row.lat == null || row.lng == null) {
-      await env.DB.prepare("UPDATE seed_candidates SET status='no_coords', reason='missing lat/lng', updated_at=? WHERE id=?")
+    if ((row.lat == null || row.lng == null) && row.provider !== ProviderId.KUPBILECIK) {
+      // kupbilecik resolves geo after dedupe (see handleIngest) — only surviving
+      // candidates pay for a possible venue-page browser call.
+      await env.DB.prepare("UPDATE seed_candidates SET status=CandidateStatus.NO_COORDS, reason='missing lat/lng', updated_at=? WHERE id=?")
         .bind(now, row.id).run();
       continue;
     }
     ingestMsgs.push({ body: { type: 'ingest', candidateId: row.id } });
   }
   if (ingestMsgs.length) await sendChunked(env, ingestMsgs);
-  else await env.DB.prepare('UPDATE seed_batches SET status=?, updated_at=? WHERE id=?').bind('done', now, m.batchId).run();
+  else await env.DB.prepare('UPDATE seed_batches SET status=?, updated_at=? WHERE id=?').bind(CandidateStatus.DONE, now, m.batchId).run();
 }
 
 async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { type: 'ingest' }>): Promise<void> {
   // Real ingest of a single candidate.
   const row = await env.DB.prepare('SELECT * FROM seed_candidates WHERE id=?').bind(m.candidateId).first<CandRow & { batch_id: string; attempts: number }>();
   if (!row) return;
-  if (row.status === 'done' || row.status === 'error') return; // idempotent
+  if (row.status === CandidateStatus.DONE || row.status === CandidateStatus.ERROR) return; // idempotent
 
-  await env.DB.prepare("UPDATE seed_candidates SET status='ingesting', attempts=attempts+1, updated_at=? WHERE id=?").bind(Date.now(), m.candidateId).run();
+  await env.DB.prepare("UPDATE seed_candidates SET status=CandidateStatus.INGESTING, attempts=attempts+1, updated_at=? WHERE id=?").bind(Date.now(), m.candidateId).run();
   try {
     // createdAt = 06:00 Europe/Warsaw of the batch day (TTL window start).
     const batch = await env.DB.prepare('SELECT day FROM seed_batches WHERE id=?').bind(row.batch_id).first<{ day: string }>();
@@ -247,6 +250,18 @@ async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { type: 'ing
       env: env as unknown as Env, day: batch.day, dayStart: warsawMidnightMs(batch.day),
       dayEnd: warsawMidnightMs(batch.day) + 24 * 3600 * 1000 - 1, createdAt, recordBrowserMs: () => {},
     };
+
+    // kupbilecik defers geo to after dedupe: resolve it now (shared venues store,
+    // falling back to a venue-page browser call for unknowns).
+    if (row.provider === ProviderId.KUPBILECIK && (cand.lat == null || cand.lng == null)) {
+      const geo = await resolveKupGeo(ctx, cand.venue, row.geo_ref || '', batch.day, cand.city);
+      if (geo.lat == null || geo.lng == null) {
+        throw new Error(`kupbilecik ${cand.externalId}: no geo for venue "${cand.venue}"`);
+      }
+      cand.lat = geo.lat;
+      cand.lng = geo.lng;
+    }
+
     const mediaBytes = await provider.fetchBytes(ctx, cand.mediaUrl!);
     const mediaType = detectMediaType(mediaBytes);
     if (!mediaType || !mediaType.startsWith('image/')) throw new Error(`bad media ${mediaType || 'unknown'}`);
@@ -267,18 +282,18 @@ async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { type: 'ing
     await doSavePost(env as unknown as Env, user, postId, 'photo', cand.lat!, cand.lng!, description,
       mediaKey, thumbKey, createdAt, true, cand.link, cand.externalId, Boolean(existing), Boolean(cand.isSoldOut));
 
-    await env.DB.prepare("UPDATE seed_candidates SET status='done', post_id=?, reason=NULL, updated_at=? WHERE id=?")
+    await env.DB.prepare("UPDATE seed_candidates SET status=CandidateStatus.DONE, post_id=?, reason=NULL, updated_at=? WHERE id=?")
       .bind(postId, Date.now(), m.candidateId).run();
 
     // Finalize the batch once every candidate is in a terminal state.
     const remaining = await env.DB.prepare(
-      "SELECT COUNT(*) AS n FROM seed_candidates WHERE batch_id=? AND status NOT IN ('done','duplicate','no_media','no_coords','error')"
+      "SELECT COUNT(*) AS n FROM seed_candidates WHERE batch_id=? AND status NOT IN (CandidateStatus.DONE, CandidateStatus.DUPLICATE, CandidateStatus.NO_MEDIA, CandidateStatus.NO_COORDS, CandidateStatus.ERROR)"
     ).bind(row.batch_id).first<{ n: number }>();
     if (remaining && remaining.n === 0) {
-      await env.DB.prepare('UPDATE seed_batches SET status=?, updated_at=? WHERE id=?').bind('done', Date.now(), row.batch_id).run();
+      await env.DB.prepare('UPDATE seed_batches SET status=?, updated_at=? WHERE id=?').bind(CandidateStatus.DONE, Date.now(), row.batch_id).run();
     }
   } catch (e) {
-    await env.DB.prepare("UPDATE seed_candidates SET status='error', reason=?, updated_at=? WHERE id=?")
+    await env.DB.prepare("UPDATE seed_candidates SET status=CandidateStatus.ERROR, reason=?, updated_at=? WHERE id=?")
       .bind((e as Error).message, Date.now(), m.candidateId).run();
     throw e; // → retry → DLQ
   }
@@ -292,5 +307,6 @@ export function toCandidate(row: CandRow, forDedupe = false): SeedCandidate {
     lat: row.lat, lng: row.lng, city: row.city, venue: row.venue, address: row.address,
     link: row.link, mediaUrl: row.media_url || '', thumbUrl: row.thumb_url,
     isSoldOut: row.is_sold_out === 1,
+    geoRef: row.geo_ref || null,
   };
 }

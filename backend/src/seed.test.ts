@@ -13,6 +13,7 @@ import {
   enabledProviders,
   SEED_PROVIDERS,
 } from './seed';
+import { ProviderId } from './seed/types';
 import { browserBudget } from './seed/log';
 import { verifyPassword, readSession, createSession } from './admin/auth';
 import { nextCronRunMs, cronSummary } from './admin/cron';
@@ -22,6 +23,7 @@ import { dice, venueSimilarity, matchVenueGeo, VENUE_MATCH_THRESHOLD } from './s
 import { parseLocalDateTime } from './seed/dzisapp';
 import { parseEvlEvent, getOfferUrl } from './seed/eventylive';
 import { sendChunked, toCandidate } from './seed/queue';
+import { upsertVenue, resolveVenueGeo, venueKey } from './seed/venueStore';
 
 function byteSeq(...bytes: number[]): Uint8Array {
   return new Uint8Array(bytes);
@@ -54,9 +56,9 @@ test('extForMediaType: webp -> .webp, jpeg -> .jpg', () => {
   assert.equal(extForMediaType('image/png'), 'png');
 });
 
-function cand(over: Partial<{ source: string; externalId: string; title: string; startMs: number; venue: string; address: string; city: string }>) {
+function cand(over: Partial<{ source: ProviderId; externalId: string; title: string; startMs: number; venue: string; address: string; city: string }>) {
   return {
-    source: over.source ?? 'going',
+    source: over.source ?? ProviderId.GOING,
     externalId: over.externalId ?? 'x-1',
     title: over.title ?? 'Event',
     startMs: over.startMs ?? 1_782_765_000_000, // 2026-08-14T18:30:00Z
@@ -71,33 +73,33 @@ function cand(over: Partial<{ source: string; externalId: string; title: string;
 }
 
 test('dedupe: same hour+venue -> going wins over kupbilecik', () => {
-  const kup = cand({ source: 'kupbilecik', externalId: 'kup-1', title: 'Koncert' });
-  const going = cand({ source: 'going', externalId: 'going-1', title: 'Koncert' });
+  const kup = cand({ source: ProviderId.KUPBILECIK, externalId: 'kup-1', title: 'Koncert' });
+  const going = cand({ source: ProviderId.GOING, externalId: 'going-1', title: 'Koncert' });
   const out = dedupe([kup, going]);
   assert.equal(out.length, 1);
   assert.equal(out[0].externalId, 'going-1');
 });
 
 test('dedupe: canonical source wins regardless of input order', () => {
-  const mk = (source: string, ext: string) => cand({ source, externalId: ext, title: 'Koncert', startMs: 1_782_765_000_000, venue: 'Venue' });
+  const mk = (source: ProviderId, ext: string) => cand({ source, externalId: ext, title: 'Koncert', startMs: 1_782_765_000_000, venue: 'Venue' });
   // going (rank 0) beats dzisapp (rank 1) and kupbilecik (rank 3).
-  const out1 = dedupe([mk('kupbilecik', 'k'), mk('dzisapp', 'd'), mk('going', 'g')]);
+  const out1 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.DZISAPP, 'd'), mk(ProviderId.GOING, 'g')]);
   assert.equal(out1.length, 1);
   assert.equal(out1[0].externalId, 'g');
   // Same result when going comes last in input.
-  const out2 = dedupe([mk('kupbilecik', 'k'), mk('going', 'g'), mk('dzisapp', 'd')]);
+  const out2 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.GOING, 'g'), mk(ProviderId.DZISAPP, 'd')]);
   assert.equal(out2[0].externalId, 'g');
   // dzisapp beats kupbilecik when going is absent.
-  const out3 = dedupe([mk('kupbilecik', 'k'), mk('dzisapp', 'd')]);
+  const out3 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.DZISAPP, 'd')]);
   assert.equal(out3[0].externalId, 'd');
   // eventylive beats kupbilecik.
-  const out4 = dedupe([mk('kupbilecik', 'k'), mk('eventylive', 'e')]);
+  const out4 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.EVENTYLIVE, 'e')]);
   assert.equal(out4[0].externalId, 'e');
 });
 
 test('dedupe: unknown source keeps the already-seen candidate', () => {
-  const mk = (source: string, ext: string) => cand({ source, externalId: ext, title: 'Koncert', startMs: 1_782_765_000_000, venue: 'Venue' });
-  const out = dedupe([mk('future-provider', 'f'), mk('going', 'g')]);
+  const mk = (source: ProviderId, ext: string) => cand({ source, externalId: ext, title: 'Koncert', startMs: 1_782_765_000_000, venue: 'Venue' });
+  const out = dedupe([mk('future-provider', 'f'), mk(ProviderId.GOING, 'g')]);
   assert.equal(out.length, 1);
   assert.equal(out[0].externalId, 'g', 'known source must win over unknown');
 });
@@ -227,7 +229,7 @@ test('cities: bbox is centered and nearestCity works', () => {
 });
 
 test('eventsSql: city filter adds bbox binds, day filter uses date()', () => {
-  const { sql, binds } = eventsSql({ cityId: 'warszawa', source: 'going', status: null, day: '2026-08-16', fromMs: null, toMs: null, limit: 50 });
+  const { sql, binds } = eventsSql({ cityId: 'warszawa', source: ProviderId.GOING, status: null, day: '2026-08-16', fromMs: null, toMs: null, limit: 50 });
   assert.ok(sql.includes('p.lat BETWEEN'));
   assert.ok(sql.includes('date(p.created_at/1000'));
   assert.ok(sql.includes('LIMIT ?'));
@@ -253,15 +255,39 @@ test('venueMatch: matchVenueGeo returns geo or null', () => {
   assert.equal(matchVenueGeo('Nieznane Miejsce', cache), null);
 });
 
+test('venueMatch: real-world short-name and abbreviation pairs match', () => {
+  // Prefixed venue vs bare name (dzis.app "Klub Tama" vs kupbilecik "Tama").
+  assert.ok(venueSimilarity('Klub Tama', 'Tama') >= VENUE_MATCH_THRESHOLD);
+  assert.ok(venueSimilarity('Klub 2progi', '2progi') >= VENUE_MATCH_THRESHOLD);
+  // Abbreviation vs full name (Aula UAM = Uniwersytet Adama Mickiewicza).
+  assert.ok(venueSimilarity('Aula UAM', 'Aula Uniwersytetu Adama Mickiewicza') >= VENUE_MATCH_THRESHOLD);
+  // Ordinary substrings must NOT match (guard against "Koncert" in a title).
+  assert.ok(venueSimilarity('Sala Koncertowa Fryderyk', 'Koncert') < VENUE_MATCH_THRESHOLD);
+  assert.ok(venueSimilarity('Kino Muza', 'Teatr Muzyczny') < VENUE_MATCH_THRESHOLD);
+});
+
+test('venueMatch: prefers same-city venue, ignores other city', () => {
+  const cache = [
+    { name: 'Tama', geo: { lat: 52.2297, lng: 21.0122 }, city: 'warszawa' },
+    { name: 'Klub Tama', geo: { lat: 52.4064, lng: 16.9252 }, city: 'poznan' },
+  ];
+  const wa = matchVenueGeo('Klub Tama', cache, 'warszawa');
+  assert.ok(wa);
+  assert.ok(Math.abs(wa!.lat - 52.2297) < 0.001, 'should pick Warszawa Tama');
+  const poz = matchVenueGeo('Klub Tama', cache, 'poznan');
+  assert.ok(poz);
+  assert.ok(Math.abs(poz!.lat - 52.4064) < 0.001, 'should pick Poznań Klub Tama');
+});
+
 test('dedupe: all-day eventylive collapses into timed going/dzis duplicate', () => {
-  const mk = (source: string, ext: string, title: string, startMs: number, venue: string) => ({
+  const mk = (source: ProviderId, ext: string, title: string, startMs: number, venue: string) => ({
     source, externalId: ext, title, startMs, lat: 52.4, lng: 16.9, city: 'Poznań',
     venue, address: '', link: '', mediaUrl: '', thumbUrl: null,
   });
   const midnight = Date.parse('2026-08-22T00:00:00+02:00');
   const evening = Date.parse('2026-08-22T18:30:00+02:00');
-  const evl = mk('eventylive', 'evl-1', 'Muzyka z serialu Bridgerton: Koncert przy świecach', midnight, 'Ogród Dendrologiczny Uniwersytetu Przyrodniczego');
-  const going = mk('going', 'going-1', 'Bridgerton: Koncert przy świecach w plenerze', evening, 'Ogród Dendrologiczny Uniwersytetu Przyrodniczego');
+  const evl = mk(ProviderId.EVENTYLIVE, 'evl-1', 'Muzyka z serialu Bridgerton: Koncert przy świecach', midnight, 'Ogród Dendrologiczny Uniwersytetu Przyrodniczego');
+  const going = mk(ProviderId.GOING, 'going-1', 'Bridgerton: Koncert przy świecach w plenerze', evening, 'Ogród Dendrologiczny Uniwersytetu Przyrodniczego');
   const out = dedupe([evl, going]);
   assert.equal(out.length, 1);
   assert.equal(out[0].externalId, 'going-1');
@@ -273,8 +299,8 @@ test('dedupe: distinct all-day events stay separate', () => {
     venue, address: '', link: '', mediaUrl: '', thumbUrl: null,
   });
   const midnight = Date.parse('2026-08-22T00:00:00+02:00');
-  const a = mk('eventylive', 'evl-a', 'Wystawa Beksiński', midnight, 'MTP Hala nr 1');
-  const b = mk('eventylive', 'evl-b', 'K-Pop Party', midnight, 'Klub HAH');
+  const a = mk(ProviderId.EVENTYLIVE, 'evl-a', 'Wystawa Beksiński', midnight, 'MTP Hala nr 1');
+  const b = mk(ProviderId.EVENTYLIVE, 'evl-b', 'K-Pop Party', midnight, 'Klub HAH');
   const out = dedupe([a, b]);
   assert.equal(out.length, 2);
 });
@@ -387,4 +413,116 @@ test('queue toCandidate: carries is_sold_out from the candidate row', () => {
   assert.equal(cand.isSoldOut, true);
   const row2 = { ...row, is_sold_out: 0 };
   assert.equal(toCandidate(row2).isSoldOut, false);
+});
+
+// In-memory D1 mock with a `venues` table (minimal, only what venueStore needs).
+function mockDb() {
+  const db = {
+    _venues: [] as { id: string; name: string; aliases: string; lat: number; lng: number; city: string | null; sources: string; hit_count: number; first_seen: number; last_seen: number; created_at: number }[],
+    prepare: (sql: string) => {
+      const norm = (v: unknown) => (v === undefined ? null : v);
+      return {
+        bind: (...p: unknown[]) => {
+          const params = p.map(norm);
+          return {
+            run: async () => {
+              if (sql.startsWith('INSERT INTO venues')) {
+                // SQL: (id, name, '[]' literal, lat, lng, city, sources, 1, first_seen, last_seen, created_at)
+                db._venues.push({
+                  id: params[0] as string, name: params[1] as string, aliases: '[]',
+                  lat: params[2] as number, lng: params[3] as number, city: params[4] as string | null,
+                  sources: params[5] as string, hit_count: 1, first_seen: params[6] as number,
+                  last_seen: params[7] as number, created_at: params[8] as number,
+                });
+              } else if (sql.startsWith('UPDATE venues')) {
+                // bind: (lat, lng, aliases, sources, city, last_seen, id)
+                const id = params[6];
+                const v = db._venues.find((r) => r.id === id);
+                if (v) { v.lat = params[0] as number; v.lng = params[1] as number; v.aliases = params[2] as string; v.sources = params[3] as string; v.city = params[4] as string | null; v.hit_count += 1; v.last_seen = params[5] as number; }
+              } else if (sql.includes('hit_count=hit_count+1')) {
+                const id = params[1];
+                const v = db._venues.find((r) => r.id === id);
+                if (v) { v.hit_count += 1; v.last_seen = params[0] as number; }
+              }
+              return {};
+            },
+            first: async () => null,
+            all: async () => ({ results: [...db._venues] }),
+          };
+        },
+        all: async () => ({ results: [...db._venues] }),
+      };
+    },
+  } as unknown as D1Database & { _venues: typeof db._venues };
+  return db;
+}
+
+test('venueStore: upsert creates, fuzzy-matches alias, resolves', async () => {
+  const db = mockDb();
+  await upsertVenue(db, { name: 'Sala Koncertowa Fryderyk', lat: 52.25, lng: 21.01, city: 'warszawa', provider: 'dzisapp' });
+  // Same venue with a slightly different spelling → fuzzy match (alias), not a new row.
+  const id2 = await upsertVenue(db, { name: 'Sala koncertowa Fryderyk', lat: 52.25, lng: 21.01, provider: 'kupbilecik', ref: '3326' });
+  assert.equal(id2, venueKey('Sala Koncertowa Fryderyk'));
+  // resolve by the alias spelling works.
+  const geo = await resolveVenueGeo(db, 'Sala koncertowa Fryderyk');
+  assert.ok(geo);
+  assert.ok(Math.abs(geo!.lat - 52.25) < 0.001);
+  // unrelated venue → null.
+  assert.equal(await resolveVenueGeo(db, 'Teatr Wielki w Poznaniu'), null);
+});
+
+test('venueStore: same venue name in different cities resolves to the right geo', async () => {
+  const db = mockDb();
+  // Two distinct venues that look alike — Warszawa "Tama" vs Poznań "Klub Tama".
+  await upsertVenue(db, { name: 'Tama', lat: 52.2297, lng: 21.0122, city: 'warszawa', provider: 'dzisapp' });
+  await upsertVenue(db, { name: 'Klub Tama', lat: 52.4064, lng: 16.9252, city: 'poznan', provider: 'dzisapp' });
+  // Same name+city → warszawa.
+  const wa = await resolveVenueGeo(db, 'Tama', 'warszawa');
+  assert.ok(wa);
+  assert.ok(Math.abs(wa!.lat - 52.2297) < 0.001, `warszawa lat=${wa?.lat}`);
+  // Different name but same semantic + city → poznan.
+  const poz = await resolveVenueGeo(db, 'Tama', 'poznan');
+  assert.ok(poz);
+  assert.ok(Math.abs(poz!.lat - 52.4064) < 0.001, `poznan lat=${poz?.lat}`);
+  // Unknown city falls back to the full pool (mock order → warszawa first).
+  const noCity = await resolveVenueGeo(db, 'Tama', 'nieznane');
+  assert.ok(noCity);
+});
+
+test('venueStore: venueKey normalizes diacritics and spaces', () => {
+  assert.equal(venueKey('Sala Koncertowa Fryderyk'), 'salakoncertowafryderyk');
+  assert.equal(venueKey('Łódź Klub HAH'), 'lodzklubhah');
+});
+
+test('venueMatch: live production pairs match to the right city geo', () => {
+  // Real dzis.app venue cache (geo verified on 2026-08-16). "I like Chopin" exists
+  // in Gdańsk AND Warszawa with different coordinates — city disambiguates.
+  const gdansk = [
+    { name: 'I like Chopin', geo: { lat: 54.3549, lng: 18.6494 }, city: 'gdansk' },
+    { name: 'Kościół św. Katarzyny', geo: { lat: 54.3544, lng: 18.6524 }, city: 'gdansk' },
+    { name: 'Sala pod Bazyliką Mariacką', geo: { lat: 54.3499, lng: 18.6531 }, city: 'gdansk' },
+  ];
+  const warszawa = [{ name: 'I like Chopin', geo: { lat: 52.2297, lng: 21.0122 }, city: 'warszawa' }];
+  const krakow = [{ name: 'Royal Chopin Hall', geo: { lat: 50.0532, lng: 19.9379 }, city: 'krakow' }];
+  const wroclaw = [
+    { name: 'Katedra Marii Magdaleny', geo: { lat: 51.1095, lng: 17.0347 }, city: 'wroclaw' },
+    { name: 'Vertigo Jazz Club & Restaurant', geo: { lat: 51.1095, lng: 17.0347 }, city: 'wroclaw' },
+  ];
+
+  // Same name, different city → correct geo per city (mixed cache, both cities present).
+  const mixed = [...gdansk, ...warszawa];
+  const g = matchVenueGeo('I like Chopin', mixed, 'gdansk');
+  assert.ok(g && Math.abs(g.lat - 54.3549) < 0.001, 'Gdańsk I like Chopin');
+  const w = matchVenueGeo('I like Chopin', mixed, 'warszawa');
+  assert.ok(w && Math.abs(w.lat - 52.2297) < 0.001, 'Warszawa I like Chopin');
+
+  // Other real pairs.
+  assert.ok(Math.abs(matchVenueGeo('Kościół św. Katarzyny', gdansk, 'gdansk')!.lat - 54.3544) < 0.001);
+  assert.ok(Math.abs(matchVenueGeo('Sala pod Bazyliką Mariacką', gdansk, 'gdansk')!.lat - 54.3499) < 0.001);
+  assert.ok(Math.abs(matchVenueGeo('Royal Chopin Hall', krakow, 'krakow')!.lat - 50.0532) < 0.001);
+  assert.ok(Math.abs(matchVenueGeo('Katedra Marii Magdaleny', wroclaw, 'wroclaw')!.lat - 51.1095) < 0.001);
+  assert.ok(Math.abs(matchVenueGeo('Vertigo Jazz Club & Restaurant', wroclaw, 'wroclaw')!.lat - 51.1095) < 0.001);
+
+  // Distinct venue in the same city must NOT cross-match.
+  assert.equal(matchVenueGeo('Kościół św. Katarzyny', mixed, 'warszawa'), null);
 });

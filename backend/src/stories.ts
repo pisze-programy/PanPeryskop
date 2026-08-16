@@ -11,9 +11,40 @@ function popularityExpr(): string {
   return `MAX(0, p.views_count * ${WV} + p.likes_count * ${WL} + p.shares_count * ${WS} - p.dislikes_count * ${WD}) * (1 + (CAST(p.likes_count AS REAL) / MAX(p.views_count, 1)))`;
 }
 
+export interface StoryJson {
+  id: string;
+  user_id: string;
+  type: string;
+  lat: number;
+  lng: number;
+  description: string;
+  status: string;
+  media_key: string | null;
+  thumb_key: string | null;
+  duration_ms: number | null;
+  created_at: number;
+  likes_count: number;
+  views_count: number;
+  shares_count: number;
+  dislikes_count: number;
+  grid_cell_id: string | null;
+  is_sponsored: boolean;
+  category: string;
+  link_url: string | null;
+  is_sold_out: boolean;
+  external_id: string | null;
+  liked: boolean;
+  disliked: boolean;
+  watched: boolean;
+  author_name: string;
+  author_avatar_url: string | null;
+  media_url: string | null;
+  thumb_url: string | null;
+}
+
 // Map a D1 row to the public story shape. No `as any` — the row type carries the
 // raw 0/1 integers and we coerce explicitly.
-function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): any {
+function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): StoryJson {
   const origin = originFromRequest(c);
   return {
     id: r.id,

@@ -3,9 +3,10 @@
 // shared kupbilecik/ebilet. No Cloudflare → plain fetch from the Worker edge.
 // Limitations: no per-event time (events are all-day), no geo → venue is matched
 // against dzis.app venue cache (fuzzy) and falls back to the city center bbox.
-import { SeedProvider, SeedContext, SeedCandidate } from './types';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from './types';
 import { CITIES, cityById, cityBbox } from '../admin/cities';
 import { matchVenueGeo, VenueEntry } from './venueMatch';
+import { upsertVenue, listVenues } from './venueStore';
 import { DZIS_API, DZIS_LIMIT, EVL_BASE, EVL_LIST_BASE, EVL_MAX_PAGES } from './constants';
 
 const UA = { 'User-Agent': 'Mozilla/5.0' };
@@ -41,11 +42,11 @@ function decodeHtml(s: string): string {
 export function parseEvlEvent(html: string): EvlEventJson | null {
   for (const m of html.matchAll(/<script[^>]*application\/ld\+json[^>]*>(.*?)<\/script>/gs)) {
     try {
-      const data = JSON.parse(m[1]);
-      const graph = data['@graph'] || [data];
-      const ev = graph.find((n: any) => /Event/i.test(String(n['@type'])));
+      const data: unknown = JSON.parse(m[1]);
+      const graph = (Array.isArray(data) ? data : ((data as { '@graph'?: unknown[] } | null)?.['@graph'] ?? [data])) as unknown[];
+      const ev = graph.find((n) => /Event/i.test(String((n as { '@type'?: unknown })?.['@type'])));
       if (ev) {
-        if (ev.name) ev.name = decodeHtml(ev.name);
+        if ((ev as EvlEventJson).name) (ev as EvlEventJson).name = decodeHtml((ev as EvlEventJson).name as string);
         return ev as EvlEventJson;
       }
     } catch (e) {
@@ -55,14 +56,10 @@ export function parseEvlEvent(html: string): EvlEventJson | null {
   return null;
 }
 
-// Build dzis.app venue geo cache (all cities) into D1 so parallel eventylive city
-// scopes can borrow venue geo without each re-fetching dzis.app. Called once per
-// seed day (seed-day handler), read by every eventylive city scope.
-export async function buildVenueCache(ctx: SeedContext, day: string): Promise<void> {
-  const now = Date.now();
-  await ctx.env.DB.prepare('DELETE FROM seed_venue_cache WHERE day = ?').bind(day).run();
-  const seen = new Set<string>();
-  const rows: { name: string; lat: number; lng: number }[] = [];
+// Seed the shared `venues` store from dzis.app (all cities) so parallel scopes can
+// borrow venue geo without re-fetching dzis.app, and other providers (kupbilecik,
+// going, eventylive) reuse the same locations. Idempotent — upserts only.
+export async function buildVenueCache(ctx: SeedContext, _day: string): Promise<void> {
   for (const cityId of CITIES.map((c) => c.id)) {
     try {
       const res = await fetch(`${DZIS_API}?city=${cityId}&limit=${DZIS_LIMIT}`, { headers: UA });
@@ -72,29 +69,17 @@ export async function buildVenueCache(ctx: SeedContext, day: string): Promise<vo
         const name = e.venue?.name;
         const g = e.venue?.geo;
         if (!name || !g?.lat || !g?.lng) continue;
-        const key = name.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        rows.push({ name, lat: g.lat, lng: g.lng });
+        await upsertVenue(ctx.env.DB, { name, lat: g.lat, lng: g.lng, city: cityId, provider: ProviderId.DZISAPP });
       }
     } catch (e) {
       console.error(`venue-cache dzis.app ${cityId} failed: ${(e as Error).message}`);
     }
   }
-  const stmt = ctx.env.DB.prepare(
-    'INSERT OR REPLACE INTO seed_venue_cache (venue_name, lat, lng, day, created_at) VALUES (?, ?, ?, ?, ?)'
-  );
-  for (const r of rows) {
-    await stmt.bind(r.name, r.lat, r.lng, day, now).run();
-  }
 }
 
-// Read the day's venue geo cache from D1 (empty when buildVenueCache didn't run).
-async function loadVenueCache(ctx: SeedContext, day: string): Promise<VenueEntry[]> {
-  const { results } = await ctx.env.DB.prepare(
-    'SELECT venue_name AS name, lat, lng FROM seed_venue_cache WHERE day = ?'
-  ).bind(day).all<{ name: string; lat: number; lng: number }>();
-  return (results || []).map((r) => ({ name: r.name, geo: { lat: r.lat, lng: r.lng } }));
+// Read the shared venues store for in-memory fuzzy matching (matchVenueGeo).
+async function loadVenueCache(ctx: SeedContext, _day: string): Promise<VenueEntry[]> {
+  return listVenues(ctx.env.DB);
 }
 
 // eventylive's offers.availability mirrors the ticket platform's value, but for
@@ -198,8 +183,10 @@ export async function fetchEventyliveCity(ctx: SeedContext, cityId: string): Pro
       const locality = evl.location?.address?.addressLocality || city.name;
       const street = evl.location?.address?.streetAddress || '';
 
-      // Borrow geo from dzis.app venue cache (fuzzy), else city center.
-      const geo = matchVenueGeo(venueName, venueCache);
+      // Borrow geo from dzis.app venue cache (fuzzy), else city center. The venue
+      // name alone is ambiguous across cities ("Tama" in Warszawa vs Poznań), so
+      // prefer matches in the candidate's city.
+      const geo = matchVenueGeo(venueName, venueCache, locality);
 
       const img = evl.image || '';
       const id = (link.match(/\/wydarzenie\/([^/]+)/) || [])[1];
@@ -220,7 +207,7 @@ export async function fetchEventyliveCity(ctx: SeedContext, cityId: string): Pro
       }
 
       out.push({
-        source: 'eventylive',
+        source: ProviderId.EVENTYLIVE,
         externalId: `eventylive-${id}`,
         title: evl.name || '',
         startMs,
@@ -239,7 +226,7 @@ export async function fetchEventyliveCity(ctx: SeedContext, cityId: string): Pro
 }
 
 export const eventyliveProvider: SeedProvider = {
-  id: 'eventylive',
+  id: ProviderId.EVENTYLIVE,
   transport: 'fetch',
   enabled: true,
   fetchCandidates: fetchEventylive,

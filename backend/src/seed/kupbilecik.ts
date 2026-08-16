@@ -1,20 +1,25 @@
 // kupbilecik provider — 'browser' transport. kupbilecik sits behind Cloudflare
-// Bot Fight Mode which 403s plain Workers fetch() (HTML and raw sockets), but
-// renders fine through Cloudflare Browser Run (headless Chrome from the same
-// edge). Listings, event pages and venue pages all go through Browser Run;
-// media (posters/thumbs) try plain fetch first and fall back to Browser Run
-// via puppeteer (real browser request, returns raw bytes).
-import { SeedProvider, SeedContext, SeedCandidate } from './types';
+// Bot Fight Mode which 403s plain Workers fetch() for HTML, but renders through
+// Cloudflare Browser Run (headless Chrome from the same edge).
+//
+// Architecture: candidate extraction happens ENTIRELY from category listings
+// (title, time, venue, city, poster, sold-out) — no per-event or per-venue
+// browser calls. Cross-provider dedupe then drops kupbilecik events already
+// covered by higher-priority sources (going/dzisapp/eventylive). Geo is resolved
+// AFTER dedupe (only for surviving candidates) from the shared `venues` store,
+// falling back to a single venue-page browser call that upserts into the store
+// for future days.
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from './types';
 import { browserContent } from './browser';
 import { getBytes, getText } from './http';
 import { KUP_BASE, KUP_LISTINGS, KUP_MAX_PAGES } from './constants';
+import { resolveVenueGeo, upsertVenue } from './venueStore';
 
 const MONTHS = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
 
 // Try a plain Workers fetch first — sitemap.xml passes from the edge (200), so
-// event/venue pages may too. Falls back to Browser Run when Bot Fight 403s the
-// request (same strategy as kupbilecikFetchBytes). Keeps behavior identical when
-// the edge blocks HTML; skips Browser Run entirely when it doesn't.
+// listing pages may too. Falls back to Browser Run when Bot Fight 403s the
+// request (same strategy as kupbilecikFetchBytes).
 async function kupGetText(ctx: SeedContext, url: string): Promise<string> {
   const t0 = Date.now();
   try {
@@ -39,9 +44,8 @@ export async function fetchKupbilecik(ctx: SeedContext): Promise<SeedCandidate[]
   return out;
 }
 
-// Fetch one kupbilecik category listing (a queue fetch scope). The `seen` set is
-// shared across all categories so the same event isn't re-fetched via Browser Run
-// when it appears in more than one listing. Sequential within the category.
+// Parse one listing page into lightweight candidates (no event/venue browser).
+
 async function fetchKupCategory(ctx: SeedContext, listing: string, seen: Set<string>): Promise<SeedCandidate[]> {
   const t0 = Date.now();
   const [y, m, d] = ctx.day.split('-').map(Number);
@@ -63,8 +67,11 @@ async function fetchKupCategory(ctx: SeedContext, listing: string, seen: Set<str
       for (const m2 of content.matchAll(/href="(https:\/\/www\.kupbilecik\.pl\/(?:imprezy|wydarzenia)\/[^"]+)"/g)) {
         const href = m2[1];
         if (href.includes('/imprezy/')) {
-          const cand = await buildKupEvent(ctx, href, seen, ctx.day, timeM && timeM[1]);
-          if (cand) list.push(cand);
+          const id = (href.match(/\/(?:imprezy|wydarzenia)\/(\d+)\//) || [])[1];
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+          const c = buildFromHtml(ctx, href, content, id, timeM && timeM[1]);
+          if (c) list.push(c);
         } else {
           const sub = await expandFestival(ctx, href, seen);
           list.push(...sub);
@@ -78,14 +85,19 @@ async function fetchKupCategory(ctx: SeedContext, listing: string, seen: Set<str
   return list;
 }
 
+// Build a candidate from a listing/festival HTML fragment — zero browser calls.
 async function expandFestival(ctx: SeedContext, href: string, seen: Set<string>): Promise<SeedCandidate[]> {
   const out: SeedCandidate[] = [];
   try {
     const page = await kupGetText(ctx, href);
     const links = [...new Set([...page.matchAll(/href="(\/imprezy\/\d+[^"]*)"/g)].map((m) => m[1]))];
     for (const link of links) {
-      const cand = await buildKupEvent(ctx, `${KUP_BASE}${link}`, seen, ctx.day, null);
-      if (cand) out.push(cand);
+      const id = (link.match(/\/imprezy\/(\d+)\//) || [])[1];
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      // Festival page: reuse listing extraction from the festival HTML block.
+      const c = buildFromHtml(ctx, `${KUP_BASE}${link}`, page, id);
+      if (c) out.push(c);
     }
   } catch (e) {
     console.error(`kupbilecik festival ${href} failed: ${(e as Error).message}`);
@@ -93,81 +105,86 @@ async function expandFestival(ctx: SeedContext, href: string, seen: Set<string>)
   return out;
 }
 
-async function buildKupEvent(
-  ctx: SeedContext, href: string, seen: Set<string>, day: string, fallbackTime: string | null
-): Promise<SeedCandidate | null> {
+// Resolve geo for a surviving kupbilecik candidate. Tries the shared venues store
+// first; on miss fetches the kupbilecik venue page via browser and upserts into
+// the store (so future days reuse it without a browser call).
+export async function resolveKupGeo(
+  ctx: SeedContext, venueName: string, venueId: string, day: string, city?: string | null
+): Promise<{ lat: number | null; lng: number | null }> {
+  const db = ctx.env.DB;
+  if (venueName) {
+    const hit = await resolveVenueGeo(db, venueName, city);
+    if (hit) return { lat: hit.lat, lng: hit.lng };
+  }
+  if (!venueId) return { lat: null, lng: null };
   const t0 = Date.now();
-  const id = (href.match(/\/(?:imprezy|wydarzenia)\/(\d+)\//) || [])[1];
-  if (!id || seen.has(id)) return null;
-  seen.add(id);
-  let eventPage: string;
-  try { eventPage = await kupGetText(ctx, href); } catch (e) { console.error(`kupbilecik event ${href} failed: ${(e as Error).message}`); return null; }
-
-  let ev: any = null;
-  for (const m of eventPage.matchAll(/<script[^>]*application\/ld\+json[^>]*>(.*?)<\/script>/gs)) {
-    try {
-      const data = JSON.parse(m[1]);
-      const nodes = data['@graph'] || [data];
-      ev = nodes.find((n: any) => /Event/.test(String(n['@type']))) || null;
-      if (ev) break;
-    } catch (e) {
-      console.error(`kupbilecik event ld+json parse failed: ${(e as Error).message}`);
+  try {
+    const url = `${KUP_BASE}/obiekty/${venueId}/`;
+    let html: string;
+    try { html = await getText(url); } catch {
+      const { html: bh, browserMs } = await browserContent(ctx.env, url);
+      ctx.recordBrowserMs(browserMs);
+      html = bh;
     }
-  }
-
-  let startMs = ev?.startDate ? new Date(ev.startDate).getTime() : null;
-  if (!startMs && fallbackTime) {
-    const [hh, mm] = fallbackTime.split(':').map(Number);
-    startMs = ctx.dayStart + (hh * 60 + mm) * 60 * 1000;
-  }
-  if (!startMs || startMs < ctx.dayStart || startMs > ctx.dayEnd) return null;
-
-  const venueName = ev?.location?.name || '';
-  const addr = ev?.location?.address || {};
-  const address = [addr.streetAddress, addr.postalCode].filter(Boolean).join(', ');
-  const city = addr.addressLocality || '';
-
-  let lat: number | null = null, lng: number | null = null;
-  const venueM = eventPage.match(/href="(\/obiekty\/[^"?]+)/);
-  if (venueM) {
-    try {
-      const venueHtml = await kupGetText(ctx, `${KUP_BASE}${venueM[1]}`);
-      const geoM = venueHtml.match(/"geo":\{"@type":"GeoCoordinates","latitude":"([^"]+)","longitude":"([^"]+)"\}/);
-      if (geoM) { lat = parseFloat(geoM[1]); lng = parseFloat(geoM[2]); }
-    } catch (e) {
-      console.error(`kupbilecik venue ${venueM[1]} failed: ${(e as Error).message}`);
+    const geoM = html.match(/"geo":\{"@type":"GeoCoordinates","latitude":"([^"]+)","longitude":"([^"]+)"\}/);
+    if (geoM) {
+      const lat = parseFloat(geoM[1]), lng = parseFloat(geoM[2]);
+      // Upsert into the store so next day avoids the browser call.
+      await upsertVenue(db, { name: venueName || `obiekt-${venueId}`, lat, lng, provider: ProviderId.KUPBILECIK, ref: venueId });
+      console.log(`kupbilecik venue ${venueId} geo (${lat},${lng}) -> stored in ${((Date.now() - t0) / 1000).toFixed(2)}s`);
+      return { lat, lng };
     }
+  } catch (e) {
+    console.error(`kupbilecik venue ${venueId} failed: ${(e as Error).message}`);
   }
+  return { lat: null, lng: null };
+}
 
-  const posters = [...new Set(eventPage.matchAll(/(https:\/\/www\.kupbilecik\.pl\/img\/(?:gal_plakaty|gal_baza)\/[^"'\s?]+)/g).map((m) => m[1]))];
-  const poster = posters.filter((p) => !/_(?:m|fb|tlo)\.webp$/.test(p))[0] || posters[0];
-  if (!poster) return null;
+// Parse a kupbilecik event from raw HTML (listing block or festival page).
+// Extracts everything from HTML — no extra browser calls.
+function buildFromHtml(
+  ctx: SeedContext, href: string, html: string, id: string, fallbackTime: string | null = null
+): SeedCandidate | null {
+  const titleM = html.match(/<h2 class="blackLine">[^<]*<a href="https:\/\/www\.kupbilecik\.pl\/imprezy\/\d+\/[^"]+"[^>]*>\s*<b>([^<]+)<\/b>/);
+  const title = titleM ? decode(titleM[1]) : '';
+  const timeM = html.match(/godz\.\s*(\d{2}:\d{2})/);
+  const time = (timeM && timeM[1]) || fallbackTime;
+  const startMs = time ? ctx.dayStart + (parseInt(time.slice(0, 2)) * 60 + parseInt(time.slice(3, 5))) * 60 * 1000 : ctx.dayStart;
+  if (!time) return null;
 
-  // KupBilecik serves a ready-made thumbnail: same base with `_m.webp` suffix.
-  const thumb = posters.find((p) => /_m\.webp$/.test(p)) || poster.replace(/\.webp$/, '_m.webp');
+  const cityM = html.match(/href="\/miasta\/\d+\/[^"]+"[^>]*>\s*<b>([^<]+)<\/b>/);
+  const city = cityM ? decode(cityM[1]) : '';
+  const venueM = html.match(/href="\/obiekty\/(\d+)\/[^"]+"[^>]*>\s*([^<]+?)<\/a>/);
+  const venueName = venueM ? decode(venueM[2]) : '';
+  const venueId = venueM ? venueM[1] : '';
 
-  // Sold out detection: the event page marks an exhausted performance with a
-  // disabled "Brak biletów" button and a "Brak aktualnie wolnych miejsc w
-  // sprzedaży" note. The `sold-out` badge only appears on category listings, and
-  // JSON-LD offers.availability stays InStock even when sold out, so we key off
-  // the real HTML markers (NOT `btn-brak`, which also appears in every page's CSS).
-  const isSoldOut = /Brak aktualnie wolnych miejsc|>Brak biletów</.test(eventPage);
+  const posterM = html.match(/data-src="(https:\/\/www\.kupbilecik\.pl\/img\/(?:gal_plakaty|gal_baza)\/[^"'?\s]+)/);
+  const thumb = posterM ? posterM[1] : '';
+  if (!thumb) return null;
+  // Full poster = thumb without `_m` suffix (kupbilecik convention).
+  const poster = thumb.replace(/_m\.webp$/, '.webp');
 
-  console.log(`kupbilecik event id=${id} -> ${((Date.now() - t0) / 1000).toFixed(2)}s (${lat ? 'geo' : 'no-geo'})`);
+  const isSoldOut = /class="sold-out">SOLD OUT<\/div>/.test(html);
+
   return {
-    source: 'kupbilecik',
-    externalId: `kupbilecik-${id}-${day}`,
-    title: ev?.name || '',
+    source: ProviderId.KUPBILECIK,
+    externalId: `kupbilecik-${id}-${ctx.day}`,
+    title,
     startMs,
-    lat, lng,
+    lat: null, lng: null, // geo resolved after dedupe
     city,
     venue: venueName,
-    address,
+    address: '',
     link: href,
     mediaUrl: poster,
     thumbUrl: thumb,
     isSoldOut,
+    geoRef: venueId || null,
   };
+}
+
+function decode(s: string): string {
+  return s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 }
 
 async function kupbilecikFetchBytes(ctx: SeedContext, url: string): Promise<Uint8Array> {
@@ -181,8 +198,8 @@ async function kupbilecikFetchBytes(ctx: SeedContext, url: string): Promise<Uint
   // the raw response bytes. Slower + counts toward the 10h/month browser budget.
   // Dynamic import keeps @cloudflare/puppeteer's DOM-dependent types out of tsc.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const puppeteerModule: any = await import('@cloudflare/puppeteer');
-  const puppeteer = puppeteerModule.default ?? puppeteerModule;
+  const puppeteerModule = await import('@cloudflare/puppeteer');
+  const puppeteer = (puppeteerModule.default ?? puppeteerModule) as typeof import('@cloudflare/puppeteer');
   const browser = await puppeteer.launch(ctx.env.BROWSER);
   try {
     const page = await browser.newPage();
@@ -198,14 +215,11 @@ async function kupbilecikFetchBytes(ctx: SeedContext, url: string): Promise<Uint
 }
 
 export const kupbilecikProvider: SeedProvider = {
-  id: 'kupbilecik',
+  id: ProviderId.KUPBILECIK,
   transport: 'browser',
   enabled: true,
   fetchCandidates: fetchKupbilecik,
   fetchBytes: kupbilecikFetchBytes,
-  // One scope: Browser Run calls don't scale in parallel (each is ~seconds, and
-  // concurrent quickAction is throttled). A single sequential pass with a shared
-  // `seen` set avoids duplicate browser fetches — faster than parallel categories.
   scopes: ['all'],
   fetchScope: (ctx, _scope) => fetchKupbilecik(ctx),
 };

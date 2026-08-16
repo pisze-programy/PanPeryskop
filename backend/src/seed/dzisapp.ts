@@ -3,7 +3,7 @@
 // No Cloudflare → plain fetch works from the Worker edge.
 // Coverage: 13 cities, ~500 events each; 86.6% have venue.geo, rest fall back to
 // the city center bbox.
-import { SeedProvider, SeedContext, SeedCandidate } from './types';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from './types';
 import { CITIES, cityById, cityBbox } from '../admin/cities';
 import { warsawOffset } from './dates';
 import { DZIS_API, DZIS_LIMIT, DZIS_WEB } from './constants';
@@ -88,7 +88,7 @@ export async function fetchDzisCity(ctx: SeedContext, cityId: string): Promise<S
     const lng = geo ? geo.lng : bbox ? bbox.swLng + (bbox.neLng - bbox.swLng) / 2 : city.lng;
 
     out.push({
-      source: 'dzisapp',
+      source: ProviderId.DZISAPP,
       externalId: `dzisapp-${e.id}`,
       title: e.title || '',
       startMs,
@@ -106,7 +106,7 @@ export async function fetchDzisCity(ctx: SeedContext, cityId: string): Promise<S
 }
 
 export const dzisappProvider: SeedProvider = {
-  id: 'dzisapp',
+  id: ProviderId.DZISAPP,
   transport: 'fetch',
   enabled: true,
   fetchCandidates: fetchDzisApp,

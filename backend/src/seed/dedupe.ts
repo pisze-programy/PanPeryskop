@@ -1,4 +1,4 @@
-import { SeedCandidate } from './types';
+import { SeedCandidate, ProviderId } from './types';
 import { toWarsawIso } from './dates';
 
 function normVenue(s: string): string {
@@ -25,13 +25,13 @@ function titleOverlap(a: string, b: string): number {
 // Canonical-link preference: when several sources carry the same event (same hour
 // + venue), the one with the LOWEST rank wins — its link/geo becomes canonical.
 // Lower is better. Unknown sources rank last.
-const SOURCE_PRIORITY: Record<string, number> = {
-  going: 0,
-  dzisapp: 1,
-  eventylive: 2,
-  kupbilecik: 3,
+const SOURCE_PRIORITY: Record<ProviderId, number> = {
+  [ProviderId.GOING]: 0,
+  [ProviderId.DZISAPP]: 1,
+  [ProviderId.EVENTYLIVE]: 2,
+  [ProviderId.KUPBILECIK]: 3,
 };
-const sourceRank = (s: string): number => SOURCE_PRIORITY[s] ?? 99;
+const sourceRank = (s: ProviderId): number => SOURCE_PRIORITY[s] ?? 99;
 
 // Return whichever candidate is canonical for the two (same-key) candidates.
 function preferCanonical(a: SeedCandidate, b: SeedCandidate): SeedCandidate {

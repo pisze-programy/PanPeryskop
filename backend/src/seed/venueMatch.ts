@@ -3,17 +3,29 @@
 // shared significant token as a guard against false positives ("Kino Muza" should
 // NOT match "Teatr Muzyczny" just because "muza" ⊂ "muzyczny").
 export interface GeoPoint { lat: number; lng: number; }
-export interface VenueEntry { name: string; geo: GeoPoint | null; }
+export interface VenueEntry { name: string; geo: GeoPoint | null; city?: string | null; }
 
-function flat(s: string): string {
+export function flat(s: string): string {
   return (s || '')
     .toLowerCase()
+    .replace(/ł/g, 'l')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '');
 }
 function tokens(s: string): string[] {
   return flat(s).match(/[a-z0-9]{3,}/g) || [];
+}
+// Whole-word tokens (split on spaces, then flattened) for containment checks.
+function wordTokens(s: string): string[] {
+  return (s || '')
+    .toLowerCase()
+    .replace(/ł/g, 'l')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9 ]/g, '')
+    .split(/\s+/)
+    .filter((w) => w.length >= 3);
 }
 function ngrams(s: string, n: number): Set<string> {
   const out = new Set<string>();
@@ -36,22 +48,48 @@ function significantTokens(s: string): string[] {
 }
 
 export function venueSimilarity(a: string, b: string): number {
+  const fa = flat(a), fb = flat(b);
+  // Whole-word containment covers short names and prefixes ("Klub Tama" vs "Tama",
+  // "Aula UAM" vs "Aula Uniwersytetu ...") where n-gram dice is too coarse.
+  const wa = wordTokens(a), wb = wordTokens(b);
+  const [short, long] = wa.length <= wb.length ? [wa, wb] : [wb, wa];
+  if (fa.length >= 4 && fb.length >= 4 && short.length > 0) {
+    if (short.every((w) => long.includes(w))) return 1;
+    // Abbreviation match: "UAM" ↔ "Aula Uniwersytetu Adama Mickiewicza" — the short
+    // token's letters equal first letters of the long words that aren't shared.
+    const shortTokens = short.filter((w) => w.length <= 4 && !long.includes(w));
+    if (shortTokens.length > 0) {
+      const longRest = long.filter((w) => !short.includes(w));
+      const initials = initialsOf(longRest);
+      if (shortTokens.every((t) => initials.startsWith(t))) return 1;
+    }
+  }
   const d = dice(a, b, 3);
-  const shared = significantTokens(a).filter((w) => flat(b).includes(w)).length;
+  const shared = significantTokens(a).filter((w) => fb.includes(w)).length;
   const aSig = significantTokens(a).length;
   // Require at least one shared significant token when a has any.
   const guardOk = aSig === 0 || shared >= 1;
   return guardOk ? d : d * 0.3; // penalize strongly if no shared significant token
 }
 
+// First letters of each word in a token list, e.g. ["uniwersytetu","adama","mickiewicza"] -> "uam".
+function initialsOf(words: string[]): string {
+  return words.map((w) => w[0] || '').join('');
+}
+
 export const VENUE_MATCH_THRESHOLD = 0.55;
 
 // Find best matching venue geo from a cache (dzis.app venues). Returns geo or null.
-export function matchVenueGeo(name: string, cache: VenueEntry[]): GeoPoint | null {
+// When a city is given, only candidates in the same city are considered — "Tama"
+// in Warszawa is not "Tama" in Poznań.
+export function matchVenueGeo(name: string, cache: VenueEntry[], city?: string | null): GeoPoint | null {
   if (!name || cache.length === 0) return null;
+  const cityNorm = city ? city.toLowerCase() : null;
+  const pool = cityNorm ? cache.filter((v) => (v.city || '').toLowerCase() === cityNorm) : cache;
+  const candidates = pool.length > 0 ? pool : cache; // fall back to all cities when none match
   let best: VenueEntry | null = null;
   let bestScore = 0;
-  for (const v of cache) {
+  for (const v of candidates) {
     const s = venueSimilarity(name, v.name);
     if (s > bestScore) { bestScore = s; best = v; }
   }

@@ -110,7 +110,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
       const description = buildDescription(c);
       await doSavePost(
         env, user, postId, 'photo', c.lat, c.lng, description,
-        mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing)
+        mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing), Boolean(c.isSoldOut)
       );
       providerResult.ingested++; totalIngested++;
     } catch (e) {

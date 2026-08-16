@@ -1,8 +1,11 @@
 // Cron schedule display + next-run calculation for the dashboard.
-// The worker's schedule lives in wrangler.toml [triggers] crons = ["0 2 * * *"].
-// We mirror it here for display (local == CF: same value, kept in one place).
+// The worker's schedule lives in wrangler.toml [triggers] crons; we expose the
+// same value via the CRON_SCHEDULE env var so the dashboard reads one source of
+// truth instead of mirroring the schedule in code.
 
-export const CRON_SCHEDULES = ['0 2 * * *']; // daily 02:00 UTC
+export function cronSchedules(env: Env): string[] {
+  return env.CRON_SCHEDULE ? [env.CRON_SCHEDULE] : [];
+}
 
 // Human-readable description (Europe/Warsaw, accounts for CEST/CET).
 export function cronSummary(): string {
@@ -10,8 +13,8 @@ export function cronSummary(): string {
 }
 
 // Compute the next occurrence of a cron "M H * * *" (daily, single time) in ms.
-export function nextCronRunMs(): number | null {
-  const parts = CRON_SCHEDULES[0]?.split(' ') ?? [];
+export function nextCronRunMs(schedule: string): number | null {
+  const parts = schedule.split(' ');
   if (parts.length !== 5) return null;
   const minute = parseInt(parts[0], 10);
   const hour = parseInt(parts[1], 10);

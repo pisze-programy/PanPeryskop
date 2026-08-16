@@ -39,3 +39,7 @@ admin/src/seed-import.mjs
 # IDE
 .idea/
 .vscode/
+
+# Swift Package Manager build artifacts (vendor SPM deps)
+**/.build/
+ios/vendor/YPImagePicker/Package.resolved

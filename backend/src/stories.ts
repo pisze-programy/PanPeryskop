@@ -1,12 +1,9 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED } from './models';
+import { mediaUrl, originFromRequest } from './media';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
-
-function mediaUrl(_c: { env: Env }, key: string): string {
-  return `https://panperyskop-api.dev-4cb.workers.dev/media/${key}`;
-}
 
 // Mirrors models.popularityScore so ORDER BY matches the ranking algorithm.
 function popularityExpr(): string {
@@ -16,7 +13,8 @@ function popularityExpr(): string {
 
 // Map a D1 row to the public story shape. No `as any` — the row type carries the
 // raw 0/1 integers and we coerce explicitly.
-function storyJson(r: StoryRow, c: { env: Env }): any {
+function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): any {
+  const origin = originFromRequest(c);
   return {
     id: r.id,
     user_id: r.user_id,
@@ -37,14 +35,15 @@ function storyJson(r: StoryRow, c: { env: Env }): any {
     is_sponsored: r.is_sponsored === 1,
     category: r.category,
     link_url: r.link_url,
+    is_sold_out: r.is_sold_out === 1,
     external_id: r.external_id,
     liked: false,
     disliked: (r.disliked ?? 0) === 1,
     watched: (r.watched ?? 0) === 1,
     author_name: r.author_name || 'unknown',
-    author_avatar_url: r.author_avatar_key ? mediaUrl(c, r.author_avatar_key) : null,
-    media_url: r.media_key ? mediaUrl(c, r.media_key) : null,
-    thumb_url: r.thumb_key ? mediaUrl(c, r.thumb_key) : (r.media_key ? mediaUrl(c, r.media_key) : null),
+    author_avatar_url: mediaUrl(origin, r.author_avatar_key),
+    media_url: mediaUrl(origin, r.media_key),
+    thumb_url: mediaUrl(origin, r.thumb_key ?? r.media_key),
   };
 }
 

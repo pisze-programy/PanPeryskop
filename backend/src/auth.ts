@@ -2,6 +2,7 @@ import { Hono, Context } from 'hono';
 import { nanoid } from 'nanoid';
 import { User, defaultUsername } from './models';
 import { APPLE_JWKS_URL, GOOGLE_JWKS_URL, verifyIdToken } from './oauth';
+import { mediaUrl, originFromRequest } from './media';
 
 export const authRoutes = new Hono<{ Bindings: Env }>();
 
@@ -69,16 +70,14 @@ function toUserJson(user: {
   username: string | null;
   avatar_key: string | null;
   is_new: boolean;
-}) {
+}, origin: string) {
   return {
     session_token: user.session_token,
     user_id: user.user_id,
     role: user.role,
     username: user.username,
     auth_provider: 'device',
-    avatar_url: user.avatar_key
-      ? `https://panperyskop-api.dev-4cb.workers.dev/media/${user.avatar_key}`
-      : null,
+    avatar_url: mediaUrl(origin, user.avatar_key),
     is_new: user.is_new,
   };
 }
@@ -98,7 +97,7 @@ authRoutes.post('/device', async (c) => {
 
   const session = await issueSession(db, device_id);
   await logAuthEvent(db, session.is_new ? 'register' : 'login', { id: session.user_id, device_id }, 'device');
-  return c.json(toUserJson(session), session.is_new ? 201 : 200);
+  return c.json(toUserJson(session, originFromRequest(c)), session.is_new ? 201 : 200);
 });
 
 // Dev-mode simulation (ENVIRONMENT !== 'production'): accepts {device_id, apple_user_id,
@@ -183,9 +182,7 @@ async function appleOrGoogleLogin(
       role: existing.role,
       username: existing.username,
       auth_provider: provider,
-      avatar_url: existing.avatar_key
-        ? `https://panperyskop-api.dev-4cb.workers.dev/media/${existing.avatar_key}`
-        : null,
+      avatar_url: mediaUrl(originFromRequest(c), existing.avatar_key),
       is_new: false,
     });
   }

@@ -60,6 +60,7 @@ export interface PostRow {
   link_url: string | null;
   external_id: string | null;
   rejection_reason: string | null;
+  is_sold_out: number;
 }
 
 // A post row joined with author info (and optional watched flag) for /stories.

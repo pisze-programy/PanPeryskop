@@ -4,10 +4,37 @@ main = "src/index.ts"
 compatibility_date = "2026-03-24"
 compatibility_flags = ["nodejs_compat"]
 
+# Raise the CPU limit to the paid max (5 min) — kupbilecik Browser Run scraping and
+# the parallel seed queue consumers need headroom past the 30s default.
+[limits]
+cpu_ms = 300_000
+
 # Daily event seed: load next day's events early morning Europe/Warsaw.
 # 02:00 UTC = 04:00 CEST (summer) / 03:00 CET (winter).
+# CRON_SCHEDULE is the single source of truth — mirrored into the dashboard via env.
 [triggers]
 crons = [ "0 2 * * *" ]
+
+# Queue-based seed pipeline: seed-jobs is the main queue; panperyskop-dlq receives
+# messages whose retries were exhausted (transient failures) for audit.
+[[queues.producers]]
+binding = "SEED_QUEUE"
+queue = "seed-jobs"
+
+[[queues.consumers]]
+queue = "seed-jobs"
+max_batch_size = 100
+max_batch_timeout = 60
+max_retries = 3
+dead_letter_queue = "panperyskop-dlq"
+# Run many fetch scopes (per-city / per-category) in parallel. 50 concurrent
+# consumers stay comfortably under D1's single-threaded write queue and the
+# account's 250-invocation concurrency ceiling.
+max_concurrency = 50
+
+[[queues.producers]]
+binding = "SEED_DLQ"
+queue = "panperyskop-dlq"
 
 # Headless Chrome via Cloudflare Browser Run — used by browser-transport seed
 # providers (kupbilecik). remote=true so `wrangler dev` matches deployed CF.
@@ -26,8 +53,10 @@ bucket_name = "panperyskop-media"
 
 [vars]
 APPLE_CLIENT_ID = "com.panperyskop.PanPeryskop"
+# Cron schedule mirrors [triggers] crons — dashboard reads this as single source of truth.
+CRON_SCHEDULE = "0 2 * * *"
 # goingapp scraping. Public Algolia app id; API key + Cloudinary sig are secrets
-# (wrangler secret put ALGOLIA_API_KEY / CLOUDINARY_SIG) — never committed.
+# (wrangler secret put ALGOLIA_API_KEY / CLOUDINARY_SIG)
 ALGOLIA_APP_ID = "FAFFKUSLK0"
 # GOOGLE_CLIENT_ID = ""  # set once an OAuth client is created in Google Cloud Console
 

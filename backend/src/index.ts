@@ -1,15 +1,16 @@
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import { authRoutes } from './auth';
-import { postsRoutes } from './posts';
-import { storiesRoutes } from './stories';
-import { actionsRoutes } from './actions';
-import { adminRoutes } from './admin';
-import { dashboardRoutes } from './admin/dashboard';
-import { usersRoutes } from './users';
-import { clientErrorRoutes } from './clientErrors';
-import { mediaRequestsRoutes } from './mediaRequests';
-import { runSeed, seedTomorrow } from './seed';
+import {Hono} from 'hono';
+import {cors} from 'hono/cors';
+import {authRoutes} from './auth';
+import {postsRoutes} from './posts';
+import {storiesRoutes} from './stories';
+import {actionsRoutes} from './actions';
+import {adminRoutes} from './admin';
+import {dashboardRoutes} from './admin/dashboard';
+import {usersRoutes} from './users';
+import {clientErrorRoutes} from './clientErrors';
+import {mediaRequestsRoutes} from './mediaRequests';
+import {runSeed, tomorrowWarsaw} from './seed';
+import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/queue';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -75,31 +76,42 @@ app.all('/media/*', async (c) => {
 app.get('/health', (c) => c.json({ ok: true, ts: Date.now() }));
 
 // Manual seed trigger (admin-only). day = YYYY-MM-DD (default: tomorrow).
+// Runs synchronously (blocking) so the caller sees the full result; the cron path
+// uses the async queue (see `queue` + `scheduled` below). Pass via:"queue" to run
+// through the queue pipeline instead (useful for testing).
 app.post('/admin/seed', async (c) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
   if (!c.env.ADMIN_SECRET || token !== c.env.ADMIN_SECRET) return c.json({ error: 'Forbidden' }, 403);
-  const body = (await c.req.json<{ day?: string }>().catch(() => ({}))) as { day?: string };
+  const body = (await c.req.json<{ day?: string; via?: string }>().catch(() => ({}))) as { day?: string; via?: string };
   const day = body?.day;
   if (day !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
     return c.json({ error: 'Invalid day' }, 400);
   }
+  const target = day ?? tomorrowWarsaw();
   try {
-    const result = await (day ? runSeed(c.env, day, 'manual') : seedTomorrow(c.env));
+    if (body?.via === 'queue') {
+      const batchId = await enqueueSeedDay(c.env, target, 'manual');
+      return c.json({ queued: true, day: target, batchId }, 202);
+    }
+    const result = await runSeed(c.env, target, 'manual');
     return c.json(result, 200);
   } catch (e) {
-    return c.json({ error: (e as Error).message }, 400);
+    return c.json({ error: (e as Error).message }, 500);
   }
 });
 
 export default {
   fetch: app.fetch.bind(app),
+  async queue(batch: MessageBatch<SeedQueueMessage>, env: Env): Promise<void> {
+    await runQueue(env, batch);
+  },
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    // Daily seed: load tomorrow's events. Errors are caught inside runSeed per-provider
-    // and per-candidate; every run is logged to D1 (seed_runs) with timings.
+    // Daily seed: enqueue a batch for tomorrow. The queue consumer does the heavy
+    // work with per-event retries + DLQ — no long-running single invocation.
     ctx.waitUntil(
-      seedTomorrow(env)
-        .then((r) => console.log(`seed cron done: day=${r.day} ingested=${r.total.ingested} errors=${r.total.errors} browserMs=${r.total.browserMs}`))
-        .catch((e) => console.error(`seed cron failed: ${(e as Error).message}`))
+      enqueueSeedDay(env, tomorrowWarsaw(), 'cron')
+        .then((batchId) => console.log(`seed cron enqueued: day=${tomorrowWarsaw()} batch=${batchId}`))
+        .catch((e) => console.error(`seed cron enqueue failed: ${(e as Error).message}`))
     );
   },
 };

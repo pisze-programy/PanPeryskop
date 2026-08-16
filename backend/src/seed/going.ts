@@ -75,4 +75,6 @@ export const goingProvider: SeedProvider = {
   enabled: true,
   fetchCandidates: fetchGoing,
   fetchBytes: (ctx, url) => import('./http').then((m) => m.getBytes(url)),
+  scopes: ['all'],
+  fetchScope: (ctx, _scope) => fetchGoing(ctx),
 };

@@ -4,11 +4,10 @@
 // and the legacy bearer ADMIN_SECRET for CLI/seed. No hardcoded defaults.
 import { nanoid } from 'nanoid';
 
-const COOKIE_NAME = 'pp_admin';
-const SESSION_TTL_MS = 4 * 3_600_000; // 4h
+export const COOKIE_NAME = 'pp_admin';
+export const SESSION_TTL_MS = 4 * 3_600_000;
 const MAX_ATTEMPTS = 5;
-const ATTEMPT_WINDOW_MS = 15 * 60_000; // 15 min
-const RATE_LIMIT_MS = 15 * 60_000; // block window
+const RATE_LIMIT_MS = 15 * 60_000;
 
 // PBKDF2-SHA256 hash verification for ADMIN_PASSWORD_HASH = "salt:iterations:hex".
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
@@ -116,7 +115,4 @@ export async function adminLogin(env: Env, password: string, ip: string): Promis
   const cookie = await createSession(env);
   return { cookie };
 }
-
-export const COOKIE_NAME_ = COOKIE_NAME;
-export const SESSION_TTL_MS_ = SESSION_TTL_MS;
 void nanoid;

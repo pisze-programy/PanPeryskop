@@ -3,6 +3,7 @@ import { authenticate } from './auth';
 import { nanoid } from 'nanoid';
 import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, POST_TYPE_SET, STATUS_APPROVED, PostRow } from './models';
 import { strField, fileField, ParsedForm } from './form';
+import { mediaUrl, originFromRequest } from './media';
 
 export const postsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -170,10 +171,12 @@ export async function doSavePost(
   isSponsored: boolean,
   linkUrl: string | null,
   externalId: string | null,
-  isUpdate: boolean
+  isUpdate: boolean,
+  isSoldOut = false
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
+  const soldOut = isSoldOut ? 1 : 0;
   // Category is assigned server-side: seed (has external_id) -> 'events', app -> 'live'.
   const category = externalId ? 'events' : 'live';
 
@@ -182,19 +185,20 @@ export async function doSavePost(
       .prepare(
         `UPDATE posts
          SET type = ?, lat = ?, lng = ?, description = ?, media_key = ?, thumb_key = ?,
-             is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?
+             is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?,
+             is_sold_out = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id)
-         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out)
+         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId)
+      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut)
       .run();
     await db
       .prepare(
@@ -218,6 +222,7 @@ export async function doSavePost(
     category,
     link_url: linkUrl,
     external_id: externalId,
+    is_sold_out: soldOut,
   };
 }
 
@@ -238,9 +243,8 @@ postsRoutes.get('/:id', async (c) => {
 
   if (!post) return c.json({ error: 'Not found' }, 404);
 
-  const mediaUrl = post.media_key
-    ? `https://panperyskop-api.dev-4cb.workers.dev/media/${post.media_key}`
-    : null;
+  const origin = originFromRequest(c);
+  const mediaUrlV = mediaUrl(origin, post.media_key);
 
   return c.json({
     ...post,
@@ -249,12 +253,8 @@ postsRoutes.get('/:id', async (c) => {
     disliked: false,
     watched: false,
     author_name: post.author_name || 'unknown',
-    author_avatar_url: post.author_avatar_key
-      ? `https://panperyskop-api.dev-4cb.workers.dev/media/${post.author_avatar_key}`
-      : null,
-    media_url: mediaUrl,
-    thumb_url: post.thumb_key
-      ? `https://panperyskop-api.dev-4cb.workers.dev/media/${post.thumb_key}`
-      : mediaUrl,
+    author_avatar_url: mediaUrl(origin, post.author_avatar_key),
+    media_url: mediaUrlV,
+    thumb_url: mediaUrl(origin, post.thumb_key) ?? mediaUrlV,
   });
 });

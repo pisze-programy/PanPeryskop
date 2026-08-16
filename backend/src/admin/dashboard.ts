@@ -1,30 +1,27 @@
-// Admin dashboard (Tabler UI): login (password → 4h cookie) + SSR pages + JSON API.
-import { Hono } from 'hono';
-import { esc, fmtDate, fmtDur, fmtPct, page, cards, bars, pill, empty } from './ui';
-import { adminLogin, readSession, getClientIp, COOKIE_NAME_ } from './auth';
-import { CITIES, cityById } from './cities';
-import { eventsSql, cronInfo, daySeries, nearestCity, browserBudget } from './queries';
-import { runSeed, seedTomorrow } from '../seed';
+import {Hono} from 'hono';
+import {bars, cards, empty, esc, fmtDate, fmtDur, fmtPct, page, pill} from './ui';
+import {adminLogin, COOKIE_NAME, getClientIp, readSession} from './auth';
+import {CITIES} from './cities';
+import {browserBudget, cronInfo, daySeries, eventsSql, nearestCity} from './queries';
+import {runSeed, seedTomorrow} from '../seed';
 
 export const dashboardRoutes = new Hono<{ Bindings: Env }>();
 
-const COOKIE = COOKIE_NAME_;
 
 function setSessionCookie(res: Response, value: string, maxAgeSec: number): Response {
   const headers = new Headers(res.headers);
-  headers.set('Set-Cookie', `${COOKIE}=${value}; Path=/admin; HttpOnly; SameSite=Strict; Secure; Max-Age=${maxAgeSec}`);
+  headers.set('Set-Cookie', `${COOKIE_NAME}=${value}; Path=/admin; HttpOnly; SameSite=Strict; Secure; Max-Age=${maxAgeSec}`);
   return new Response(res.body, { status: res.status, headers });
 }
 function clearCookie(): string {
-  return `${COOKIE}=; Path=/admin; HttpOnly; SameSite=Strict; Secure; Max-Age=0`;
+  return `${COOKIE_NAME}=; Path=/admin; HttpOnly; SameSite=Strict; Secure; Max-Age=0`;
 }
 async function requireSession(c: { env: Env; req: { header: (n: string) => string | undefined } }) {
   const cookie = c.req.header('Cookie');
-  const m = cookie?.match(new RegExp(`(?:^|; )${COOKIE}=([^;]+)`));
+  const m = cookie?.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]+)`));
   return readSession(c.env, m?.[1]);
 }
 
-// ---------- login / logout ----------
 dashboardRoutes.get('/login', async (c) => {
   const session = await requireSession(c);
   if (session) return c.redirect('/admin');
@@ -89,7 +86,7 @@ dashboardRoutes.get('/api/overview', (c) => api(c, async (env) => {
     db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(dayStart).first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM banned_devices').first<{ n: number }>(),
     db.prepare('SELECT * FROM seed_runs WHERE provider=? ORDER BY created_at DESC LIMIT 1').bind('total').first(),
-    cronInfo(db),
+    cronInfo(env, db),
     env.BROWSER ? browserBudget(env) : null,
   ]);
   return {
@@ -145,7 +142,7 @@ dashboardRoutes.get('/api/seed', (c) => api(c, async (env) => {
   const since = Date.now() - days * 86400000;
   const { results } = await env.DB.prepare('SELECT * FROM seed_runs WHERE created_at>=? ORDER BY created_at DESC LIMIT 500').bind(since).all();
   const budget = env.BROWSER ? await browserBudget(env) : null;
-  const cron = await cronInfo(env.DB);
+  const cron = await cronInfo(env, env.DB);
   return { runs: results, budget, cron };
 }));
 
@@ -211,7 +208,7 @@ dashboardRoutes.get('/', async (c) => {
     db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(dayStart).first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM media_requests').first<{ n: number }>(),
     db.prepare('SELECT * FROM seed_runs WHERE provider=? ORDER BY created_at DESC LIMIT 1').bind('total').first<Record<string, unknown>>(),
-    cronInfo(db),
+    cronInfo(c.env, db),
     c.env.BROWSER ? await browserBudget(c.env) : null,
   ]);
   const ccards = cards([
@@ -352,7 +349,7 @@ dashboardRoutes.get('/seed', async (c) => {
   const since = Date.now() - 30 * 86400000;
   const { results } = await db.prepare('SELECT * FROM seed_runs WHERE created_at>=? ORDER BY created_at DESC LIMIT 500').bind(since).all();
   const budget = c.env.BROWSER ? await browserBudget(c.env) : null;
-  const cron = await cronInfo(db);
+  const cron = await cronInfo(c.env, db);
   const rows = (results as any[]).map((r) => `<tr>
     <td>${fmtDate(r.created_at)}</td><td>${esc(r.day)}</td>
     <td>${r.run_type === 'cron' ? pill('cron', 'ok') : pill('manual', 'muted')}</td>

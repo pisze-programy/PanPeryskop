@@ -1,7 +1,7 @@
 // Shared D1 query helpers for the dashboard (per-day series, budget, cron state).
 import { browserBudget } from '../seed/log';
 import { CITIES, cityBbox } from './cities';
-import { CRON_SCHEDULES, nextCronRunMs, cronSummary } from './cron';
+import { cronSchedules, nextCronRunMs, cronSummary, CronInfo } from './cron';
 
 // Per-day series grouped by Warsaw date. `table`/`col` come only from callers'
 // fixed literals (never user input).
@@ -23,19 +23,15 @@ export async function daySeries(
 }
 
 // last cron run + next run + summary.
-export async function cronInfo(db: D1Database): Promise<{
-  schedules: string[];
-  summary: string;
-  nextRunMs: number | null;
-  lastCronRunMs: number | null;
-}> {
+export async function cronInfo(env: Env, db: D1Database): Promise<CronInfo> {
   const last = await db
     .prepare("SELECT MAX(created_at) AS m FROM seed_runs WHERE run_type='cron'")
     .first<{ m: number | null }>();
+  const schedules = cronSchedules(env);
   return {
-    schedules: CRON_SCHEDULES,
+    schedules,
     summary: cronSummary(),
-    nextRunMs: nextCronRunMs(),
+    nextRunMs: nextCronRunMs(schedules[0] ?? ''),
     lastCronRunMs: last?.m ?? null,
   };
 }

@@ -2,16 +2,9 @@ import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { fileField, ParsedForm } from './form';
 import { PostRow, TTL_MS, normalizeUsername } from './models';
+import { mediaUrl, originFromRequest } from './media';
 
 export const usersRoutes = new Hono<{ Bindings: Env }>();
-
-function avatarUrl(key: string | null): string | null {
-  return key ? `https://panperyskop-api.dev-4cb.workers.dev/media/${key}` : null;
-}
-
-function mediaUrl(key: string | null): string | null {
-  return key ? `https://panperyskop-api.dev-4cb.workers.dev/media/${key}` : null;
-}
 
 usersRoutes.get('/me', async (c) => {
   const user = await authenticate(c);
@@ -22,7 +15,7 @@ usersRoutes.get('/me', async (c) => {
     device_id: user.device_id,
     role: user.role,
     username: user.username,
-    avatar_url: avatarUrl(user.avatar_key),
+    avatar_url: mediaUrl(originFromRequest(c), user.avatar_key),
     auth_provider: user.auth_provider,
     has_apple: Boolean(user.apple_id),
     has_google: Boolean(user.google_id),
@@ -66,21 +59,24 @@ usersRoutes.get('/me/posts', async (c) => {
     .all<PostRow>();
 
   return c.json(
-    results.map((p) => ({
-      id: p.id,
-      type: p.type,
-      description: p.description,
-      status: p.status,
-      created_at: p.created_at,
-      likes_count: p.likes_count,
-      views_count: p.views_count,
-      shares_count: p.shares_count,
-      media_url: mediaUrl(p.media_key),
-      thumb_url: mediaUrl(p.thumb_key ?? p.media_key),
-      rejection_reason: p.rejection_reason,
-      is_expired: p.created_at < now - TTL_MS,
-      is_future: p.created_at > now,
-    }))
+    results.map((p) => {
+      const origin = originFromRequest(c);
+      return {
+        id: p.id,
+        type: p.type,
+        description: p.description,
+        status: p.status,
+        created_at: p.created_at,
+        likes_count: p.likes_count,
+        views_count: p.views_count,
+        shares_count: p.shares_count,
+        media_url: mediaUrl(origin, p.media_key),
+        thumb_url: mediaUrl(origin, p.thumb_key) ?? mediaUrl(origin, p.media_key),
+        rejection_reason: p.rejection_reason,
+        is_expired: p.created_at < now - TTL_MS,
+        is_future: p.created_at > now,
+      };
+    })
   );
 });
 
@@ -107,6 +103,6 @@ usersRoutes.post('/avatar', async (c) => {
   await c.env.DB.prepare('UPDATE users SET avatar_key = ? WHERE id = ?').bind(key, user.id).run();
 
   return c.json({
-    avatar_url: avatarUrl(key),
+    avatar_url: mediaUrl(originFromRequest(c), key),
   });
 });

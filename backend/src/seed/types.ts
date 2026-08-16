@@ -6,7 +6,7 @@ export type ProviderTransport = 'fetch' | 'browser';
 export type RunType = 'manual' | 'cron';
 
 export interface SeedCandidate {
-  source: string; // provider id, e.g. 'going' | 'kupbilecik'
+  source: string;
   externalId: string;
   title: string;
   startMs: number;
@@ -18,6 +18,7 @@ export interface SeedCandidate {
   link: string;
   mediaUrl: string;
   thumbUrl: string | null;
+  isSoldOut?: boolean;
 }
 
 export interface SeedProviderResult {
@@ -63,4 +64,8 @@ export interface SeedProvider {
   fetchCandidates(ctx: SeedContext): Promise<SeedCandidate[]>;
   /** Download media bytes (poster / thumb). Browser transport may proxy through Browser Run. */
   fetchBytes(ctx: SeedContext, url: string): Promise<Uint8Array>;
+  /** Parallel fetch scopes (per city / per category). Each becomes its own queue message. */
+  scopes: string[];
+  /** Fetch one scope. Used by the queue consumer to parallelize across cities/categories. */
+  fetchScope(ctx: SeedContext, scope: string): Promise<SeedCandidate[]>;
 }

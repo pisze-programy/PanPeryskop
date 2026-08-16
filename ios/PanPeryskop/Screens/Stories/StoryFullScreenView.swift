@@ -102,6 +102,14 @@ struct StoryFullScreenView: View {
                                         .font(.caption)
                                         .foregroundColor(.yellow)
                                 }
+                                if currentPost.is_sold_out == true {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.caption2)
+                                        .foregroundColor(.red)
+                                    Text("Wyprzedane")
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                }
                             }
                             Text(currentPost.description)
                                 .font(.callout)

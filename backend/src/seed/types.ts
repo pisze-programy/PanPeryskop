@@ -11,6 +11,7 @@ export const ProviderId = {
   KUPBILECIK: 'kupbilecik',
   DZISAPP: 'dzisapp',
   EVENTYLIVE: 'eventylive',
+  MULTIKINO: 'multikino',
 } as const;
 export type ProviderId = (typeof ProviderId)[keyof typeof ProviderId];
 

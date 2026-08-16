@@ -13,7 +13,7 @@ import {
   enabledProviders,
   SEED_PROVIDERS,
 } from './seed';
-import { ProviderId, CandidateStatus } from './seed/types';
+import { ProviderId, CandidateStatus, SeedContext } from './seed/types';
 import { browserBudget } from './seed/log';
 import { verifyPassword, readSession, createSession } from './admin/auth';
 import { nextCronRunMs, cronSummary } from './admin/cron';
@@ -22,6 +22,8 @@ import { eventsSql } from './admin/queries';
 import { dice, venueSimilarity, matchVenueGeo, VENUE_MATCH_THRESHOLD } from './seed/venueMatch';
 import { parseLocalDateTime } from './seed/dzisapp';
 import { parseEvlEvent, getOfferUrl } from './seed/eventylive';
+import { parseMkFilms, extractToken, resolveMkGeo } from './seed/multikino';
+import { mkScopes, MK_CINEMAS, MK_ALL_CINEMAS } from './seed/constants';
 import { sendChunked, toCandidate } from './seed/queue';
 import { upsertVenue, resolveVenueGeo, venueKey } from './seed/venueStore';
 import { pruneSeedData } from './seed/cleanup';
@@ -148,16 +150,18 @@ test('providers: going=fetch, kupbilecik=browser, all enabled', () => {
   assert.ok(byId.has('kupbilecik'));
   assert.ok(byId.has('dzisapp'));
   assert.ok(byId.has('eventylive'));
+  assert.ok(byId.has('multikino'));
   assert.equal(byId.get('going')!.transport, 'fetch');
   assert.equal(byId.get('kupbilecik')!.transport, 'browser');
   assert.equal(byId.get('dzisapp')!.transport, 'fetch');
   assert.equal(byId.get('eventylive')!.transport, 'fetch');
+  assert.equal(byId.get('multikino')!.transport, 'fetch');
   for (const p of SEED_PROVIDERS) {
     assert.equal(typeof p.fetchCandidates, 'function');
     assert.equal(typeof p.fetchBytes, 'function');
     assert.ok(p.enabled, `${p.id} should be enabled`);
   }
-  assert.ok(enabledProviders().length >= 4);
+  assert.ok(enabledProviders().length >= 5);
 });
 
 test('browserBudget: sums browser_ms for current month', async () => {
@@ -304,6 +308,156 @@ test('dedupe: distinct all-day events stay separate', () => {
   const b = mk(ProviderId.EVENTYLIVE, 'evl-b', 'K-Pop Party', midnight, 'Klub HAH');
   const out = dedupe([a, b]);
   assert.equal(out.length, 2);
+});
+
+test('dedupe: multikino (primary) wins over going for the same film×cinema×hour', () => {
+  const mk = (source: ProviderId, ext: string, title: string, startMs: number, venue: string) => ({
+    source, externalId: ext, title, startMs, lat: 52.4, lng: 16.9, city: 'Warszawa',
+    venue, address: '', link: '', mediaUrl: '', thumbUrl: null,
+  });
+  const t = Date.parse('2026-08-22T18:30:00+02:00');
+  const mk2 = mk(ProviderId.MULTIKINO, 'mk-1', 'Spider-Man: Całkiem nowy dzień', t, 'Multikino Warszawa Złote Tarasy');
+  const going = mk(ProviderId.GOING, 'going-1', 'Spider-Man: Całkiem nowy dzień', t, 'Multikino Warszawa Złote Tarasy');
+  const out = dedupe([going, mk2]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].externalId, 'mk-1');
+});
+
+test('dedupe: two distinct films at the same hour in the same cinema stay separate', () => {
+  const mk = (source: ProviderId, ext: string, title: string, startMs: number, venue: string) => ({
+    source, externalId: ext, title, startMs, lat: 52.4, lng: 16.9, city: 'Warszawa',
+    venue, address: '', link: '', mediaUrl: '', thumbUrl: null,
+  });
+  const t = Date.parse('2026-08-22T18:30:00+02:00');
+  const a = mk(ProviderId.MULTIKINO, 'mk-a', 'Spider-Man: Całkiem nowy dzień', t, 'Multikino Warszawa Złote Tarasy');
+  const b = mk(ProviderId.MULTIKINO, 'mk-b', 'Superman: Dziedzictwo', t, 'Multikino Warszawa Złote Tarasy');
+  const out = dedupe([a, b]);
+  assert.equal(out.length, 2);
+});
+
+test('multikino: parseMkFilms builds one film×cinema candidate per day', () => {
+  const data = {
+    result: [
+      {
+        filmId: 'HO00002696', filmTitle: 'Spider-Man: Całkiem nowy dzień',
+        posterImageSrc: 'https://www.multikino.pl/-/media/spider-man.jpg?rev=abc',
+        filmUrl: 'https://www.multikino.pl/filmy/spider-man',
+        hasSessions: true,
+        showingGroups: [
+          { date: '2026-08-22T00:00:00', sessions: [
+            { startTime: '2026-08-22T14:15:00', showTimeWithTimeZone: '2026-08-22T14:15:00+02:00', isSoldOut: false },
+            { startTime: '2026-08-22T18:15:00', showTimeWithTimeZone: '2026-08-22T18:15:00+02:00', isSoldOut: false },
+          ]},
+        ],
+      },
+      { filmId: 'HO00000000', filmTitle: 'No sessions', hasSessions: true, showingGroups: [] },
+    ],
+  };
+  const out = parseMkFilms(data, '0013', '2026-08-22');
+  assert.equal(out.length, 1);
+  const c = out[0];
+  assert.equal(c.source, ProviderId.MULTIKINO);
+  assert.equal(c.externalId, 'multikino-0013-HO00002696-2026-08-22');
+  assert.equal(c.venue, 'Multikino Warszawa Złote Tarasy');
+  assert.equal(c.city, 'Warszawa');
+  assert.equal(c.startMs, Date.parse('2026-08-22T14:15:00+02:00'));
+  assert.equal(c.link, 'https://www.multikino.pl/filmy/spider-man');
+  assert.equal(c.mediaUrl, 'https://www.multikino.pl/-/media/spider-man.jpg?rev=abc');
+  assert.equal(c.thumbUrl, 'https://www.multikino.pl/-/media/spider-man.jpg?rev=abc&mw=240&mh=350');
+  assert.equal(c.isSoldOut, false);
+});
+
+test('multikino: parseMkFilms marks sold out only when ALL sessions are sold out', () => {
+  const data = {
+    result: [
+      { filmId: 'F1', filmTitle: 'Film', posterImageSrc: 'https://x.pl/p.jpg', hasSessions: true,
+        showingGroups: [{ date: '2026-08-22T00:00:00', sessions: [
+          { startTime: '2026-08-22T10:00:00', showTimeWithTimeZone: '2026-08-22T10:00:00+02:00', isSoldOut: true },
+          { startTime: '2026-08-22T14:00:00', showTimeWithTimeZone: '2026-08-22T14:00:00+02:00', isSoldOut: true },
+        ]} ] },
+      { filmId: 'F2', filmTitle: 'Film 2', posterImageSrc: 'https://x.pl/p2.jpg', hasSessions: true,
+        showingGroups: [{ date: '2026-08-22T00:00:00', sessions: [
+          { startTime: '2026-08-22T10:00:00', showTimeWithTimeZone: '2026-08-22T10:00:00+02:00', isSoldOut: true },
+          { startTime: '2026-08-22T14:00:00', showTimeWithTimeZone: '2026-08-22T14:00:00+02:00', isSoldOut: false },
+        ]} ] },
+    ],
+  };
+  const out = parseMkFilms(data, '0011', '2026-08-22');
+  assert.equal(out.length, 2);
+  assert.equal(out[0].isSoldOut, true);
+  assert.equal(out[1].isSoldOut, false);
+});
+
+test('multikino: parseMkFilms filters sessions to the target day only', () => {
+  const data = {
+    result: [
+      { filmId: 'F1', filmTitle: 'Film', posterImageSrc: 'https://x.pl/p.jpg', hasSessions: true,
+        showingGroups: [
+          { date: '2026-08-21T00:00:00', sessions: [{ startTime: '2026-08-21T20:00:00', showTimeWithTimeZone: '2026-08-21T20:00:00+02:00' }] },
+          { date: '2026-08-22T00:00:00', sessions: [{ startTime: '2026-08-22T20:00:00', showTimeWithTimeZone: '2026-08-22T20:00:00+02:00' }] },
+        ] },
+    ],
+  };
+  const out = parseMkFilms(data, '0013', '2026-08-22');
+  assert.equal(out.length, 1);
+  assert.equal(out[0].startMs, Date.parse('2026-08-22T20:00:00+02:00'));
+});
+
+test('multikino: extractToken pulls microservicesToken out of Set-Cookie lines', () => {
+  const cookies = [
+    'microservicesRefreshToken=xyz; path=/; HttpOnly',
+    'microservicesToken=eyJhbGciOiJIUzI1NiJ9; path=/; HttpOnly; Secure',
+    '__cf_bm=abc; path=/',
+  ];
+  assert.equal(extractToken(cookies), 'eyJhbGciOiJIUzI1NiJ9');
+  assert.equal(extractToken(['no-token-here']), null);
+});
+
+test('multikino: resolveMkGeo parses SSR repertuar page (geo regex + address)', async () => {
+  const html = '<iframe src="https://www.google.com/maps/embed/v1/place?key=k&q=52.40276672871932, 16.9306668234985"></iframe>' +
+    '<div class="cinema-location__address-holder"><address class="cinema-location__address">ul. Półwiejska 42<br/>61-888 Poznań</address></div>';
+  const calls: { sql: string; binds: unknown[] }[] = [];
+  const db = {
+    prepare: (sql: string) => ({
+      bind: (...binds: unknown[]) => ({
+        run: async () => { calls.push({ sql, binds }); },
+        first: async () => null,
+        all: async () => ({ results: [] }),
+      }),
+      all: async () => ({ results: [] }),
+    }),
+  } as unknown as D1Database;
+  const env = { DB: db, BROWSER: {} } as unknown as Env;
+  const realFetch = globalThis.fetch;
+  const mockFetch: typeof fetch = async (url: string | URL | Request, init?: RequestInit) => {
+    assert.match(String(url), /\/repertuar\/poznan-stary-browar\/teraz-gramy/);
+    return new Response(html, { status: 200 });
+  };
+  globalThis.fetch = mockFetch;
+  try {
+    const ctx = { env, day: '2026-08-22', dayStart: 0, dayEnd: 0, createdAt: 0, recordBrowserMs: () => {} } as SeedContext;
+    const geo = await resolveMkGeo(ctx, '0011', 'Multikino Poznań Stary Browar', 'Poznań');
+    assert.ok(geo.lat != null && geo.lng != null);
+    assert.ok(Math.abs(geo.lat! - 52.40276672871932) < 1e-6);
+    assert.ok(geo.address.includes('Półwiejska 42'));
+    assert.ok(calls.some((c) => c.sql.startsWith('INSERT INTO venues')), 'cinema upserted into venues store');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('multikino: scopes cover the 18 cinemas in app cities (38 total)', () => {
+  assert.equal(MK_CINEMAS.length, 38);
+  assert.equal(MK_ALL_CINEMAS, false);
+  const scopes = mkScopes();
+  assert.equal(scopes.length, 18);
+  // Poznań, Warszawa, Kraków, Gdańsk present; Radom / Zabrze excluded while MK_ALL_CINEMAS=false.
+  assert.ok(scopes.includes('0011'));
+  assert.ok(scopes.includes('0013'));
+  assert.ok(scopes.includes('0005'));
+  assert.ok(scopes.includes('0004'));
+  assert.ok(!scopes.includes('0026'));
+  assert.ok(!scopes.includes('0003'));
 });
 
 test('dzisapp: parseLocalDateTime handles Warsaw local time', () => {

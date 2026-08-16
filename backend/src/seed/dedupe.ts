@@ -26,10 +26,13 @@ function titleOverlap(a: string, b: string): number {
 // + venue), the one with the LOWEST rank wins — its link/geo becomes canonical.
 // Lower is better. Unknown sources rank last.
 const SOURCE_PRIORITY: Record<ProviderId, number> = {
-  [ProviderId.GOING]: 0,
-  [ProviderId.DZISAPP]: 1,
-  [ProviderId.EVENTYLIVE]: 2,
-  [ProviderId.KUPBILECIK]: 3,
+  // multikino is the primary (true) source for cinema showtimes — a film×cinema
+  // row it provides wins over any aggregated copy of the same screening.
+  [ProviderId.MULTIKINO]: 0,
+  [ProviderId.GOING]: 1,
+  [ProviderId.DZISAPP]: 2,
+  [ProviderId.EVENTYLIVE]: 3,
+  [ProviderId.KUPBILECIK]: 4,
 };
 const sourceRank = (s: ProviderId): number => SOURCE_PRIORITY[s] ?? 99;
 
@@ -45,6 +48,24 @@ export function dedupe(events: SeedCandidate[]): SeedCandidate[] {
     const key = `${Math.floor(e.startMs / 3600000)}|${normVenue(e.venue)}`;
     const prev = seen.get(key);
     if (prev) {
+      // Same hour + venue but a clearly different event (e.g. two distinct films
+      // in the same cinema). Keep both by disambiguating the key with the title.
+      if (titleOverlap(prev.title, e.title) < 0.5) {
+        const tkey = `${key}|${titleTokens(e.title).sort().join(' ')}`;
+        const tprev = seen.get(tkey);
+        if (tprev) {
+          const tw = preferCanonical(tprev, e);
+          if (tw !== tprev) {
+            const i = out.indexOf(tprev);
+            out[i] = tw;
+            seen.set(tkey, tw);
+          }
+          continue;
+        }
+        seen.set(tkey, e);
+        out.push(e);
+        continue;
+      }
       const winner = preferCanonical(prev, e);
       if (winner !== prev) {
         const i = out.indexOf(prev);

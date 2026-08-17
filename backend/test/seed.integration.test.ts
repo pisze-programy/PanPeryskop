@@ -13,6 +13,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { SEED_PROVIDERS } from '../src/seed/providers';
 import { enqueueSeedDay, runQueue, QUEUE_NAMES } from '../src/seed/pipeline/queue';
 import { storiesRoutes } from '../src/api/stories';
+import { parseStoriesLimit } from '../src/api/stories';
 import type { SeedQueueMessage } from '../src/seed/pipeline/queue';
 import type { SeedProvider } from '../src/seed/core/types';
 
@@ -277,4 +278,16 @@ test('integration: /stories?day= browses that day even outside the live TTL wind
   // Invalid day format → 400.
   const resBad = await storiesRoutes.request(`/?${bbox}&day=17-08-2026`, {}, env);
   assert.equal(resBad.status, 400);
+
+  // limit is respected and clamped.
+  const resL1 = await storiesRoutes.request(`/?${bbox}&day=2026-08-20&limit=1`, {}, env);
+  assert.equal(((await resL1.json()) as { stories: { id: string }[] }).stories.length, 1);
+});
+
+test('integration: parseStoriesLimit defaults to 50, caps at 1000, clamps to >=1', () => {
+  assert.equal(parseStoriesLimit(undefined), 50);
+  assert.equal(parseStoriesLimit('0'), 1);
+  assert.equal(parseStoriesLimit('42'), 42);
+  assert.equal(parseStoriesLimit('5000'), 1000);
+  assert.equal(parseStoriesLimit('abc'), 50);
 });

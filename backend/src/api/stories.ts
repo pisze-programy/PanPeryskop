@@ -89,6 +89,14 @@ function parseBBox(q: Query): { swLat: number; swLng: number; neLat: number; neL
   return { swLat, swLng, neLat, neLng };
 }
 
+// Optional row limit for the map feed (default 50, capped at 1000 — day browsing
+// wants all pins of the day; MapKit clusters them client-side).
+export function parseStoriesLimit(raw: string | undefined): number {
+  const n = raw ? parseInt(raw, 10) : 50;
+  if (!Number.isFinite(n)) return 50;
+  return Math.max(1, Math.min(1000, n));
+}
+
 storiesRoutes.get('/', async (c) => {
   const db = c.env.DB;
   const q = c.req.query();
@@ -114,6 +122,7 @@ storiesRoutes.get('/', async (c) => {
     timeCond = 'p.event_date = ?';
     timeBinds = [day];
   }
+  const limit = parseStoriesLimit(q.limit);
 
   const authHeader = c.req.header('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
@@ -136,7 +145,7 @@ storiesRoutes.get('/', async (c) => {
            ${catCond}
            ${hideWatchedLive ? 'AND v.post_id IS NULL' : ''}
            ORDER BY ${popularityExpr()} DESC
-           LIMIT 50`
+           LIMIT ${limit}`
         )
         .bind(user.id, user.id, swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []))
         .all<StoryRow>();
@@ -159,7 +168,7 @@ storiesRoutes.get('/', async (c) => {
        AND ${timeCond}
        ${catCond}
        ORDER BY ${popularityExpr()} DESC
-       LIMIT 50`
+       LIMIT ${limit}`
     )
     .bind(swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []))
     .all<StoryRow>();

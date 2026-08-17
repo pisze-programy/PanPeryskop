@@ -93,4 +93,6 @@ export interface SeedProvider {
   scopes: string[];
   /** Fetch one scope. Used by the queue consumer to parallelize across cities/categories. */
   fetchScope(ctx: SeedContext, scope: string): Promise<SeedCandidate[]>;
+  /** Optional: resolve the post's link_url to a direct source (called at ingest, only for survivors). */
+  resolveLink?(ctx: SeedContext, cand: SeedCandidate): Promise<string>;
 }

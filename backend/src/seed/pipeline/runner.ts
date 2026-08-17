@@ -105,6 +105,11 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
         .first<{ id: string }>();
       const postId = existing?.id || nanoid(24);
 
+      // Optional provider hook: resolve the post link to the direct source (dzis.app).
+      if (provider.resolveLink) {
+        try { c.link = await provider.resolveLink(ctx, c); } catch { /* best-effort */ }
+      }
+
       const mediaBytes = await provider.fetchBytes(ctx, c.mediaUrl);
       const mediaType = detectMediaType(mediaBytes);
       if (!mediaType || !mediaType.startsWith('image/')) throw new Error(`bad media ${mediaType || 'unknown'}`);

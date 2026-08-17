@@ -223,6 +223,11 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
       cand.lng = geo.lng;
     }
 
+    // Optional provider hook: resolve the post link to the direct source (dzis.app).
+    if (provider.resolveLink) {
+      try { cand.link = await provider.resolveLink(ctx, cand); } catch { /* best-effort */ }
+    }
+
     const mediaBytes = await provider.fetchBytes(ctx, cand.mediaUrl!);
     const mediaType = detectMediaType(mediaBytes);
     if (!mediaType || !mediaType.startsWith('image/')) throw new Error(`bad media ${mediaType || 'unknown'}`);

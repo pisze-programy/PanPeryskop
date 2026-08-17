@@ -23,7 +23,8 @@ export const KUP_MAX_PAGES = 6;
 
 export const DZIS_API = 'https://api.dzis.app/events';
 export const DZIS_LIMIT = 1000;
-export const DZIS_WEB = 'https://dzis.app/wydarzenie';
+// Event page URL is plural /wydarzenia/<slug> (singular /wydarzenie/ 404s).
+export const DZIS_WEB = 'https://dzis.app/wydarzenia';
 
 export const EVL_BASE = 'https://www.eventylive.pl';
 export const EVL_LIST_BASE = `${EVL_BASE}/miasto`;

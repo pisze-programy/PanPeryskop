@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { enabledProviders, SEED_PROVIDERS } from '../src/seed';
 import { ProviderId, SeedContext } from '../src/seed/core/types';
-import { parseLocalDateTime } from '../src/seed/providers/dzisapp';
+import { parseLocalDateTime, externalOfferUrl, primaryOutHref, resolveDzisLink } from '../src/seed/providers/dzisapp';
 import { parseEvlEvent, getOfferUrl } from '../src/seed/providers/eventylive';
 import { parseMkFilms, extractToken, resolveMkGeo } from '../src/seed/providers/multikino';
 import { mkScopes, MK_CINEMAS, MK_ALL_CINEMAS } from '../src/seed/core/constants';
@@ -194,6 +194,55 @@ test('eventylive: ebilet link gets a ?date= param for the target day', () => {
   assert.equal(mk('https://www.ebilet.pl/klasyka/koncert/x?city=Gdańsk'), 'https://www.ebilet.pl/klasyka/koncert/x?city=Gdańsk&date=2026-08-16');
   assert.equal(mk('https://www.ebilet.pl/klasyka/koncert/x'), 'https://www.ebilet.pl/klasyka/koncert/x?date=2026-08-16');
   assert.equal(mk('https://biletyna.pl/kabaret/x?eid=1'), 'https://biletyna.pl/kabaret/x?eid=1');
+});
+
+test('dzisapp: externalOfferUrl returns an external source, ignores dzis.app self-links', () => {
+  const paid = `<script type="application/ld+json">{"@type":"MusicEvent","offers":[{"@type":"Offer","url":"https://www.kupbilecik.pl/imprezy/191429/Warszawa/Koncert","price":"1"}]}</script>`;
+  assert.equal(externalOfferUrl(paid), 'https://www.kupbilecik.pl/imprezy/191429/Warszawa/Koncert');
+  // Free event self-links with price 0 — must NOT be treated as a source.
+  const free = `<script type="application/ld+json">{"@type":"ExhibitionEvent","offers":[{"@type":"Offer","url":"https://dzis.app/wydarzenia/x","price":"0"}]}</script>`;
+  assert.equal(externalOfferUrl(free), null);
+  assert.equal(externalOfferUrl('<html>no json</html>'), null);
+});
+
+test('dzisapp: primaryOutHref extracts the pos=primary out link (decodes &amp;)', () => {
+  const html = `<a class="hero__side-cta" href="/out/c8de1336-c125-47cc-ab44-c59cd99c3d50?pos=primary&amp;city=warszawa" target="_blank">Bilety</a>`;
+  assert.equal(primaryOutHref(html), '/out/c8de1336-c125-47cc-ab44-c59cd99c3d50?pos=primary&city=warszawa');
+  assert.equal(primaryOutHref('<html>no out</html>'), null);
+});
+
+test('dzisapp: resolveDzisLink returns external source first, then the out link, then the page', async () => {
+  const realFetch = globalThis.fetch;
+  const cand = { link: 'https://dzis.app/wydarzenia/koncert-chopinowski-sala-koncertowa-fryderyk-warszawa-2026-08-17' } as never;
+  try {
+    // 1) External offers.url wins (no follow needed).
+    globalThis.fetch = (async () => new Response(
+      `<script type="application/ld+json">{"offers":[{"@type":"Offer","url":"https://www.kupbilecik.pl/imprezy/191429/Warszawa/Koncert"}]}</script>`,
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )) as typeof fetch;
+    assert.equal(await resolveDzisLink(cand), 'https://www.kupbilecik.pl/imprezy/191429/Warszawa/Koncert');
+
+    // 2) Self-link offers + out link → falls back to following /out/ (final url unknown → out url).
+    let calls = 0;
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      calls++;
+      if (String(url).includes('/out/')) return new Response('<html>x</html>', { status: 200 });
+      return new Response(
+        `<a href="/out/0575c549-c0de-475b-a5e5-ae38149e8624?pos=primary&amp;city=warszawa">Bilety</a>` +
+        `<script type="application/ld+json">{"offers":[{"@type":"Offer","url":"https://dzis.app/wydarzenia/x","price":"0"}]}</script>`,
+        { status: 200 },
+      );
+    }) as typeof fetch;
+    const r = await resolveDzisLink(cand);
+    assert.ok(r.startsWith('https://dzis.app/out/0575c549-c0de-475b-a5e5-ae38149e8624?pos=primary'), r);
+    assert.equal(calls, 2, 'page + out fetch');
+
+    // 3) Page 404 → falls back to the dzis.app event page.
+    globalThis.fetch = (async () => new Response('404', { status: 404 })) as typeof fetch;
+    assert.equal(await resolveDzisLink(cand), 'https://dzis.app/wydarzenia/koncert-chopinowski-sala-koncertowa-fryderyk-warszawa-2026-08-17');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
 
 test('eventylive: ebilet JSON-LD marks the target-day showtime sold out', () => {

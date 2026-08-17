@@ -35,6 +35,55 @@ function isUsableImage(url: string | undefined): string | null {
   return url;
 }
 
+// Direct source URL from the event page's JSON-LD offers[].url — but only when it
+// points OUTSIDE dzis.app (free events self-link with price 0).
+export function externalOfferUrl(html: string): string | null {
+  const re = /<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/gs;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    try {
+      const data = JSON.parse(m[1]);
+      const offers = Array.isArray(data.offers) ? data.offers : data.offers ? [data.offers] : [];
+      for (const o of offers) {
+        const u = typeof o?.url === 'string' ? o.url : '';
+        if (!u) continue;
+        try { if (new URL(u).hostname !== 'dzis.app') return u; } catch { /* malformed */ }
+      }
+    } catch { /* malformed JSON-LD */ }
+  }
+  return null;
+}
+
+// The click-tracking redirect to the primary vendor/source (hero CTA).
+export function primaryOutHref(html: string): string | null {
+  const m = /href="(\/out\/[a-f0-9-]{36}\?pos=primary[^"]*)"/i.exec(html);
+  return m ? m[1].replace(/&amp;/g, '&') : null;
+}
+
+// Resolve a candidate's link to the DIRECT source. Priority:
+//   1. JSON-LD offers[].url when external (paid events → kupbilecik etc.)
+//   2. /out/<uuid>?pos=primary followed to its final URL (free events → source)
+//   3. the dzis.app event page itself (plural URL)
+// Best-effort — on any failure the dzis.app page is returned.
+export async function resolveDzisLink(cand: SeedCandidate): Promise<string> {
+  const slug = (cand.link || '').split('/').filter(Boolean).pop() || '';
+  const page = slug ? `https://dzis.app/wydarzenia/${slug}` : (cand.link || '');
+  if (!slug) return page;
+  try {
+    const res = await fetch(page, { headers: { 'User-Agent': 'Mozilla/5.0' }, redirect: 'follow', signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) return page;
+    const html = await res.text();
+    const ext = externalOfferUrl(html);
+    if (ext) return ext;
+    const out = primaryOutHref(html);
+    if (out) {
+      const r2 = await fetch(`https://dzis.app${out}`, { headers: { 'User-Agent': 'Mozilla/5.0' }, redirect: 'follow', signal: AbortSignal.timeout(15_000) });
+      return r2.url || `https://dzis.app${out}`;
+    }
+    return page;
+  } catch { return page; }
+}
+
 export function parseLocalDateTime(s: string | undefined): number | null {
   // "YYYY-MM-DD HH:MM:SS" interpreted as Europe/Warsaw.
   if (!s) return null;
@@ -113,4 +162,5 @@ export const dzisappProvider: SeedProvider = {
   fetchBytes: (ctx, url) => import('./http').then((m) => m.getBytes(url)),
   scopes: DZIS_CITIES,
   fetchScope: (ctx, scope) => fetchDzisCity(ctx, scope),
+  resolveLink: (_ctx, cand) => resolveDzisLink(cand),
 };

@@ -7,7 +7,7 @@ import { parseEvlEvent, getOfferUrl } from '../src/seed/providers/eventylive';
 import { parseMkFilms, extractToken, resolveMkGeo } from '../src/seed/providers/multikino';
 import { mkScopes, MK_CINEMAS, MK_ALL_CINEMAS } from '../src/seed/core/constants';
 
-test('providers: going=fetch, kupbilecik=browser, all enabled', () => {
+test('providers: going=fetch, kupbilecik=browser, all enabled (multikino local-only)', () => {
   const byId = new Map(SEED_PROVIDERS.map((p) => [p.id, p]));
   assert.ok(byId.has('going'));
   assert.ok(byId.has('kupbilecik'));
@@ -22,9 +22,13 @@ test('providers: going=fetch, kupbilecik=browser, all enabled', () => {
   for (const p of SEED_PROVIDERS) {
     assert.equal(typeof p.fetchCandidates, 'function');
     assert.equal(typeof p.fetchBytes, 'function');
-    assert.ok(p.enabled, `${p.id} should be enabled`);
   }
-  assert.ok(enabledProviders().length >= 5);
+  assert.ok(byId.get('going')!.enabled);
+  assert.ok(byId.get('kupbilecik')!.enabled);
+  assert.ok(byId.get('dzisapp')!.enabled);
+  assert.ok(byId.get('eventylive')!.enabled);
+  assert.equal(byId.get('multikino')!.enabled, false, 'multikino fetched locally (clean IP), not from the Worker');
+  assert.ok(enabledProviders().length >= 4);
 });
 
 test('multikino: parseMkFilms builds one film×cinema candidate per day', () => {

@@ -224,11 +224,11 @@ export async function fetchMultikino(ctx: SeedContext): Promise<SeedCandidate[]>
 export const multikinoProvider: SeedProvider = {
   id: ProviderId.MULTIKINO,
   transport: 'fetch',
-  // Enabled: the earlier 403 was a per-IP rate-limit from bursting the API (both
-  // /auth/token and showings). Mitigated by a D1-shared token cache (mk_session,
-  // one auth call per ~12h) and a single sequential 'all' scope with a delay so
-  // the showings endpoint is never burst.
-  enabled: true,
+  // DISABLED in the Worker: multikino's API rate-limits bursts per egress IP and
+  // Cloudflare Workers egress is shared/hot — the reliable source is the LOCAL
+  // Mac script (admin/local/multikino) running from a clean residential IP and
+  // uploading via seed-ingest. Enabling here would re-introduce 403 churn.
+  enabled: false,
   fetchCandidates: fetchMultikino,
   fetchBytes: (ctx, url) => getBytes(url),
   scopes: ['all'],

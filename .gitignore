@@ -43,3 +43,9 @@ admin/src/seed-import.mjs
 # Swift Package Manager build artifacts (vendor SPM deps)
 **/.build/
 ios/vendor/YPImagePicker/Package.resolved
+
+# Local multikino seed tooling (clean-IP source; operational state + media)
+admin/seed/multikino-media/
+admin/local/multikino/.env
+admin/local/multikino/logs/
+admin/seed/multikino.json

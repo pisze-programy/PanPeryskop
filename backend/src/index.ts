@@ -1,20 +1,21 @@
 import {Hono} from 'hono';
 import {cors} from 'hono/cors';
-import {authRoutes} from './auth';
-import {postsRoutes} from './posts';
-import {storiesRoutes} from './stories';
-import {actionsRoutes} from './actions';
-import {adminRoutes} from './admin';
+import {authRoutes} from './api/auth';
+import {postsRoutes} from './api/posts';
+import {storiesRoutes} from './api/stories';
+import {actionsRoutes} from './api/actions';
+import {adminRoutes} from './api/admin';
 import {dashboardRoutes} from './admin/dashboard';
-import {usersRoutes} from './users';
-import {clientErrorRoutes} from './clientErrors';
-import {mediaRequestsRoutes} from './mediaRequests';
+import {usersRoutes} from './api/users';
+import {clientErrorRoutes} from './api/clientErrors';
+import {mediaRequestsRoutes} from './api/mediaRequests';
 import {runSeed, tomorrowWarsaw} from './seed';
-import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/queue';
-import {pruneSeedData} from './seed/cleanup';
+import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/pipeline/queue';
+import {pruneSeedData, watchdogSeedBatches} from './seed/pipeline/cleanup';
 
-const SEED_CRON = '0 2 * * *';      // 02:00 UTC daily
-const CLEANUP_CRON = '0 4 * * *';   // 04:00 UTC daily
+const SEED_CRON = '0 2 * * *';        // 02:00 UTC daily — enqueue tomorrow's seed
+const CLEANUP_CRON = '0 4 * * *';     // 04:00 UTC daily — audit cleanup (4-day retention)
+const WATCHDOG_CRON = '0 * * * *';    // hourly — mark stuck batches failed
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -94,8 +95,8 @@ app.post('/admin/seed', async (c) => {
   const target = day ?? tomorrowWarsaw();
   try {
     if (body?.via === 'queue') {
-      const batchId = await enqueueSeedDay(c.env, target, 'manual');
-      return c.json({ queued: true, day: target, batchId }, 202);
+      const { batchId, created } = await enqueueSeedDay(c.env, target, 'manual');
+      return c.json({ queued: true, day: target, batchId, created }, 202);
     }
     const result = await runSeed(c.env, target, 'manual');
     return c.json(result, 200);
@@ -119,12 +120,21 @@ export default {
       );
       return;
     }
-    // Daily seed (SEED_CRON): enqueue a batch for tomorrow. The queue consumer
-    // does the heavy work with per-event retries + DLQ — no long-running single
-    // invocation.
+    if (controller.cron === WATCHDOG_CRON) {
+      // Hourly liveness: mark batches stuck in created/fetching/ingesting failed.
+      ctx.waitUntil(
+        watchdogSeedBatches(env, 'cron')
+          .then(() => console.log('seed watchdog cron done'))
+          .catch((e) => console.error(`seed watchdog cron failed: ${(e as Error).message}`))
+      );
+      return;
+    }
+    // Daily seed (SEED_CRON): enqueue a batch for tomorrow (single-flight per day).
+    // The queue consumer does the heavy work with per-message retries + bounded
+    // DLQ re-drive — no long-running single invocation.
     ctx.waitUntil(
       enqueueSeedDay(env, tomorrowWarsaw(), 'cron')
-        .then((batchId) => console.log(`seed cron enqueued: day=${tomorrowWarsaw()} batch=${batchId}`))
+        .then(({ batchId, created }) => console.log(`seed cron enqueued: day=${tomorrowWarsaw()} batch=${batchId} created=${created}`))
         .catch((e) => console.error(`seed cron enqueue failed: ${(e as Error).message}`))
     );
   },

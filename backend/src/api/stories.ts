@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
-import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED } from './models';
-import { mediaUrl, originFromRequest } from './media';
+import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED } from '../core/models';
+import { mediaUrl, originFromRequest } from '../core/media';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
 

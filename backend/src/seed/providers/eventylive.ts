@@ -3,11 +3,11 @@
 // shared kupbilecik/ebilet. No Cloudflare → plain fetch from the Worker edge.
 // Limitations: no per-event time (events are all-day), no geo → venue is matched
 // against dzis.app venue cache (fuzzy) and falls back to the city center bbox.
-import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from './types';
-import { CITIES, cityById, cityBbox } from '../admin/cities';
-import { matchVenueGeo, VenueEntry } from './venueMatch';
-import { upsertVenuesBatch, listVenues, venueKey } from './venueStore';
-import { DZIS_API, DZIS_LIMIT, EVL_BASE, EVL_LIST_BASE, EVL_MAX_PAGES } from './constants';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
+import { CITIES, cityById, cityBbox } from '../../admin/cities';
+import { matchVenueGeo, VenueEntry } from '../venues/venueMatch';
+import { upsertVenuesBatch, listVenues, venueKey } from '../venues/venueStore';
+import { DZIS_API, DZIS_LIMIT, EVL_BASE, EVL_LIST_BASE, EVL_MAX_PAGES } from '../core/constants';
 
 const UA = { 'User-Agent': 'Mozilla/5.0' };
 

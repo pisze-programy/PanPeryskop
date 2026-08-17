@@ -1,8 +1,8 @@
 import { Hono, Context } from 'hono';
 import { nanoid } from 'nanoid';
-import { User, defaultUsername } from './models';
+import { User, defaultUsername } from '../core/models';
 import { APPLE_JWKS_URL, GOOGLE_JWKS_URL, verifyIdToken } from './oauth';
-import { mediaUrl, originFromRequest } from './media';
+import { mediaUrl, originFromRequest } from '../core/media';
 
 export const authRoutes = new Hono<{ Bindings: Env }>();
 

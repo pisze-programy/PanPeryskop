@@ -1,7 +1,22 @@
 export const SEED_DEVICE_ID = 'panperyskop-seed';
 
-// Provider base URLs + shared scraping limits. Single source of truth — provider
-// modules import these instead of hardcoding origins in each file.
+// ---------- Time units ----------
+export const HOUR_MS = 3_600_000;
+export const DAY_MS = 24 * HOUR_MS;
+// Event posts become visible at 06:00 Europe/Warsaw of their day (TTL window start).
+export const EVENT_VISIBLE_OFFSET_MS = 6 * HOUR_MS;
+
+// ---------- Queue pipeline limits ----------
+// Cloudflare Queues sendBatch caps at 100 messages per call.
+export const QUEUE_SEND_BATCH_CAP = 100;
+// D1 batch() caps at 100 statements — keep chunks well under it.
+export const D1_BATCH_STATEMENT_CAP = 90;
+// Backoff applied when a message is retried (per-message msg.retry + config retry_delay).
+export const QUEUE_RETRY_DELAY_SECONDS = 30;
+// Per-invocation message concurrency cap (respects the 6-connection limit + D1 writes).
+export const QUEUE_CONSUMER_CONCURRENCY = 6;
+
+// ---------- Provider base URLs + scraping limits ----------
 export const KUP_BASE = 'https://www.kupbilecik.pl';
 export const KUP_LISTINGS = ['/koncerty/?q=', '/kabarety/?q=', '/standup/?q=', '/festiwal/?q='];
 export const KUP_MAX_PAGES = 6;
@@ -15,24 +30,26 @@ export const EVL_LIST_BASE = `${EVL_BASE}/miasto`;
 export const EVL_MAX_PAGES = 30;
 
 export const GOING_BASE = 'https://goingapp.pl';
+export const GOING_ALGOLIA_ORIGIN = 'https://goingapp.pl';
 export const GOING_PLACE = (slug: string) => `https://api-empikbilety.prod.goingapp.eu/api/v1/place/${slug}`;
+export const GOING_POSTER = (path: string, sig: string) =>
+  `https://res.cloudinary.com/dr89d8ldb/image/upload/c_fill,h_810,w_1080/f_jpg/q_auto:eco/v1/${path}?_a=${sig}`;
+export const GOING_THUMB = (path: string, sig: string) =>
+  `https://res.cloudinary.com/dr89d8ldb/image/upload/c_fill,w_320,h_320/f_jpg/q_auto:eco/v1/${path}?_a=${sig}`;
 
-// Multikino (multikino.pl) — Sitecore JSS backed by a JSON microservice. Plain
-// fetch works once an anonymous session token is obtained (see multikino.ts).
 export const MK_BASE = 'https://www.multikino.pl';
 export const MK_API = `${MK_BASE}/api/microservice`;
 export const MK_AUTH = `${MK_API}/auth/token`;
 export const MK_EMBARGO = 1;
+// Fallback anonymous-token cache TTL when the JWT has no usable `exp` claim.
+export const MK_TOKEN_TTL_MS = 12 * HOUR_MS;
 
-// All 38 Multikino cinemas (verified 2026-08-16). `citySlug` is the CITIES id for
-// the 18 cinemas in app cities (null for the rest). scopes = all 38 when
-// MK_ALL_CINEMAS is true, else only the 18 in app cities — no CITIES coupling.
 export interface MkCinema {
-  id: string;      // zero-padded 4-char cinemaId (e.g. "0013")
-  name: string;    // cinemaName (e.g. "Warszawa Złote Tarasy")
-  city: string;    // display city (e.g. "Warszawa")
-  citySlug: string | null; // CITIES id when the city is in the app
-  slug: string;    // whatsOnUrl city slug (e.g. "warszawa-zlote-tarasy")
+  id: string;
+  name: string;
+  city: string;
+  citySlug: string | null;
+  slug: string;
 }
 export const MK_CINEMAS: MkCinema[] = [
   { id: '0006', name: 'Bydgoszcz', city: 'Bydgoszcz', citySlug: 'bydgoszcz', slug: 'bydgoszcz' },
@@ -88,4 +105,3 @@ export function mkScopes(): string[] {
 
 // Thumbnail resizing on Sitecore media URLs (mw/mh keep aspect via fit).
 export const MK_THUMB_QUERY = '&mw=240&mh=350';
-

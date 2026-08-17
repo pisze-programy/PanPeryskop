@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "tsx --test src/seed.test.ts",
+    "test": "tsx --test test/seed*.test.ts",
     "db:migrate": "wrangler d1 migrations apply panperyskop-db",
     "db:create": "wrangler d1 execute panperyskop-db --file=./schema/schema.sql",
     "cf-typegen": "wrangler types"

@@ -1,15 +1,16 @@
 // Seed runner: iterate enabled providers, dedupe, ingest, log per-provider runs
 // to D1 (seed_runs), track Browser Run budget. Shared by cron + /admin/seed.
 import { nanoid } from 'nanoid';
-import { detectMediaType, extForMediaType, doSavePost } from '../posts';
-import { TTL_MS } from '../models';
-import { SeedProvider, SeedProviderResult, SeedResult, SeedContext, RunType, SeedCandidate, ProviderId } from './types';
-import { enabledProviders } from './providers';
-import { warsawMidnightMs, tomorrowWarsaw } from './dates';
-import { buildDescription, dedupe } from './dedupe';
-import { resolveKupGeo } from './kupbilecik';
-import { writeSeedRun, browserBudget, BrowserBudget } from './log';
-import { SEED_DEVICE_ID } from './constants';
+import { detectMediaType, extForMediaType } from '../../core/mediaFormat';
+import { doSavePost } from '../../api/posts';
+import { TTL_MS } from '../../core/models';
+import { SeedProvider, SeedProviderResult, SeedResult, SeedContext, RunType, SeedCandidate, ProviderId } from '../core/types';
+import { enabledProviders } from '../providers';
+import { warsawMidnightMs, tomorrowWarsaw, eventCreatedAtMs, eventDayEndMs } from '../core/dates';
+import { buildDescription, dedupe } from '../core/dedupe';
+import { resolveKupGeo } from '../providers/kupbilecik';
+import { writeSeedRun, browserBudget, BrowserBudget } from '../core/log';
+import { SEED_DEVICE_ID } from '../core/constants';
 
 async function getOrCreateSeedUser(env: Env): Promise<{ id: string }> {
   const existing = await env.DB
@@ -27,7 +28,7 @@ async function getOrCreateSeedUser(env: Env): Promise<{ id: string }> {
 
 export async function runSeed(env: Env, day: string, runType: RunType = 'manual'): Promise<SeedResult> {
   const dayStart = warsawMidnightMs(day);
-  const createdAt = dayStart + 6 * 3600 * 1000; // 06:00 Europe/Warsaw
+  const createdAt = eventCreatedAtMs(day);
   const now = Date.now();
   if (createdAt < now - TTL_MS) throw new Error(`created_at (${new Date(createdAt).toISOString()}) too far in the past`);
 
@@ -43,7 +44,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
       env,
       day,
       dayStart,
-      dayEnd: dayStart + 24 * 3600 * 1000 - 1,
+      dayEnd: eventDayEndMs(day),
       createdAt,
       recordBrowserMs: (ms) => { browserMs += ms; },
     };
@@ -84,7 +85,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
       if (c.source === ProviderId.KUPBILECIK && c.geoRef) {
         const ctx: SeedContext = {
           env, day, dayStart,
-          dayEnd: dayStart + 24 * 3600 * 1000 - 1, createdAt,
+          dayEnd: eventDayEndMs(day), createdAt,
           recordBrowserMs: (ms) => { providerResult.browserMs += ms; },
         };
         const geo = await resolveKupGeo(ctx, c.venue, c.geoRef, day, c.city);
@@ -94,7 +95,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
     }
     const ctx: SeedContext = {
       env, day, dayStart,
-      dayEnd: dayStart + 24 * 3600 * 1000 - 1, createdAt,
+      dayEnd: eventDayEndMs(day), createdAt,
       recordBrowserMs: (ms) => { providerResult.browserMs += ms; },
     };
     try {

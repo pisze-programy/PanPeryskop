@@ -1,5 +1,5 @@
 // Shared D1 query helpers for the dashboard (per-day series, budget, cron state).
-import { browserBudget } from '../seed/log';
+import { browserBudget } from '../seed/core/log';
 import { CITIES, cityBbox } from './cities';
 import { cronSchedules, nextCronRunMs, cronSummary, CronInfo } from './cron';
 

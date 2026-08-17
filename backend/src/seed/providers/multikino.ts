@@ -8,10 +8,10 @@
 // target day). Geo + address are parsed from the cinema's SSR repertuar page and
 // upserted into the shared venues store, so only the first-ever seed pays for a
 // page fetch per cinema; later days resolve from the store.
-import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from './types';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { getBytes, getText, UA_HEADERS } from './http';
-import { MK_BASE, MK_API, MK_AUTH, MK_EMBARGO, MK_CINEMAS, MK_THUMB_QUERY, mkScopes } from './constants';
-import { resolveVenueGeo, upsertVenue } from './venueStore';
+import { MK_BASE, MK_API, MK_AUTH, MK_EMBARGO, MK_CINEMAS, MK_THUMB_QUERY, MK_TOKEN_TTL_MS, mkScopes } from '../core/constants';
+import { resolveVenueGeo, upsertVenue } from '../venues/venueStore';
 
 // Module-level token cache — valid across multiple scopes in one invocation;
 // between invocations a fresh fetch is cheap (and idempotent).
@@ -49,7 +49,7 @@ export async function getMkToken(ctx: SeedContext): Promise<string> {
     } catch { return 0; }
   })();
   token = t;
-  tokenExpMs = exp || Date.now() + 12 * 3600 * 1000;
+  tokenExpMs = exp || Date.now() + MK_TOKEN_TTL_MS;
   return t;
 }
 
@@ -160,11 +160,11 @@ function decodeAddress(html: string): string {
 async function fetchMkCinema(ctx: SeedContext, cinemaId: string): Promise<SeedCandidate[]> {
   const t = await getMkToken(ctx);
   const url = `${MK_API}/showings/cinemas/${cinemaId}/films?showingDate=${ctx.day}&minEmbargoLevel=${MK_EMBARGO}&includesSession=true&includeSessionAttributes=true`;
-  let res = await fetch(url, { headers: { ...UA_HEADERS, Cookie: `microservicesToken=${t}`, Accept: 'application/json' } });
+  let res = await fetch(url, { headers: { ...UA_HEADERS, Authorization: `Bearer ${t}`, Accept: 'application/json' } });
   if (res.status === 401) {
     token = null;
     const t2 = await getMkToken(ctx);
-    res = await fetch(url, { headers: { ...UA_HEADERS, Cookie: `microservicesToken=${t2}`, Accept: 'application/json' } });
+    res = await fetch(url, { headers: { ...UA_HEADERS, Authorization: `Bearer ${t2}`, Accept: 'application/json' } });
   }
   if (!res.ok) throw new Error(`multikino ${cinemaId} -> ${res.status}`);
   const data = await res.json();

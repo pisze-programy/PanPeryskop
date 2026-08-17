@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { nanoid } from 'nanoid';
-import { MediaRequestRow, MEDIA_REQUEST_TTL_MS, MEDIA_REQUEST_COOLDOWN_MS } from './models';
+import { MediaRequestRow, MEDIA_REQUEST_TTL_MS, MEDIA_REQUEST_COOLDOWN_MS } from '../core/models';
 
 export const mediaRequestsRoutes = new Hono<{ Bindings: Env }>();
 

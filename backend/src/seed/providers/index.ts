@@ -1,4 +1,4 @@
-import { SeedProvider } from './types';
+import { SeedProvider } from '../core/types';
 import { goingProvider } from './going';
 import { kupbilecikProvider } from './kupbilecik';
 import { dzisappProvider } from './dzisapp';

@@ -9,33 +9,78 @@ compatibility_flags = ["nodejs_compat"]
 [limits]
 cpu_ms = 300_000
 
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+
 # Daily event seed: load next day's events early morning Europe/Warsaw.
 # 02:00 UTC = 04:00 CEST (summer) / 03:00 CET (winter).
 # CRON_SCHEDULE is the single source of truth — mirrored into the dashboard via env.
-# 02:00 daily seed; 04:00 daily audit cleanup (4-day retention).
+# 02:00 daily seed; 04:00 daily audit cleanup (4-day retention); hourly liveness
+# watchdog (marks batches stuck in created/fetching/ingesting as failed).
 [triggers]
-crons = [ "0 2 * * *", "0 4 * * *" ]
+crons = [ "0 2 * * *", "0 4 * * *", "0 * * * *" ]
 
-# Queue-based seed pipeline: seed-jobs is the main queue; panperyskop-dlq receives
-# messages whose retries were exhausted (transient failures) for audit.
+# Queue-based seed pipeline, split by phase so each has its own capacity and
+# retry policy (no single worker/queue does everything).
+#   seed-fetch-jobs    → per-scope (city/cinema) fetch, browser + HTTP transports
+#   seed-ingest-jobs   → per-candidate media→R2→D1 ingest
+#   seed-finalize-jobs → per-batch dedupe + terminal-state completion
+#   panperyskop-dlq    → dead-lettered messages are RE-DRIVEN (bounded) by a
+#                        dedicated consumer; stale batches are marked failed.
 [[queues.producers]]
-binding = "SEED_QUEUE"
-queue = "seed-jobs"
+binding = "SEED_FETCH_QUEUE"
+queue = "pp-seed-fetch-jobs"
+
+[[queues.producers]]
+binding = "SEED_INGEST_QUEUE"
+queue = "pp-seed-ingest-jobs"
+
+[[queues.producers]]
+binding = "SEED_FINALIZE_QUEUE"
+queue = "pp-seed-finalize-jobs"
 
 [[queues.consumers]]
-queue = "seed-jobs"
-max_batch_size = 100
-max_batch_timeout = 60
+queue = "pp-seed-fetch-jobs"
+max_batch_size = 10
+max_batch_timeout = 30
 max_retries = 3
+retry_delay = 30
 dead_letter_queue = "panperyskop-dlq"
-# Run many fetch scopes (per-city / per-category) in parallel. 50 concurrent
-# consumers stay comfortably under D1's single-threaded write queue and the
-# account's 250-invocation concurrency ceiling.
-max_concurrency = 50
+max_concurrency = 10
 
-[[queues.producers]]
-binding = "SEED_DLQ"
+[[queues.consumers]]
+queue = "pp-seed-ingest-jobs"
+max_batch_size = 20
+max_batch_timeout = 30
+max_retries = 3
+retry_delay = 30
+dead_letter_queue = "panperyskop-dlq"
+max_concurrency = 10
+
+[[queues.consumers]]
+queue = "pp-seed-finalize-jobs"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+retry_delay = 30
+dead_letter_queue = "panperyskop-dlq"
+max_concurrency = 5
+
+# DLQ is deliberately low-concurrency: it re-drives dead-lettered work back to
+# the phase queues (bounded by seed_scopes.attempts / candidate state) instead of
+# flooding them. Stale batches are terminal-marked by the daily watchdog cron.
+[[queues.consumers]]
 queue = "panperyskop-dlq"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 2
+retry_delay = 30
+max_concurrency = 1
 
 # Headless Chrome via Cloudflare Browser Run — used by browser-transport seed
 # providers (kupbilecik). remote=true so `wrangler dev` matches deployed CF.

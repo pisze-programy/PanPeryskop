@@ -9,11 +9,11 @@
 // AFTER dedupe (only for surviving candidates) from the shared `venues` store,
 // falling back to a single venue-page browser call that upserts into the store
 // for future days.
-import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from './types';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { browserContent } from './browser';
 import { getBytes, getText } from './http';
-import { KUP_BASE, KUP_LISTINGS, KUP_MAX_PAGES } from './constants';
-import { resolveVenueGeo, upsertVenue } from './venueStore';
+import { KUP_BASE, KUP_LISTINGS, KUP_MAX_PAGES } from '../core/constants';
+import { resolveVenueGeo, upsertVenue } from '../venues/venueStore';
 
 const MONTHS = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
 

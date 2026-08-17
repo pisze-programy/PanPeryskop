@@ -3,10 +3,10 @@
 // No Cloudflare → plain fetch works from the Worker edge.
 // Coverage: 13 cities, ~500 events each; 86.6% have venue.geo, rest fall back to
 // the city center bbox.
-import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from './types';
-import { CITIES, cityById, cityBbox } from '../admin/cities';
-import { warsawOffset } from './dates';
-import { DZIS_API, DZIS_LIMIT, DZIS_WEB } from './constants';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
+import { CITIES, cityById, cityBbox } from '../../admin/cities';
+import { warsawOffset } from '../core/dates';
+import { DZIS_API, DZIS_LIMIT, DZIS_WEB } from '../core/constants';
 
 const DZIS_CITIES = CITIES.map((c) => c.id);
 

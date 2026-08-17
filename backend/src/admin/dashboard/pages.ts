@@ -1,28 +1,22 @@
-import {Hono} from 'hono';
-import {bars, cards, empty, esc, fmtDate, fmtDur, fmtPct, page, pill} from './ui';
-import {adminLogin, COOKIE_NAME, getClientIp, readSession} from './auth';
-import {CITIES} from './cities';
-import {browserBudget, cronInfo, daySeries, eventsSql, nearestCity} from './queries';
-import {runSeed, seedTomorrow} from '../seed';
+// Admin dashboard SSR pages, mounted at /admin. Rendered server-side (Tabler UI).
+import { Hono } from 'hono';
+import { bars, cards, empty, esc, fmtDate, fmtDur, fmtPct, page, pill } from '../ui';
+import { adminLogin, getClientIp } from '../auth';
+import { CITIES } from '../cities';
+import { browserBudget, cronInfo, daySeries, eventsSql, nearestCity } from '../queries';
+import { seedTomorrow } from '../../seed';
+import { clearCookie, fmtPctNum, requireSession, setSessionCookie } from './common';
 
-export const dashboardRoutes = new Hono<{ Bindings: Env }>();
+export const pageRoutes = new Hono<{ Bindings: Env }>();
 
-
-function setSessionCookie(res: Response, value: string, maxAgeSec: number): Response {
-  const headers = new Headers(res.headers);
-  headers.set('Set-Cookie', `${COOKIE_NAME}=${value}; Path=/admin; HttpOnly; SameSite=Strict; Secure; Max-Age=${maxAgeSec}`);
-  return new Response(res.body, { status: res.status, headers });
-}
-function clearCookie(): string {
-  return `${COOKIE_NAME}=; Path=/admin; HttpOnly; SameSite=Strict; Secure; Max-Age=0`;
-}
-async function requireSession(c: { env: Env; req: { header: (n: string) => string | undefined } }) {
-  const cookie = c.req.header('Cookie');
-  const m = cookie?.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]+)`));
-  return readSession(c.env, m?.[1]);
+async function renderPage(c: any, title: string, active: string, html: string) {
+  const session = await requireSession(c);
+  if (!session) return c.redirect('/admin/login');
+  return page(title, active, html);
 }
 
-dashboardRoutes.get('/login', async (c) => {
+// ---------- Auth ----------
+pageRoutes.get('/login', async (c) => {
   const session = await requireSession(c);
   if (session) return c.redirect('/admin');
   const body = `<div style="max-width:380px;margin:10vh auto">
@@ -37,7 +31,7 @@ dashboardRoutes.get('/login', async (c) => {
   return page('Logowanie', '', body);
 });
 
-dashboardRoutes.post('/login', async (c) => {
+pageRoutes.post('/login', async (c) => {
   const parsed = (await c.req.parseBody<Record<string, string>>().catch(() => ({}))) as Record<string, string>;
   const password = String(parsed.password || '');
   const ip = getClientIp(c);
@@ -53,148 +47,15 @@ dashboardRoutes.post('/login', async (c) => {
   return page('Logowanie', '', body);
 });
 
-dashboardRoutes.get('/logout', async (c) => {
+pageRoutes.get('/logout', async (c) => {
   const res = c.redirect('/admin/login');
   const headers = new Headers(res.headers);
   headers.set('Set-Cookie', clearCookie());
   return new Response(res.body, { status: res.status, headers });
 });
 
-// ---------- JSON API (cookie-auth) ----------
-async function api(c: any, handler: (env: Env) => Promise<unknown>) {
-  const session = await requireSession(c);
-  if (!session) return c.json({ error: 'Unauthorized' }, 401);
-  try {
-    return c.json(await handler(c.env));
-  } catch (e) {
-    return c.json({ error: (e as Error).message }, 500);
-  }
-}
-
-dashboardRoutes.get('/api/overview', (c) => api(c, async (env) => {
-  const db = env.DB;
-  const now = Date.now();
-  const dayStart = now - 24 * 3600 * 1000;
-  const [users, posts, evToday, viewsToday, likes, shares, mediaReq, errs, banned, lastSeed, cron, budget] = await Promise.all([
-    db.prepare('SELECT COUNT(*) n FROM users').first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM posts').first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM posts WHERE category=? AND created_at>=? AND created_at<=?').bind('events', dayStart, now).first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM views WHERE created_at>=?').bind(dayStart).first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM likes').first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM shares').first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM media_requests').first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(dayStart).first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM banned_devices').first<{ n: number }>(),
-    db.prepare('SELECT * FROM seed_runs WHERE provider=? ORDER BY created_at DESC LIMIT 1').bind('total').first(),
-    cronInfo(env, db),
-    env.BROWSER ? browserBudget(env) : null,
-  ]);
-  return {
-    users: users?.n ?? 0, posts: posts?.n ?? 0, eventsToday: evToday?.n ?? 0,
-    viewsToday: viewsToday?.n ?? 0, likes: likes?.n ?? 0, shares: shares?.n ?? 0,
-    mediaRequests: mediaReq?.n ?? 0, errorsToday: errs?.n ?? 0, banned: banned?.n ?? 0,
-    lastSeed, cron, budget,
-  };
-}));
-
-dashboardRoutes.get('/api/events', (c) => api(c, async (env) => {
-  const q = c.req.query();
-  const { sql, binds } = eventsSql({
-    cityId: q.city ? String(q.city) : null,
-    source: q.source ? String(q.source) : null,
-    status: q.status ? String(q.status) : null,
-    day: q.day ? String(q.day) : null,
-    fromMs: null, toMs: null, limit: 300,
-  });
-  const { results } = await env.DB.prepare(sql).bind(...binds).all();
-  const out = (results as any[]).map((r) => ({
-    ...r, city: nearestCity(r.lat, r.lng), thumb_url: r.thumb_key ? `/media/${r.thumb_key}` : null,
-  }));
-  return { events: out, cities: CITIES };
-}));
-
-dashboardRoutes.get('/api/users', (c) => api(c, async (env) => {
-  const { results } = await env.DB
-    .prepare(`SELECT u.id, u.device_id, u.username, u.auth_provider, u.created_at,
-              (SELECT COUNT(*) FROM posts p WHERE p.user_id=u.id) AS post_count,
-              (SELECT COUNT(*) FROM views v WHERE v.user_id=u.id) AS view_count,
-              EXISTS(SELECT 1 FROM banned_devices b WHERE b.device_id=u.device_id) AS banned
-              FROM users u ORDER BY u.created_at DESC LIMIT 200`).all();
-  return { users: results };
-}));
-
-dashboardRoutes.get('/api/posts', (c) => api(c, async (env) => {
-  const q = c.req.query();
-  const status = q.status ? String(q.status) : null;
-  let sql = `SELECT p.id, p.description, p.created_at, p.status, p.type, p.thumb_key, p.likes_count, p.views_count,
-             COALESCE(NULLIF(u.username,''), u.device_id) AS author
-             FROM posts p JOIN users u ON p.user_id=u.id WHERE p.category='live'`;
-  const binds: unknown[] = [];
-  if (status) { sql += ' AND p.status=?'; binds.push(status); }
-  sql += ' ORDER BY p.created_at DESC LIMIT 200';
-  const { results } = await env.DB.prepare(sql).bind(...binds).all();
-  return { posts: results };
-}));
-
-dashboardRoutes.get('/api/seed', (c) => api(c, async (env) => {
-  const q = c.req.query();
-  const days = parseInt(String(q.days || '30'), 10) || 30;
-  const since = Date.now() - days * 86400000;
-  const { results } = await env.DB.prepare('SELECT * FROM seed_runs WHERE created_at>=? ORDER BY created_at DESC LIMIT 500').bind(since).all();
-  const budget = env.BROWSER ? await browserBudget(env) : null;
-  const cron = await cronInfo(env, env.DB);
-  return { runs: results, budget, cron };
-}));
-
-dashboardRoutes.post('/api/seed/run', (c) => api(c, async (env) => {
-  const body = (await c.req.json<{ day?: string }>().catch(() => ({}))) as { day?: string };
-  const day = body?.day;
-  if (day !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error('Invalid day');
-  return day ? runSeed(env, day, 'manual') : seedTomorrow(env);
-}));
-
-dashboardRoutes.get('/api/stats', (c) => api(c, async (env) => {
-  const q = c.req.query();
-  const days = parseInt(String(q.days || '14'), 10) || 14;
-  const since = Date.now() - days * 86400000;
-  const metric = String(q.metric || 'views');
-  const map: Record<string, [string, string, string?]> = {
-    views: ['views', 'created_at'], media: ['posts', 'created_at'], likes: ['likes', 'created_at'],
-    shares: ['shares', 'created_at'], logins: ['auth_events', 'created_at', " AND event='login'"],
-    signups: ['auth_events', 'created_at', " AND event='register'"],
-  };
-  const [table, col, extra] = map[metric] || map.views;
-  return { series: await daySeries(env.DB, table, col, since, extra) };
-}));
-
-dashboardRoutes.get('/api/errors', (c) => api(c, async (env) => {
-  const q = c.req.query();
-  const days = parseInt(String(q.days || '7'), 10) || 7;
-  const since = Date.now() - days * 86400000;
-  const { results } = await env.DB.prepare('SELECT * FROM client_errors WHERE created_at>=? ORDER BY created_at DESC LIMIT 200').bind(since).all();
-  return { errors: results };
-}));
-
-dashboardRoutes.get('/api/media-requests', (c) => api(c, async (env) => {
-  const q = c.req.query();
-  const days = parseInt(String(q.days || '14'), 10) || 14;
-  const since = Date.now() - days * 86400000;
-  const { results } = await env.DB
-    .prepare(`SELECT r.id, r.lat, r.lng, r.created_at, COALESCE(NULLIF(u.username,''), u.device_id) AS user
-              FROM media_requests r JOIN users u ON r.user_id=u.id WHERE r.created_at>=? ORDER BY r.created_at DESC LIMIT 200`)
-    .bind(since).all();
-  return { requests: results };
-}));
-
-// ---------- SSR pages ----------
-async function renderPage(c: any, title: string, active: string, html: string) {
-  const session = await requireSession(c);
-  if (!session) return c.redirect('/admin/login');
-  return page(title, active, html);
-}
-
-// Overview
-dashboardRoutes.get('/', async (c) => {
+// ---------- Overview ----------
+pageRoutes.get('/', async (c) => {
   const db = c.env.DB;
   const now = Date.now();
   const dayStart = now - 86400000;
@@ -262,12 +123,8 @@ dashboardRoutes.get('/', async (c) => {
   return renderPage(c, 'Overview', '/admin', body);
 });
 
-function fmtPctNum(usedMs: number, limitMs: number): number {
-  return limitMs > 0 ? Math.round((usedMs / limitMs) * 100) : 0;
-}
-
-// Events (city + day + source filters)
-dashboardRoutes.get('/events', async (c) => {
+// ---------- Events ----------
+pageRoutes.get('/events', async (c) => {
   const db = c.env.DB;
   const q = c.req.query();
   const cityId = q.city ? String(q.city) : null;
@@ -305,8 +162,8 @@ dashboardRoutes.get('/events', async (c) => {
   return renderPage(c, 'Eventy', '/admin/events', body);
 });
 
-// Users
-dashboardRoutes.get('/users', async (c) => {
+// ---------- Users ----------
+pageRoutes.get('/users', async (c) => {
   const db = c.env.DB;
   const { results } = await db.prepare(`SELECT u.id, u.device_id, u.username, u.auth_provider, u.created_at,
       (SELECT COUNT(*) FROM posts p WHERE p.user_id=u.id) AS post_count,
@@ -325,8 +182,8 @@ dashboardRoutes.get('/users', async (c) => {
   return renderPage(c, 'Użytkownicy', '/admin/users', body);
 });
 
-// Posts (live)
-dashboardRoutes.get('/posts', async (c) => {
+// ---------- Posts ----------
+pageRoutes.get('/posts', async (c) => {
   const db = c.env.DB;
   const { results } = await db.prepare(`SELECT p.id, p.description, p.created_at, p.status, p.type, p.thumb_key, p.likes_count, p.views_count,
     COALESCE(NULLIF(u.username,''), u.device_id) AS author FROM posts p JOIN users u ON p.user_id=u.id
@@ -343,11 +200,12 @@ dashboardRoutes.get('/posts', async (c) => {
   return renderPage(c, 'Posty', '/admin/posts', body);
 });
 
-// Seed
-dashboardRoutes.get('/seed', async (c) => {
+// ---------- Seed ----------
+pageRoutes.get('/seed', async (c) => {
   const db = c.env.DB;
   const since = Date.now() - 30 * 86400000;
   const { results } = await db.prepare('SELECT * FROM seed_runs WHERE created_at>=? ORDER BY created_at DESC LIMIT 500').bind(since).all();
+  const { results: batches } = await db.prepare('SELECT id, day, status, scopes_total, scopes_done, reason, created_at, updated_at FROM seed_batches WHERE created_at>=? ORDER BY created_at DESC LIMIT 50').bind(since).all();
   const budget = c.env.BROWSER ? await browserBudget(c.env) : null;
   const cron = await cronInfo(c.env, db);
   const rows = (results as any[]).map((r) => `<tr>
@@ -358,6 +216,18 @@ dashboardRoutes.get('/seed', async (c) => {
     <td class="${r.errors ? 'text-danger fw-bold' : 'text-success'}">${r.errors}</td>
     <td>${fmtDur(r.duration_ms)}</td><td>${fmtDur(r.browser_ms)}</td>
     ${r.error_detail ? `<td class="font-monospace text-danger" title="${esc(r.error_detail)}">${esc(r.error_detail.slice(0, 30))}</td>` : '<td>—</td>'}</tr>`).join('');
+
+  const batchPill = (s: string) =>
+    s === 'done' ? pill('done', 'ok') :
+    s === 'failed' ? pill('failed', 'err') :
+    s === 'ingesting' ? pill('ingesting', 'warn') :
+    s === 'fetching' ? pill('fetching', 'warn') : pill(esc(s), 'muted');
+  const batchRows = (batches as any[]).map((b) => `<tr>
+    <td class="font-monospace">${esc(b.id.slice(0, 8))}</td><td>${esc(b.day)}</td>
+    <td>${batchPill(b.status)}</td>
+    <td>${b.scopes_done}/${b.scopes_total}</td>
+    <td>${fmtDate(b.updated_at)}</td>
+    <td>${b.reason ? `<span class="text-danger" title="${esc(b.reason)}">${esc((b.reason as string).slice(0, 40))}</span>` : '—'}</td></tr>`).join('');
 
   let budgetHtml = '';
   if (budget) {
@@ -372,13 +242,16 @@ dashboardRoutes.get('/seed', async (c) => {
 
   const body = `<h2 class="mb-3">Seed</h2>${cronHtml}${budgetHtml}
   <form method="post" action="/admin/seed/run" class="mb-3"><button class="btn btn-primary">▶ Seed jutro (ręcznie)</button></form>
+  <div class="card mb-3"><div class="card-header"><h3 class="card-title">Batche (kolejki)</h3></div><div class="table-responsive"><table class="table table-vcenter card-table">
+    <thead><tr><th>Batch</th><th>Dzień</th><th>Status</th><th>Scope</th><th>Ostatnia aktywność</th><th>Powód</th></tr></thead>
+    <tbody>${batchRows || `<tr><td colspan="6">${empty()}</td></tr>`}</tbody></table></div></div>
   <div class="card"><div class="table-responsive"><table class="table table-vcenter card-table">
     <thead><tr><th>Czas</th><th>Dzień</th><th>Typ</th><th>Provider</th><th>Transport</th><th>Cand</th><th>Ingest</th><th>Skip</th><th>Err</th><th>Czas</th><th>Browser</th><th>Błąd</th></tr></thead>
     <tbody>${rows || `<tr><td colspan="12">${empty()}</td></tr>`}</tbody></table></div></div>`;
   return renderPage(c, 'Seed', '/admin/seed', body);
 });
 
-dashboardRoutes.post('/seed/run', async (c) => {
+pageRoutes.post('/seed/run', async (c) => {
   const session = await requireSession(c);
   if (!session) return c.redirect('/admin/login');
   // Fire-and-forget: return immediately; seed runs in the background (up to the
@@ -392,8 +265,8 @@ dashboardRoutes.post('/seed/run', async (c) => {
   return c.redirect('/admin/seed');
 });
 
-// Stats
-dashboardRoutes.get('/stats', async (c) => {
+// ---------- Stats ----------
+pageRoutes.get('/stats', async (c) => {
   const db = c.env.DB;
   const days = 14;
   const since = Date.now() - days * 86400000;
@@ -410,8 +283,8 @@ dashboardRoutes.get('/stats', async (c) => {
   return renderPage(c, 'Statystyki', '/admin/stats', body);
 });
 
-// Errors
-dashboardRoutes.get('/errors', async (c) => {
+// ---------- Errors ----------
+pageRoutes.get('/errors', async (c) => {
   const db = c.env.DB;
   const since = Date.now() - 7 * 86400000;
   const { results } = await db.prepare('SELECT * FROM client_errors WHERE created_at>=? ORDER BY created_at DESC LIMIT 200').bind(since).all();
@@ -426,8 +299,8 @@ dashboardRoutes.get('/errors', async (c) => {
   return renderPage(c, 'Błędy', '/admin/errors', body);
 });
 
-// Media requests
-dashboardRoutes.get('/media-requests', async (c) => {
+// ---------- Media requests ----------
+pageRoutes.get('/media-requests', async (c) => {
   const db = c.env.DB;
   const since = Date.now() - 14 * 86400000;
   const { results } = await db.prepare(`SELECT r.id, r.lat, r.lng, r.created_at, COALESCE(NULLIF(u.username,''), u.device_id) AS user

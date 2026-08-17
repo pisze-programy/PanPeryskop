@@ -1,11 +1,10 @@
 // goingapp provider — 'fetch' transport. Scrapes Algolia search + place API.
 // API keys come from wrangler vars (ALGOLIA_APP_ID / ALGOLIA_API_KEY /
 // CLOUDINARY_SIG) — never hardcoded (they were previously leaked via git).
-import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from './types';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { getJson } from './http';
-import { upsertVenue } from './venueStore';
-
-const GOING_PLACE = (slug: string) => `https://api-empikbilety.prod.goingapp.eu/api/v1/place/${slug}`;
+import { upsertVenue } from '../venues/venueStore';
+import { GOING_BASE, GOING_ALGOLIA_ORIGIN, GOING_PLACE, GOING_POSTER, GOING_THUMB } from '../core/constants';
 
 interface GoingHit {
   name_pl?: string;
@@ -36,7 +35,7 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
   const params = `query=&filters=type%3Arundate&numericFilters=start_date_timestamp%3E%3D${ctx.dayStart}%2Cstart_date_timestamp%3C%3D${ctx.dayEnd}&hitsPerPage=100`;
   const res = await fetch(algoliaUrl, {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: 'https://goingapp.pl' },
+    headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: GOING_ALGOLIA_ORIGIN },
     body: JSON.stringify({ requests: [{ indexName: 'search-main', params }] }),
   });
   if (!res.ok) throw new Error(`going algolia -> ${res.status}`);
@@ -64,10 +63,10 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
       venue: place?.name || h.place_name || '',
       address: place?.address || '',
       link: h.slug && h.rundate_slug
-        ? `https://goingapp.pl/wydarzenie/${h.slug}/${h.rundate_slug}`
-        : `https://goingapp.pl/${h.path}`,
-      mediaUrl: `https://res.cloudinary.com/dr89d8ldb/image/upload/c_fill,h_810,w_1080/f_jpg/q_auto:eco/v1/${enc}?_a=${cloudSig}`,
-      thumbUrl: `https://res.cloudinary.com/dr89d8ldb/image/upload/c_fill,w_320,h_320/f_jpg/q_auto:eco/v1/${enc}?_a=${cloudSig}`,
+        ? `${GOING_BASE}/wydarzenie/${h.slug}/${h.rundate_slug}`
+        : `${GOING_BASE}/${h.path}`,
+      mediaUrl: GOING_POSTER(enc, cloudSig),
+      thumbUrl: GOING_THUMB(enc, cloudSig),
     });
   }
   return out;

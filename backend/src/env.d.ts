@@ -5,8 +5,9 @@ interface Env {
   DB: D1Database;
   MEDIA: R2Bucket;
   BROWSER: BrowserRun;
-  SEED_QUEUE: Queue<SeedQueueMessage>;
-  SEED_DLQ: Queue<SeedQueueMessage>;
+  SEED_FETCH_QUEUE: Queue<SeedQueueMessage>;
+  SEED_INGEST_QUEUE: Queue<SeedQueueMessage>;
+  SEED_FINALIZE_QUEUE: Queue<SeedQueueMessage>;
   // Admin (Bearer for CLI/seed + password hash + cookie signing for dashboard).
   ADMIN_SECRET?: string;
   ADMIN_PASSWORD_HASH?: string;   // PBKDF2-SHA256 "salt:iterations:hex"

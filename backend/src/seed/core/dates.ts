@@ -1,3 +1,5 @@
+import { DAY_MS, EVENT_VISIBLE_OFFSET_MS } from './constants';
+
 export function todayWarsaw(): string {
   const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' });
   return fmt.format(new Date()); // "YYYY-MM-DD"
@@ -12,6 +14,14 @@ export function warsawMidnightMs(isoDate: string): number {
   const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' });
   while (fmt.format(t) === isoDate) t -= 3_600_000;
   return t + 3_600_000;
+}
+// Event posts for a day become visible at 06:00 Europe/Warsaw (TTL window start).
+export function eventCreatedAtMs(isoDate: string): number {
+  return warsawMidnightMs(isoDate) + EVENT_VISIBLE_OFFSET_MS;
+}
+// Inclusive end of a Warsaw day.
+export function eventDayEndMs(isoDate: string): number {
+  return warsawMidnightMs(isoDate) + DAY_MS - 1;
 }
 export function warsawOffset(): string {
   const raw = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Warsaw', timeZoneName: 'shortOffset' })

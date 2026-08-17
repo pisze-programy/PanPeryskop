@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { STATUS_APPROVED, STATUS_REJECTED } from './models';
+import { STATUS_APPROVED, STATUS_REJECTED } from '../core/models';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 

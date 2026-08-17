@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
-import { TTL_MS, STATUS_APPROVED } from './models';
+import { TTL_MS, STATUS_APPROVED } from '../core/models';
 
 export const actionsRoutes = new Hono<{ Bindings: Env }>();
 

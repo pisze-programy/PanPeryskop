@@ -52,3 +52,5 @@ admin/local/
 # Staging + media produced by the local multikino fetch (regenerated on demand).
 admin/seed/multikino-media/
 admin/seed/multikino.json
+admin/seed/cinemas.json
+admin/seed/cinemas-media/

@@ -29,19 +29,19 @@ test('dedupe: same hour+venue -> going wins over kupbilecik', () => {
 
 test('dedupe: canonical source wins regardless of input order', () => {
   const mk = (source: ProviderId, ext: string) => cand({ source, externalId: ext, title: 'Koncert', startMs: 1_782_765_000_000, venue: 'Venue' });
-  // going (rank 0) beats dzisapp (rank 1) and kupbilecik (rank 3).
+  // Priority: going > kupbilecik > dzisapp > eventylive.
   const out1 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.DZISAPP, 'd'), mk(ProviderId.GOING, 'g')]);
   assert.equal(out1.length, 1);
   assert.equal(out1[0].externalId, 'g');
   // Same result when going comes last in input.
   const out2 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.GOING, 'g'), mk(ProviderId.DZISAPP, 'd')]);
   assert.equal(out2[0].externalId, 'g');
-  // dzisapp beats kupbilecik when going is absent.
+  // kupbilecik beats dzisapp when going is absent.
   const out3 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.DZISAPP, 'd')]);
-  assert.equal(out3[0].externalId, 'd');
-  // eventylive beats kupbilecik.
+  assert.equal(out3[0].externalId, 'k');
+  // kupbilecik beats eventylive.
   const out4 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.EVENTYLIVE, 'e')]);
-  assert.equal(out4[0].externalId, 'e');
+  assert.equal(out4[0].externalId, 'k');
 });
 
 test('dedupe: unknown source keeps the already-seen candidate', () => {

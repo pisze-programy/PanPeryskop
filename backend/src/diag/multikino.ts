@@ -166,6 +166,40 @@ export async function diagMultikino(env: Env, mode: string, dayOverride?: string
     return finish();
   }
 
+  if (mode === 'cinemacity') {
+    // Probe Cinema City's DAS API (quickbook) from the Worker's egress — is it
+    // IP-blocked like multikino, or usable? Base + tenant from the site (apiSitesList).
+    const ccBase = 'https://www.cinema-city.pl/pl/data-api-service/v1/quickbook/10103';
+    const tAtt = Date.now();
+    const att = await fetch(`${ccBase}/attributes?jsonp`, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }, redirect: 'follow', signal: AbortSignal.timeout(15_000) });
+    steps.push({ name: 'cc-attributes', http: att.status, ms: Date.now() - tAtt, bytes: (await att.text()).length });
+
+    const tFe = Date.now();
+    const res = await fetch(`${ccBase}/film-events/in-cinema/1100/at-date/${q_day}`, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }, redirect: 'follow', signal: AbortSignal.timeout(15_000) });
+    const text = await res.text();
+    let films = 0, events = 0;
+    if (res.ok) {
+      try {
+        const d = JSON.parse(text) as { body?: { films?: unknown[]; events?: unknown[] } };
+        films = d.body?.films?.length ?? 0;
+        events = d.body?.events?.length ?? 0;
+      } catch { /* not json */ }
+    }
+    steps.push({ name: 'cc-film-events', http: res.status, ms: Date.now() - tFe, bytes: text.length, note: `${films} films, ${events} events` });
+    return finish();
+  }
+
+  if (mode === 'helios') {
+    // Probe a Helios cinema SSR page from the Worker's egress.
+    const t0h = Date.now();
+    const res = await fetch('https://www.helios.pl/bialystok/kino-helios-alfa', { headers: { 'User-Agent': 'Mozilla/5.0' }, redirect: 'follow', signal: AbortSignal.timeout(20_000) });
+    const html = await res.text();
+    const times = (html.match(/<time datetime=/g) || []).length;
+    const cards = (html.match(/\/kino-helios[^"]*\/filmy\//g) || []).length;
+    steps.push({ name: 'helios-page', http: res.status, ms: Date.now() - t0h, bytes: html.length, note: `${times} showtimes, ${cards} film cards` });
+    return finish();
+  }
+
   if (mode === 'seedpath') {
     // Exact seed code path: provider.fetchScope → getMkToken (D1 cache) + showings + geo.
     const targetDay = q_day; // closure var set below

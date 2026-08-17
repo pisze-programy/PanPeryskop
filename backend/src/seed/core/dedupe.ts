@@ -26,13 +26,13 @@ function titleOverlap(a: string, b: string): number {
 // + venue), the one with the LOWEST rank wins — its link/geo becomes canonical.
 // Lower is better. Unknown sources rank last.
 const SOURCE_PRIORITY: Record<ProviderId, number> = {
-  // multikino is the primary (true) source for cinema showtimes — a film×cinema
-  // row it provides wins over any aggregated copy of the same screening.
+  // Cinema sources are primary (true) for showtimes — a film×cinema row they provide
+  // wins over any aggregated copy. Among the aggregators: going > kupbilecik > dzisapp > eventylive.
   [ProviderId.MULTIKINO]: 0,
   [ProviderId.GOING]: 1,
-  [ProviderId.DZISAPP]: 2,
-  [ProviderId.EVENTYLIVE]: 3,
-  [ProviderId.KUPBILECIK]: 4,
+  [ProviderId.KUPBILECIK]: 2,
+  [ProviderId.DZISAPP]: 3,
+  [ProviderId.EVENTYLIVE]: 4,
 };
 const sourceRank = (s: ProviderId): number => SOURCE_PRIORITY[s] ?? 99;
 

@@ -85,7 +85,16 @@ struct MapScreen: View {
                 categoryPill
                     .padding(.bottom, 112)
             }
+
+            if viewModel.feedCategory == .events {
+                HStack {
+                    Spacer()
+                    DaySliderView(viewModel: viewModel)
+                        .padding(.trailing, 10)
+                }
+            }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: viewModel.feedCategory)
         .onAppear {
             viewModel.currentUserId = authManager.userId
             viewModel.startPolling()

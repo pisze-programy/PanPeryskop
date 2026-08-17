@@ -48,6 +48,7 @@
 		DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBDD7756E22141DD95593257 /* City.swift */; };
 		EF416FDD5F47F902E0511EB7 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11FEA4CA8A5185D280CA5E6B /* APIClient.swift */; };
 		F83DB2EE1C81C2E3A19B19B9 /* AppleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */; };
+		F9E3362AAB4E85A2D9D7F76F /* DaySliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41CE1F1D60CDF1DD025F0C7 /* DaySliderView.swift */; };
 		FF623E777239A2DC2C912B37 /* CityListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F76F226243E1E3B5C14FE6F5 /* CityListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -80,6 +81,7 @@
 		9C0C2297077E1CF861F55EF2 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
 		AA3257AF225A3FC46AC22646 /* MediaNearbyNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaNearbyNotifier.swift; sourceTree = "<group>"; };
+		B41CE1F1D60CDF1DD025F0C7 /* DaySliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaySliderView.swift; sourceTree = "<group>"; };
 		BB11E724A06F70ED3DA7B0F5 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		C198549226A3AB8D8AD7C270 /* MyContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyContentView.swift; sourceTree = "<group>"; };
 		C8D6796591AD82A922A91F5E /* PermissionGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGateView.swift; sourceTree = "<group>"; };
@@ -227,6 +229,7 @@
 			isa = PBXGroup;
 			children = (
 				F76F226243E1E3B5C14FE6F5 /* CityListView.swift */,
+				B41CE1F1D60CDF1DD025F0C7 /* DaySliderView.swift */,
 				1057374311D0AF3FDAC2B2FF /* MapKitMapView.swift */,
 				BB11E724A06F70ED3DA7B0F5 /* MapView.swift */,
 				8E2581E6150C834401927100 /* MapViewModel.swift */,
@@ -338,6 +341,7 @@
 				DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */,
 				FF623E777239A2DC2C912B37 /* CityListView.swift in Sources */,
 				9920ED1276D0819A568362B5 /* ContentView.swift in Sources */,
+				F9E3362AAB4E85A2D9D7F76F /* DaySliderView.swift in Sources */,
 				440C2CC483A9E17757501ADA /* DescriptionStepView.swift in Sources */,
 				DCA8A572B7CEBBBBAE9492B7 /* FaveLikeButton.swift in Sources */,
 				B403D6102AA1FE9F564CDAC4 /* GoogleSignIn.swift in Sources */,

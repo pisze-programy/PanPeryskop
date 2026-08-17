@@ -27,6 +27,9 @@ class MapViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var selectedCity: City = .poznan
     @Published var feedCategory: FeedCategory = .events
+    // Selected day offset 0…3 (dziś / jutro / +2 / +3). Kept only as a live variable
+    // (no persistence) — resets to today on a fresh launch, survives view switches.
+    @Published var selectedDayOffset: Int = 0
 
     private var serverPosts: [Post] = []
     private var serverRequests: [MediaRequest] = []
@@ -85,14 +88,37 @@ class MapViewModel: ObservableObject {
     }
 
     var allPosts: [Post] {
-        serverPosts.filter {
-            $0.isStillValid
+        // Day browsing (offset>0) skips the TTL/future window — the server already
+        // scoped the response to the requested event_date (future days have
+        // created_at in the future and would otherwise be dropped client-side).
+        let dayBrowse = feedCategory == .events && selectedDayOffset > 0
+        return serverPosts.filter {
+            (dayBrowse ? true : $0.isStillValid)
                 && ($0.category ?? "live") == feedCategory.rawValue
                 && (feedCategory != .live || !$0.watched)
         }
     }
 
     var defaultZoom: Double { 12 }
+
+    /// YYYY-MM-DD (Europe/Warsaw) for a day offset relative to today.
+    func dayString(offset: Int) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Warsaw")!
+        let date = calendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
+        let f = DateFormatter()
+        f.calendar = calendar
+        f.locale = Locale(identifier: "pl_PL")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
+    }
+
+    /// Commit the selected day (called on slider release) → refetch the viewport.
+    func commitDay(_ offset: Int) {
+        guard selectedDayOffset != offset else { return }
+        selectedDayOffset = offset
+        refreshCurrentRegion()
+    }
 
     func refreshCurrentRegion() {
         guard let viewport else { return }
@@ -150,13 +176,18 @@ class MapViewModel: ObservableObject {
         guard !isFetchingStories else { return nil }
         isFetchingStories = true
         defer { isFetchingStories = false }
-        let params = [
+        var params = [
             "sw_lat": String(swLat),
             "sw_lng": String(swLng),
             "ne_lat": String(neLat),
             "ne_lng": String(neLng),
             "category": feedCategory.rawValue,
         ]
+        // Day browsing: fetch that day's events (all pins; the map clusters them).
+        if feedCategory == .events, selectedDayOffset > 0 {
+            params["day"] = dayString(offset: selectedDayOffset)
+            params["limit"] = "1000"
+        }
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)
             serverPosts = resp.stories
@@ -281,7 +312,7 @@ class MapViewModel: ObservableObject {
             liked: post.liked, disliked: post.disliked, watched: watched,
             author_name: post.author_name, media_url: post.media_url, thumb_url: post.thumb_url,
             author_avatar_url: post.author_avatar_url,
-            is_sponsored: post.is_sponsored, category: post.category, link_url: post.link_url
+            is_sponsored: post.is_sponsored, category: post.category, link_url: post.link_url, is_sold_out: post.is_sold_out
         )
     }
 
@@ -303,7 +334,7 @@ class MapViewModel: ObservableObject {
                     liked: resp.liked, disliked: updated.disliked, watched: updated.watched,
                     author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
                     author_avatar_url: updated.author_avatar_url,
-                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url
+                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url, is_sold_out: updated.is_sold_out
                 )
                 posts[idx] = updated
             }
@@ -331,7 +362,7 @@ class MapViewModel: ObservableObject {
                     liked: updated.liked, disliked: resp.disliked, watched: updated.watched,
                     author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
                     author_avatar_url: updated.author_avatar_url,
-                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url
+                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url, is_sold_out: updated.is_sold_out
                 )
                 posts[idx] = updated
             }

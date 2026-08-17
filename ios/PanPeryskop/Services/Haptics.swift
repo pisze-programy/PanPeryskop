@@ -60,4 +60,33 @@ enum Haptics {
         tickTask?.cancel()
         tickTask = nil
     }
+
+    // MARK: - Day slider haptics
+    // A dedicated, REUSED generator with a minimum interval between fires. Calling
+    // UIImpactFeedbackGenerator faster than the system allows makes iOS silently
+    // drop haptics (a known bug during fast slider drags) — the throttle prevents it.
+
+    private static let sliderGenerator = UIImpactFeedbackGenerator(style: .light)
+    private static let rigidGenerator = UIImpactFeedbackGenerator(style: .rigid)
+    private static var lastSliderFire: TimeInterval = 0
+    private static let sliderMinInterval: TimeInterval = 0.07
+
+    /// Detent haptic per tick, intensity scales with how far the drag jumped
+    /// (fast drags feel stronger).
+    static func sliderTick(intensity: CGFloat) {
+        guard isEnabled else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        guard now - lastSliderFire >= sliderMinInterval else { return }
+        lastSliderFire = now
+        sliderGenerator.impactOccurred(intensity: min(max(intensity, 0), 1))
+    }
+
+    /// "Wall" haptic fired when the user drags past the range at either end.
+    static func sliderWall() {
+        guard isEnabled else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        guard now - lastSliderFire >= 0.12 else { return }
+        lastSliderFire = now
+        rigidGenerator.impactOccurred(intensity: 1.0)
+    }
 }

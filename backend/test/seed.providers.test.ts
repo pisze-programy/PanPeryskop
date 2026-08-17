@@ -57,7 +57,7 @@ test('multikino: parseMkFilms builds one film×cinema candidate per day', () => 
   assert.equal(c.venue, 'Multikino Warszawa Złote Tarasy');
   assert.equal(c.city, 'Warszawa');
   assert.equal(c.startMs, Date.parse('2026-08-22T14:15:00+02:00'));
-  assert.equal(c.link, 'https://www.multikino.pl/filmy/spider-man');
+  assert.equal(c.link, 'https://www.multikino.pl/repertuar/warszawa-zlote-tarasy/filmy/spider-man', 'link scoped to the selected cinema');
   assert.equal(c.mediaUrl, 'https://www.multikino.pl/-/media/spider-man.jpg?rev=abc');
   assert.equal(c.thumbUrl, 'https://www.multikino.pl/-/media/spider-man.jpg?rev=abc&mw=240&mh=350');
   assert.equal(c.isSoldOut, false);

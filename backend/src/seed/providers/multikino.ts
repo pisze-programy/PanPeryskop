@@ -112,6 +112,14 @@ export function parseMkFilms(data: unknown, cinemaId: string, day: string): Seed
     const poster = isUsableImage(f.posterImageSrc);
     if (!poster) continue;
     const thumb = `${poster}${MK_THUMB_QUERY}`;
+    // Link to the film page scoped to THIS cinema (showtimes at that cinema):
+    //   /repertuar/{cinemaSlug}/filmy/{filmSlug}
+    // falls back to the generic film page when a slug is missing.
+    const cinema = cinemaById(cinemaId);
+    const filmSlug = (f.filmUrl || '').split('/filmy/')[1]?.split(/[?#]/)[0]?.replace(/\/$/, '') || '';
+    const link = cinema?.slug && filmSlug
+      ? `${MK_BASE}/repertuar/${cinema.slug}/filmy/${filmSlug}`
+      : (f.filmUrl || `${MK_BASE}/filmy`);
     out.push({
       source: ProviderId.MULTIKINO,
       externalId: `multikino-${cinemaId}-${f.filmId}-${day}`,
@@ -121,7 +129,7 @@ export function parseMkFilms(data: unknown, cinemaId: string, day: string): Seed
       city: cinemaCity(cinemaId),
       venue: `Multikino ${cinemaName(cinemaId)}`,
       address: '',
-      link: f.filmUrl || `${MK_BASE}/filmy`,
+      link,
       mediaUrl: poster,
       thumbUrl: thumb,
       isSoldOut: sessions.every((s) => s.isSoldOut),

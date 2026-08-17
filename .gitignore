@@ -44,8 +44,11 @@ admin/src/seed-import.mjs
 **/.build/
 ios/vendor/YPImagePicker/Package.resolved
 
-# Local multikino seed tooling (clean-IP source; operational state + media)
+# Local machine-only seed tooling (clean-IP source). Whole dir is gitignored —
+# it contains absolute paths (launchd plist), local env secrets, checkpoint state.
+# Never commit any of admin/local/ — the data flows in via the public worker API.
+admin/local/
+
+# Staging + media produced by the local multikino fetch (regenerated on demand).
 admin/seed/multikino-media/
-admin/local/multikino/.env
-admin/local/multikino/logs/
 admin/seed/multikino.json

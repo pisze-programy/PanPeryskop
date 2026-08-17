@@ -5,6 +5,7 @@ import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, POST_TYPE_SET, STATUS_APPROVED, P
 import { strField, fileField, ParsedForm } from '../core/form';
 import { mediaUrl, originFromRequest } from '../core/media';
 import { detectMediaType, extForMediaType } from '../core/mediaFormat';
+import { warsawDateOf } from '../seed/core/dates';
 
 export const postsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -140,6 +141,8 @@ export async function doSavePost(
   const soldOut = isSoldOut ? 1 : 0;
   // Category is assigned server-side: seed (has external_id) -> 'events', app -> 'live'.
   const category = externalId ? 'events' : 'live';
+  // Day-browser key: the event's day in Europe/Warsaw (created_at = 06:00 of that day).
+  const eventDate = externalId ? warsawDateOf(createdAt) : null;
 
   if (isUpdate) {
     await db
@@ -147,19 +150,19 @@ export async function doSavePost(
         `UPDATE posts
          SET type = ?, lat = ?, lng = ?, description = ?, media_key = ?, thumb_key = ?,
              is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?,
-             is_sold_out = ?
+             is_sold_out = ?, event_date = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, eventDate, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out)
-         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date)
+         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut)
+      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate)
       .run();
     await db
       .prepare(
@@ -184,6 +187,7 @@ export async function doSavePost(
     link_url: linkUrl,
     external_id: externalId,
     is_sold_out: soldOut,
+    event_date: eventDate,
   };
 }
 

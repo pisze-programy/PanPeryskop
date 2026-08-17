@@ -194,7 +194,10 @@ export async function fetchMultikino(ctx: SeedContext): Promise<SeedCandidate[]>
 export const multikinoProvider: SeedProvider = {
   id: ProviderId.MULTIKINO,
   transport: 'fetch',
-  enabled: true,
+  // DISABLED: multikino.pl returns 403 to Cloudflare Workers egress IPs (verified
+  // 2026-08-17: works from residential IP, blocked from the Worker). Keeping it
+  // enabled would churn 18 permanently-failing scopes through the DLQ every seed.
+  enabled: false,
   fetchCandidates: fetchMultikino,
   fetchBytes: (ctx, url) => getBytes(url),
   scopes: mkScopes(),

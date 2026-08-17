@@ -103,6 +103,18 @@ storiesRoutes.get('/', async (c) => {
   // it locally and future fetches must not return it either.
   const hideWatchedLive = category === 'live';
 
+  // Day browser: `day=YYYY-MM-DD` shows pins for that day regardless of the live
+  // TTL window (future days are otherwise hidden by created_at <= now). Live posts
+  // have event_date NULL so they never match a day query.
+  const day = q.day ? String(q.day) : null;
+  let timeCond = 'p.created_at >= ? AND p.created_at <= ?';
+  let timeBinds: unknown[] = [windowStart, now];
+  if (day) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: 'Invalid day' }, 400);
+    timeCond = 'p.event_date = ?';
+    timeBinds = [day];
+  }
+
   const authHeader = c.req.header('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const user = await authenticate(c);
@@ -120,13 +132,13 @@ storiesRoutes.get('/', async (c) => {
            WHERE p.lat BETWEEN ? AND ?
            AND p.lng BETWEEN ? AND ?
            AND p.status = '${STATUS_APPROVED}'
-           AND p.created_at >= ? AND p.created_at <= ?
+           AND ${timeCond}
            ${catCond}
            ${hideWatchedLive ? 'AND v.post_id IS NULL' : ''}
            ORDER BY ${popularityExpr()} DESC
            LIMIT 50`
         )
-        .bind(user.id, user.id, swLat, neLat, swLng, neLng, windowStart, now, ...(category ? [category] : []))
+        .bind(user.id, user.id, swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []))
         .all<StoryRow>();
 
       return c.json({
@@ -144,12 +156,12 @@ storiesRoutes.get('/', async (c) => {
        WHERE p.lat BETWEEN ? AND ?
        AND p.lng BETWEEN ? AND ?
        AND p.status = '${STATUS_APPROVED}'
-       AND p.created_at >= ? AND p.created_at <= ?
+       AND ${timeCond}
        ${catCond}
        ORDER BY ${popularityExpr()} DESC
        LIMIT 50`
     )
-    .bind(swLat, neLat, swLng, neLng, windowStart, now, ...(category ? [category] : []))
+    .bind(swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []))
     .all<StoryRow>();
 
   return c.json({
@@ -166,6 +178,15 @@ storiesRoutes.get('/heatmap', async (c) => {
   const now = Date.now();
   const windowStart = now - TTL_MS;
 
+  const day = q.day ? String(q.day) : null;
+  let timeCond = 'created_at >= ? AND created_at <= ?';
+  let timeBinds: unknown[] = [windowStart, now];
+  if (day) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: 'Invalid day' }, 400);
+    timeCond = 'event_date = ?';
+    timeBinds = [day];
+  }
+
   const { results } = await db
     .prepare(
       `SELECT grid_cell_id, AVG(lat) as lat, AVG(lng) as lng, COUNT(*) as heat
@@ -173,11 +194,11 @@ storiesRoutes.get('/heatmap', async (c) => {
        WHERE lat BETWEEN ? AND ?
        AND lng BETWEEN ? AND ?
        AND status = '${STATUS_APPROVED}'
-       AND created_at >= ? AND created_at <= ?
+       AND ${timeCond}
        GROUP BY grid_cell_id
        HAVING COUNT(*) > 0`
     )
-    .bind(swLat, neLat, swLng, neLng, windowStart, now)
+    .bind(swLat, neLat, swLng, neLng, ...timeBinds)
     .all<HeatmapCell>();
 
   return c.json(results);

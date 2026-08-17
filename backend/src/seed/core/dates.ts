@@ -8,6 +8,15 @@ export function tomorrowWarsaw(day = todayWarsaw()): string {
   const [y, m, d] = day.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
 }
+// Add `n` calendar days to a YYYY-MM-DD string (Warsaw-calendar arithmetic).
+export function addDaysWarsaw(day: string, n: number): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+// YYYY-MM-DD of a millisecond instant in Europe/Warsaw (day-browser key).
+export function warsawDateOf(ms: number): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+}
 export function warsawMidnightMs(isoDate: string): number {
   const [y, m, d] = isoDate.split('-').map(Number);
   let t = Date.UTC(y, m - 1, d);

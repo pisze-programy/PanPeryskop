@@ -198,7 +198,7 @@ struct ClusterBadge: View {
 
     var body: some View {
         if cluster.count == 1, let post = cluster.singlePost {
-            if post.watched {
+            if post.watched && !post.isEvent {
                 SinglePostPin(post: post, currentUserId: currentUserId)
                     .allowsHitTesting(false)
             } else {
@@ -297,12 +297,12 @@ struct SinglePostPin: View {
                         .clipShape(Circle())
                 }
             }
-            .opacity(post.watched ? 0.4 : 1)
-            .saturation(post.watched ? 0.3 : 1)
+            .opacity(post.watched && !post.isEvent ? 0.4 : 1)
+            .saturation(post.watched && !post.isEvent ? 0.3 : 1)
             .offset(y: bounceOffset)
         }
         .overlay(alignment: .topTrailing) {
-            if post.watched {
+            if post.watched && !post.isEvent {
                 Image(systemName: "eye.slash.fill")
                     .font(.system(size: 9))
                     .foregroundColor(.red)
@@ -460,9 +460,10 @@ private func makeClusters(_ posts: [Post]) -> [PostCluster] {
     for post in mediaPosts {
         guard !used.contains(post.id) else { continue }
         var nearby = [post]
-        if !post.watched {
+        // Events cluster regardless of seen state (re-viewable); live groups only unseen.
+        if !post.watched || post.isEvent {
             for other in mediaPosts {
-                guard !used.contains(other.id), other.id != post.id, !other.watched else { continue }
+                guard !used.contains(other.id), other.id != post.id, (!other.watched || other.isEvent) else { continue }
                 if dist(post.lat, post.lng, other.lat, other.lng) < radius {
                     nearby.append(other)
                 }

@@ -33,7 +33,7 @@ struct MapScreen: View {
                     viewModel.saveViewport(region)
                 },
                 onTapPost: { post, bbox in
-                    guard !post.watched else { return }
+                    guard !post.watched || post.isEvent else { return }
                     Haptics.impact(.medium)
                     storyPosts = viewModel.viewerPosts(for: post, in: bbox)
                     selectedStoryIndex = 0

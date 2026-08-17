@@ -32,6 +32,10 @@ struct Post: Codable, Identifiable, Equatable {
         CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
 
+    /// Events (category "events") are re-viewable: "seen" is stored but never blocks
+    /// or hides them. Live stays one-time.
+    var isEvent: Bool { category == "events" }
+
     static let ttlMs: Int64 = 24 * 3_600_000
 
     /// Server-side visibility window: [created_at, created_at + 24h].

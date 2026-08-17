@@ -260,7 +260,7 @@ class MapViewModel: ObservableObject {
     }
 
     func visiblePosts(in bbox: MapBBox) -> [Post] {
-        posts.filter { bbox.contains(lat: $0.lat, lng: $0.lng) && !$0.watched }
+        posts.filter { bbox.contains(lat: $0.lat, lng: $0.lng) && ($0.isEvent || !$0.watched) }
     }
 
     func viewerPosts(for clicked: Post, in bbox: MapBBox) -> [Post] {
@@ -269,7 +269,8 @@ class MapViewModel: ObservableObject {
 
     func viewerPosts(forCluster clusterPosts: [Post], in bbox: MapBBox) -> [Post] {
         let clusterIds = Set(clusterPosts.map(\.id))
-        return clusterPosts.filter { !$0.watched } + visiblePosts(in: bbox).filter { !clusterIds.contains($0.id) }
+        return clusterPosts.filter { $0.isEvent || !$0.watched }
+            + visiblePosts(in: bbox).filter { !clusterIds.contains($0.id) }
     }
 
     func viewerPosts(for clicked: Post) -> [Post] {

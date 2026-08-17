@@ -12,8 +12,6 @@ import {mediaRequestsRoutes} from './api/mediaRequests';
 import {runSeed, tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
 import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/pipeline/queue';
 import {pruneSeedData, watchdogSeedBatches} from './seed/pipeline/cleanup';
-// [DIAG] multikino access test — TEMPORARY, remove with src/diag/multikino.ts after diagnosis.
-import {diagMultikino} from './diag/multikino';
 
 const SEED_CRON = '0 2 * * *';        // 02:00 UTC daily — roll the seed window one day forward
 const CLEANUP_CRON = '0 4 * * *';     // 04:00 UTC daily — audit cleanup (4-day retention)
@@ -84,20 +82,6 @@ app.all('/media/*', async (c) => {
 });
 
 app.get('/health', (c) => c.json({ ok: true, ts: Date.now() }));
-
-// [DIAG] multikino access test — TEMPORARY, remove together with src/diag/multikino.ts.
-// GET /admin/diag/multikino?mode=baseline|headers|cookie|http1|repertuar|browser
-app.get('/admin/diag/multikino', async (c) => {
-  const token = c.req.header('Authorization')?.replace('Bearer ', '');
-  if (!c.env.ADMIN_SECRET || token !== c.env.ADMIN_SECRET) return c.json({ error: 'Forbidden' }, 403);
-  const mode = String(c.req.query('mode') || 'baseline');
-  const dayParam = String(c.req.query('day') || '');
-  try {
-    return c.json(await diagMultikino(c.env, mode, dayParam));
-  } catch (e) {
-    return c.json({ error: (e as Error).message, mode }, 500);
-  }
-});
 
 // Manual seed trigger (admin-only). day = YYYY-MM-DD (default: tomorrow).
 // Runs synchronously (blocking) so the caller sees the full result; the cron path

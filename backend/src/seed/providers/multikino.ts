@@ -230,11 +230,15 @@ function decodeAddress(html: string): string {
 export async function fetchMkCinema(opts: MkFetchOptions, cinemaId: string): Promise<SeedCandidate[]> {
   const t = await getMkToken(opts.tokenStore ?? null);
   const url = `${MK_API}/showings/cinemas/${cinemaId}/films?minEmbargoLevel=${MK_EMBARGO}&includesSession=true&includeSessionAttributes=true`;
-  let res = await fetch(url, { headers: { ...UA_HEADERS, Authorization: `Bearer ${t}`, Accept: 'application/json' }, signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) });
+  // Clean browser-ish headers WITHOUT a foreign Referer — UA_HEADERS carries
+  // `Referer: https://goingapp.pl/` (shared with the going provider) which
+  // multikino's Cloudflare rejects with 403.
+  const mkHeaders = { 'User-Agent': UA_HEADERS['User-Agent'], Accept: 'application/json', Referer: MK_BASE };
+  let res = await fetch(url, { headers: { ...mkHeaders, Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) });
   if (res.status === 401) {
     token = null;
     const t2 = await getMkToken(opts.tokenStore ?? null);
-    res = await fetch(url, { headers: { ...UA_HEADERS, Authorization: `Bearer ${t2}`, Accept: 'application/json' }, signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) });
+    res = await fetch(url, { headers: { ...mkHeaders, Authorization: `Bearer ${t2}` }, signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) });
   }
   if (!res.ok) throw new Error(`multikino ${cinemaId} -> ${res.status}`);
   const out = parseMkFilms(await res.json(), cinemaId, opts.days);

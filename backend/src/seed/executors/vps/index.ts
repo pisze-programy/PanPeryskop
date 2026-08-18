@@ -285,6 +285,12 @@ async function main(): Promise<void> {
   const env = loadEnv();
   await ensureProxy();
 
+  // Route every in-process fetch (providers + media) through the IPv4-forcing
+  // proxy → exit node. Without this the bundles egress straight from the VPS's
+  // datacenter IP, which Cloudflare-fronted origins (multikino) 403.
+  process.env.HTTPS_PROXY = PROXY_URL;
+  process.env.NODE_USE_ENV_PROXY = '1';
+
   for (const cfg of plan) {
     const spec = cfg.executors.vps!;
     const target = expectedTarget();

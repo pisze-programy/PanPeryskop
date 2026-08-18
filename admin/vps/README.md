@@ -13,37 +13,6 @@ with every execution method.
 
 ---
 
-## Rebuild after a VPS wipe — ONE command
-
-From the Mac (repo root), the whole box is recreated idempotently — no git, no manual steps:
-
-```sh
-sh admin/vps/deploy.sh
-```
-
-`deploy.sh` (Mac): builds the app payload tarball (`backend/src/seed` + `backend/src/admin/cities.ts`
-+ `admin/vps` + `admin/src/seed-ingest.mjs` — NO git), scp's it with `setup-vps.sh` to the VPS
-(ssh alias `frog`), and runs the bootstrap there as root (`sudo -n`). `setup-vps.sh` (VPS) then:
-
-1. installs node/npm/tailscale/imagemagick/ffmpeg + global `tsx`,
-2. enables `NOPASSWD` sudo for the deploy user — key-only SSH works without prompts,
-3. joins the tailnet with the iPhone as exit node,
-4. extracts the payload into `/opt/panperyskop` and removes legacy files,
-5. installs the root crontab — seed kick **every 5 min all day** (05–22 PL window is enforced
-   in the orchestrator; off-window kicks are no-ops),
-6. runs a self-test (`orchestrator --dry`).
-
-Requirements on a fresh box: the `frog` SSH alias + key in `~/.ssh/config` (see below) and an
-initial root/console login to run the first `sudo -n` — after that everything is key-only.
-
-After `deploy.sh`, **first seed** (whole window, one-time):
-```sh
-ssh frog 'sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --full'
-```
-(`--full` backfills [today, today+3]; the daily cron afterwards only fetches the new far edge.)
-
----
-
 ## Architecture — execution methods ("sposoby wykonywania")
 
 Providers are **pure logic** (`backend/src/seed/providers/*.ts`). WHERE they run is decided by the
@@ -58,8 +27,8 @@ backend/src/seed/
 │   ├── worker.ts      # CF Workers executor → the queue pipeline
 │   └── vps/           # VPS executor
 │       ├── index.ts   # orchestrator: egress, plan, run, verify, upload
-│       ├── runtime.ts # shared staging/checkpoint/media/dedupe (no provider logic)
-│       └── runners/   # ONE dedicated runner file per provider (wires provider → model)
+│       ├── runtime.ts # shared staging/checkpoint/media/dedupe, resource gate
+│       └── runners/   # ONE source per provider (wires provider → scope model)
 │           ├── luma.ts · meetup.ts          (scopes = 21 cities)
 │           ├── multikino.ts                 (scopes = 18 cinemas, 1 req each = whole programme)
 │           └── cinemacity.ts                (scopes = 36 cinemas, per-day API → loop window days)
@@ -79,11 +48,11 @@ never change.
 
 ---
 
-## Daily flow (cron every 5 min, window 05–22 PL, single-instance lock + resource gate)
+## Daily flow (cron every 5 min, window 05–22 PL)
 
-The cron fires `orchestrator.sh` → the VPS executor. It mirrors the **Worker cron**: daily each
-provider fetches ONLY the new **far edge (today+3)** — the browse window [today, today+3] is
-covered by rolling. `--full` backfills the whole window once.
+The cron fires `orchestrator.sh` → the VPS executor (the pre-built bundle). It mirrors the
+**Worker cron**: daily each provider fetches ONLY the new **far edge (today+3)** — the browse
+window [today, today+3] is covered by rolling. `--full` backfills the whole window once.
 
 | Provider | Scopes | HTTP per day (far edge) | Output |
 |---|---|---|---|
@@ -92,18 +61,92 @@ covered by rolling. `--full` backfills the whole window once.
 | luma | 21 cities | 1/city | `admin/seed/events-luma.json` |
 | meetup | 21 cities | 1/city | `admin/seed/events-meetup.json` |
 
-Exit-node logic (ONE rule): **iPhone → unavailable → Mac → unavailable → retry at the next 5-min kick**
-(all day within the window). Per provider: compute the far edge → skip if the checkpoint already
-has `{target, completed}` → select+validate exit node (probed through the IPv4 proxy) → spawn the
-runner → verify completion → upload via `seed-ingest --approve`.
+Exit-node logic (ONE rule): **iPhone → unavailable → Mac → unavailable → retry at the next 5-min
+kick** (all day within the window). Per provider: compute the far edge → skip if the checkpoint
+already has `{target, completed}` → select+validate exit node (probed through the IPv4 proxy) →
+run in-process → verify completion → upload via `seed-ingest --approve`.
 
 All checkpoints share one contract: `{ target: "<far-edge day>", completed, completedAt, scopes }`.
 
 **Small footprint / good citizenship (256 MB shared VPS):** the seed is a single pre-built
 bundle (`backend/dist/vps-seed.mjs`) run as ONE `node` process — no tsx/esbuild at runtime.
 A **single-instance lock** stops a new 5-min kick from overlapping a running pass, and a
-**resource gate** (MemAvailable / load from /proc) pauses the run (checkpoint saved) when the
-box is busy with other processes — the next kick resumes. Build locally: `node admin/vps/build.mjs`.
+**resource gate** (MemAvailable < 80 MB or load1 ≥ 2.0 from `/proc`) pauses the run (checkpoint
+saved) when the box is busy — the next kick resumes.
+
+---
+
+## Environment variables
+
+### On the VPS — `admin/vps/.env` (gitignored, REQUIRED)
+
+| Var | Required | Purpose |
+|---|---|---|
+| `BASE_URL` | ✅ | PanPeryskop API URL (default `https://panperyskop-api.dev-4cb.workers.dev`) |
+| `ADMIN_SECRET` | ✅ | Bearer token for `seed-ingest --approve` and `POST /admin/seed` |
+
+Location: `/opt/panperyskop/admin/vps/.env` (one `KEY=VALUE` per line). Copy it to a fresh box
+after a wipe — this is the only manual step in the rebuild.
+
+### On the Mac — deploy.sh / setup-vps.sh
+
+| Var | Default | Purpose |
+|---|---|---|
+| `HOST` | `frog` | SSH alias to the VPS (deploy.sh) |
+| `IPHONE_HOST` | `iphone-14-pro-max` | Primary Tailscale exit node (deploy.sh / setup-vps.sh) |
+
+### Orchestrator (runtime)
+
+| Var | Purpose |
+|---|---|
+| `FORCE=1` | Bypass the 05–22 PL window guard (manual runs) |
+
+### Not env (code constants)
+
+| Constant | File | Value |
+|---|---|---|
+| `SEED_DAYS_AHEAD` | `backend/src/seed/core/constants.ts` | `3` (window size / far edge) |
+| `VPS_MIN_MEMAVAILABLE_MB`, `VPS_MAX_LOAD1` | `backend/src/seed/core/constants.ts` | `80`, `2.0` (resource gate) |
+| `VPS_WINDOW_START_HOUR`, `VPS_WINDOW_END_HOUR` | `backend/src/seed/core/constants.ts` | `5`, `22` (PL) |
+
+---
+
+## Rebuild after a VPS wipe — ONE command
+
+From the Mac (repo root):
+
+```sh
+sh admin/vps/deploy.sh
+```
+
+`deploy.sh` (Mac): builds the bundle (`node admin/vps/build.mjs` → `backend/dist/vps-seed.mjs`),
+scp's it with `orchestrator.sh`, `setup-vps.sh`, `ipv4-proxy.mjs` and `seed-ingest.mjs` to the VPS
+(ssh alias `HOST`, default `frog`), and runs the bootstrap there as root (`sudo -n`). No git on
+the box, no TS at runtime.
+
+`setup-vps.sh` (VPS, idempotent) then:
+
+1. installs node/npm/tailscale/imagemagick/ffmpeg + global `tsx`,
+2. enables `NOPASSWD` sudo for the deploy user — key-only SSH works without prompts,
+3. joins the tailnet with the iPhone as exit node,
+4. installs the bundle + scripts into `/opt/panperyskop`, removes legacy files,
+5. installs the IPv4 proxy as an **openrc service** (auto-start + restart on crash),
+6. installs the root crontab — `*/5 * * * * /opt/panperyskop/admin/vps/orchestrator.sh`,
+7. runs a self-test (`--dry`).
+
+Requirements on a fresh box: the `HOST` SSH alias + key (see SSH notes below), the `.env`
+(see Environment variables), and an initial root/console login for the first `sudo`.
+
+After `deploy.sh`, **first seed** (whole window, one-time):
+
+```sh
+ssh frog 'sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --full'
+```
+
+(`--full` backfills [today, today+3]; the daily cron afterwards only fetches the new far edge.)
+
+**The bundle is not committed** (`backend/dist/` is gitignored) — `deploy.sh` rebuilds it from the
+current source, so a fresh deploy always carries the latest fixes.
 
 ---
 
@@ -112,6 +155,9 @@ box is busy with other processes — the next kick resumes. Build locally: `node
 ```sh
 # plan (no side effects)
 ssh frog 'sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --dry'
+
+# single provider
+ssh frog 'sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --provider multikino'
 
 # status + logs
 cat /opt/panperyskop/admin/vps/logs/status.json
@@ -122,6 +168,7 @@ ssh frog 'sh /opt/panperyskop/admin/vps/check-exit.sh'
 ```
 
 DB check after a seed:
+
 ```sh
 npx wrangler d1 execute panperyskop-db --remote \
   --command="SELECT substr(external_id,1,instr(external_id,'-')-1) src, status, COUNT(*) n FROM posts WHERE external_id IS NOT NULL GROUP BY src, status ORDER BY src"
@@ -131,10 +178,32 @@ npx wrangler d1 execute panperyskop-db --remote \
 
 ## SSH / setup notes
 
-- Mac `~/.ssh/config`: `Host <vps>` → `HostName <vps-host>`, `Port 11322`, `User frog`,
-  `IdentityFile ~/.ssh/<vps-key>`, `IdentitiesOnly yes`.
-- The VPS is Alpine (apk) / busybox. Node 24 — `Intl.DateTimeFormat('en-CA')` does NOT render
+- Mac `~/.ssh/config`:
+  ```
+  Host <vps>
+    HostName <vps-host>
+    Port 11322
+    User frog
+    IdentityFile ~/.ssh/<vps-key>
+    IdentitiesOnly yes
+  ```
+- The VPS is Alpine (apk) / busybox. **Node 24** — `Intl.DateTimeFormat('en-CA')` does NOT render
   ISO dates there (returns `08/18/2026`), so all Warsaw-date helpers use `formatToParts`.
 - Image processing is cross-platform: macOS `sips`, Linux `convert` (imagemagick).
-- If the phone and Mac are both offline, the orchestrator logs `exit-none` and the next 30-min
-  kick retries — no manual intervention.
+- **Proxy env must be set at process launch**, not at runtime — `NODE_USE_ENV_PROXY` is parsed by
+  Node at startup. It lives in `orchestrator.sh` (`HTTPS_PROXY` + `NODE_USE_ENV_PROXY`).
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `multikino auth -> 403` | fetch egressing from the VPS datacenter IP (proxy env missing / exit node down) | ensure `orchestrator.sh` has `HTTPS_PROXY`+`NODE_USE_ENV_PROXY`; check exit node (`tailscale status`, `check-exit.sh`) |
+| `no usable exit node for <provider>` | phone + Mac both offline | cron retries every 5 min; enable Mac "Use as Exit Node" / phone exit node |
+| pass `done in 0s`, nothing staged | exit-node probe failed fast | see above |
+| OOM kills / SSH hanging | concurrent orchestrators on the 256 MB box | single-instance lock already prevents it; check `orchestrator.lock` for a stale pid (clears at next kick) |
+| seed pauses with `resources tight` | resource gate (MemAvailable/load) | expected; next 5-min kick resumes |
+| `multikino auth -> 403` after a long run | multikino rate-limits bursts per IP | transient; next kick retries; resetting the phone IP helps |
+| stale `orchestrator.lock` | a killed process left the pidfile | next kick detects the dead pid and takes over; or `sudo rm -f .../orchestrator.lock` |
+| proxy down | service crashed | `sudo rc-service panperyskop-proxy restart` |

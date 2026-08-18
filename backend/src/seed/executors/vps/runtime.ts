@@ -22,7 +22,7 @@ import { execFileSync } from 'node:child_process';
 import { dedupe, buildDescription } from '../../../../src/seed/core/dedupe';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs, warsawDateOf, eventDayEndMs } from '../../../../src/seed/core/dates';
 import { GeoStore } from '../../../../src/seed/core/geo';
-import { SEED_DAYS_AHEAD } from '../../../../src/seed/core/constants';
+import { SEED_DAYS_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1 } from '../../../../src/seed/core/constants';
 import { UA_HEADERS } from '../../../../src/seed/providers/http';
 import { configOf } from '../../../../src/seed/providers/registry';
 import type { SeedCandidate, ProviderId } from '../../../../src/seed/core/types';
@@ -326,7 +326,7 @@ export function hasCoords(c: SeedCandidate): c is SeedCandidate & { lat: number;
   return typeof c.lat === 'number' && typeof c.lng === 'number';
 }
 
-export async function runScopeSource(src: ScopeSource): Promise<void> {
+export async function runScopeSource(src: ScopeSource): Promise<boolean> {
   const args = parseCommonArgs();
   const spec = specFor(src.source);
   // Daily: fetch ONLY the new far edge (today+SEED_DAYS_AHEAD) — the window is
@@ -360,6 +360,13 @@ export async function runScopeSource(src: ScopeSource): Promise<void> {
   for (const scope of scopes) {
     if (cp.scopes?.[scope] === 'done') { done++; continue; }
     if (args.limit && processed >= args.limit) break;
+    // Resource gate: the VPS is a small shared box. When memory/load is tight we
+    // PAUSE (progress is checkpointed) so other processes are never starved — the
+    // next cron kick (30 min) resumes from here.
+    if (!resourcesOk()) {
+      console.log(`[${src.source}] resources tight — pausing (${done}/${scopes.length} scopes done, resume next kick)`);
+      break;
+    }
     processed++;
     try {
       const cands = (await src.fetchScope(scope, ctx))
@@ -405,6 +412,7 @@ export async function runScopeSource(src: ScopeSource): Promise<void> {
     saveCp(cpPath, cp);
   }
   console.log(`[${src.source}] done target=${target} scopes=${done}/${scopes.length} → ${spec.output}`);
+  return done >= scopes.length;
 }
 
 // Drop staged entries whose day already passed — the app only browses the current
@@ -462,4 +470,38 @@ function seedDays(args: CommonArgs): { days: string[]; target: string } {
     ? Array.from({ length: SEED_DAYS_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i))
     : [farEdge];
   return { days, target: farEdge };
+}
+
+// Read /proc directly (Linux; on macOS the gate always passes) — the seed yields
+// the box to other processes when memory or load is tight.
+let lastCheck = 0;
+let lastOk = true;
+export function resourcesOk(): boolean {
+  if (process.platform !== 'linux') return true;
+  const now = Date.now();
+  if (now - lastCheck < 10_000) return lastOk; // check at most once per 10s
+  lastCheck = now;
+  lastOk = readResources();
+  if (!lastOk) {
+    console.error(`resources gate: MemAvailable=${memAvailableMb()}MB load1=${load1()} — pausing`);
+  }
+  return lastOk;
+}
+function memAvailableMb(): number {
+  try {
+    const s = readFileSync('/proc/meminfo', 'utf8');
+    const m = /^MemAvailable:\s+(\d+)\s*kB/m.exec(s);
+    return m ? Math.round(parseInt(m[1], 10) / 1024) : Infinity;
+  } catch { return Infinity; }
+}
+function load1(): number {
+  try {
+    const s = readFileSync('/proc/loadavg', 'utf8');
+    return parseFloat(s.split(' ')[0]) || 0;
+  } catch { return 0; }
+}
+function readResources(): boolean {
+  const mem = memAvailableMb();
+  const load = load1();
+  return mem >= VPS_MIN_MEMAVAILABLE_MB && load < VPS_MAX_LOAD1;
 }

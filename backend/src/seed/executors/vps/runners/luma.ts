@@ -1,13 +1,11 @@
-// luma provider — VPS executor runner. One file per provider; only wires the
-// provider's fetch (cities = scopes) into the shared scope model. Every provider
-// covers the same seed window [today, today+SEED_DAYS_AHEAD].
-// Usage (from the backend dir): npx tsx src/seed/executors/vps/runners/luma.ts
-import { runScopeSource, checkpointGeoStore } from '../runtime';
+// Luma provider — VPS executor ScopeSource (imported by the orchestrator, run in-process).
+import { checkpointGeoStore } from '../runtime';
+import type { ScopeSource } from '../runtime';
 import { fetchLumaCity } from '../../../../seed/providers/luma';
 import { CITIES, cityById } from '../../../../admin/cities';
 import { ProviderId } from '../../../../seed/core/types';
 
-runScopeSource({
+export const lumaSource: ScopeSource = {
   source: ProviderId.LUMA,
   scopes: () => CITIES.map((c) => c.id),
   scopeGeo: (scope) => {
@@ -27,7 +25,5 @@ runScopeSource({
       fetchOpts,
     );
   },
-}).catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+};
+

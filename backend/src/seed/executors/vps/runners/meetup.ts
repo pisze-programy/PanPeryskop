@@ -1,13 +1,13 @@
-// meetup provider — VPS executor runner. One file per provider; only wires the
-// provider's fetch (cities = scopes) into the shared scope model. Every provider
-// covers the same seed window [today, today+SEED_DAYS_AHEAD].
+// meetup provider — VPS executor source. Exported ScopeSource wired into the
+// shared scope model; runs standalone only when executed directly.
 // Usage (from the backend dir): npx tsx src/seed/executors/vps/runners/meetup.ts
-import { runScopeSource, checkpointGeoStore } from '../runtime';
+import { checkpointGeoStore } from '../runtime';
+import type { ScopeSource } from '../runtime';
 import { fetchMeetupCity } from '../../../../seed/providers/meetup';
 import { CITIES, cityById } from '../../../../admin/cities';
 import { ProviderId } from '../../../../seed/core/types';
 
-runScopeSource({
+export const meetupSource: ScopeSource = {
   source: ProviderId.MEETUP,
   scopes: () => CITIES.map((c) => c.id),
   scopeGeo: (scope) => {
@@ -27,7 +27,5 @@ runScopeSource({
       fetchOpts,
     );
   },
-}).catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+};
+

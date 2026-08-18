@@ -2,30 +2,23 @@
 # PanPeryskop VPS deploy — ONE command from the Mac.
 #   sh admin/vps/deploy.sh
 #
-# Builds the app payload (backend/src/seed + admin/vps + seed-ingest, NO git),
-# pushes it + setup-vps.sh to the VPS, and runs the bootstrap there (as root via
-# the NOPASSWD sudo rule). Idempotent — safe on a live box, designed for a wipe:
-# wipe → (re-add your SSH key / the `frog` alias) → run THIS → box is back up.
+# Builds the pre-built seed bundle (backend/dist/vps-seed.mjs — no TS/tsx on the
+# VPS, one node process), pushes it + the VPS scripts to the server, and runs the
+# bootstrap there (root via the NOPASSWD sudo rule). Idempotent — safe on a live
+# box, designed for a wipe: wipe → (re-add your SSH key / the `frog` alias) →
+# run THIS → box is back up.
 #
 # Env: HOST=frog (ssh alias), IPHONE_HOST=iphone-14-pro-max
 set -eu
 
 HOST="${HOST:-frog}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-TGZ="/tmp/pp-deploy.tgz"
 
-echo "== build payload =="
-cd "$ROOT"
-tar -czf "$TGZ" \
-  --exclude='.DS_Store' --exclude='admin/vps/logs' --exclude='admin/vps/.env' \
-  backend/src/seed \
-  backend/src/admin/cities.ts \
-  admin/vps \
-  admin/src/seed-ingest.mjs
-echo "payload: $TGZ ($(du -h "$TGZ" | cut -f1))"
+echo "== build bundle =="
+node "$ROOT/admin/vps/build.mjs"
 
 echo "== push to $HOST =="
-scp -q "$TGZ" admin/vps/setup-vps.sh "$HOST:/tmp/"
+scp -q "$ROOT/backend/dist/vps-seed.mjs" "$ROOT/admin/vps/orchestrator.sh" "$ROOT/admin/vps/setup-vps.sh" "$ROOT/admin/vps/ipv4-proxy.mjs" "$ROOT/admin/src/seed-ingest.mjs" "$HOST:/tmp/"
 echo "pushed"
 
 echo "== run bootstrap on $HOST (root) =="

@@ -5,51 +5,71 @@
 // and a callback (seed-ingest upload). All provider logic lives in src and is
 // shared with every executor.
 //
+// Design constraints (256 MB shared VPS):
+//   - ONE node process (the pre-built bundle). Providers run IN-PROCESS via
+//     runScopeSource — no `npx tsx` subprocesses, no esbuild in the runtime.
+//   - single-instance lock — a 30-min cron overlapping a slow pass must never
+//     run two orchestrators (that caused OOM kills).
+//   - resource gate — runScopeSource pauses (checkpoint saved) when
+//     MemAvailable/load are tight, so other processes on the box are never
+//     starved; the next kick resumes.
+//
 // For each enabled VPS provider:
 //   1. target   — the new far edge today+SEED_DAYS_AHEAD (mirrors the Worker cron;
 //                 the browse window is covered by rolling; --full backfills once).
 //   2. complete — skip when the checkpoint already has target + completed.
 //   3. exit     — select+validate an exit node (iPhone primary, Mac fallback) by
 //                 probing multikino auth through the IPv4-forcing proxy.
-//   4. run      — spawn the per-provider runner (executors/vps/runners/<id>.ts)
-//                 through the proxy; re-select the exit node + backoff on
-//                 incomplete runs (VPS_MAX_ATTEMPTS).
+//   4. run      — runScopeSource(source) in-process (chunked, resource-gated).
 //   5. upload   — seed-ingest the provider's staged output (--approve).
 //
-// Cron fires it as a KICKER every ~30 min inside the window (06-20 PL); the
+// Cron fires it as a KICKER every ~30 min inside the window (05-22 PL); the
 // checkpoint state machine makes extra kicks no-ops.
 //
-// Usage (root): npx tsx src/seed/executors/vps/index.ts
+// Usage (root): node dist/vps-seed.mjs
 //   --dry                 print the plan, do nothing
 //   --provider luma       single provider
+//   --full                backfill the whole window (first run)
 //   FORCE=1 ...           bypass the window guard
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import process from 'node:process';
-import { enabledForExecutor, configOf } from '../../../../src/seed/providers/registry';
+import { enabledForExecutor } from '../../../../src/seed/providers/registry';
 import { EXECUTOR } from '../types';
 import type { ProviderConfig, VpsSpec } from '../../../../src/seed/providers/registry';
+import { runScopeSource } from './runtime';
+import type { ScopeSource } from './runtime';
+import { lumaSource } from './runners/luma';
+import { meetupSource } from './runners/meetup';
+import { multikinoSource } from './runners/multikino';
+import { cinemacitySource } from './runners/cinemacity';
 import { todayWarsaw, addDaysWarsaw } from '../../../../src/seed/core/dates';
 import {
   SEED_DAYS_AHEAD,
   VPS_IPV4_PROXY_HOST, VPS_IPV4_PROXY_PORT, VPS_WINDOW_START_HOUR, VPS_WINDOW_END_HOUR,
-  VPS_EXIT_IPHONE, VPS_EXIT_MAC, VPS_MAX_ATTEMPTS, VPS_BACKOFF_MS,
-  VPS_EXIT_PROBE_TIMEOUT_MS, VPS_EXIT_SWITCH_WAIT_MS,
+  VPS_EXIT_IPHONE, VPS_EXIT_MAC, VPS_EXIT_PROBE_TIMEOUT_MS, VPS_EXIT_SWITCH_WAIT_MS,
 } from '../../../../src/seed/core/constants';
+import type { ProviderId } from '../../../../src/seed/core/types';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_DIR = join(__dirname, '..', '..', '..', '..', '..');
-const BACKEND_DIR = join(REPO_DIR, 'backend');
 const SEED_DIR = join(REPO_DIR, 'admin', 'seed');
 const VPS_DIR = join(REPO_DIR, 'admin', 'vps');
 const VPS_LOGS_DIR = join(VPS_DIR, 'logs');
-const RUNNERS_DIR = join(__dirname, 'runners');
 const ENV_FILE = join(VPS_DIR, '.env');
 const LOG = join(VPS_LOGS_DIR, 'orchestrator.log');
 const STATUS = join(VPS_LOGS_DIR, 'status.json');
+const LOCK = join(VPS_LOGS_DIR, 'orchestrator.lock');
 const PROXY_URL = `http://${VPS_IPV4_PROXY_HOST}:${VPS_IPV4_PROXY_PORT}`;
+
+const SOURCES: Partial<Record<ProviderId, ScopeSource>> = {
+  [lumaSource.source]: lumaSource,
+  [meetupSource.source]: meetupSource,
+  [multikinoSource.source]: multikinoSource,
+  [cinemacitySource.source]: cinemacitySource,
+};
 
 const argv = process.argv.slice(2);
 const DRY = argv.includes('--dry');
@@ -143,7 +163,7 @@ async function probeExitNode(host: string): Promise<boolean> {
   await sleep(VPS_EXIT_SWITCH_WAIT_MS);
   const probe = `fetch("https://www.multikino.pl/api/microservice/auth/token",{method:"POST",headers:{Accept:"application/json"},signal:AbortSignal.timeout(${VPS_EXIT_PROBE_TIMEOUT_MS})}).then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1));`;
   const result = runSync('node', ['-e', probe], {
-    cwd: BACKEND_DIR,
+    cwd: REPO_DIR,
     env: { HTTPS_PROXY: PROXY_URL, NODE_USE_ENV_PROXY: '1' },
   });
   if (result.status !== 0) log(`exit-node ${host} probe failed: ${result.output.trim()}`);
@@ -174,22 +194,38 @@ function isComplete(spec: VpsSpec, target: string): boolean {
     return false;
   }
 }
-function runnerArgs(spec: VpsSpec): string[] {
-  const args = ['--checkpoint', checkpointPath(spec)];
-  if (FULL) args.push('--full');
-  return args;
+
+// Single-instance lock — the cron fires every 5 min, but a slow pass (flaky
+// exit node) must never overlap a new kick. Two orchestrators on this 256 MB box
+// is what caused OOM kills. Lock is fail-open: if we can't manage it, proceed.
+function acquireLock(): boolean {
+  try {
+    if (existsSync(LOCK)) {
+      const pid = parseInt(readFileSync(LOCK, 'utf8').trim(), 10);
+      if (Number.isInteger(pid) && pid > 0) {
+        try {
+          process.kill(pid, 0);
+          return false; // another instance is alive
+        } catch { /* stale pid — take over */ }
+      }
+    }
+    writeFileSync(LOCK, String(process.pid));
+    return true;
+  } catch (e) {
+    console.error(`lock failed (${(e as Error).message}) — proceeding`);
+    return true;
+  }
 }
-function runRunner(cfg: ProviderConfig, target: string, env: Record<string, string>): void {
-  const spec = cfg.executors.vps!;
-  const runner = join(RUNNERS_DIR, `${cfg.id}.ts`);
-  const args = runnerArgs(spec);
-  log(`run ${cfg.id}: npx tsx ${runner} ${args.join(' ')}`);
-  const r = runSync('npx', ['--yes', 'tsx', runner, ...args], {
-    cwd: BACKEND_DIR,
-    env: { ...env, HTTPS_PROXY: PROXY_URL, NODE_USE_ENV_PROXY: '1' },
-  });
-  if (r.output.trim()) log(`${cfg.id} output: ${r.output.trim().slice(0, 2000)}`);
+function releaseLock(): void {
+  try { rmSync(LOCK, { force: true }); } catch { /* noop */ }
 }
+
+function sourceFor(id: ProviderId): ScopeSource {
+  const source = SOURCES[id];
+  if (!source) throw new Error(`no VPS source for provider ${id}`);
+  return source;
+}
+
 function upload(cfg: ProviderConfig, env: Record<string, string>): void {
   const spec = cfg.executors.vps!;
   const out = join(SEED_DIR, spec.output);
@@ -212,10 +248,17 @@ async function main(): Promise<void> {
     log('kick outside window — skip');
     return;
   }
+  // Never overlap a running pass — the cron fires every 5 min but a slow run must
+  // finish undisturbed (two orchestrators on this box = OOM).
+  if (!acquireLock()) {
+    log('another orchestrator instance running — skip');
+    return;
+  }
 
   const plan = enabledForExecutor(EXECUTOR.VPS).filter((c) => !onlyProvider || c.id === onlyProvider);
   if (!plan.length) {
     log(`no enabled VPS providers${onlyProvider ? ` for --provider ${onlyProvider}` : ''} — skip`);
+    releaseLock();
     return;
   }
 
@@ -225,8 +268,8 @@ async function main(): Promise<void> {
       const target = expectedTarget();
       return {
         id: c.id,
-        runner: `${c.id}.ts`,
-        args: runnerArgs(spec),
+        runner: 'in-process (bundled)',
+        full: FULL,
         target,
         out: spec.output,
         cp: spec.checkpoint,
@@ -234,6 +277,7 @@ async function main(): Promise<void> {
       };
     });
     console.log(JSON.stringify(dry, null, 2));
+    releaseLock();
     return;
   }
 
@@ -257,30 +301,18 @@ async function main(): Promise<void> {
     }
     log(`exit node = ${exitNode} (provider=${cfg.id})`);
 
-    let done = false;
-    for (let attempt = 1; attempt <= VPS_MAX_ATTEMPTS; attempt++) {
-      runRunner(cfg, target, env);
-      if (isComplete(spec, target)) {
-        done = true;
-        break;
-      }
-      log(`${cfg.id}: incomplete after attempt ${attempt} — re-select exit node`);
-      const retryExit = await selectExitNode();
-      if (retryExit === 'none') {
-        log(`${cfg.id}: no exit node after failure — retry next kick`);
-        break;
-      }
-      if (attempt < VPS_MAX_ATTEMPTS) await sleep(VPS_BACKOFF_MS[attempt] ?? 0);
-    }
-
-    if (done) {
+    // In-process, chunked and resource-gated: runScopeSource pauses (checkpoint
+    // saved) when the box is busy; the next 5-min kick resumes. No subprocess.
+    const completed = await runScopeSource(sourceFor(cfg.id));
+    if (completed) {
       upload(cfg, env);
       status('ok', `${cfg.id} ${target}`);
     } else {
-      status('failed', cfg.id);
+      status('paused', cfg.id);
     }
   }
   log('orchestrator pass done');
+  releaseLock();
 }
 
 main().catch((e) => {

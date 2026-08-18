@@ -29,7 +29,7 @@ sh admin/vps/deploy.sh
 2. enables `NOPASSWD` sudo for the deploy user — key-only SSH works without prompts,
 3. joins the tailnet with the iPhone as exit node,
 4. extracts the payload into `/opt/panperyskop` and removes legacy files,
-5. installs the root crontab — seed kick **every 30 min all day** (05–22 PL window is enforced
+5. installs the root crontab — seed kick **every 5 min all day** (05–22 PL window is enforced
    in the orchestrator; off-window kicks are no-ops),
 6. runs a self-test (`orchestrator --dry`).
 
@@ -38,7 +38,7 @@ initial root/console login to run the first `sudo -n` — after that everything 
 
 After `deploy.sh`, **first seed** (whole window, one-time):
 ```sh
-ssh frog 'cd /opt/panperyskop/backend && sudo -n npx --yes tsx src/seed/executors/vps/index.ts --full'
+ssh frog 'sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --full'
 ```
 (`--full` backfills [today, today+3]; the daily cron afterwards only fetches the new far edge.)
 
@@ -79,7 +79,7 @@ never change.
 
 ---
 
-## Daily flow (cron, every 30 min, window 05–22 PL)
+## Daily flow (cron every 5 min, window 05–22 PL, single-instance lock + resource gate)
 
 The cron fires `orchestrator.sh` → the VPS executor. It mirrors the **Worker cron**: daily each
 provider fetches ONLY the new **far edge (today+3)** — the browse window [today, today+3] is
@@ -92,12 +92,18 @@ covered by rolling. `--full` backfills the whole window once.
 | luma | 21 cities | 1/city | `admin/seed/events-luma.json` |
 | meetup | 21 cities | 1/city | `admin/seed/events-meetup.json` |
 
-Exit-node logic (ONE rule): **iPhone → unavailable → Mac → unavailable → retry in 30 min**
+Exit-node logic (ONE rule): **iPhone → unavailable → Mac → unavailable → retry at the next 5-min kick**
 (all day within the window). Per provider: compute the far edge → skip if the checkpoint already
 has `{target, completed}` → select+validate exit node (probed through the IPv4 proxy) → spawn the
 runner → verify completion → upload via `seed-ingest --approve`.
 
 All checkpoints share one contract: `{ target: "<far-edge day>", completed, completedAt, scopes }`.
+
+**Small footprint / good citizenship (256 MB shared VPS):** the seed is a single pre-built
+bundle (`backend/dist/vps-seed.mjs`) run as ONE `node` process — no tsx/esbuild at runtime.
+A **single-instance lock** stops a new 5-min kick from overlapping a running pass, and a
+**resource gate** (MemAvailable / load from /proc) pauses the run (checkpoint saved) when the
+box is busy with other processes — the next kick resumes. Build locally: `node admin/vps/build.mjs`.
 
 ---
 
@@ -105,7 +111,7 @@ All checkpoints share one contract: `{ target: "<far-edge day>", completed, comp
 
 ```sh
 # plan (no side effects)
-ssh frog 'cd /opt/panperyskop/backend && sudo -n npx --yes tsx src/seed/executors/vps/index.ts --dry'
+ssh frog 'sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --dry'
 
 # status + logs
 cat /opt/panperyskop/admin/vps/logs/status.json

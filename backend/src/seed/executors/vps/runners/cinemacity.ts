@@ -1,15 +1,15 @@
-// cinemacity provider — VPS executor runner. One file per provider; only wires
-// the provider's fetch into the shared scope model. The quickbook API is
-// PER-DAY (at-date/{date} → exactly one day, no bulk variant), so each cinema
-// scope fetches every window day sequentially.
+// cinemacity provider — VPS executor source. The quickbook API is PER-DAY
+// (at-date/{date} → exactly one day, no bulk variant), so each cinema scope
+// fetches every window day sequentially.
 // Usage (from the backend dir): npx tsx src/seed/executors/vps/runners/cinemacity.ts
-import { runScopeSource, sleep, PACING_MS } from '../runtime';
+import { sleep, PACING_MS } from '../runtime';
+import type { ScopeSource } from '../runtime';
 import { fetchCcCinema } from '../../../../seed/providers/cinemacity';
 import { ccScopes, CC_CINEMAS } from '../../../../seed/core/constants';
 import { ProviderId } from '../../../../seed/core/types';
 import type { SeedCandidate } from '../../../../seed/core/types';
 
-runScopeSource({
+export const cinemacitySource: ScopeSource = {
   source: ProviderId.CINEMACITY,
   scopes: () => ccScopes(),
   scopeGeo: (scope) => {
@@ -24,7 +24,5 @@ runScopeSource({
     }
     return out;
   },
-}).catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+};
+

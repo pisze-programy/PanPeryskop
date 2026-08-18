@@ -1,7 +1,6 @@
 #!/bin/sh
-# Cron PATH bootstrap ONLY — all orchestration logic lives in the VPS executor:
-# backend/src/seed/executors/vps/index.ts. Cron runs with a minimal PATH;
-# tsx/node/tailscale need the normal bin dirs.
+# Cron PATH bootstrap ONLY — all orchestration logic lives in the pre-built
+# bundle: backend/dist/vps-seed.mjs (built locally by admin/vps/build.mjs).
+# One `node` process, no tsx/esbuild at runtime — fits the 256 MB shared box.
 export PATH="/usr/bin:/bin:/usr/local/bin:$PATH"
-cd /opt/panperyskop/backend
-exec npx --yes tsx /opt/panperyskop/backend/src/seed/executors/vps/index.ts "$@"
+exec node /opt/panperyskop/backend/dist/vps-seed.mjs "$@"

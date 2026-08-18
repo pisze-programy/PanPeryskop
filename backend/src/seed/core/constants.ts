@@ -199,6 +199,11 @@ export const VPS_MAX_ATTEMPTS = 3;
 export const VPS_BACKOFF_MS = [0, 300_000, 600_000]; // after attempt 1 and 2
 export const VPS_EXIT_PROBE_TIMEOUT_MS = 20_000;
 export const VPS_EXIT_SWITCH_WAIT_MS = 2_000;
+// Resource gate — the VPS is a 256 MB shared box. Before each scope the seed
+// reads /proc; if memory or load is too tight it PAUSES (checkpoint saved) and
+// the next 30-min kick resumes. Good citizen: small chunks in free moments.
+export const VPS_MIN_MEMAVAILABLE_MB = 80;
+export const VPS_MAX_LOAD1 = 2.0;
 
 // ---------- luma.com ----------
 export const LUMA_API = 'https://api.luma.com/discover';

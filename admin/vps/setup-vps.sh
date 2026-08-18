@@ -4,7 +4,7 @@
 #
 # Run (as root): the Mac-side ONE command does this for you:
 #   sh admin/vps/deploy.sh
-# which scp's THIS script + pp-deploy.tgz (the app payload) to /tmp and runs:
+# which scp's THIS script + the pre-built bundle (vps-seed.mjs) to /tmp and runs:
 #   sudo -n sh /tmp/setup-vps.sh
 #
 # What it does (each step idempotent):
@@ -12,7 +12,7 @@
 #   2. enables NOPASSWD sudo for the deploy user (frog) — key-only SSH then works
 #      without prompts (automation), 3. joins tailnet with the phone as exit node
 #   4. deploys the app payload (backend/src/seed + admin/vps + seed-ingest) — NO git
-#   5. installs the root crontab: seed kick every 30 min all day (05-22 PL window
+#   5. installs the root crontab: seed kick every 5 min all day (05-22 PL window
 #      is enforced in the orchestrator; off-window kicks are no-ops)
 #   6. self-test: orchestrator --dry, then prints next steps (backfill --full).
 set -u
@@ -20,7 +20,6 @@ set -u
 IPHONE_HOST="${IPHONE_HOST:-iphone-14-pro-max}"
 DEPLOY_USER="${DEPLOY_USER:-frog}"
 REPO_DIR=/opt/panperyskop
-DEPLOY_TGZ="${DEPLOY_TGZ:-$(dirname "$0")/pp-deploy.tgz}"
 ENV_FILE="$REPO_DIR/admin/vps/.env"
 
 stamp() { date '+%F %T'; }
@@ -82,28 +81,30 @@ else
   say "WARN: brak openrc — ipv4-proxy uruchamiany ad-hoc (mniej niezawodny)"
 fi
 
-# ---------- 4. deploy the app payload (NO git) ----------
-mkdir -p "$REPO_DIR"
-if [ -f "$DEPLOY_TGZ" ]; then
-  tar -xzf "$DEPLOY_TGZ" -C "$REPO_DIR"
-  say "app payload extracted into $REPO_DIR"
-else
-  say "ERROR: brak payloadu $DEPLOY_TGZ — wgraj go razem ze skryptem"
-fi
+# ---------- 4. deploy the pre-built bundle + scripts (NO git, no TS on the box) ----------
+# deploy.sh ships these to /tmp: vps-seed.mjs (bundle), orchestrator.sh,
+# setup-vps.sh, ipv4-proxy.mjs, seed-ingest.mjs. .env and logs stay in place.
+SRC_TMP="/tmp"
+mkdir -p "$REPO_DIR/backend/dist" "$REPO_DIR/admin/vps" "$REPO_DIR/admin/src"
+install -m 0644 "$SRC_TMP/vps-seed.mjs"    "$REPO_DIR/backend/dist/vps-seed.mjs"
+install -m 0755 "$SRC_TMP/orchestrator.sh" "$REPO_DIR/admin/vps/orchestrator.sh"
+install -m 0755 "$SRC_TMP/setup-vps.sh"    "$REPO_DIR/admin/vps/setup-vps.sh"
+install -m 0644 "$SRC_TMP/ipv4-proxy.mjs"  "$REPO_DIR/admin/vps/ipv4-proxy.mjs"
+install -m 0644 "$SRC_TMP/seed-ingest.mjs" "$REPO_DIR/admin/src/seed-ingest.mjs"
+say "bundle + scripts installed into $REPO_DIR"
 
 # Remove legacy/obsolete admin/vps files (replaced by the executor).
 rm -f "$REPO_DIR/admin/vps/watchdog.sh" "$REPO_DIR/admin/vps/watchdog.s" \
       "$REPO_DIR/admin/vps/select-exit-node.sh" "$REPO_DIR/admin/vps/fetch-cinemas.mts"
-chmod +x "$REPO_DIR/admin/vps/orchestrator.sh"
 say "legacy files cleaned"
 
 # ---------- 5. crontab (preserve system + user entries; swap our seed line) ----------
 TMP_CRON=$(mktemp)
 crontab -l 2>/dev/null | grep -vE 'panperyskop.*(watchdog|orchestrator)\.sh' > "$TMP_CRON"
-printf '%s\n' '*/30 * * * * /opt/panperyskop/admin/vps/orchestrator.sh' >> "$TMP_CRON"
+printf '%s\n' '*/5 * * * * /opt/panperyskop/admin/vps/orchestrator.sh' >> "$TMP_CRON"
 crontab "$TMP_CRON"
 rm -f "$TMP_CRON"
-say "crontab ok: */30 * * * * orchestrator.sh (co 30 min cały dzień, okno 05-22 PL)"
+say "crontab ok: */5 * * * * orchestrator.sh (co 5 min cały dzień, okno 05-22 PL)"
 
 # ---------- env ----------
 if [ -f "$ENV_FILE" ]; then
@@ -113,15 +114,15 @@ else
 fi
 
 # ---------- 6. self-test ----------
-say "self-test: orchestrator --dry"
-cd "$REPO_DIR/backend" && npx --yes tsx src/seed/executors/vps/index.ts --dry 2>&1 | tail -12
+say "self-test: orchestrator --dry (bundle)"
+cd "$REPO_DIR/backend" && node dist/vps-seed.mjs --dry 2>&1 | tail -12
 cd /
 
 cat <<'SUMMARY'
 
 === PanPeryskop VPS ready ===
 Następny krok (pierwszy seed całego okna, jednorazowo):
-  sudo -n npx --yes tsx /opt/panperyskop/backend/src/seed/executors/vps/index.ts --full
+  sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --full
 
 Status / logi:
   cat /opt/panperyskop/admin/vps/logs/status.json

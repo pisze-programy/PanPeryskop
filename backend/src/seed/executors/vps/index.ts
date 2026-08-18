@@ -39,7 +39,7 @@ import process from 'node:process';
 import { enabledForExecutor } from '../../../../src/seed/providers/registry';
 import { EXECUTOR } from '../types';
 import type { ProviderConfig, VpsSpec } from '../../../../src/seed/providers/registry';
-import { runScopeSource } from './runtime';
+import { runScopeSource, findRepoDir } from './runtime';
 import type { ScopeSource } from './runtime';
 import { lumaSource } from './runners/luma';
 import { meetupSource } from './runners/meetup';
@@ -54,7 +54,7 @@ import {
 import type { ProviderId } from '../../../../src/seed/core/types';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_DIR = join(__dirname, '..', '..', '..', '..', '..');
+const REPO_DIR = findRepoDir(__dirname);
 const SEED_DIR = join(REPO_DIR, 'admin', 'seed');
 const VPS_DIR = join(REPO_DIR, 'admin', 'vps');
 const VPS_LOGS_DIR = join(VPS_DIR, 'logs');
@@ -243,6 +243,7 @@ function upload(cfg: ProviderConfig, env: Record<string, string>): void {
 
 // ---------- main ----------
 async function main(): Promise<void> {
+  const t0 = Date.now();
   mkdirSync(VPS_LOGS_DIR, { recursive: true });
   if (!inWindow()) {
     log('kick outside window — skip');
@@ -287,7 +288,9 @@ async function main(): Promise<void> {
   for (const cfg of plan) {
     const spec = cfg.executors.vps!;
     const target = expectedTarget();
-    if (isComplete(spec, target)) {
+    // --full forces a re-fetch of the whole window (runScopeSource resets the
+    // checkpoint), so a complete far-edge must NOT be skipped.
+    if (!FULL && isComplete(spec, target)) {
       log(`${cfg.id}: target ${target} already complete — skip`);
       status('complete', `${cfg.id} ${target}`);
       continue;
@@ -313,6 +316,9 @@ async function main(): Promise<void> {
   }
   log('orchestrator pass done');
   releaseLock();
+  const dur = Math.round((Date.now() - t0) / 1000);
+  const stats = runSync('sh', ['-c', "awk '/MemAvailable/{print \"MemAvail=\"int($2/1024)\"MB\"}' /proc/meminfo; cut -d' ' -f1 /proc/loadavg | xargs printf 'load1=%s'"], { cwd: REPO_DIR });
+  log(`pass done in ${dur}s ${stats.output.trim().replace(/\n/g, ' ')}`);
 }
 
 main().catch((e) => {

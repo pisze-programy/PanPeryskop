@@ -30,7 +30,19 @@ import type { VpsSpec } from '../../../../src/seed/providers/registry';
 import type { MkGeoStore } from '../../../../src/seed/providers/multikino';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_DIR = join(__dirname, '..', '..', '..', '..', '..');
+// Repo root — works from BOTH the TS source (deep in backend/src/...) AND the
+// pre-built bundle (backend/dist/vps-seed.mjs), where __dirname depth differs.
+export function findRepoDir(start: string): string {
+  let dir = start;
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, 'backend')) && existsSync(join(dir, 'admin'))) return dir;
+    const up = dirname(dir);
+    if (up === dir) break;
+    dir = up;
+  }
+  return '/opt/panperyskop';
+}
+const REPO_DIR = findRepoDir(__dirname);
 const SEED_DIR = join(REPO_DIR, 'admin', 'seed');
 const LOGS_DIR = join(REPO_DIR, 'admin', 'vps', 'logs');
 const BASE_URL = process.env.BASE_URL || 'https://panperyskop-api.dev-4cb.workers.dev';
@@ -341,12 +353,14 @@ export async function runScopeSource(src: ScopeSource): Promise<boolean> {
   const cpPath = args.checkpoint ?? join(LOGS_DIR, spec.checkpoint);
   const cp = loadCp(cpPath);
 
-  if (cp.target !== target) {
+  // Reset the checkpoint when the target changed OR --full backfills the whole
+  // window (force re-fetch even if the far edge is already complete).
+  if (args.full || cp.target !== target) {
     cp.target = target;
     cp.completed = false;
     cp.completedAt = 0;
     cp.scopes = {};
-    console.log(`[${src.source}] new target ${target} — reset progress`);
+    console.log(`[${src.source}] ${args.full ? '--full backfill' : 'new target'} ${target} — reset progress`);
   }
 
   const entries = loadEntries(jsonPath);

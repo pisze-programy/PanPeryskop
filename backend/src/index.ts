@@ -12,13 +12,13 @@ import {mediaRequestsRoutes} from './api/mediaRequests';
 import {runSeed, tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
 import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/pipeline/queue';
 import {pruneSeedData, watchdogSeedBatches} from './seed/pipeline/cleanup';
+import {SEED_DAYS_AHEAD} from './seed/core/constants';
 
 const SEED_CRON = '0 2 * * *';        // 02:00 UTC daily — roll the seed window one day forward
 const CLEANUP_CRON = '0 4 * * *';     // 04:00 UTC daily — audit cleanup (4-day retention)
 const WATCHDOG_CRON = '0 * * * *';    // hourly — mark stuck batches failed
-// The app browses [today, today+2]; seed holds a 1-day buffer, so the morning
-// cron seeds today+3 (the new far edge). Single-flight skips already-seeded days.
-const SEED_AHEAD_DAYS = 3;
+// The app browses [today, today+SEED_DAYS_AHEAD]; the morning cron seeds the
+// new far edge (today+SEED_DAYS_AHEAD). Single-flight skips already-active days.
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -132,12 +132,12 @@ export default {
       );
       return;
     }
-    // Daily seed (SEED_CRON): roll the seed window one day forward (today+SEED_AHEAD_DAYS).
+    // Daily seed (SEED_CRON): roll the seed window one day forward (today+SEED_DAYS_AHEAD).
     // Single-flight per day prevents duplicate batches; the queue consumer does the
     // heavy work with per-message retries + bounded DLQ re-drive.
     ctx.waitUntil(
-      enqueueSeedDay(env, addDaysWarsaw(todayWarsaw(), SEED_AHEAD_DAYS), 'cron')
-        .then(({ batchId, created }) => console.log(`seed cron enqueued: day=${addDaysWarsaw(todayWarsaw(), SEED_AHEAD_DAYS)} batch=${batchId} created=${created}`))
+      enqueueSeedDay(env, addDaysWarsaw(todayWarsaw(), SEED_DAYS_AHEAD), 'cron')
+        .then(({ batchId, created }) => console.log(`seed cron enqueued: day=${addDaysWarsaw(todayWarsaw(), SEED_DAYS_AHEAD)} batch=${batchId} created=${created}`))
         .catch((e) => console.error(`seed cron enqueue failed: ${(e as Error).message}`))
     );
   },

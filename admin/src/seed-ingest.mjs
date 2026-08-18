@@ -90,12 +90,24 @@ function optimize(src, tmp) {
   }
   const mediaOut = join(tmp, 'media.jpg');
   const thumbOut = join(tmp, 'thumb.jpg');
-  run(`sips -Z ${PHOTO_MAX} -s format jpeg "${src}" --out "${mediaOut}"`);
-  run(`sips -Z ${THUMB_MAX} -s format jpeg "${src}" --out "${thumbOut}"`);
+  compressImage(src, mediaOut, PHOTO_MAX);
+  compressImage(src, thumbOut, THUMB_MAX);
   return {
     file: readFileSync(mediaOut), fileName: 'media.jpg', mime: 'image/jpeg',
     thumb: readFileSync(thumbOut), type: 'photo',
   };
+}
+
+// Cross-platform image resize → JPEG. macOS uses sips; Linux (VPS) uses
+// ImageMagick. NOTE: do NOT use `-auto-orient` with ImageMagick 7's convert
+// — it fails with "no decode delegate" on valid JPEGs (confirmed). Posters are
+// portrait already, so orientation correction is unnecessary.
+function compressImage(src, out, max) {
+  if (process.platform === 'darwin') {
+    run(`sips -Z ${max} -s format jpeg "${src}" --out "${out}"`);
+  } else {
+    run(`convert "${src}" -resize ${max}x${max}\\> -quality 85 "${out}"`);
+  }
 }
 
 async function login() {

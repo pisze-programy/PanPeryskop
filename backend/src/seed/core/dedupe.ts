@@ -1,5 +1,6 @@
 import { SeedCandidate, ProviderId } from './types';
 import { toWarsawIso } from './dates';
+import { priorityOf } from '../providers/registry';
 
 function normVenue(s: string): string {
   return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -24,17 +25,9 @@ function titleOverlap(a: string, b: string): number {
 
 // Canonical-link preference: when several sources carry the same event (same hour
 // + venue), the one with the LOWEST rank wins — its link/geo becomes canonical.
-// Lower is better. Unknown sources rank last.
-const SOURCE_PRIORITY: Record<ProviderId, number> = {
-  // Cinema sources are primary (true) for showtimes — a film×cinema row they provide
-  // wins over any aggregated copy. Among the aggregators: going > kupbilecik > dzisapp > eventylive.
-  [ProviderId.MULTIKINO]: 0,
-  [ProviderId.GOING]: 1,
-  [ProviderId.KUPBILECIK]: 2,
-  [ProviderId.DZISAPP]: 3,
-  [ProviderId.EVENTYLIVE]: 4,
-};
-const sourceRank = (s: ProviderId): number => SOURCE_PRIORITY[s] ?? 99;
+// Lower is better. Rank lives in the provider registry (single source of truth);
+// unknown sources rank last.
+const sourceRank = (s: ProviderId): number => priorityOf(s);
 
 // Return whichever candidate is canonical for the two (same-key) candidates.
 function preferCanonical(a: SeedCandidate, b: SeedCandidate): SeedCandidate {

@@ -6,29 +6,81 @@ import { parseLocalDateTime, externalOfferUrl, primaryOutHref, resolveDzisLink }
 import { parseEvlEvent, getOfferUrl } from '../src/seed/providers/eventylive';
 import { parseMkFilms, extractToken, resolveMkGeo } from '../src/seed/providers/multikino';
 import { mkScopes, MK_CINEMAS, MK_ALL_CINEMAS } from '../src/seed/core/constants';
+import { PROVIDER_CONFIGS, enabledForExecutor, configOf, priorityOf, EXECUTOR } from '../src/seed/providers/registry';
+import { workerExecutor } from '../src/seed/executors/worker';
 
-test('providers: going=fetch, kupbilecik=browser, all enabled (multikino local-only)', () => {
+test('providers: going=kupbilecik=browser, helios in Worker, multikino+cinemacity local-only', () => {
   const byId = new Map(SEED_PROVIDERS.map((p) => [p.id, p]));
   assert.ok(byId.has('going'));
   assert.ok(byId.has('kupbilecik'));
   assert.ok(byId.has('dzisapp'));
   assert.ok(byId.has('eventylive'));
   assert.ok(byId.has('multikino'));
+  assert.ok(byId.has('cinemacity'));
+  assert.ok(byId.has('helios'));
+  assert.ok(byId.has('luma'));
+  assert.ok(byId.has('meetup'));
   assert.equal(byId.get('going')!.transport, 'fetch');
   assert.equal(byId.get('kupbilecik')!.transport, 'browser');
   assert.equal(byId.get('dzisapp')!.transport, 'fetch');
   assert.equal(byId.get('eventylive')!.transport, 'fetch');
   assert.equal(byId.get('multikino')!.transport, 'fetch');
+  assert.equal(byId.get('cinemacity')!.transport, 'fetch');
+  assert.equal(byId.get('helios')!.transport, 'fetch');
   for (const p of SEED_PROVIDERS) {
     assert.equal(typeof p.fetchCandidates, 'function');
     assert.equal(typeof p.fetchBytes, 'function');
   }
-  assert.ok(byId.get('going')!.enabled);
-  assert.ok(byId.get('kupbilecik')!.enabled);
-  assert.ok(byId.get('dzisapp')!.enabled);
-  assert.ok(byId.get('eventylive')!.enabled);
-  assert.equal(byId.get('multikino')!.enabled, false, 'multikino fetched locally (clean IP), not from the Worker');
-  assert.ok(enabledProviders().length >= 4);
+  // Registry is the single source of truth for enabled/executors — implementations
+  // no longer carry an `enabled` flag.
+  for (const p of SEED_PROVIDERS) assert.ok(!('enabled' in p), `${p.id} must not define enabled`);
+
+  // Worker executor providers run in the CF queue pipeline.
+  const workerIds = workerExecutor.providerIds(PROVIDER_CONFIGS);
+  for (const id of ['going', 'kupbilecik', 'dzisapp', 'eventylive', 'helios'] as const) {
+    assert.ok(workerIds.includes(id), `${id} enabled on worker`);
+  }
+  assert.ok(enabledProviders().length >= 5);
+  assert.deepEqual(
+    enabledProviders().map((p) => p.id).sort(),
+    workerIds.sort(),
+    'enabledProviders derives from the worker executor registry'
+  );
+
+  // VPS-executor providers (Cloudflare bot management blocks Worker egress) are
+  // driven by the VPS executor from the registry, not from the Worker.
+  const vpsIds = enabledForExecutor(EXECUTOR.VPS).map((c) => c.id);
+  for (const id of ['multikino', 'cinemacity', 'luma', 'meetup'] as const) {
+    assert.ok(vpsIds.includes(id), `${id} enabled on vps`);
+    assert.ok(!workerIds.includes(id), `${id} not on worker`);
+    assert.ok(configOf(id)!.executors.vps, `${id} has a vps executor spec`);
+  }
+});
+
+test('registry: executors, priority and vps specs are consistent', () => {
+  // Every implementation has a registry config; every config maps to a provider.
+  for (const p of SEED_PROVIDERS) assert.ok(configOf(p.id), `${p.id} in registry`);
+  assert.equal(PROVIDER_CONFIGS.length, SEED_PROVIDERS.length);
+
+  // Every provider is assigned to at least one executor.
+  for (const c of PROVIDER_CONFIGS) {
+    assert.ok(c.executors.worker === true || c.executors.vps, `${c.id} assigned to an executor`);
+  }
+
+  // Priority ranks the dedupe winner (lower = canonical). Luma above going,
+  // meetup is the lowest-priority fallback.
+  assert.ok(priorityOf(ProviderId.LUMA) < priorityOf(ProviderId.GOING));
+  assert.ok(priorityOf(ProviderId.MEETUP) > priorityOf(ProviderId.EVENTYLIVE));
+  assert.equal(priorityOf(ProviderId.MULTIKINO), 0);
+  assert.equal(priorityOf('madeup' as ProviderId), 99, 'unknown sources rank last');
+
+  // VPS executor specs point at a real output/checkpoint layout. Every VPS
+  // provider covers the SAME seed window — no per-provider target config.
+  for (const c of enabledForExecutor(EXECUTOR.VPS)) {
+    const v = c.executors.vps!;
+    assert.ok(v.output.endsWith('.json'));
+    assert.ok(v.checkpoint.endsWith('-checkpoint.json'));
+  }
 });
 
 test('multikino: parseMkFilms builds one film×cinema candidate per day', () => {
@@ -49,7 +101,7 @@ test('multikino: parseMkFilms builds one film×cinema candidate per day', () => 
       { filmId: 'HO00000000', filmTitle: 'No sessions', hasSessions: true, showingGroups: [] },
     ],
   };
-  const out = parseMkFilms(data, '0013', '2026-08-22');
+  const out = parseMkFilms(data, '0013', ['2026-08-22']);
   assert.equal(out.length, 1);
   const c = out[0];
   assert.equal(c.source, ProviderId.MULTIKINO);
@@ -78,7 +130,7 @@ test('multikino: parseMkFilms marks sold out only when ALL sessions are sold out
         ]} ] },
     ],
   };
-  const out = parseMkFilms(data, '0011', '2026-08-22');
+  const out = parseMkFilms(data, '0011', ['2026-08-22']);
   assert.equal(out.length, 2);
   assert.equal(out[0].isSoldOut, true);
   assert.equal(out[1].isSoldOut, false);
@@ -94,9 +146,32 @@ test('multikino: parseMkFilms filters sessions to the target day only', () => {
         ] },
     ],
   };
-  const out = parseMkFilms(data, '0013', '2026-08-22');
+  const out = parseMkFilms(data, '0013', ['2026-08-22']);
   assert.equal(out.length, 1);
   assert.equal(out[0].startMs, Date.parse('2026-08-22T20:00:00+02:00'));
+});
+
+test('multikino: parseMkFilms covers the whole seed window — one candidate per day', () => {
+  const data = {
+    result: [
+      { filmId: 'F1', filmTitle: 'Film', posterImageSrc: 'https://x.pl/p.jpg', hasSessions: true,
+        showingGroups: [
+          { date: '2026-08-18T00:00:00', sessions: [{ startTime: '2026-08-18T20:00:00', showTimeWithTimeZone: '2026-08-18T20:00:00+02:00' }] },
+          { date: '2026-08-19T00:00:00', sessions: [{ startTime: '2026-08-19T20:00:00', showTimeWithTimeZone: '2026-08-19T20:00:00+02:00' }] },
+          { date: '2026-08-20T00:00:00', sessions: [{ startTime: '2026-08-20T20:00:00', showTimeWithTimeZone: '2026-08-20T20:00:00+02:00' }] },
+        ] },
+    ],
+  };
+  const days = ['2026-08-18', '2026-08-19', '2026-08-20'];
+  const out = parseMkFilms(data, '0013', days);
+  assert.equal(out.length, 3, 'one candidate per film×cinema×day in the window');
+  assert.deepEqual(out.map((c) => c.externalId), [
+    'multikino-0013-F1-2026-08-18',
+    'multikino-0013-F1-2026-08-19',
+    'multikino-0013-F1-2026-08-20',
+  ]);
+  assert.equal(out[0].startMs, Date.parse('2026-08-18T20:00:00+02:00'));
+  assert.equal(out[2].startMs, Date.parse('2026-08-20T20:00:00+02:00'));
 });
 
 test('multikino: extractToken pulls microservicesToken out of Set-Cookie lines', () => {
@@ -132,7 +207,7 @@ test('multikino: resolveMkGeo parses SSR repertuar page (geo regex + address)', 
   globalThis.fetch = mockFetch;
   try {
     const ctx = { env, day: '2026-08-22', dayStart: 0, dayEnd: 0, createdAt: 0, recordBrowserMs: () => {} } as SeedContext;
-    const geo = await resolveMkGeo(ctx, '0011', 'Multikino Poznań Stary Browar', 'Poznań');
+    const geo = await resolveMkGeo('0011', 'Multikino Poznań Stary Browar', 'Poznań', { db: ctx.env.DB });
     assert.ok(geo.lat != null && geo.lng != null);
     assert.ok(Math.abs(geo.lat! - 52.40276672871932) < 1e-6);
     assert.ok(geo.address.includes('Półwiejska 42'));
@@ -261,4 +336,83 @@ test('eventylive: ebilet JSON-LD marks the target-day showtime sold out', () => 
     if (/(?:soldout|outofstock)/i.test(avail)) soldOut = true;
   }
   assert.ok(soldOut);
+});
+
+test('luma: parseLumaEntry keeps offline events, drops online, UTC start', async () => {
+  const { parseLumaEntry } = await import('../src/seed/providers/luma');
+  const opts = { day: '2026-08-18', dayStart: 0, dayEnd: 0 };
+  const entry: any = {
+    start_at: '2026-08-18T14:00:00.000Z',
+    event: {
+      api_id: 'evt-XYZ',
+      name: 'Vibe Coding Jam',
+      timezone: 'Europe/Warsaw',
+      url: 'vid3g51z',
+      location_type: 'offline',
+      coordinate: { latitude: 52.2297, longitude: 21.0122 },
+      geo_address_info: { city: 'Warszawa', address: 'Wincentego Rzymowskiego 53', short_address: 'Adgar Wave, Wincentego Rzymowskiego 53, Warszawa' },
+      cover_url: 'https://images.lumacdn.com/uploads/ak/x.png',
+    },
+  };
+  const c = await parseLumaEntry(entry, 'Warszawa', { lat: 52.2297, lng: 21.0122 }, opts);
+  assert.ok(c);
+  assert.equal(c!.externalId, 'luma-evt-XYZ');
+  assert.equal(c!.venue, 'Adgar Wave');
+  assert.equal(c!.address, 'Wincentego Rzymowskiego 53');
+  assert.equal(c!.lat, 52.2297);
+  assert.equal(new Date(c!.startMs).toISOString(), '2026-08-18T14:00:00.000Z'); // true UTC
+  assert.equal(c!.link, 'https://lu.ma/vid3g51z');
+
+  // online → dropped
+  const online = await parseLumaEntry({ ...entry, event: { ...entry.event, location_type: 'online' } }, 'Warszawa', { lat: 1, lng: 1 }, opts);
+  assert.equal(online, null);
+});
+
+test('luma: obfuscated geo falls back to sublocality as the venue', async () => {
+  const { parseLumaEntry } = await import('../src/seed/providers/luma');
+  const opts = { day: '2026-08-18', dayStart: 0, dayEnd: 0 };
+  const entry: any = {
+    start_at: '2026-08-18T10:00:00.000Z',
+    event: {
+      api_id: 'evt-OBF', name: 'Secret Meetup', location_type: 'offline',
+      coordinate: { latitude: 52.4, longitude: 16.9 },
+      geo_address_info: { mode: 'obfuscated', city: 'Poznań', sublocality: 'Poznań Old Town' },
+      cover_url: 'https://images.lumacdn.com/uploads/ak/x.png',
+    },
+  };
+  const c = await parseLumaEntry(entry, 'Poznań', { lat: 52.4, lng: 16.9 }, opts);
+  assert.ok(c);
+  assert.equal(c!.venue, 'Poznań Old Town');
+});
+
+test('meetup: parseMeetupNode uses venue coords, resolves (0,0) via fallback, PHYSICAL only', async () => {
+  const { parseMeetupNode } = await import('../src/seed/providers/meetup');
+  const opts = { day: '2026-08-18', dayStart: 0, dayEnd: 0 };
+  const fb = { lat: 52.4064, lng: 16.9252 };
+  const node: any = {
+    id: '123', title: 'Startup Poznan', dateTime: '2026-08-27T18:30:00+02:00', eventType: 'PHYSICAL',
+    eventUrl: 'https://www.meetup.com/pl-PL/startup-poznan/events/123/',
+    venue: { id: '1', name: 'Ministerstwo Browaru', address: 'Wroniecka 16', city: 'Poznań', lat: 52.410248, lon: 16.934267 },
+    featuredEventPhoto: { highResUrl: 'https://secure.meetupstatic.com/photos/event/x/highres_1.jpeg' },
+    group: { name: 'Startup Poznan', urlname: 'startup-poznan' },
+  };
+  const c = await parseMeetupNode(node, 'Poznań', fb, opts);
+  assert.ok(c);
+  assert.equal(c!.externalId, 'meetup-123');
+  assert.equal(c!.lat, 52.410248);
+  assert.equal(c!.lng, 16.934267);
+  assert.equal(c!.venue, 'Ministerstwo Browaru');
+
+  // (0,0) venue with an unresolvable name → deterministic city-center fallback.
+  const zero = await parseMeetupNode({
+    ...node,
+    venue: { id: '2', name: 'XYZ No Such Venue 448812', address: 'ul. Niewiadoma 0', city: 'Poznań', lat: 0, lon: 0 },
+  }, 'Poznań', fb, opts);
+  assert.ok(zero);
+  assert.equal(zero!.lat, fb.lat);
+  assert.equal(zero!.lng, fb.lng);
+
+  // ONLINE → dropped
+  const online = await parseMeetupNode({ ...node, eventType: 'ONLINE' }, 'Poznań', fb, opts);
+  assert.equal(online, null);
 });

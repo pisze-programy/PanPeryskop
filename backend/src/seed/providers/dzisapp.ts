@@ -6,6 +6,7 @@
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { CITIES, cityById, cityBbox } from '../../admin/cities';
 import { warsawOffset } from '../core/dates';
+import { resolveGeo } from '../core/geo';
 import { DZIS_API, DZIS_LIMIT, DZIS_WEB } from '../core/constants';
 
 const DZIS_CITIES = CITIES.map((c) => c.id);
@@ -129,12 +130,27 @@ export async function fetchDzisCity(ctx: SeedContext, cityId: string): Promise<S
     if (!startMs || startMs < ctx.dayStart || startMs > ctx.dayEnd) continue;
 
     const img = isUsableImage(e.coverImageUrl);
-    const geo = e.venue?.geo?.lat != null && e.venue?.geo?.lng != null
+    const venueGeo = e.venue?.geo?.lat != null && e.venue?.geo?.lng != null
       ? { lat: e.venue.geo.lat, lng: e.venue.geo.lng }
       : null;
-    // Fallback: city center (all dzis.app events belong to their city).
-    const lat = geo ? geo.lat : bbox ? bbox.swLat + (bbox.neLat - bbox.swLat) / 2 : city.lat;
-    const lng = geo ? geo.lng : bbox ? bbox.swLng + (bbox.neLng - bbox.swLng) / 2 : city.lng;
+    // Same geo path as every provider: shared venues store → Nominatim → bbox
+    // center (always the fallback). The dzis.app API carries geo for ~86% of
+    // events; the rest resolve through the cache/geocoder instead of a blunt
+    // city-center pin.
+    const fallback = bbox ? { lat: bbox.swLat + (bbox.neLat - bbox.swLat) / 2, lng: bbox.swLng + (bbox.neLng - bbox.swLng) / 2 } : { lat: city.lat, lng: city.lng };
+    let lat: number | null = venueGeo?.lat ?? null;
+    let lng: number | null = venueGeo?.lng ?? null;
+    if (lat == null || lng == null) {
+      const resolved = await resolveGeo({
+        name: e.venue?.name || '',
+        city: e.venue?.citySlug ? (cityById(e.venue.citySlug)?.name || city.name) : city.name,
+        db: ctx.env.DB,
+        fallback,
+        provider: ProviderId.DZISAPP,
+      });
+      if (resolved) { lat = resolved.lat; lng = resolved.lng; }
+    }
+    if (lat == null || lng == null) { lat = fallback.lat; lng = fallback.lng; }
 
     out.push({
       source: ProviderId.DZISAPP,
@@ -157,7 +173,6 @@ export async function fetchDzisCity(ctx: SeedContext, cityId: string): Promise<S
 export const dzisappProvider: SeedProvider = {
   id: ProviderId.DZISAPP,
   transport: 'fetch',
-  enabled: true,
   fetchCandidates: fetchDzisApp,
   fetchBytes: (ctx, url) => import('./http').then((m) => m.getBytes(url)),
   scopes: DZIS_CITIES,

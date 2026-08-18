@@ -75,7 +75,6 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
 export const goingProvider: SeedProvider = {
   id: ProviderId.GOING,
   transport: 'fetch',
-  enabled: true,
   fetchCandidates: fetchGoing,
   fetchBytes: (ctx, url) => import('./http').then((m) => m.getBytes(url)),
   scopes: ['all'],

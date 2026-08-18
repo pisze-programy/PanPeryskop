@@ -11,9 +11,11 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { SEED_PROVIDERS } from '../src/seed/providers';
+import { PROVIDER_CONFIGS } from '../src/seed/providers/registry';
 import { enqueueSeedDay, runQueue, QUEUE_NAMES } from '../src/seed/pipeline/queue';
 import { storiesRoutes } from '../src/api/stories';
 import { parseStoriesLimit } from '../src/api/stories';
+import { todayWarsaw, addDaysWarsaw } from '../src/seed/core/dates';
 import type { SeedQueueMessage } from '../src/seed/pipeline/queue';
 import type { SeedProvider } from '../src/seed/core/types';
 
@@ -82,7 +84,6 @@ function fakeProvider(
   return {
     id: id as never,
     transport: 'fetch',
-    enabled: true,
     fetchCandidates: async () => [],
     fetchBytes: async (ctx, url) => {
       if (String(url).includes('boom')) throw new Error(`media boom: ${url}`);
@@ -90,6 +91,23 @@ function fakeProvider(
     },
     scopes,
     fetchScope: (ctx, scope) => fetchScope(scope),
+  };
+}
+
+// The registry is the single source of truth for enabled providers, so a fake
+// provider is wired in by BOTH adding the implementation (SEED_PROVIDERS) and a
+// worker executor config (PROVIDER_CONFIGS) — exactly how a real provider is added.
+function fakeConfig(id: string) {
+  return { id: id as never, transport: 'fetch' as const, enabled: true, priority: 99, executors: { worker: true } };
+}
+function swapFakes(providers: SeedProvider[]) {
+  const origP = [...SEED_PROVIDERS];
+  const origC = [...PROVIDER_CONFIGS];
+  SEED_PROVIDERS.splice(0, SEED_PROVIDERS.length, ...providers);
+  PROVIDER_CONFIGS.splice(0, PROVIDER_CONFIGS.length, ...providers.map((p) => fakeConfig(String(p.id))));
+  return () => {
+    SEED_PROVIDERS.splice(0, SEED_PROVIDERS.length, ...origP);
+    PROVIDER_CONFIGS.splice(0, PROVIDER_CONFIGS.length, ...origC);
   };
 }
 
@@ -155,7 +173,6 @@ function makeEnv() {
 }
 
 test('integration: seed pipeline completes end-to-end and catches provider/ingest exceptions', async () => {
-  const orig = [...SEED_PROVIDERS];
   const realFetch = globalThis.fetch;
   // Venue-cache build in handleSeedDay is best-effort — stub the network so the
   // test is hermetic (buildVenueCache swallows its own errors anyway).
@@ -165,14 +182,13 @@ test('integration: seed pipeline completes end-to-end and catches provider/inges
   const okCand = candidate({ externalId: 'fake-ok', title: 'Koncert', startMs: 1_782_765_000_000 });
   const okCand2 = candidate({ externalId: 'fake-ok2', title: 'Standup', startMs: 1_782_765_000_000 + 3_600_000 });
 
-  SEED_PROVIDERS.splice(0, SEED_PROVIDERS.length);
-  SEED_PROVIDERS.push(
+  const restore = swapFakes([
     fakeProvider('fakea', ['city1', 'city2'], async (scope) => {
       if (scope === 'city2') throw new Error('scope city2 boom'); // poison scope → DLQ → failed
       return [okCand, boomCand]; // boom candidate fails at media download
     }),
     fakeProvider('fakeb', ['city3'], async () => [okCand2]),
-  );
+  ]);
 
   try {
     const { sqlite, env } = makeEnv();
@@ -204,17 +220,15 @@ test('integration: seed pipeline completes end-to-end and catches provider/inges
     const dlq = env.SEED_DLQ as FakeQueue;
     assert.equal(dlq.msgs.length, 0, 'DLQ drained (bounded re-drive, no infinite loop)');
   } finally {
-    SEED_PROVIDERS.splice(0, SEED_PROVIDERS.length, ...orig);
+    restore();
     globalThis.fetch = realFetch;
   }
 });
 
 test('integration: runQueue catches handler exceptions (retry→DLQ, never uncaught)', async () => {
-  const orig = [...SEED_PROVIDERS];
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch;
-  SEED_PROVIDERS.splice(0, SEED_PROVIDERS.length);
-  SEED_PROVIDERS.push(fakeProvider('fakethrow', ['only'], async () => { throw new Error('always throws'); }));
+  const restore = swapFakes([fakeProvider('fakethrow', ['only'], async () => { throw new Error('always throws'); })]);
 
   try {
     const { sqlite, env } = makeEnv();
@@ -229,7 +243,7 @@ test('integration: runQueue catches handler exceptions (retry→DLQ, never uncau
     const scope = sqliteRow(sqlite, "SELECT status FROM seed_scopes WHERE scope='only'");
     assert.equal(scope.status, 'failed', 'poison scope marked failed after bounded re-drive');
   } finally {
-    SEED_PROVIDERS.splice(0, SEED_PROVIDERS.length, ...orig);
+    restore();
     globalThis.fetch = realFetch;
   }
 });
@@ -248,11 +262,16 @@ test('integration: /stories?day= browses that day even outside the live TTL wind
     `INSERT INTO posts (id, user_id, type, lat, lng, description, status, created_at, category, event_date)
      VALUES (?, 'u1', 'photo', ?, ?, ?, 'approved', ?, ?, ?)`
   );
+  // Date-relative (the TTL window is 24h from created_at, so hardcoded days break
+  // the live-window assertions depending on when the suite runs).
+  const today = todayWarsaw();
+  const futureDay = addDaysWarsaw(today, 2);
   const now = Date.now();
-  // p_today — event on 2026-08-17, created_at 06:00 Warsaw (inside the live window).
-  ins.run('p_today', 52.2, 21.0, 'dzis', Date.parse('2026-08-17T04:00:00Z'), 'events', '2026-08-17');
-  // p_future — event on 2026-08-20, created_at 06:00 Warsaw (OUTSIDE the live window).
-  ins.run('p_future', 52.3, 21.1, 'jutro', Date.parse('2026-08-20T04:00:00Z'), 'events', '2026-08-20');
+  // p_today — event today, created_at 06:00 Warsaw today (inside the live window).
+  ins.run('p_today', 52.2, 21.0, 'dzis', Date.parse(`${today}T04:00:00Z`), 'events', today);
+  // p_future — event in +2 days, created_at 06:00 Warsaw that day (OUTSIDE the
+  // live window because created_at > now).
+  ins.run('p_future', 52.3, 21.1, 'jutro', Date.parse(`${futureDay}T04:00:00Z`), 'events', futureDay);
   // p_live — live post, event_date NULL, created now (inside the live window).
   ins.run('p_live', 52.25, 21.05, 'live!', now, 'live', null);
 
@@ -264,23 +283,23 @@ test('integration: /stories?day= browses that day even outside the live TTL wind
   const windowBody = (await resWindow.json()) as { stories: { id: string }[] };
   assert.deepEqual(windowBody.stories.map((s) => s.id).sort(), ['p_live', 'p_today']);
 
-  // day=2026-08-20 → only that day's event, despite being outside the TTL window.
-  const resDay = await storiesRoutes.request(`/?${bbox}&day=2026-08-20`, {}, env);
+  // day=<futureDay> → only that day's event, despite being outside the TTL window.
+  const resDay = await storiesRoutes.request(`/?${bbox}&day=${futureDay}`, {}, env);
   assert.equal(resDay.status, 200);
   const dayBody = (await resDay.json()) as { stories: { id: string }[] };
   assert.deepEqual(dayBody.stories.map((s) => s.id), ['p_future']);
 
   // Live posts (event_date NULL) never match a day query.
-  const resDay17 = await storiesRoutes.request(`/?${bbox}&day=2026-08-17`, {}, env);
-  const day17 = (await resDay17.json()) as { stories: { id: string }[] };
-  assert.deepEqual(day17.stories.map((s) => s.id), ['p_today']);
+  const resDayToday = await storiesRoutes.request(`/?${bbox}&day=${today}`, {}, env);
+  const dayToday = (await resDayToday.json()) as { stories: { id: string }[] };
+  assert.deepEqual(dayToday.stories.map((s) => s.id), ['p_today']);
 
   // Invalid day format → 400.
   const resBad = await storiesRoutes.request(`/?${bbox}&day=17-08-2026`, {}, env);
   assert.equal(resBad.status, 400);
 
   // limit is respected and clamped.
-  const resL1 = await storiesRoutes.request(`/?${bbox}&day=2026-08-20&limit=1`, {}, env);
+  const resL1 = await storiesRoutes.request(`/?${bbox}&day=${futureDay}&limit=1`, {}, env);
   assert.equal(((await resL1.json()) as { stories: { id: string }[] }).stories.length, 1);
 });
 

@@ -237,7 +237,6 @@ export async function fetchEventyliveCity(ctx: SeedContext, cityId: string): Pro
 export const eventyliveProvider: SeedProvider = {
   id: ProviderId.EVENTYLIVE,
   transport: 'fetch',
-  enabled: true,
   fetchCandidates: fetchEventylive,
   fetchBytes: (ctx, url) => import('./http').then((m) => m.getBytes(url)),
   scopes: EVL_CITIES,

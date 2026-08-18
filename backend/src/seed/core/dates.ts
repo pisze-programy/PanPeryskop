@@ -1,8 +1,19 @@
 import { DAY_MS, EVENT_VISIBLE_OFFSET_MS } from './constants';
 
+// Build "YYYY-MM-DD" for a Warsaw-wall-clock instant WITHOUT relying on a locale's
+// short-date format. Node 24 (Alpine, and newer macOS builds) stopped rendering
+// `en-CA` as ISO — `fmt.format()` returned "08/18/2026", breaking every parser.
+// formatToParts yields numeric fields regardless of locale/CLDR.
+function warsawYmd(ms: number): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date(ms));
+  const field = (type: string) => parts.find((p) => p.type === type)?.value || '';
+  return `${field('year')}-${field('month')}-${field('day')}`;
+}
+
 export function todayWarsaw(): string {
-  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' });
-  return fmt.format(new Date()); // "YYYY-MM-DD"
+  return warsawYmd(Date.now());
 }
 export function tomorrowWarsaw(day = todayWarsaw()): string {
   const [y, m, d] = day.split('-').map(Number);
@@ -15,13 +26,12 @@ export function addDaysWarsaw(day: string, n: number): string {
 }
 // YYYY-MM-DD of a millisecond instant in Europe/Warsaw (day-browser key).
 export function warsawDateOf(ms: number): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+  return warsawYmd(ms);
 }
 export function warsawMidnightMs(isoDate: string): number {
   const [y, m, d] = isoDate.split('-').map(Number);
   let t = Date.UTC(y, m - 1, d);
-  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' });
-  while (fmt.format(t) === isoDate) t -= 3_600_000;
+  while (warsawYmd(t) === isoDate) t -= 3_600_000;
   return t + 3_600_000;
 }
 // Event posts for a day become visible at 06:00 Europe/Warsaw (TTL window start).

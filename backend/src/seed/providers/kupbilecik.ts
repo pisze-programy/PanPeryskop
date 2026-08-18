@@ -217,7 +217,6 @@ async function kupbilecikFetchBytes(ctx: SeedContext, url: string): Promise<Uint
 export const kupbilecikProvider: SeedProvider = {
   id: ProviderId.KUPBILECIK,
   transport: 'browser',
-  enabled: true,
   fetchCandidates: fetchKupbilecik,
   fetchBytes: kupbilecikFetchBytes,
   scopes: ['all'],

@@ -12,6 +12,10 @@ export const ProviderId = {
   DZISAPP: 'dzisapp',
   EVENTYLIVE: 'eventylive',
   MULTIKINO: 'multikino',
+  CINEMACITY: 'cinemacity',
+  HELIOS: 'helios',
+  LUMA: 'luma',
+  MEETUP: 'meetup',
 } as const;
 export type ProviderId = (typeof ProviderId)[keyof typeof ProviderId];
 
@@ -81,10 +85,14 @@ export interface SeedContext {
   recordBrowserMs: (ms: number) => void;
 }
 
+/** Date-window context a provider's fetch function actually reads. Both the
+ *  Worker (full SeedContext) and the VPS executor (a plain {day,dayStart,dayEnd})
+ *  can satisfy it — the VPS host has no Worker `Env`. */
+export type SeedFetchCtx = Pick<SeedContext, 'day' | 'dayStart' | 'dayEnd'>;
+
 export interface SeedProvider {
   id: ProviderId;
   transport: ProviderTransport;
-  enabled: boolean;
   /** Fetch candidates for the target day. Must call ctx.recordBrowserMs for browser time. */
   fetchCandidates(ctx: SeedContext): Promise<SeedCandidate[]>;
   /** Download media bytes (poster / thumb). Browser transport may proxy through Browser Run. */

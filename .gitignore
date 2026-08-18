@@ -49,8 +49,14 @@ ios/vendor/YPImagePicker/Package.resolved
 # Never commit any of admin/local/ — the data flows in via the public worker API.
 admin/local/
 
-# Staging + media produced by the local multikino fetch (regenerated on demand).
-admin/seed/multikino-media/
+# Staging + media produced by the local/VPS per-source fetches (regenerated on demand).
 admin/seed/multikino.json
-admin/seed/cinemas.json
-admin/seed/cinemas-media/
+admin/seed/multikino-media/
+admin/seed/cinemacity.json
+admin/seed/cinemacity-media/
+admin/seed/events-luma.json
+admin/seed/events-luma-media/
+admin/seed/events-meetup.json
+admin/seed/events-meetup-media/
+admin/vps/logs/
+admin/vps/.env

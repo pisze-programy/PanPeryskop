@@ -17,6 +17,8 @@ struct StoryFullScreenView: View {
     @State private var showReportDialog = false
     @State private var paused = false
     @State private var loadedIDs: Set<String> = []
+    /// Random gradient generated once per preview open — stable while viewing.
+    @State private var backgroundSeed = StoryGradientSeed.random()
 
     init(posts: [Post], startIndex: Int, isPresented: Binding<Bool>, viewModel: MapViewModel) {
         self.posts = posts
@@ -28,7 +30,7 @@ struct StoryFullScreenView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            StoryMeshGradient(seed: backgroundSeed)
 
             LazyPager(data: posts, page: $currentIndex, direction: .vertical) { post in
                 StoryContent(
@@ -110,7 +112,7 @@ struct StoryFullScreenView: View {
                     bottomInfoCard
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 16)
+                .padding(.bottom, 16 + bottomSafeAreaInset)
                 .overlay(alignment: .bottomTrailing) {
                     actionCapsule
                         .padding(.trailing, 24)
@@ -121,6 +123,7 @@ struct StoryFullScreenView: View {
                         .frame(height: 330)
                 }
             }
+        .ignoresSafeArea()
         .onAppear { photoTimer = startPhotoTimer() }
         .onDisappear { photoTimer?.cancel() }
         .sheet(item: $shareItem) { item in
@@ -182,14 +185,25 @@ struct StoryFullScreenView: View {
             }
 
             HStack(alignment: .bottom, spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .center, spacing: 6) {
                     Text(EventDateFormatter.eventDay(currentPost.created_at))
                         .font(.caption)
                         .fontWeight(.semibold)
                         .textCase(.uppercase)
                         .foregroundColor(.secondary)
-                    FlipClockTime(time: clockTime)
+                        .frame(maxWidth: .infinity)
+                    if let times = currentPost.showtimes, times.count > 1 {
+                        ShowtimesPager(times: times)
+                            .id(currentPost.id)
+                    } else {
+                        FlipClockTime(time: clockTime)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        // Reserve the dots row height so single-time cards don't
+                        // jump between pager (with dots) and plain clock.
+                        Spacer().frame(height: 11)
+                    }
                 }
+                .frame(width: 168)
 
                 if currentPost.isEvent {
                     eventDetails
@@ -210,9 +224,21 @@ struct StoryFullScreenView: View {
         )
     }
 
-    /// Flip-clock value: event start time (from description, `--:--` if unknown) or
-    /// the live post's publish time.
+    /// Home-indicator inset — the story preview ignores the safe area for the media,
+    /// but the bottom info card must sit above the iOS bottom bar.
+    private var bottomSafeAreaInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }?.safeAreaInsets.bottom ?? 0
+    }
+
+    /// Flip-clock value: the first structured showtime, else the event start time
+    /// from the description (`--:--` if unknown) or the live post's publish time.
     private var clockTime: String {
+        if let times = currentPost.showtimes, !times.isEmpty {
+            return times[0]
+        }
         if currentPost.isEvent {
             return currentPost.eventInfo.time ?? "--:--"
         }
@@ -662,10 +688,13 @@ struct StoryAvatar: View {
     }
 
     private var defaultAvatar: some View {
-        Image("Logo")
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .scaleEffect(1.5)
+        ZStack {
+            Color.black
+            Image("Logo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .scaleEffect(0.85)
+        }
     }
 }
 
@@ -760,3 +789,37 @@ struct FlipClockDigit: View {
         .frame(width: 30, height: 50)
     }
 }
+
+/// Horizontally paged row of flip-clock times (one showtime per page) with dot
+/// indicators underneath — cinema events with multiple sessions.
+struct ShowtimesPager: View {
+    let times: [String]
+    @State private var page: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(Array(times.enumerated()), id: \.offset) { _, t in
+                        FlipClockTime(time: t)
+                            .containerRelativeFrame(.horizontal)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $page)
+            .frame(height: 50)
+
+            HStack(spacing: 6) {
+                ForEach(times.indices, id: \.self) { i in
+                    Circle()
+                        .fill(i == (page ?? 0) ? Color.blue : Color.secondary.opacity(0.3))
+                        .frame(width: 9, height: 9)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
+    }
+}
+

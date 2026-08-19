@@ -151,11 +151,19 @@ export function parseMkFilms(data: unknown, cinemaId: string, days: string[]): S
         if (m) startMs = Date.parse(`${m[1]}T${m[2]}:00+02:00`);
       }
       if (Number.isNaN(startMs)) continue;
+      const times = sessions
+        .map((s) => {
+          const mm = /T(\d{2}:\d{2})/.exec(s.showTimeWithTimeZone || '') || /^.*T(\d{2}:\d{2})/.exec(s.startTime || '');
+          return mm ? mm[1] : null;
+        })
+        .filter((x): x is string => x !== null)
+        .sort();
       out.push({
         source: ProviderId.MULTIKINO,
         externalId: `multikino-${cinemaId}-${f.filmId}-${day}`,
         title: f.filmTitle,
         startMs,
+        times,
         lat: null, lng: null, // resolved via cinema geo (venues store / SSR)
         city: cinemaCity(cinemaId),
         venue: `Multikino ${cinemaName(cinemaId)}`,

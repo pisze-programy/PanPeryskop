@@ -7,7 +7,7 @@ import { TTL_MS } from '../../core/models';
 import { SeedProvider, SeedProviderResult, SeedResult, SeedContext, RunType, SeedCandidate, ProviderId } from '../core/types';
 import { enabledProviders } from '../providers';
 import { warsawMidnightMs, tomorrowWarsaw, eventCreatedAtMs, eventDayEndMs } from '../core/dates';
-import { buildDescription, dedupe } from '../core/dedupe';
+import { buildDescription, dedupe, showtimesJson } from '../core/dedupe';
 import { dropCancelled, rescueRealShows } from '../core/filters';
 import { resolveKupGeo } from '../providers/kupbilecik';
 import { writeSeedRun, browserBudget, BrowserBudget } from '../core/log';
@@ -132,7 +132,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
       const description = buildDescription(c);
       await doSavePost(
         env, user, postId, 'photo', c.lat, c.lng, description,
-        mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing), Boolean(c.isSoldOut)
+        mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing), Boolean(c.isSoldOut), showtimesJson(c)
       );
       providerResult.ingested++; totalIngested++;
     } catch (e) {

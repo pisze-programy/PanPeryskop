@@ -207,10 +207,13 @@ struct AvatarView: View {
     }
 
     private var defaultAvatar: some View {
-        Image("Logo")
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .scaleEffect(1.5)
+        ZStack {
+            Color.black
+            Image("Logo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .scaleEffect(0.85)
+        }
     }
 }
 

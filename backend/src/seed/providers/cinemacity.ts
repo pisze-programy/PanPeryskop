@@ -30,6 +30,10 @@ export function parseCcScope(data: unknown, code: string, day: string): SeedCand
     const m = /T(\d{2}):(\d{2})/.exec(first || '');
     if (!m) continue;
     const startMs = dayStart + (parseInt(m[1], 10) * 60 + parseInt(m[2], 10)) * 60_000;
+    const times = dayEvents
+      .map((e) => { const mm = /T(\d{2}):(\d{2})/.exec(e.eventDateTime || ''); return mm ? `${mm[1]}:${mm[2]}` : null; })
+      .filter((x): x is string => x !== null)
+      .sort();
     const poster = f.posterLink || '';
     if (!poster) continue;
     out.push({
@@ -37,6 +41,7 @@ export function parseCcScope(data: unknown, code: string, day: string): SeedCand
       externalId: `cinemacity-${f.id}-${code}-${day}`,
       title: f.name,
       startMs,
+      times,
       lat: cinema?.lat ?? null, lng: cinema?.lng ?? null,
       city: cinema?.city || '',
       venue: `Cinema City ${cinema?.name || code}`,

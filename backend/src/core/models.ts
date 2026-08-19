@@ -70,6 +70,7 @@ export interface StoryRow extends PostRow {
   author_avatar_key: string | null;
   watched?: number;
   disliked?: number;
+  showtimes?: string | null;
 }
 
 // Content category enum — NOT driven by is_sponsored (which is visual only).

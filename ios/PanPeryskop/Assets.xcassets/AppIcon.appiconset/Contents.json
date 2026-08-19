@@ -49,16 +49,19 @@
       "size" : "60x60"
     },
     {
+      "filename" : "icon_40.png",
       "idiom" : "ipad",
       "scale" : "2x",
       "size" : "20x20"
     },
     {
+      "filename" : "icon_58.png",
       "idiom" : "ipad",
       "scale" : "2x",
       "size" : "29x29"
     },
     {
+      "filename" : "icon_80.png",
       "idiom" : "ipad",
       "scale" : "2x",
       "size" : "40x40"

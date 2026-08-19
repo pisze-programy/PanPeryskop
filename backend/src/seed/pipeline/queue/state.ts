@@ -11,7 +11,7 @@ export interface CandRow {
   id: string; batch_id: string; external_id: string; provider: ProviderId; title: string; start_ms: number;
   lat: number | null; lng: number | null; city: string; venue: string; address: string;
   link: string; media_url: string | null; thumb_url: string | null;
-  status?: CandidateStatus; is_sold_out?: number; geo_ref?: string | null;
+  status?: CandidateStatus; is_sold_out?: number; geo_ref?: string | null; showtimes?: string | null;
 }
 
 export interface BatchRow {
@@ -75,5 +75,6 @@ export function toCandidate(row: CandRow, forDedupe = false): SeedCandidate {
     link: row.link, mediaUrl: row.media_url || '', thumbUrl: row.thumb_url,
     isSoldOut: row.is_sold_out === 1,
     geoRef: row.geo_ref || null,
+    times: row.showtimes ? (JSON.parse(row.showtimes) as string[]) : undefined,
   };
 }

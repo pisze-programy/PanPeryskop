@@ -159,6 +159,7 @@ export interface SeedEntry {
   status: string;
   post_id: string | null;
   error: string | null;
+  showtimes?: string[] | null;
 }
 export type EntryMap = Map<string, SeedEntry>;
 
@@ -250,6 +251,7 @@ export function entryFor(c: SeedCandidate & { lat: number; lng: number }, mediaR
     status: 'pending',
     post_id: null,
     error: null,
+    showtimes: c.times?.length ? c.times : null,
   };
 }
 

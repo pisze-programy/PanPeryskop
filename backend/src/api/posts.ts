@@ -112,9 +112,25 @@ postsRoutes.post('/', async (c) => {
     await c.env.MEDIA.put(thumbKey, thumbData, { httpMetadata: { contentType: thumbType } });
   }
 
+  // Optional structured showtimes (JSON array of "HH:MM") — seed-only; the app
+  // never sends it. Invalid values are rejected.
+  let showtimesJson: string | null = null;
+  const showtimesRaw = strField(form, 'showtimes');
+  if (showtimesRaw) {
+    let parsed: unknown;
+    try { parsed = JSON.parse(showtimesRaw); } catch { return c.json({ error: 'Invalid showtimes' }, 400); }
+    const times = Array.isArray(parsed)
+      ? parsed.filter((t): t is string => typeof t === 'string')
+      : null;
+    if (!times || times.length === 0 || times.length > 30 || !times.every((t) => /^\d{2}:\d{2}$/.test(t))) {
+      return c.json({ error: 'Invalid showtimes' }, 400);
+    }
+    showtimesJson = JSON.stringify(times);
+  }
+
   const result = await doSavePost(
     c.env, user, postId, type, lat, lng, description,
-    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate
+    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate, false, showtimesJson
   );
   return c.json(result, isUpdate ? 200 : 201);
 });
@@ -134,7 +150,8 @@ export async function doSavePost(
   linkUrl: string | null,
   externalId: string | null,
   isUpdate: boolean,
-  isSoldOut = false
+  isSoldOut = false,
+  showtimes: string | null = null
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
@@ -150,19 +167,19 @@ export async function doSavePost(
         `UPDATE posts
          SET type = ?, lat = ?, lng = ?, description = ?, media_key = ?, thumb_key = ?,
              is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?,
-             is_sold_out = ?, event_date = ?
+             is_sold_out = ?, event_date = ?, showtimes = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, eventDate, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, eventDate, showtimes, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date)
-         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes)
+         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate)
+      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes)
       .run();
     await db
       .prepare(
@@ -188,6 +205,7 @@ export async function doSavePost(
     external_id: externalId,
     is_sold_out: soldOut,
     event_date: eventDate,
+    showtimes: showtimes ? (JSON.parse(showtimes) as string[]) : null,
   };
 }
 

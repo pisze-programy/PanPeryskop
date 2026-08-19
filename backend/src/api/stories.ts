@@ -33,6 +33,7 @@ export interface StoryJson {
   link_url: string | null;
   is_sold_out: boolean;
   external_id: string | null;
+  showtimes: string[] | null;
   liked: boolean;
   disliked: boolean;
   watched: boolean;
@@ -68,6 +69,7 @@ function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): StoryJso
     link_url: r.link_url,
     is_sold_out: r.is_sold_out === 1,
     external_id: r.external_id,
+    showtimes: r.showtimes ? (JSON.parse(r.showtimes) as string[]) : null,
     liked: false,
     disliked: (r.disliked ?? 0) === 1,
     watched: (r.watched ?? 0) === 1,

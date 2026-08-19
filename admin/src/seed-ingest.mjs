@@ -143,6 +143,7 @@ async function upload(token, entry, media, createdAt) {
   form.append('is_sponsored', '1');
   if (entry.link) form.append('link_url', entry.link);
   form.append('external_id', entry.external_id);
+  if (entry.showtimes) form.append('showtimes', JSON.stringify(entry.showtimes));
   form.append('file', new Blob([media.file], { type: media.mime }), media.fileName);
   form.append('thumb', new Blob([media.thumb], { type: 'image/jpeg' }), 'thumb.jpg');
 

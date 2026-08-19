@@ -47,6 +47,10 @@ export function parseHeliosPayload(payload: HeliosPayload, cinemaId: number, day
     const entries = dayMap[key];
     const startMs = startMsFor(day, entries);
     if (startMs === null) continue;
+    const times = entries.screenings
+      .map((s) => { const m = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})/.exec(s.timeFrom || ''); return m ? `${m[2]}:${m[3]}` : null; })
+      .filter((x): x is string => x !== null)
+      .sort();
     const meta = key.startsWith('m') ? payload.movies?.[key] : payload.events?.[key];
     if (!meta) continue;
     const title = meta.title || meta.name;
@@ -59,6 +63,7 @@ export function parseHeliosPayload(payload: HeliosPayload, cinemaId: number, day
       externalId: `helios-${cinema.citySlug}-${cinema.slug}-${filmId}-${day}`,
       title,
       startMs,
+      times,
       lat: cinema.lat, lng: cinema.lng,
       city: cinema.city,
       venue: cinema.name,

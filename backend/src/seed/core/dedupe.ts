@@ -101,3 +101,16 @@ export function buildDescription(c: SeedCandidate): string {
   const loc = [c.venue, street].filter(Boolean).join(', ');
   return `${c.title}: ${hm}, ${loc}`.slice(0, 130);
 }
+
+export function hhmm(ms: number | null | undefined): string | null {
+  if (ms == null || Number.isNaN(ms)) return null;
+  return toWarsawIso(ms).slice(11, 16);
+}
+
+// Structured showtimes for the post: the candidate's full list when present,
+// otherwise a single entry from startMs. JSON array of "HH:MM" or null.
+export function showtimesJson(c: SeedCandidate): string | null {
+  if (c.times && c.times.length > 0) return JSON.stringify(c.times);
+  const hm = hhmm(c.startMs);
+  return hm ? JSON.stringify([hm]) : null;
+}

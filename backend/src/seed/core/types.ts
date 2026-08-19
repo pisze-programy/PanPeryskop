@@ -48,6 +48,9 @@ export interface SeedCandidate {
   isSoldOut?: boolean;
   /** Provider-specific reference for deferred geo resolution (e.g. kupbilecik obiekt id). */
   geoRef?: string | null;
+  /** All showtimes for the target day ("HH:MM", sorted). Cinema providers carry
+   *  every session; may be a single entry or empty when unknown. */
+  times?: string[];
 }
 
 export interface SeedProviderResult {

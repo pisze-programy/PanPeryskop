@@ -27,6 +27,7 @@ struct Post: Codable, Identifiable, Equatable {
     let category: String?
     let link_url: String?
     let is_sold_out: Bool?
+    let showtimes: [String]?
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lng)

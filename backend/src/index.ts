@@ -10,6 +10,7 @@ import {usersRoutes} from './api/users';
 import {clientErrorRoutes} from './api/clientErrors';
 import {mediaRequestsRoutes} from './api/mediaRequests';
 import {appleEventsRoutes} from './api/appleEvents';
+import {reportsRoutes} from './api/reports';
 import {runSeed, tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
 import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/pipeline/queue';
 import {pruneSeedData, watchdogSeedBatches} from './seed/pipeline/cleanup';
@@ -43,6 +44,7 @@ app.route('/admin', dashboardRoutes);
 app.route('/client', clientErrorRoutes);
 app.route('/media-requests', mediaRequestsRoutes);
 app.route('/apple', appleEventsRoutes);
+app.route('/reports', reportsRoutes);
 
 app.all('/media/*', async (c) => {
   const key = c.req.path.replace(/^\/media\//, '');

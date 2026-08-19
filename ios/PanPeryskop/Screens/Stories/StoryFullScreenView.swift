@@ -14,6 +14,7 @@ struct StoryFullScreenView: View {
     @State private var dislikedStates: [String: Bool] = [:]
     @State private var dislikesCounts: [String: Int] = [:]
     @State private var shareItem: ShareItem?
+    @State private var showReportDialog = false
     @State private var paused = false
     @State private var loadedIDs: Set<String> = []
 
@@ -71,6 +72,17 @@ struct StoryFullScreenView: View {
                                 .clipShape(Circle())
                         }
                         Spacer()
+                        Button {
+                            pausePlayback()
+                            showReportDialog = true
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 40, height: 40)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Circle())
+                        }
                     }
                     .padding(.horizontal, 16)
 
@@ -222,6 +234,16 @@ struct StoryFullScreenView: View {
             ActivityViewController(items: [item.text])
                 .onDisappear { resumePlayback() }
         }
+        .confirmationDialog("Zgłoś treść", isPresented: $showReportDialog, titleVisibility: .visible) {
+            Button("Spam") { reportPost(reason: "spam") }
+            Button("Przemoc") { reportPost(reason: "przemoc") }
+            Button("Nienawistna treść") { reportPost(reason: "nienawistna_tresc") }
+            Button("Nieodpowiednie treści") { reportPost(reason: "nieodpowiednie") }
+            Button("Inne") { reportPost(reason: "inne") }
+            Button("Anuluj", role: .cancel) { resumePlayback() }
+        } message: {
+            Text("Dlaczego zgłaszasz tę treść?")
+        }
     }
 
     private func pausePlayback() {
@@ -233,6 +255,24 @@ struct StoryFullScreenView: View {
         paused = false
         if currentPost.type != .video {
             photoTimer = startPhotoTimer()
+        }
+    }
+
+    /// Sends a content report to the admin moderation queue. Reports never
+    /// auto-block the content or the user — an admin decides.
+    @MainActor
+    private func reportPost(reason: String) {
+        let postId = currentPost.id
+        Task {
+            defer { resumePlayback() }
+            do {
+                struct ReportBody: Encodable { let reason: String }
+                struct ReportResponse: Decodable { let ok: Bool }
+                let _: ReportResponse = try await APIClient.post("/reports/posts/\(postId)/report", body: ReportBody(reason: reason))
+                ToastManager.shared.show("Dziękujemy za zgłoszenie")
+            } catch {
+                ToastManager.shared.show("Nie udało się wysłać zgłoszenia. Spróbuj ponownie.")
+            }
         }
     }
 

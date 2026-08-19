@@ -107,126 +107,14 @@ struct StoryFullScreenView: View {
 
                 VStack {
                     Spacer()
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 6) {
-                                if currentPost.is_sponsored == true {
-                                    Image(systemName: "megaphone.fill")
-                                        .font(.caption2)
-                                        .foregroundColor(.yellow)
-                                    Text("Sponsorowane")
-                                        .font(.caption)
-                                        .foregroundColor(.yellow)
-                                }
-                                if currentPost.is_sold_out == true {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.caption2)
-                                        .foregroundColor(.red)
-                                    Text("Wyprzedane")
-                                        .font(.caption)
-                                        .foregroundColor(.red)
-                                }
-                            }
-                            Text(currentPost.description)
-                                .font(.callout)
-                                .foregroundColor(.white)
-                            HStack(spacing: 6) {
-                                StoryAvatar(url: currentPost.author_avatar_url, size: 20)
-                                Text(currentPost.author_name)
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.7))
-                                Text("·")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.5))
-                                Text(StoryDateFormatter.format(currentPost.created_at))
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.5))
-                            }
-                            if currentPost.is_sponsored == true,
-                               let link = currentPost.link_url,
-                               let url = URL(string: link) {
-                                Button {
-                                    UIApplication.shared.open(url)
-                                } label: {
-                                    Label("Więcej informacji", systemImage: "arrow.up.right.square")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(.ultraThinMaterial)
-                                        .clipShape(Capsule())
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        Spacer()
-                        VStack(spacing: 20) {
-                            let liked = likedStates[currentPost.id] ?? currentPost.liked
-                            FaveLikeButton(isLiked: liked) { newValue in
-                                if newValue { Haptics.explosion() }
-                                Task {
-                                    let result = await viewModel.toggleLike(currentPost.id)
-                                    likedStates[currentPost.id] = result
-                                }
-                            }
-                            let disliked = dislikedStates[currentPost.id] ?? currentPost.disliked
-                            let dislikeCount = dislikesCounts[currentPost.id] ?? currentPost.dislikes_count
-                            Button {
-                                Haptics.impact(.light)
-                                let base = dislikeCount
-                                Task {
-                                    let result = await viewModel.toggleDislike(currentPost.id)
-                                    dislikedStates[currentPost.id] = result
-                                    dislikesCounts[currentPost.id] = max(0, base + (result ? 1 : -1))
-                                }
-                            } label: {
-                                VStack(spacing: 4) {
-                                    Image(systemName: disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                                        .font(.system(size: 26, weight: .semibold))
-                                        .foregroundColor(disliked ? .red : .white)
-                                    if dislikeCount > 0 {
-                                        Text("\(dislikeCount)")
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .frame(width: 56, height: 56)
-                                .contentShape(Circle())
-                            }
-                            .buttonStyle(.plain)
-                            Button {
-                                Haptics.impact(.light)
-                                pausePlayback()
-                                Task { await viewModel.sharePost(currentPost.id) }
-                                shareItem = ShareItem(
-                                    id: currentPost.id,
-                                    text: "\(DeepLink.scheme)://\(DeepLink.host)/\(currentPost.id)"
-                                )
-                            } label: {
-                                VStack(spacing: 4) {
-                                    Image(systemName: "arrowshape.turn.up.right.fill")
-                                        .font(.system(size: 26, weight: .semibold))
-                                        .foregroundColor(.white)
-                                    if currentPost.shares_count > 0 {
-                                        Text("\(currentPost.shares_count)")
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .frame(width: 56, height: 56)
-                                .contentShape(Circle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.vertical, 14)
-                        .padding(.horizontal, 10)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
-                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-                        .hidden()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 80)
+                    bottomInfoCard
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+                .overlay(alignment: .bottomTrailing) {
+                    actionCapsule
+                        .padding(.trailing, 24)
+                        .padding(.bottom, 56)
                 }
                 .background(alignment: .bottom) {
                     StoryBlurBar(bottomFade: false)
@@ -239,7 +127,7 @@ struct StoryFullScreenView: View {
             ActivityViewController(items: [item.text])
                 .onDisappear { resumePlayback() }
         }
-        .confirmationDialog("Zgłosić treść?", isPresented: $showReportDialog, titleVisibility: .visible) {
+        .alert("Zgłosić treść?", isPresented: $showReportDialog) {
             Button("Zgłaszam", role: .destructive) { reportPost(reason: "inne") }
             Button("Anuluj", role: .cancel) { resumePlayback() }
         } message: {
@@ -275,6 +163,178 @@ struct StoryFullScreenView: View {
                 ToastManager.shared.show("Nie udało się wysłać zgłoszenia. Spróbuj ponownie.")
             }
         }
+    }
+
+    // MARK: - Bottom info cards
+
+    /// Shared bottom card (events + live, same layout): blur background, title on top
+    /// (events only), left = date + flip-clock (event start time or live publish time),
+    /// right = venue + link (events) or avatar + nickname (live).
+    private var bottomInfoCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            badgesRow
+
+            if currentPost.isEvent {
+                Text(currentPost.eventInfo.title)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+            }
+
+            HStack(alignment: .bottom, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(EventDateFormatter.eventDay(currentPost.created_at))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .textCase(.uppercase)
+                        .foregroundColor(.secondary)
+                    FlipClockTime(time: clockTime)
+                }
+
+                if currentPost.isEvent {
+                    eventDetails
+                } else {
+                    liveAuthor
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.25), lineWidth: 0.5)
+        )
+    }
+
+    /// Flip-clock value: event start time (from description, `--:--` if unknown) or
+    /// the live post's publish time.
+    private var clockTime: String {
+        if currentPost.isEvent {
+            return currentPost.eventInfo.time ?? "--:--"
+        }
+        return EventDateFormatter.time(currentPost.created_at)
+    }
+
+    /// Events: venue above the link; both bottom-aligned with the flip-clock.
+    private var eventDetails: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let venue = currentPost.eventInfo.venue {
+                Label(venue, systemImage: "mappin.and.ellipse")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+            if let link = currentPost.link_url, let url = URL(string: link) {
+                Button {
+                    UIApplication.shared.open(url)
+                } label: {
+                    Label("Strona wydarzenia", systemImage: "arrow.up.right")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.blue)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// Live: avatar + nickname, bottom-aligned with the flip-clock.
+    private var liveAuthor: some View {
+        HStack(spacing: 8) {
+            StoryAvatar(url: currentPost.author_avatar_url, size: 32)
+            Text(currentPost.author_name)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+        }
+    }
+
+    private var badgesRow: some View {
+        HStack(spacing: 6) {
+            if currentPost.is_sponsored == true {
+                Label("Sponsorowane", systemImage: "megaphone.fill")
+                    .font(.caption2)
+                    .foregroundColor(.orange)
+            }
+            if currentPost.is_sold_out == true {
+                Label("Wyprzedane", systemImage: "xmark.circle.fill")
+                    .font(.caption2)
+                    .foregroundColor(.red)
+            }
+        }
+    }
+
+    /// Like / Dislike / Share capsule — kept in the hierarchy but hidden until the
+    /// UI is reworked (rendered as an overlay so the info card stays full-width).
+    private var actionCapsule: some View {
+        VStack(spacing: 20) {
+            let liked = likedStates[currentPost.id] ?? currentPost.liked
+            FaveLikeButton(isLiked: liked) { newValue in
+                if newValue { Haptics.explosion() }
+                Task {
+                    let result = await viewModel.toggleLike(currentPost.id)
+                    likedStates[currentPost.id] = result
+                }
+            }
+            let disliked = dislikedStates[currentPost.id] ?? currentPost.disliked
+            let dislikeCount = dislikesCounts[currentPost.id] ?? currentPost.dislikes_count
+            Button {
+                Haptics.impact(.light)
+                let base = dislikeCount
+                Task {
+                    let result = await viewModel.toggleDislike(currentPost.id)
+                    dislikedStates[currentPost.id] = result
+                    dislikesCounts[currentPost.id] = max(0, base + (result ? 1 : -1))
+                }
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundColor(disliked ? .red : .white)
+                    if dislikeCount > 0 {
+                        Text("\(dislikeCount)")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                    }
+                }
+                .frame(width: 56, height: 56)
+                .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            Button {
+                Haptics.impact(.light)
+                pausePlayback()
+                Task { await viewModel.sharePost(currentPost.id) }
+                shareItem = ShareItem(
+                    id: currentPost.id,
+                    text: "\(DeepLink.scheme)://\(DeepLink.host)/\(currentPost.id)"
+                )
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "arrowshape.turn.up.right.fill")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundColor(.white)
+                    if currentPost.shares_count > 0 {
+                        Text("\(currentPost.shares_count)")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                    }
+                }
+                .frame(width: 56, height: 56)
+                .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 14)
+        .padding(.horizontal, 10)
+        .background(.ultraThinMaterial)
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+        .hidden()
     }
 
     private var currentPost: Post {
@@ -619,5 +679,84 @@ enum StoryDateFormatter {
 
     static func format(_ ms: Int64) -> String {
         formatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
+    }
+}
+
+/// Event day (the seed anchor is 06:00 Europe/Warsaw of the event date) — shown
+/// as a small label above the flip-clock time.
+enum EventDateFormatter {
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "pl_PL")
+        f.timeZone = TimeZone(identifier: "Europe/Warsaw")
+        f.dateFormat = "EEE d MMM"
+        return f
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "pl_PL")
+        f.timeZone = TimeZone(identifier: "Europe/Warsaw")
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    static func eventDay(_ ms: Int64) -> String {
+        dayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000)).uppercased()
+    }
+
+    static func time(_ ms: Int64) -> String {
+        timeFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
+    }
+}
+
+/// Retro split-flap style time ("HH:MM" or "--:--") — dark panels, white monospaced
+/// digits, a hinge seam down the middle. Static look (no flip animation). Stretches
+/// vertically to match the neighbouring text column.
+struct FlipClockTime: View {
+    let time: String
+
+    var body: some View {
+        HStack(spacing: 5) {
+            FlipClockDigit(text: String(time.prefix(1)))
+            FlipClockDigit(text: String(time.dropFirst(1).prefix(1)))
+            colon
+            FlipClockDigit(text: String(time.dropFirst(3).prefix(1)))
+            FlipClockDigit(text: String(time.suffix(1)))
+        }
+    }
+
+    private var colon: some View {
+        VStack(spacing: 7) {
+            Circle().fill(Color(red: 0.12, green: 0.13, blue: 0.15)).frame(width: 5, height: 5)
+            Circle().fill(Color(red: 0.12, green: 0.13, blue: 0.15)).frame(width: 5, height: 5)
+        }
+        .padding(.horizontal, 2)
+    }
+}
+
+struct FlipClockDigit: View {
+    let text: String
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color(red: 0.12, green: 0.13, blue: 0.15))
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.07))
+                Rectangle()
+                    .fill(Color.black.opacity(0.5))
+                    .frame(height: 1)
+                Rectangle()
+                    .fill(Color.black.opacity(0.18))
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            Text(text)
+                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundColor(.white)
+        }
+        .frame(width: 30, height: 50)
     }
 }

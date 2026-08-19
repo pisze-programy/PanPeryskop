@@ -36,6 +36,29 @@ struct Post: Codable, Identifiable, Equatable {
     /// or hides them. Live stays one-time.
     var isEvent: Bool { category == "events" }
 
+    /// Seed events encode `Tytuł: HH:MM, Lokalizacja` in the description — parse it
+    /// for the calendar/timer panel. `00:00` means the start time is unknown.
+    var eventInfo: EventInfo {
+        let pattern = #"^(.+?):\s*(\d{1,2}):(\d{2}),\s*(.+)$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return EventInfo(title: description, time: nil, venue: nil)
+        }
+        let ns = description as NSString
+        if let m = regex.firstMatch(in: description, range: NSRange(location: 0, length: ns.length)) {
+            let title = ns.substring(with: m.range(at: 1)).trimmingCharacters(in: .whitespaces)
+            let hh = Int(ns.substring(with: m.range(at: 2))) ?? 0
+            let mm = Int(ns.substring(with: m.range(at: 3))) ?? 0
+            let venue = ns.substring(with: m.range(at: 4)).trimmingCharacters(in: .whitespaces)
+            let time = String(format: "%02d:%02d", hh, mm)
+            return EventInfo(
+                title: title.isEmpty ? description : title,
+                time: time == "00:00" ? nil : time,
+                venue: venue.isEmpty ? nil : venue
+            )
+        }
+        return EventInfo(title: description, time: nil, venue: nil)
+    }
+
     static let ttlMs: Int64 = 24 * 3_600_000
 
     /// Server-side visibility window: [created_at, created_at + 24h].
@@ -87,6 +110,13 @@ struct Post: Codable, Identifiable, Equatable {
 
 struct PostListResponse: Codable {
     let stories: [Post]
+}
+
+/// Parsed seed-event details (from the `Tytuł: HH:MM, Lokalizacja` description).
+struct EventInfo {
+    let title: String
+    let time: String?
+    let venue: String?
 }
 
 struct CreatePostResponse: Codable {

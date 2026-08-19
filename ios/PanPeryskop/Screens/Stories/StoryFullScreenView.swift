@@ -72,9 +72,13 @@ struct StoryFullScreenView: View {
                                 .clipShape(Circle())
                         }
                         Spacer()
-                        Button {
-                            pausePlayback()
-                            showReportDialog = true
+                        Menu {
+                            Button {
+                                pausePlayback()
+                                showReportDialog = true
+                            } label: {
+                                Label("Zgłoś", systemImage: "flag")
+                            }
                         } label: {
                             Image(systemName: "ellipsis")
                                 .font(.system(size: 20, weight: .semibold))
@@ -235,15 +239,11 @@ struct StoryFullScreenView: View {
             ActivityViewController(items: [item.text])
                 .onDisappear { resumePlayback() }
         }
-        .confirmationDialog("Zgłoś treść", isPresented: $showReportDialog, titleVisibility: .visible) {
-            Button("Spam") { reportPost(reason: "spam") }
-            Button("Przemoc") { reportPost(reason: "przemoc") }
-            Button("Nienawistna treść") { reportPost(reason: "nienawistna_tresc") }
-            Button("Nieodpowiednie treści") { reportPost(reason: "nieodpowiednie") }
-            Button("Inne") { reportPost(reason: "inne") }
+        .confirmationDialog("Zgłosić treść?", isPresented: $showReportDialog, titleVisibility: .visible) {
+            Button("Zgłaszam", role: .destructive) { reportPost(reason: "inne") }
             Button("Anuluj", role: .cancel) { resumePlayback() }
         } message: {
-            Text("Dlaczego zgłaszasz tę treść?")
+            Text("Treść trafi do weryfikacji moderatora.")
         }
     }
 

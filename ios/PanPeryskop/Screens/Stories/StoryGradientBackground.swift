@@ -1,5 +1,23 @@
 import SwiftUI
 
+/// Renders a 1x1 MeshGradient at launch so SwiftUI compiles the Metal shader once,
+/// off the story-open path — the first MeshGradient render causes a cold-start
+/// hitch, so we warm the shader cache up front.
+struct MeshGradientWarmup: View {
+    var body: some View {
+        MeshGradient(
+            width: 2,
+            height: 2,
+            points: [[0, 0], [1, 0], [0, 1], [1, 1]],
+            colors: [.black, .black, .black, .black]
+        )
+        .frame(width: 1, height: 1)
+        .clipped()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
 /// Random mesh-gradient seed — generated once per preview open and kept in
 /// `@State` by the caller, so the backdrop never changes while viewing or when
 /// switching stories. 2–3 cool hues in a given range, low opacity.

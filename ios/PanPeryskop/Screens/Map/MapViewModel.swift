@@ -264,7 +264,20 @@ class MapViewModel: ObservableObject {
     }
 
     func viewerPosts(for clicked: Post, in bbox: MapBBox) -> [Post] {
-        [clicked] + visiblePosts(in: bbox).filter { $0.id != clicked.id }
+        [clicked] + visiblePosts(in: previewBBox(around: clicked, in: bbox)).filter { $0.id != clicked.id }
+    }
+
+    /// Shrinks the viewport around the tapped post so the story preview only queues
+    /// nearby pins — posts at/near the screen edges stay out of the queue.
+    func previewBBox(around post: Post, in viewport: MapBBox) -> MapBBox {
+        let latDelta = min(max((viewport.neLat - viewport.swLat) * 0.35, 0.004), 0.035)
+        let lngDelta = min(max((viewport.neLng - viewport.swLng) * 0.35, 0.004), 0.035)
+        return MapBBox(
+            swLat: post.lat - latDelta / 2,
+            swLng: post.lng - lngDelta / 2,
+            neLat: post.lat + latDelta / 2,
+            neLng: post.lng + lngDelta / 2
+        )
     }
 
     func viewerPosts(forCluster clusterPosts: [Post], in bbox: MapBBox) -> [Post] {

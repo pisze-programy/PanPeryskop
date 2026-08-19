@@ -25,6 +25,19 @@ struct DaySliderView: View {
     @State private var lastTickOffset: CGFloat = 0
     @State private var lastTickIndex = -2
     @State private var lastDragDelta: CGFloat = 0
+    @State private var lastRawOffset: CGFloat = 0
+
+    /// Absolute positions of the minor graduations (0.25 / 0.5 / 0.75 between days) —
+    /// used to fire a soft haptic when the drag crosses a sub-step.
+    private static let minorSteps: Set<CGFloat> = {
+        var out = Set<CGFloat>()
+        for m in minDay...(maxDay - 1) {
+            for k in 1...minorDivisions {
+                out.insert(CGFloat(m) + CGFloat(k) / CGFloat(minorDivisions + 1))
+            }
+        }
+        return out
+    }()
 
     private var clampedOffset: CGFloat {
         min(max(offset, CGFloat(Self.minDay)), CGFloat(Self.maxDay))
@@ -76,7 +89,9 @@ struct DaySliderView: View {
 
     private func y(for pos: CGFloat, centerY: CGFloat) -> CGFloat {
         // Down = next days: future (pos > selection) renders below the center.
-        centerY + (pos - clampedOffset) * Self.spacing
+        // Uses the raw (unclamped) offset so the rail visibly overruns past the
+        // range ends during a drag; it only snaps back to the range on release.
+        centerY + (pos - offset) * Self.spacing
     }
 
     private var wheel: some View {
@@ -132,12 +147,24 @@ struct DaySliderView: View {
                     dragStartOffset = clampedOffset
                     lastTickOffset = clampedOffset
                     lastTickIndex = Int(clampedOffset.rounded())
+                    lastRawOffset = clampedOffset
                 }
                 lastDragDelta = value.translation.height
                 // Natural scroll: dragging UP (finger up) → next days; DOWN → back to today.
                 let raw = dragStartOffset - value.translation.height / Self.spacing
                 let clamped = min(max(raw, CGFloat(Self.minDay)), CGFloat(Self.maxDay))
-                offset = clamped
+                // Unclamped during the drag — the rail overruns past the ends and
+                // only snaps back to the valid range on release (onEnded).
+                offset = raw
+
+                // Minor graduation crossings — a soft tick for every crossed sub-step.
+                let prevRaw = lastRawOffset
+                lastRawOffset = raw
+                let lo = min(prevRaw, raw), hi = max(prevRaw, raw)
+                var crossed = 0
+                for p in Self.minorSteps where p > lo && p < hi { crossed += 1 }
+                if crossed > 0 { Haptics.sliderMinor(steps: crossed) }
+
                 let newIndex = Int(clamped.rounded())
                 if raw != clamped {
                     // Pushed past a wall — boundary haptic (throttled inside Haptics).
@@ -146,7 +173,7 @@ struct DaySliderView: View {
                     let jump = abs(clamped - lastTickOffset)
                     lastTickOffset = clamped
                     lastTickIndex = newIndex
-                    Haptics.sliderTick(intensity: 0.4 + min(0.6, jump * 0.25))
+                    Haptics.sliderTick(intensity: 0.9 + min(0.1, jump * 0.3))
                 }
             }
             .onEnded { _ in

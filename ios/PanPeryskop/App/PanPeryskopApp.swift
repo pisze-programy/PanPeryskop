@@ -38,6 +38,7 @@ struct PanPeryskopApp: App {
                         .environmentObject(authManager)
                 }
             }
+            .background(MeshGradientWarmup())
             .onOpenURL { url in
                 if let id = DeepLink.storyId(from: url) {
                     pendingStoryId = id

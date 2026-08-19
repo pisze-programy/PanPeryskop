@@ -46,7 +46,7 @@ struct MapKitMapView: View {
     }
 
     private static let pitchDegrees: Double = 60
-    private static let maxDistance: CLLocationDistance = 20_000
+    private static let maxDistance: CLLocationDistance = 40_000
 
     private static func cameraDistance(for region: MKCoordinateRegion) -> CLLocationDistance {
         let meters = region.span.latitudeDelta * 111_320

@@ -66,10 +66,13 @@ enum Haptics {
     // UIImpactFeedbackGenerator faster than the system allows makes iOS silently
     // drop haptics (a known bug during fast slider drags) — the throttle prevents it.
 
-    private static let sliderGenerator = UIImpactFeedbackGenerator(style: .light)
+    private static let sliderGenerator = UIImpactFeedbackGenerator(style: .rigid)
     private static let rigidGenerator = UIImpactFeedbackGenerator(style: .rigid)
+    private static let minorGenerator = UIImpactFeedbackGenerator(style: .medium)
     private static var lastSliderFire: TimeInterval = 0
+    private static var lastMinorFire: TimeInterval = 0
     private static let sliderMinInterval: TimeInterval = 0.07
+    private static let minorMinInterval: TimeInterval = 0.03
 
     /// Detent haptic per tick, intensity scales with how far the drag jumped
     /// (fast drags feel stronger).
@@ -79,6 +82,18 @@ enum Haptics {
         guard now - lastSliderFire >= sliderMinInterval else { return }
         lastSliderFire = now
         sliderGenerator.impactOccurred(intensity: min(max(intensity, 0), 1))
+    }
+
+    /// Soft detent fired when the drag crosses a minor graduation (the thin ticks
+    /// between days) — so the user feels each sub-step, not just whole days.
+    static func sliderMinor(steps: Int = 1) {
+        guard isEnabled else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        for _ in 0..<steps {
+            guard now - lastMinorFire >= minorMinInterval else { return }
+            lastMinorFire = now
+            minorGenerator.impactOccurred(intensity: 0.85)
+        }
     }
 
     /// "Wall" haptic fired when the user drags past the range at either end.

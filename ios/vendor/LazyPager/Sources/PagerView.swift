@@ -88,7 +88,7 @@ class PagerView<Element, Loader: ViewLoader, Content: View>: UIScrollView, UIScr
         showsVerticalScrollIndicator = false
         showsHorizontalScrollIndicator = false
         backgroundColor = .clear
-        decelerationRate = .fast
+        decelerationRate = .normal
         delegate = self
         contentInsetAdjustmentBehavior = .always
         alwaysBounceVertical = true
@@ -468,7 +468,7 @@ class PagerView<Element, Loader: ViewLoader, Content: View>: UIScrollView, UIScr
     public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
         
         let targetPage: CGFloat
-        let velocityThreshold: CGFloat = 0.5 // a value to tune
+        let velocityThreshold: CGFloat = 0.3 // weaker swipes still change page
         
         if config.direction == .horizontal {
             let currentRelativePage = scrollView.contentOffset.x / pageWidth
@@ -482,7 +482,6 @@ class PagerView<Element, Loader: ViewLoader, Content: View>: UIScrollView, UIScr
                 // No strong swipe, snap to nearest
                 targetPage = round(currentRelativePage)
             }
-            targetContentOffset.pointee.x = targetPage * pageWidth
         } else {
             let currentRelativePage = scrollView.contentOffset.y / pageHeight
             if velocity.y > velocityThreshold {
@@ -492,7 +491,15 @@ class PagerView<Element, Loader: ViewLoader, Content: View>: UIScrollView, UIScr
             } else {
                 targetPage = round(currentRelativePage)
             }
-            targetContentOffset.pointee.y = targetPage * pageHeight
+        }
+        // Clamp so the snap never lands between/outside pages — the overscroll
+        // callback (during the drag) still handles exiting at the edges.
+        let maxPage = CGFloat((viewLoader?.dataCount ?? 1) - 1)
+        let clamped = min(max(targetPage, 0), max(0, maxPage))
+        if config.direction == .horizontal {
+            targetContentOffset.pointee.x = clamped * pageWidth
+        } else {
+            targetContentOffset.pointee.y = clamped * pageHeight
         }
     }
     

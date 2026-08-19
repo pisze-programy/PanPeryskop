@@ -1,6 +1,5 @@
 import SwiftUI
 import AVKit
-import LazyPager
 struct StoryFullScreenView: View {
     let posts: [Post]
     let startIndex: Int
@@ -20,46 +19,51 @@ struct StoryFullScreenView: View {
     /// Random gradient generated once per preview open — stable while viewing.
     @State private var backgroundSeed = StoryGradientSeed.random()
 
+    @State private var isPressing = false
+    @State private var pressStart = Date()
+    /// +1 = next (new page swings in from the right), -1 = prev (mirror).
+    @State private var flipDirection: Double = 1
+    /// What is currently rendered; updated at the flip midpoint (swap).
+    @State private var displayIndex: Int
+    /// Manual page-turn rotation: 0 = flat, ±90 = edge-on; driven per navigation so
+    /// rapid direction changes can't desync the animation.
+    @State private var rotation: Double = 0
+    @State private var flipTask: Task<Void, Never>?
+
+    private static let longPressDuration: TimeInterval = 0.4
+    private static let flipDuration: Double = 0.35
+
     init(posts: [Post], startIndex: Int, isPresented: Binding<Bool>, viewModel: MapViewModel) {
         self.posts = posts
         self.startIndex = startIndex
         self._isPresented = isPresented
         self.viewModel = viewModel
         self._currentIndex = State(initialValue: startIndex)
+        self._displayIndex = State(initialValue: startIndex)
     }
 
     var body: some View {
         ZStack {
             StoryMeshGradient(seed: backgroundSeed)
 
-            LazyPager(data: posts, page: $currentIndex, direction: .vertical) { post in
-                StoryContent(
-                    post: post,
-                    isActive: post.id == currentPost.id,
-                    paused: $paused,
-                    onLoaded: { loadedIDs.insert($0.id) },
-                    onFinished: { handleStoryFinished(post) },
-                    onProgress: { fraction in
-                        if post.id == currentPost.id { progressFraction = fraction }
-                    }
-                )
-            }
-            .settings { $0.preloadAmount = 1; $0.overscrollThreshold = 0.05 }
-            .onPress(
-                started: { pausePlayback() },
-                ended: { resumePlayback() }
-            )
-            .overscroll { position in
-                if position == .beginning, currentIndex == 0 {
-                    exitViewer()
-                } else if position == .end, currentIndex == posts.count - 1 {
-                    exitViewer()
+            GeometryReader { geo in
+                ZStack {
+                    StoryContent(
+                        post: displayedPost,
+                        isActive: true,
+                        paused: $paused,
+                        onLoaded: { loadedIDs.insert($0.id) },
+                        onFinished: { handleStoryFinished(displayedPost) },
+                        onProgress: { progressFraction = $0 }
+                    )
+                    .id(displayedPost.id)
+                    .modifier(PageTurnModifier(rotation: rotation, direction: flipDirection))
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .gesture(navigationGesture(width: geo.size.width))
             }
             .ignoresSafeArea()
-            .onChange(of: currentIndex) { oldIdx, newIdx in
-                handlePageChange(old: oldIdx, new: newIdx)
-            }
 
             VStack {
                 HStack {
@@ -77,7 +81,11 @@ struct StoryFullScreenView: View {
                         Menu {
                             Button {
                                 pausePlayback()
-                                showReportDialog = true
+                                // Defer until the menu has fully dismissed — presenting
+                                // an alert straight from a Menu item is flaky on iOS.
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                    showReportDialog = true
+                                }
                             } label: {
                                 Label("Zgłoś", systemImage: "flag")
                             }
@@ -101,7 +109,7 @@ struct StoryFullScreenView: View {
                     .padding(.top, 16)
                     Spacer()
                 }
-                .padding(.top, 56)
+                .padding(.top, topSafeAreaInset + 12)
                 .background(alignment: .top) {
                     StoryBlurBar(bottomFade: true)
                         .frame(height: 190)
@@ -231,6 +239,15 @@ struct StoryFullScreenView: View {
             .compactMap { $0 as? UIWindowScene }
             .flatMap { $0.windows }
             .first { $0.isKeyWindow }?.safeAreaInsets.bottom ?? 0
+    }
+
+    /// Status-bar / Dynamic Island inset — the top bar (and its ··· Menu) must sit
+    /// below it so the dropdown anchors in a tappable region.
+    private var topSafeAreaInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }?.safeAreaInsets.top ?? 0
     }
 
     /// Flip-clock value: the first structured showtime, else the event start time
@@ -364,8 +381,11 @@ struct StoryFullScreenView: View {
     }
 
     private var currentPost: Post {
-        posts.indices.contains(currentIndex) ? posts[currentIndex] : posts[0]
+        posts.indices.contains(displayIndex) ? posts[displayIndex] : posts[0]
     }
+
+    /// The post currently rendered (the flip midpoint swaps displayIndex).
+    private var displayedPost: Post { currentPost }
 
     private func mediaURL(for post: Post) -> URL? {
         if let url = post.media_url { return URL(string: url) }
@@ -396,15 +416,77 @@ struct StoryFullScreenView: View {
         advanceOrExit()
     }
 
-    private func handlePageChange(old: Int, new: Int) {
+    private func navigate(to newIndex: Int) {
+        guard newIndex != displayIndex, posts.indices.contains(newIndex) else { return }
+        let old = displayIndex
+        flipTask?.cancel()
         photoTimer?.cancel()
         progressFraction = 0
         paused = false
-        if old < new { markSeen(old) }
-        let nxt = posts.indices.contains(new) ? posts[new] : nil
-        if nxt?.type == .photo {
-            photoTimer = startPhotoTimer()
+        markSeen(old)
+        currentIndex = newIndex
+        flipDirection = newIndex > old ? 1 : -1
+
+        // Page turn: rotate the current page to the edge, swap at the midpoint,
+        // then unfold the new page from the opposite edge — always in the correct
+        // direction, regardless of rapid direction changes.
+        withAnimation(.easeInOut(duration: Self.flipDuration)) {
+            rotation = 90 * flipDirection
         }
+        flipTask = Task {
+            try? await Task.sleep(nanoseconds: UInt64(Self.flipDuration / 2 * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                displayIndex = newIndex
+                rotation = -90 * flipDirection
+                if currentPost.type == .photo { photoTimer = startPhotoTimer() }
+                withAnimation(.easeInOut(duration: Self.flipDuration)) { rotation = 0 }
+            }
+        }
+    }
+
+    private func goNext() {
+        Haptics.impact(.rigid)
+        if currentIndex + 1 < posts.count {
+            flipDirection = 1
+            navigate(to: currentIndex + 1)
+        } else {
+            exitViewer()
+        }
+    }
+
+    private func goPrev() {
+        Haptics.impact(.medium)
+        if currentIndex - 1 >= 0 {
+            flipDirection = -1
+            navigate(to: currentIndex - 1)
+        } else {
+            exitViewer()
+        }
+    }
+
+    /// Tap zones: left/right thirds navigate; a long press pauses playback and its
+    /// release never navigates — only a quick tap does.
+    private func navigationGesture(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { _ in
+                if !isPressing {
+                    isPressing = true
+                    pressStart = Date()
+                    pausePlayback()
+                }
+            }
+            .onEnded { value in
+                isPressing = false
+                let duration = Date().timeIntervalSince(pressStart)
+                resumePlayback()
+                guard duration < Self.longPressDuration else { return }
+                if value.location.x < width * 0.35 {
+                    goPrev()
+                } else if value.location.x > width * 0.65 {
+                    goNext()
+                }
+            }
     }
 
     private func markSeen(_ index: Int) {
@@ -415,15 +497,35 @@ struct StoryFullScreenView: View {
     }
 
     private func advanceOrExit() {
-        let hasMore = currentIndex + 1 < posts.count
-        if hasMore { currentIndex += 1 }
-        else { exitViewer() }
+        if currentIndex + 1 < posts.count {
+            flipDirection = 1
+            navigate(to: currentIndex + 1)
+        } else {
+            exitViewer()
+        }
     }
 
     private func exitViewer() {
         markSeen(currentIndex)
         photoTimer?.cancel()
         isPresented = false
+    }
+}
+
+/// Manual page-turn rotation for the story media: the page folds to the edge
+/// (0 → ±90), swaps at the midpoint, then unfolds from the opposite edge (∓90 → 0).
+/// The anchor flips with the direction so the turn always reads correctly.
+struct PageTurnModifier: ViewModifier {
+    let rotation: Double
+    let direction: Double
+
+    func body(content: Content) -> some View {
+        let anchor: UnitPoint = direction > 0
+            ? (rotation > 0 ? .leading : .trailing)
+            : (rotation > 0 ? .trailing : .leading)
+        return content
+            .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0), anchor: anchor, perspective: 0.5)
+            .shadow(color: .black.opacity(abs(rotation) > 1 ? 0.35 : 0), radius: 10, x: 0, y: 0)
     }
 }
 
@@ -434,7 +536,6 @@ struct StoryContent: View {
     let onLoaded: (Post) -> Void
     let onFinished: () -> Void
     let onProgress: (Double) -> Void
-
     @State private var showThumb = true
 
     var body: some View {

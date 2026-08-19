@@ -13,7 +13,7 @@ struct City: Identifiable, Hashable {
         name: String,
         lat: Double,
         lng: Double,
-        span: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        span: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0.10, longitudeDelta: 0.10)
     ) {
         self.id = id
         self.name = name

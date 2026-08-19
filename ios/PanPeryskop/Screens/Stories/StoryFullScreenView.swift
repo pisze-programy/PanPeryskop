@@ -21,17 +21,19 @@ struct StoryFullScreenView: View {
 
     @State private var isPressing = false
     @State private var pressStart = Date()
-    /// +1 = next (new page swings in from the right), -1 = prev (mirror).
-    @State private var flipDirection: Double = 1
-    /// What is currently rendered; updated at the flip midpoint (swap).
+    /// What is currently rendered; updated at the slide midpoint (swap).
     @State private var displayIndex: Int
-    /// Manual page-turn rotation: 0 = flat, ±90 = edge-on; driven per navigation so
-    /// rapid direction changes can't desync the animation.
-    @State private var rotation: Double = 0
+    /// Manual horizontal slide offset: current page slides out to the edge, the new
+    /// one slides in from the opposite edge. Always correct across rapid direction
+    /// changes.
+    @State private var slideOffset: CGFloat = 0
+    @State private var slideWidth: CGFloat = 400
     @State private var flipTask: Task<Void, Never>?
 
     private static let longPressDuration: TimeInterval = 0.4
-    private static let flipDuration: Double = 0.35
+    private static let flipDuration: Double = 0.1
+    /// Fraction of the screen width the story travels on next/prev — short, snappy.
+    private static let slideFraction: CGFloat = 0.35
 
     init(posts: [Post], startIndex: Int, isPresented: Binding<Bool>, viewModel: MapViewModel) {
         self.posts = posts
@@ -50,24 +52,27 @@ struct StoryFullScreenView: View {
                 ZStack {
                     StoryContent(
                         post: displayedPost,
-                        isActive: true,
+                        isActive: slideOffset == 0,
                         paused: $paused,
                         onLoaded: { loadedIDs.insert($0.id) },
                         onFinished: { handleStoryFinished(displayedPost) },
                         onProgress: { progressFraction = $0 }
                     )
                     .id(displayedPost.id)
-                    .modifier(PageTurnModifier(rotation: rotation, direction: flipDirection))
+                    .transition(.identity)
+                    .modifier(StorySlideModifier(offset: slideOffset))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .gesture(navigationGesture(width: geo.size.width))
+                .onAppear { slideWidth = geo.size.width }
             }
             .ignoresSafeArea()
 
             VStack {
                 HStack {
                     Button {
+                        Haptics.selection()
                         exitViewer()
                     } label: {
                             Image(systemName: "chevron.left")
@@ -97,6 +102,7 @@ struct StoryFullScreenView: View {
                                 .background(.ultraThinMaterial)
                                 .clipShape(Circle())
                         }
+                        .simultaneousGesture(TapGesture().onEnded { Haptics.selection() })
                     }
                     .padding(.horizontal, 16)
 
@@ -201,8 +207,18 @@ struct StoryFullScreenView: View {
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity)
                     if let times = currentPost.showtimes, times.count > 1 {
-                        ShowtimesPager(times: times)
-                            .id(currentPost.id)
+                        ShowtimesPager(times: times) { interacting in
+                            if interacting {
+                                // User is checking showtimes — hold the story timer.
+                                pausePlayback()
+                            } else {
+                                // Done: reset so the story doesn't auto-advance.
+                                photoTimer?.cancel()
+                                progressFraction = 0
+                                resumePlayback()
+                            }
+                        }
+                        .id(currentPost.id)
                     } else {
                         FlipClockTime(time: clockTime)
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -425,22 +441,24 @@ struct StoryFullScreenView: View {
         paused = false
         markSeen(old)
         currentIndex = newIndex
-        flipDirection = newIndex > old ? 1 : -1
+        let direction: CGFloat = newIndex > old ? 1 : -1
 
-        // Page turn: rotate the current page to the edge, swap at the midpoint,
-        // then unfold the new page from the opposite edge — always in the correct
-        // direction, regardless of rapid direction changes.
+        // Slide the current page out to the edge, swap at the midpoint, then slide
+        // the new page in from the opposite edge — direction-safe on rapid taps.
         withAnimation(.easeInOut(duration: Self.flipDuration)) {
-            rotation = 90 * flipDirection
+            slideOffset = -direction * slideWidth * Self.slideFraction
         }
         flipTask = Task {
             try? await Task.sleep(nanoseconds: UInt64(Self.flipDuration / 2 * 1_000_000_000))
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 displayIndex = newIndex
-                rotation = -90 * flipDirection
+                slideOffset = direction * slideWidth * Self.slideFraction
+                // Fresh timer: reset progress so the new story starts from zero even
+                // if the outgoing content fed onProgress during the slide-out.
+                progressFraction = 0
                 if currentPost.type == .photo { photoTimer = startPhotoTimer() }
-                withAnimation(.easeInOut(duration: Self.flipDuration)) { rotation = 0 }
+                withAnimation(.easeInOut(duration: Self.flipDuration)) { slideOffset = 0 }
             }
         }
     }
@@ -448,7 +466,6 @@ struct StoryFullScreenView: View {
     private func goNext() {
         Haptics.impact(.rigid)
         if currentIndex + 1 < posts.count {
-            flipDirection = 1
             navigate(to: currentIndex + 1)
         } else {
             exitViewer()
@@ -458,7 +475,6 @@ struct StoryFullScreenView: View {
     private func goPrev() {
         Haptics.impact(.medium)
         if currentIndex - 1 >= 0 {
-            flipDirection = -1
             navigate(to: currentIndex - 1)
         } else {
             exitViewer()
@@ -498,7 +514,6 @@ struct StoryFullScreenView: View {
 
     private func advanceOrExit() {
         if currentIndex + 1 < posts.count {
-            flipDirection = 1
             navigate(to: currentIndex + 1)
         } else {
             exitViewer()
@@ -512,20 +527,15 @@ struct StoryFullScreenView: View {
     }
 }
 
-/// Manual page-turn rotation for the story media: the page folds to the edge
-/// (0 → ±90), swaps at the midpoint, then unfolds from the opposite edge (∓90 → 0).
-/// The anchor flips with the direction so the turn always reads correctly.
-struct PageTurnModifier: ViewModifier {
-    let rotation: Double
-    let direction: Double
+/// Simple horizontal slide for the story media — the current page slides out to
+/// the edge, the new one slides in from the opposite edge (left/right).
+struct StorySlideModifier: ViewModifier {
+    let offset: CGFloat
 
     func body(content: Content) -> some View {
-        let anchor: UnitPoint = direction > 0
-            ? (rotation > 0 ? .leading : .trailing)
-            : (rotation > 0 ? .trailing : .leading)
-        return content
-            .rotation3DEffect(.degrees(rotation), axis: (x: 0, y: 1, z: 0), anchor: anchor, perspective: 0.5)
-            .shadow(color: .black.opacity(abs(rotation) > 1 ? 0.35 : 0), radius: 10, x: 0, y: 0)
+        content
+            .offset(x: offset)
+            .shadow(color: .black.opacity(abs(offset) > 1 ? 0.25 : 0), radius: 12)
     }
 }
 
@@ -895,7 +905,9 @@ struct FlipClockDigit: View {
 /// indicators underneath — cinema events with multiple sessions.
 struct ShowtimesPager: View {
     let times: [String]
+    var onInteraction: (Bool) -> Void = { _ in }
     @State private var page: Int?
+    @State private var isInteracting = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -911,6 +923,16 @@ struct ShowtimesPager: View {
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $page)
             .frame(height: 50)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { _ in
+                        if !isInteracting { isInteracting = true; onInteraction(true) }
+                    }
+                    .onEnded { _ in
+                        isInteracting = false
+                        onInteraction(false)
+                    }
+            )
 
             HStack(spacing: 6) {
                 ForEach(times.indices, id: \.self) { i in
@@ -920,6 +942,9 @@ struct ShowtimesPager: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .onChange(of: page) { old, new in
+            if old != new { Haptics.impact(.light) }
         }
     }
 }

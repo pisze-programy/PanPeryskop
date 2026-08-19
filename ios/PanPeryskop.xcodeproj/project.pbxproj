@@ -28,6 +28,7 @@
 		6264C7EA77D3E3B3CBD0E42F /* MediaRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3502EE142841F8A4A0F57B00 /* MediaRequest.swift */; };
 		6370F2E449A6B8876C90BFAD /* PostUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F8ADC2168E421BBB920569 /* PostUploader.swift */; };
 		704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 702099485B19214D722CB2AB /* AuthManager.swift */; };
+		71CDADC5D9F533CDA1AF553A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BB22FB100B78A75B51A1E2DA /* PrivacyInfo.xcprivacy */; };
 		8A92D89BDF126E969C43FAE7 /* PermissionCardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */; };
 		8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 063211FB7EC797AEFD489DE6 /* ToastManager.swift */; };
 		8E82AAB2424095D2D1ECDBA7 /* PermissionGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D6796591AD82A922A91F5E /* PermissionGateView.swift */; };
@@ -73,7 +74,7 @@
 		6CA2AF9B54DF0D4E30580F2D /* PendingPostsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPostsStore.swift; sourceTree = "<group>"; };
 		6D0328366619E568BB043CF9 /* SignInWithApple.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SignInWithApple.entitlements; sourceTree = "<group>"; };
 		702099485B19214D722CB2AB /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
-		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E2581E6150C834401927100 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
 		916F2163F2DBDBD7C763C34A /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		9C0C2297077E1CF861F55EF2 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
@@ -81,6 +82,7 @@
 		AA3257AF225A3FC46AC22646 /* MediaNearbyNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaNearbyNotifier.swift; sourceTree = "<group>"; };
 		B41CE1F1D60CDF1DD025F0C7 /* DaySliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaySliderView.swift; sourceTree = "<group>"; };
 		BB11E724A06F70ED3DA7B0F5 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
+		BB22FB100B78A75B51A1E2DA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		C198549226A3AB8D8AD7C270 /* MyContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyContentView.swift; sourceTree = "<group>"; };
 		C8D6796591AD82A922A91F5E /* PermissionGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGateView.swift; sourceTree = "<group>"; };
 		C9FE43E3CC773AD637F3A523 /* Post.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Post.swift; sourceTree = "<group>"; };
@@ -237,6 +239,7 @@
 			children = (
 				1F6D48B0D6B33CDCFC980CBD /* Assets.xcassets */,
 				F1660BA1D3400C29F149C24C /* Info.plist */,
+				BB22FB100B78A75B51A1E2DA /* PrivacyInfo.xcprivacy */,
 				6D0328366619E568BB043CF9 /* SignInWithApple.entitlements */,
 				42C0B8DB1C4AF2E246CDE3AF /* App */,
 				52A84047D3D5BB28DB9B94B0 /* Models */,
@@ -280,6 +283,11 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					B2CAE5D22E6E40FA50591BB7 = {
+						DevelopmentTeam = 3UKH2QRFKZ;
+					};
+				};
 			};
 			buildConfigurationList = 9D82191E0BB8E5BB3492A853 /* Build configuration list for PBXProject "PanPeryskop" */;
 			developmentRegion = en;
@@ -312,6 +320,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0D51FDA1694C2ECA08DA3F5E /* Assets.xcassets in Resources */,
+				71CDADC5D9F533CDA1AF553A /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -369,29 +378,30 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PanPeryskop/SignInWithApple.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PanPeryskop/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Pan Peryskop";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Potrzebujemy dostępu do aparatu, aby publikować \"Moje treści\"";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać \"Moje treści\" do miejsc";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Potrzebujemy mikrofonu do nagrywania filmów dla \"Moje treści\"";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Zapisujemy kopię zapasową zdjęć i wideo w Twojej galerii";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy dla \"Moje Treści\"";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Potrzebujemy dostępu do aparatu, aby nagrywać treści.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać treści do miejsc.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Potrzebujemy mikrofonu do nagrywania filmów.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Zapisujemy kopię zapasową nagrania w Twojej galerii.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = (
+					UIInterfaceOrientationPortrait,
+					UIInterfaceOrientationPortraitUpsideDown,
+					UIInterfaceOrientationLandscapeLeft,
+					UIInterfaceOrientationLandscapeRight,
+				);
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.panperyskop;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -402,29 +412,30 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PanPeryskop/SignInWithApple.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PanPeryskop/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Pan Peryskop";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Potrzebujemy dostępu do aparatu, aby publikować \"Moje treści\"";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać \"Moje treści\" do miejsc";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Potrzebujemy mikrofonu do nagrywania filmów dla \"Moje treści\"";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Zapisujemy kopię zapasową zdjęć i wideo w Twojej galerii";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy dla \"Moje Treści\"";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Potrzebujemy dostępu do aparatu, aby nagrywać treści.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać treści do miejsc.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Potrzebujemy mikrofonu do nagrywania filmów.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Zapisujemy kopię zapasową nagrania w Twojej galerii.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = (
+					UIInterfaceOrientationPortrait,
+					UIInterfaceOrientationPortraitUpsideDown,
+					UIInterfaceOrientationLandscapeLeft,
+					UIInterfaceOrientationLandscapeRight,
+				);
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.panperyskop;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

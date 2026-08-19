@@ -51,6 +51,8 @@ targets:
           - com.panperyskop.refresh.media
     entitlements:
       path: PanPeryskop/SignInWithApple.entitlements
+    scheme:
+      configVariants: []
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pl.piszeprogramy.panperyskop

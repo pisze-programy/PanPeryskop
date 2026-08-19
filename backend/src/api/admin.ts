@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { STATUS_APPROVED, STATUS_REJECTED } from '../core/models';
+import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
+import { SEED_DAYS_AHEAD } from '../seed/core/constants';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -7,6 +9,59 @@ function adminAuth(c: { env: Env; req: { header: (n: string) => string | undefin
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
   return Boolean(c.env.ADMIN_SECRET) && token === c.env.ADMIN_SECRET;
 }
+
+// Current status of a post by external_id — lets seed-ingest skip entries whose
+// post was manually rejected (never re-approve them).
+adminRoutes.get('/posts/by-external/:ext', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const row = await c.env.DB
+    .prepare('SELECT status FROM posts WHERE external_id = ?')
+    .bind(c.req.param('ext'))
+    .first<{ status: string }>();
+  return c.json({ status: row?.status ?? null });
+});
+
+// All rejected external_ids — seed-ingest fetches this ONCE (not per entry) so a
+// 2000+ entry manifest upload does not hammer the API with per-row lookups.
+adminRoutes.get('/seed/rejected', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const { results } = await c.env.DB
+    .prepare('SELECT external_id FROM posts WHERE status = ? AND external_id IS NOT NULL')
+    .bind(STATUS_REJECTED)
+    .all<{ external_id: string }>();
+  return c.json({ ids: (results || []).map((r) => r.external_id) });
+});
+
+// All approved event external_ids — seed-ingest resumes a crashed/partial upload
+// by skipping posts that already exist instead of reprocessing every entry.
+adminRoutes.get('/seed/existing', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const { results } = await c.env.DB
+    .prepare(`SELECT external_id FROM posts WHERE status = '${STATUS_APPROVED}' AND external_id IS NOT NULL`)
+    .all<{ external_id: string }>();
+  return c.json({ ids: (results || []).map((r) => r.external_id) });
+});
+
+// Per-source per-day approved-event counts over the seed window — the VPS
+// orchestrator uses it to detect window gaps (a provider that missed a day) and
+// self-heal with a backfill.
+adminRoutes.get('/seed/coverage', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const today = todayWarsaw();
+  const window = Array.from({ length: SEED_DAYS_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i));
+  const { results } = await c.env.DB.prepare(
+    `SELECT substr(external_id, 1, instr(external_id, '-') - 1) AS source, event_date, COUNT(*) AS n
+     FROM posts
+     WHERE status = '${STATUS_APPROVED}' AND category = 'events' AND external_id IS NOT NULL
+       AND event_date BETWEEN ?1 AND ?2
+     GROUP BY source, event_date`
+  ).bind(window[0], window[window.length - 1]).all<{ source: string; event_date: string; n: number }>();
+  const counts: Record<string, Record<string, number>> = {};
+  for (const r of results || []) {
+    (counts[r.source] ??= {})[r.event_date] = r.n;
+  }
+  return c.json({ window, counts });
+});
 
 adminRoutes.post('/posts/:id/approve', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);

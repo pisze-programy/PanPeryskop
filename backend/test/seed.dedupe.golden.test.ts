@@ -35,7 +35,7 @@ function toCand(r: Record<string, unknown>): SeedCandidate {
   };
 }
 
-test('golden: real-data dedupe pipeline removes exactly the expected posts (110 + 1 cancelled)', () => {
+test('golden: real-data dedupe pipeline removes exactly the expected posts (49 + 1 cancelled)', () => {
   const all = windowRows.map(toCand);
   const cancelled = all.filter((c) => isCancelled(c.title));
   const pre = dropCancelled(all);
@@ -44,13 +44,19 @@ test('golden: real-data dedupe pipeline removes exactly the expected posts (110 
   const removed = pre.filter((c) => !merged.includes(c));
 
   assert.equal(cancelled.length, 1, '*CANCELLED* Missio must be dropped by the pre-filter');
-  assert.equal(pre.length - deduped.length, 112, 'dedupe alone removes 112 losers');
+  assert.equal(pre.length - deduped.length, 51, 'dedupe alone removes 51 losers (non-cinema only)');
   assert.equal(merged.length - deduped.length, 2, 'rescue re-keeps the two real SKOLIM 20:00 shows');
-  assert.equal(removed.length, 110, 'final dedupe losers to remove');
+  assert.equal(removed.length, 49, 'final dedupe losers to remove');
 
   const removedIds = new Set(removed.map((c) => c.externalId));
-  assert.equal(removedIds.size, 110, 'no duplicate external ids in the removal set');
+  assert.equal(removedIds.size, 49, 'no duplicate external ids in the removal set');
   assert.deepEqual(removedIds, expectedRemoved, 'removal set must match the golden snapshot');
+
+  // Cinema providers are never deduped — no multikino/cinemacity post is removed.
+  for (const id of removedIds) {
+    assert.ok(!id.startsWith('multikino-') && !id.startsWith('cinemacity-') && !id.startsWith('cc-'),
+      `${id} is a cinema post — cinema is exempt from dedupe`);
+  }
 
   // Key guarded cases stay OUT of the removal set.
   const kept = new Set(merged.map((c) => c.externalId));

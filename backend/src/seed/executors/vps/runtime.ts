@@ -20,6 +20,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { dedupe, buildDescription } from '../../../../src/seed/core/dedupe';
+import { isCancelled } from '../../../../src/seed/core/filters';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs, warsawDateOf, eventDayEndMs } from '../../../../src/seed/core/dates';
 import { GeoStore } from '../../../../src/seed/core/geo';
 import { SEED_DAYS_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1 } from '../../../../src/seed/core/constants';
@@ -101,6 +102,8 @@ export interface Checkpoint {
   target: string;
   completed: boolean;
   completedAt: number;
+  /** Calendar day (YYYY-MM-DD) of the last self-healing coverage backfill — bounds it to once per day. */
+  lastBackfillDay?: string;
   /** Per-scope progress (city or cinema id) within the window. */
   scopes?: Record<string, 'done'>;
   geo?: Record<string, CpGeo>;
@@ -338,13 +341,14 @@ export function hasCoords(c: SeedCandidate): c is SeedCandidate & { lat: number;
   return typeof c.lat === 'number' && typeof c.lng === 'number';
 }
 
-export async function runScopeSource(src: ScopeSource): Promise<boolean> {
+export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }): Promise<boolean> {
   const args = parseCommonArgs();
+  const full = args.full || !!opts?.full;
   const spec = specFor(src.source);
   // Daily: fetch ONLY the new far edge (today+SEED_DAYS_AHEAD) — the window is
   // covered by rolling, exactly like the Worker cron. --full backfills the whole
-  // window once (first run). checkpoint.target is ALWAYS the far edge, so the
-  // orchestrator's skip logic is stable after a --full run.
+  // window once (first run / a window gap). checkpoint.target is ALWAYS the far
+  // edge, so the orchestrator's skip logic is stable after a --full run.
   const { days, target } = seedDays(args);
   const windowStart = warsawMidnightMs(days[0]);
   const windowEnd = eventDayEndMs(days[days.length - 1]);
@@ -355,12 +359,12 @@ export async function runScopeSource(src: ScopeSource): Promise<boolean> {
 
   // Reset the checkpoint when the target changed OR --full backfills the whole
   // window (force re-fetch even if the far edge is already complete).
-  if (args.full || cp.target !== target) {
+  if (full || cp.target !== target) {
     cp.target = target;
     cp.completed = false;
     cp.completedAt = 0;
     cp.scopes = {};
-    console.log(`[${src.source}] ${args.full ? '--full backfill' : 'new target'} ${target} — reset progress`);
+    console.log(`[${src.source}] ${full ? '--full backfill' : 'new target'} ${target} — reset progress`);
   }
 
   const entries = loadEntries(jsonPath);
@@ -371,6 +375,7 @@ export async function runScopeSource(src: ScopeSource): Promise<boolean> {
   const scopes = src.scopes();
   let processed = 0;
   let done = 0;
+  const stagedCands: SeedCandidate[] = [];
   for (const scope of scopes) {
     if (cp.scopes?.[scope] === 'done') { done++; continue; }
     if (args.limit && processed >= args.limit) break;
@@ -404,6 +409,7 @@ export async function runScopeSource(src: ScopeSource): Promise<boolean> {
           if (!c.mediaUrl) throw new Error('no media url');
           if (!args.noMedia && !existsSync(file)) await downloadMedia(c.mediaUrl, file);
           entries.set(c.externalId, entryFor(c, rel));
+          stagedCands.push(c);
           staged++;
         } catch (e) {
           console.error(`✗ media ${c.externalId}: ${(e as Error).message}`);
@@ -420,11 +426,22 @@ export async function runScopeSource(src: ScopeSource): Promise<boolean> {
     }
     await sleep(PACING_MS);
   }
-  if (done >= scopes.length) {
-    cp.completed = true;
-    cp.completedAt = Date.now();
-    saveCp(cpPath, cp);
+
+  // Cinema providers (multikino/cinemacity) show EVERYTHING the API returns —
+  // morning/evening showings, PL/UA language versions, dubbing variants. No
+  // manifest dedupe. Only drop events whose title says cancelled (always removed).
+  if (stagedCands.length > 0) {
+    const cancelledIds = stagedCands.filter((c) => isCancelled(c.title)).map((c) => c.externalId);
+    if (cancelledIds.length > 0) {
+      for (const id of cancelledIds) entries.delete(id);
+      console.log(`[${src.source}] dropped ${cancelledIds.length} cancelled entries`);
+      writeEntries(jsonPath, entries);
+    }
   }
+
+  // Do NOT mark the checkpoint complete here — the orchestrator marks it only
+  // AFTER a successful upload, so a failed upload is retried on the next kick
+  // instead of being skipped forever.
   console.log(`[${src.source}] done target=${target} scopes=${done}/${scopes.length} → ${spec.output}`);
   return done >= scopes.length;
 }

@@ -34,7 +34,7 @@ export function parseCcScope(data: unknown, code: string, day: string): SeedCand
     if (!poster) continue;
     out.push({
       source: ProviderId.CINEMACITY,
-      externalId: `cc-${f.id}-${code}-${day}`,
+      externalId: `cinemacity-${f.id}-${code}-${day}`,
       title: f.name,
       startMs,
       lat: cinema?.lat ?? null, lng: cinema?.lng ?? null,

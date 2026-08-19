@@ -39,7 +39,7 @@ import process from 'node:process';
 import { enabledForExecutor } from '../../../../src/seed/providers/registry';
 import { EXECUTOR } from '../types';
 import type { ProviderConfig, VpsSpec } from '../../../../src/seed/providers/registry';
-import { runScopeSource, findRepoDir } from './runtime';
+import { runScopeSource, findRepoDir, loadCp, saveCp } from './runtime';
 import type { ScopeSource } from './runtime';
 import { lumaSource } from './runners/luma';
 import { meetupSource } from './runners/meetup';
@@ -239,6 +239,41 @@ function upload(cfg: ProviderConfig, env: Record<string, string>): void {
     env,
   });
   if (r.output.trim()) log(`${cfg.id} upload: ${r.output.trim().slice(0, 2000)}`);
+  if (r.status !== 0) throw new Error(`seed-ingest ${cfg.id} exit ${r.status}`);
+}
+
+// Mark the provider complete ONLY after a successful upload — a failed upload
+// must be retried on the next kick, not skipped forever.
+function markComplete(spec: VpsSpec, target: string): void {
+  const cp = loadCp(checkpointPath(spec));
+  cp.target = target;
+  cp.completed = true;
+  cp.completedAt = Date.now();
+  saveCp(checkpointPath(spec), cp);
+}
+
+// Self-healing: if a NON-far-edge window day has no approved posts for this
+// provider (a missed day during rolling), return that day so the orchestrator
+// backfills the window. Bounded to once per calendar day via lastBackfillDay.
+async function coverageGapDay(source: string, env: Record<string, string>): Promise<string | null> {
+  try {
+    const base = env.BASE_URL || 'https://panperyskop-api.dev-4cb.workers.dev';
+    const res = await fetch(`${base}/admin/seed/coverage`, {
+      headers: { Authorization: `Bearer ${env.ADMIN_SECRET}` },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { window?: string[]; counts?: Record<string, Record<string, number>> };
+    const win = data.window || [];
+    const counts = data.counts?.[source] || {};
+    const today = todayWarsaw();
+    // The far edge is fetched daily by rolling — only worry about today..+SEED_DAYS_AHEAD-1.
+    const nonFarEdge = win.filter((d) => d < addDaysWarsaw(today, SEED_DAYS_AHEAD));
+    return nonFarEdge.find((d) => (counts[d] || 0) === 0) ?? null;
+  } catch (e) {
+    log(`coverage check ${source} failed (${(e as Error).message}) — assuming ok`);
+    return null;
+  }
 }
 
 // ---------- main ----------
@@ -294,9 +329,17 @@ async function main(): Promise<void> {
   for (const cfg of plan) {
     const spec = cfg.executors.vps!;
     const target = expectedTarget();
+    // Self-heal window gaps: a missed day during rolling (exit node down / error)
+    // leaves a permanent gap unless backfilled. When the last pass completed but
+    // a non-far-edge day is still empty for this provider, backfill the window.
+    let gapDay: string | null = null;
+    if (!FULL && !onlyProvider && isComplete(spec, target)) {
+      gapDay = await coverageGapDay(String(cfg.id), env);
+      if (gapDay) log(`${cfg.id}: window gap on ${gapDay} — backfill`);
+    }
     // --full forces a re-fetch of the whole window (runScopeSource resets the
     // checkpoint), so a complete far-edge must NOT be skipped.
-    if (!FULL && isComplete(spec, target)) {
+    if (!FULL && !gapDay && isComplete(spec, target)) {
       log(`${cfg.id}: target ${target} already complete — skip`);
       status('complete', `${cfg.id} ${target}`);
       continue;
@@ -310,12 +353,38 @@ async function main(): Promise<void> {
     }
     log(`exit node = ${exitNode} (provider=${cfg.id})`);
 
+    // Backfill the whole window when a gap exists — bounded to once per day, and
+    // the bound is only committed AFTER a successful backfill (a paused/failed
+    // pass must be retried on the next kick, not consumed).
+    let doFull = false;
+    if (gapDay) {
+      const cp = loadCp(checkpointPath(spec));
+      if (cp.lastBackfillDay !== todayWarsaw()) {
+        doFull = true;
+      } else {
+        log(`${cfg.id}: already backfilled today — skip`);
+        status('complete', `${cfg.id} ${target}`);
+        continue;
+      }
+    }
+
     // In-process, chunked and resource-gated: runScopeSource pauses (checkpoint
     // saved) when the box is busy; the next 5-min kick resumes. No subprocess.
-    const completed = await runScopeSource(sourceFor(cfg.id));
+    const completed = await runScopeSource(sourceFor(cfg.id), { full: doFull });
     if (completed) {
-      upload(cfg, env);
-      status('ok', `${cfg.id} ${target}`);
+      try {
+        upload(cfg, env);
+        markComplete(spec, target); // complete ONLY after a successful upload
+        if (gapDay) {
+          const cp = loadCp(checkpointPath(spec));
+          cp.lastBackfillDay = todayWarsaw();
+          saveCp(checkpointPath(spec), cp);
+        }
+        status('ok', `${cfg.id} ${target}`);
+      } catch (e) {
+        log(`${cfg.id}: upload failed — will retry next kick (${(e as Error).message})`);
+        status('upload-failed', `${cfg.id} ${target}`);
+      }
     } else {
       status('paused', cfg.id);
     }

@@ -87,7 +87,7 @@ test('dedupe: identical link but distinct known venues -> NOT merged (cinema-cit
   assert.equal(out.length, 2, 'same film at different cinemas stays separate');
 });
 
-test('dedupe: PL/UA versions of the same film (film slug) merge per cinema, keep Polish, earliest hour', () => {
+test('dedupe: PL/UA versions of the same film are BOTH kept (cinema shows everything)', () => {
   const t = Date.parse('2026-08-22T18:30:00+02:00');
   const pl = cand({
     source: ProviderId.MULTIKINO, externalId: 'pl', title: 'Spider-Man: Całkiem nowy dzień',
@@ -99,10 +99,7 @@ test('dedupe: PL/UA versions of the same film (film slug) merge per cinema, keep
     startMs: t - 3_600_000, venue: 'Multikino Katowice, ul. 3 Maja 30',
     link: 'https://www.multikino.pl/repertuar/katowice/filmy/spider-man-calkiem-nowy-dzien-ukrainian-dubbing',
   });
-  const out = dedupe([pl, ua]);
-  assert.equal(out.length, 1);
-  assert.equal(out[0].externalId, 'pl', 'Polish version must be kept even when it is later');
-  assert.equal(out[0].startMs, ua.startMs, 'earliest hour in the group becomes the winner time');
+  assert.equal(dedupe([pl, ua]).length, 2, 'language versions of a cinema film both stay');
 });
 
 test('dedupe: same film slug at different cinemas -> NOT merged', () => {
@@ -119,12 +116,22 @@ test('dedupe: same film slug at different cinemas -> NOT merged', () => {
   assert.equal(dedupe([a, b]).length, 2);
 });
 
-test('dedupe: Ukrainian-dubbing variant merges into the base film at the same cinema', () => {
+test('dedupe: Ukrainian-dubbing variant stays separate (cinema shows everything)', () => {
   const a = cand({ source: ProviderId.CINEMACITY, externalId: 'a', title: 'Koniec ulicy Dębowej', venue: 'Cinema City Kraków - Bonarka' });
   const b = cand({ source: ProviderId.CINEMACITY, externalId: 'b', title: 'Koniec ulicy Dębowej ukraiński dubbing', venue: 'Cinema City Kraków - Bonarka' });
-  const out = dedupe([a, b]);
-  assert.equal(out.length, 1);
-  assert.equal(out[0].externalId, 'a');
+  assert.equal(dedupe([a, b]).length, 2);
+});
+
+test('dedupe: two cinemas with similar short venue names never merge (Kielce vs Katowice)', () => {
+  const a = cand({
+    source: ProviderId.MULTIKINO, externalId: 'a', title: 'Odyseja',
+    venue: 'Multikino Kielce', link: 'https://www.multikino.pl/repertuar/kielce/filmy/odyseja',
+  });
+  const b = cand({
+    source: ProviderId.MULTIKINO, externalId: 'b', title: 'Odyseja',
+    venue: 'Multikino Katowice', link: 'https://www.multikino.pl/repertuar/katowice/filmy/odyseja',
+  });
+  assert.equal(dedupe([a, b]).length, 2, '0.82 venue ratio must not collapse two cinemas');
 });
 
 test('dedupe: Obsesja and Odyseja are different films -> stay separate', () => {
@@ -214,7 +221,7 @@ test('dedupe: distinct all-day events stay separate', () => {
   assert.equal(out.length, 2);
 });
 
-test('dedupe: multikino (primary) wins over going for the same film×cinema×hour', () => {
+test('dedupe: cinema providers are never deduped — a going listing of the same film stays too', () => {
   const mk = (source: ProviderId, ext: string, title: string, startMs: number, venue: string) => ({
     source, externalId: ext, title, startMs, lat: 52.4, lng: 16.9, city: 'Warszawa',
     venue, address: '', link: '', mediaUrl: '', thumbUrl: null,
@@ -223,8 +230,7 @@ test('dedupe: multikino (primary) wins over going for the same film×cinema×hou
   const mk2 = mk(ProviderId.MULTIKINO, 'mk-1', 'Spider-Man: Całkiem nowy dzień', t, 'Multikino Warszawa Złote Tarasy');
   const going = mk(ProviderId.GOING, 'going-1', 'Spider-Man: Całkiem nowy dzień', t, 'Multikino Warszawa Złote Tarasy');
   const out = dedupe([going, mk2]);
-  assert.equal(out.length, 1);
-  assert.equal(out[0].externalId, 'mk-1');
+  assert.equal(out.length, 2, 'cinema is exempt from dedupe — both the cinema and the going copy stay');
 });
 
 test('dedupe: two distinct films at the same hour in the same cinema stay separate', () => {

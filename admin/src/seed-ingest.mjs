@@ -35,7 +35,19 @@ const THUMB_MAX = 320;
 const TTL_MS = 24 * 3_600_000;
 const MAX_LOOKAHEAD_MS = 366 * 24 * 3_600_000;
 
-const run = (cmd) => execSync(cmd, { stdio: ['ignore', 'ignore', 'pipe'] });
+const run = (cmd) => {
+  // Small box (256 MB VPS): ImageMagick/ffmpeg can OOM-flake — retry once.
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return execSync(cmd, { stdio: ['ignore', 'ignore', 'pipe'], timeout: 180_000 });
+    } catch (e) {
+      lastErr = e;
+      if (attempt === 0) execSync('sleep 3', { stdio: 'ignore' });
+    }
+  }
+  throw lastErr;
+};
 
 const [,, fileArg] = process.argv;
 if (!fileArg) {
@@ -101,12 +113,13 @@ function optimize(src, tmp) {
 // Cross-platform image resize → JPEG. macOS uses sips; Linux (VPS) uses
 // ImageMagick. NOTE: do NOT use `-auto-orient` with ImageMagick 7's convert
 // — it fails with "no decode delegate" on valid JPEGs (confirmed). Posters are
-// portrait already, so orientation correction is unnecessary.
+// portrait already, so orientation correction is unnecessary. ImageMagick runs
+// with a hard memory cap so it spills to disk instead of OOMing the 256 MB box.
 function compressImage(src, out, max) {
   if (process.platform === 'darwin') {
     run(`sips -Z ${max} -s format jpeg "${src}" --out "${out}"`);
   } else {
-    run(`convert "${src}" -resize ${max}x${max}\\> -quality 85 "${out}"`);
+    run(`convert -limit memory 64MiB -limit map 128MiB "${src}" -resize ${max}x${max}\\> -quality 85 "${out}"`);
   }
 }
 
@@ -151,8 +164,25 @@ async function approvePost(id) {
   if (!res.ok) throw new Error(`approve ${id} -> ${res.status}`);
 }
 
+async function fetchSeedIds(path) {
+  if (!ADMIN_SECRET) return new Set();
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return new Set();
+    const data = await res.json();
+    return new Set(Array.isArray(data.ids) ? data.ids : []);
+  } catch {
+    return new Set(); // fail-open
+  }
+}
+
 async function main() {
   const token = await login();
+  const rejectedIds = await fetchSeedIds('/admin/seed/rejected');
+  const existingIds = force ? new Set() : await fetchSeedIds('/admin/seed/existing');
   const tmp = mkdtempSync(join(tmpdir(), 'pp-seed-'));
   const results = { done: [], errors: [], skipped: 0 };
 
@@ -162,6 +192,23 @@ async function main() {
 
     if (entry.status === 'done' && !force) {
       results.skipped += 1;
+      continue;
+    }
+
+    // Never resurrect a rejected post (manual dedupe cleanup / moderation).
+    if (rejectedIds.has(entry.external_id || '')) {
+      entry.status = 'done'; // terminal — do not retry
+      results.skipped += 1;
+      console.log(`↷ ${label}: already rejected — skip`);
+      continue;
+    }
+
+    // Resume: a post that already exists is left untouched (upsert would also
+    // keep its status, but skipping avoids re-converting media on every pass).
+    if (existingIds.has(entry.external_id || '')) {
+      entry.status = 'done';
+      results.skipped += 1;
+      console.log(`↷ ${label}: already exists — skip`);
       continue;
     }
 

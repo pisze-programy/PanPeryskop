@@ -120,9 +120,10 @@ export function linkKey(url: string): string | null {
 // (e.g. odyseja vs odyseja-ukrainian-dubbing) — a language-independent film key.
 const CINEMA_SOURCES = new Set<ProviderId>([ProviderId.MULTIKINO, ProviderId.HELIOS, ProviderId.CINEMACITY]);
 const SLUG_SUFFIXES = [
-  '-ukrainian-dubbing', '-ukrainska-wersja', '-wersja-ukrainska', '-ukrainska',
-  '-ukrainian', '-dubbing', '-napisy', '-lektor', '-3d', '-2d', '-imax',
-  '-wersja-rozszerzona', '-rozszerzona', '-ukrainskiej-wersji',
+  '-ukrainian-dubbing', '-ukrainski-dubbing', '-ukrainska-wersja', '-ukrainskiej-wersji',
+  '-wersja-ukrainska', '-ukrainski', '-ukrainska', '-ukrainian', '-ukr',
+  '-dubbing', '-napisy', '-lektor', '-3d', '-2d', '-imax',
+  '-wersja-rozszerzona', '-rozszerzona',
 ];
 export function filmSlug(url: string, source: ProviderId): string | null {
   if (!url || !CINEMA_SOURCES.has(source)) return null;
@@ -158,4 +159,13 @@ export function containment(a: Set<string>, b: Set<string>, min = 0.8): boolean 
   let shared = 0;
   for (const w of a) if (b.has(w)) shared++;
   return shared >= 1 && shared / Math.min(a.size, b.size) >= min;
+}
+
+// Cinema chains are NEVER deduped: the API may return many films per cinema
+// (morning/evening showings, PL/UA language versions, dubbing variants) and we
+// show ALL of them. Their short venue names ("Multikino Kielce") would otherwise
+// false-positive on the fuzzy venue ratio ("Multikino Kielce" vs "Multikino
+// Katowice" = 0.82 >= 0.8) and collapse distinct cinemas.
+export function isCinemaSource(source: ProviderId): boolean {
+  return source === ProviderId.MULTIKINO || source === ProviderId.CINEMACITY || source === ProviderId.HELIOS;
 }

@@ -156,69 +156,6 @@ struct StoryFullScreenView: View {
                             }
                         }
                         Spacer()
-                        VStack(spacing: 20) {
-                            let liked = likedStates[currentPost.id] ?? currentPost.liked
-                            FaveLikeButton(isLiked: liked) { newValue in
-                                if newValue { Haptics.explosion() }
-                                Task {
-                                    let result = await viewModel.toggleLike(currentPost.id)
-                                    likedStates[currentPost.id] = result
-                                }
-                            }
-                            let disliked = dislikedStates[currentPost.id] ?? currentPost.disliked
-                            let dislikeCount = dislikesCounts[currentPost.id] ?? currentPost.dislikes_count
-                            Button {
-                                Haptics.impact(.light)
-                                let base = dislikeCount
-                                Task {
-                                    let result = await viewModel.toggleDislike(currentPost.id)
-                                    dislikedStates[currentPost.id] = result
-                                    dislikesCounts[currentPost.id] = max(0, base + (result ? 1 : -1))
-                                }
-                            } label: {
-                                VStack(spacing: 4) {
-                                    Image(systemName: disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                                        .font(.system(size: 26, weight: .semibold))
-                                        .foregroundColor(disliked ? .red : .white)
-                                    if dislikeCount > 0 {
-                                        Text("\(dislikeCount)")
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .frame(width: 56, height: 56)
-                                .contentShape(Circle())
-                            }
-                            .buttonStyle(.plain)
-                            Button {
-                                Haptics.impact(.light)
-                                pausePlayback()
-                                Task { await viewModel.sharePost(currentPost.id) }
-                                shareItem = ShareItem(
-                                    id: currentPost.id,
-                                    text: "\(DeepLink.scheme)://\(DeepLink.host)/\(currentPost.id)"
-                                )
-                            } label: {
-                                VStack(spacing: 4) {
-                                    Image(systemName: "arrowshape.turn.up.right.fill")
-                                        .font(.system(size: 26, weight: .semibold))
-                                        .foregroundColor(.white)
-                                    if currentPost.shares_count > 0 {
-                                        Text("\(currentPost.shares_count)")
-                                            .font(.caption)
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .frame(width: 56, height: 56)
-                                .contentShape(Circle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.vertical, 14)
-                        .padding(.horizontal, 10)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
-                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 80)

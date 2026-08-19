@@ -76,5 +76,4 @@ targets:
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy."
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Potrzebujemy mikrofonu do nagrywania filmów."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać treści do miejsc."
-        INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "Używamy Twojej lokalizacji, aby powiadomić Cię, gdy znajdziesz się w pobliżu miejsca, w którym ktoś prosi o podgląd okolicy."
         GENERATE_INFOPLIST_FILE: YES

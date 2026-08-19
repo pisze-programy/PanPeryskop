@@ -170,7 +170,7 @@ struct MapScreen: View {
             return
         }
         pendingRequestDrop = nil
-        ProximityMonitor.shared.requestPermissionsIfNeeded()
+        ProximityMonitor.shared.requestNotificationPermissionIfNeeded()
         Task {
             let result = await viewModel.submitRequestPin(at: coordinate)
             switch result {

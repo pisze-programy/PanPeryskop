@@ -125,13 +125,8 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
         }
     }
 
-    /// Ask for location "Always" once (background region delivery) + notification permission.
-    func requestPermissionsIfNeeded() {
-        requestNotificationPermissionIfNeeded()
-        locationManager.requestAlwaysAuthorization()
-    }
-
     /// Ask only for notification permission (needed by the "new media nearby" push).
+    /// Location is "WhenInUse" only and requested at media-add time; no Always prompt.
     func requestNotificationPermissionIfNeeded() {
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in

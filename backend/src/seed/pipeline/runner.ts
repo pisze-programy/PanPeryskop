@@ -8,6 +8,7 @@ import { SeedProvider, SeedProviderResult, SeedResult, SeedContext, RunType, See
 import { enabledProviders } from '../providers';
 import { warsawMidnightMs, tomorrowWarsaw, eventCreatedAtMs, eventDayEndMs } from '../core/dates';
 import { buildDescription, dedupe } from '../core/dedupe';
+import { dropCancelled, rescueRealShows } from '../core/filters';
 import { resolveKupGeo } from '../providers/kupbilecik';
 import { writeSeedRun, browserBudget, BrowserBudget } from '../core/log';
 import { SEED_DEVICE_ID } from '../core/constants';
@@ -72,7 +73,9 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
   const bySource = new Map<string, SeedProvider>();
   for (const p of enabledProviders()) bySource.set(p.id, p);
 
-  const merged = dedupe(collected.map((x) => x.candidate));
+  const collectedCands = collected.map((x) => x.candidate);
+  const pre = dropCancelled(collectedCands);
+  const merged = rescueRealShows(pre, dedupe(pre));
   let totalIngested = 0, totalSkipped = 0;
   const allErrors: { externalId: string; error: string }[] = [];
 

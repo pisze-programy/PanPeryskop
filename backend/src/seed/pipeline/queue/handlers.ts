@@ -9,6 +9,7 @@ import { detectMediaType, extForMediaType } from '../../../core/mediaFormat';
 import { doSavePost } from '../../../api/posts';
 import { TTL_MS } from '../../../core/models';
 import { dedupe, buildDescription } from '../../core/dedupe';
+import { dropCancelled, rescueRealShows, isCancelled } from '../../core/filters';
 import { buildVenueCache } from '../../providers/eventylive';
 import { resolveKupGeo } from '../../providers/kupbilecik';
 import { writeSeedRun } from '../../core/log';
@@ -146,14 +147,15 @@ async function runDedupe(env: EnvQ, batchId: string): Promise<void> {
     `SELECT * FROM seed_candidates WHERE batch_id=? AND status='${CandidateStatus.PENDING}'`
   ).bind(batchId).all<CandRow>();
   const dedupeInput = (results || []).map((r) => toCandidate(r, true));
-  const merged = dedupe(dedupeInput);
+  const pre = dropCancelled(dedupeInput);
+  const merged = rescueRealShows(pre, dedupe(pre));
   const winnerRowIds = new Set(merged.map((x) => x.externalId));
   const t = now();
   const ingestMsgs: MessageSendRequest<SeedQueueMessage>[] = [];
   for (const row of results || []) {
     if (!winnerRowIds.has(row.id)) {
       await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.DUPLICATE}', reason=?, updated_at=? WHERE id=?`)
-        .bind('dedupe: covered by another provider', t, row.id).run();
+        .bind(isCancelled(row.title) ? 'title: cancelled' : 'dedupe: covered by another provider', t, row.id).run();
       continue;
     }
     if (!row.media_url) {

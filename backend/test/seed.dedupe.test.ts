@@ -3,17 +3,18 @@ import assert from 'node:assert/strict';
 import { dedupe, buildDescription, todayWarsaw, tomorrowWarsaw, warsawMidnightMs, toWarsawIso } from '../src/seed';
 import { ProviderId } from '../src/seed/core/types';
 
-function cand(over: Partial<{ source: ProviderId; externalId: string; title: string; startMs: number; venue: string; address: string; city: string }>) {
+function cand(over: Partial<{ source: ProviderId; externalId: string; title: string; startMs: number; venue: string; address: string; city: string; link: string }>) {
+  const externalId = over.externalId ?? 'x-1';
   return {
     source: over.source ?? ProviderId.GOING,
-    externalId: over.externalId ?? 'x-1',
+    externalId,
     title: over.title ?? 'Event',
     startMs: over.startMs ?? 1_782_765_000_000, // 2026-08-14T18:30:00Z
     lat: 52.2, lng: 21.0,
     city: over.city ?? 'Warszawa',
     venue: over.venue ?? 'Venue',
     address: over.address ?? 'ul. Testowa 1, 00-001',
-    link: 'https://example.com',
+    link: over.link ?? `https://example.com/${externalId}`,
     mediaUrl: 'https://example.com/media.webp',
     thumbUrl: 'https://example.com/media_m.webp',
   };
@@ -51,10 +52,140 @@ test('dedupe: unknown source keeps the already-seen candidate', () => {
   assert.equal(out[0].externalId, 'g', 'known source must win over unknown');
 });
 
-test('dedupe: different hours stay separate', () => {
+test('dedupe: same day, same title+venue, different hours -> merged (earliest wins)', () => {
   const a = cand({ externalId: 'a', startMs: 1_782_765_000_000 });
   const b = cand({ externalId: 'b', startMs: 1_782_765_000_000 + 3_600_000 });
+  const out = dedupe([a, b]);
+  assert.equal(out.length, 1, 'same event at a different hour in the same day must merge');
+  assert.equal(out[0].externalId, 'a', 'earlier hour must become canonical');
+});
+
+test('dedupe: identical link is a duplicate even with different venue/geo (TBA venue)', () => {
+  const going = cand({
+    source: ProviderId.GOING, externalId: 'going-1', title: 'INTERNET IRL: KEJTER',
+    venue: 'Poznań - różne lokalizacje', link: 'https://goingapp.pl/wydarzenie/internet-irl/poznan',
+  });
+  const dzis = cand({
+    source: ProviderId.DZISAPP, externalId: 'dzis-1', title: 'Internet Irl: Kejter',
+    venue: '3ecia Strona Baru', link: 'https://goingapp.pl/wydarzenie/internet-irl/poznan',
+  });
+  const out = dedupe([going, dzis]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].externalId, 'going-1');
+});
+
+test('dedupe: identical link but distinct known venues -> NOT merged (cinema-city per-film link)', () => {
+  const a = cand({
+    source: ProviderId.CINEMACITY, externalId: 'a', title: 'Psi patrol i dinozaury',
+    venue: 'Cinema City Bytom, pl. T. Kościuszki 1', link: 'https://www.cinema-city.pl/filmy/psi-patrol-i-dinozaury/8093d2r',
+  });
+  const b = cand({
+    source: ProviderId.CINEMACITY, externalId: 'b', title: 'Psi patrol i dinozaury',
+    venue: 'Cinema City Elbląg, ul. Teatralna 5', link: 'https://www.cinema-city.pl/filmy/psi-patrol-i-dinozaury/8093d2r',
+  });
+  const out = dedupe([a, b]);
+  assert.equal(out.length, 2, 'same film at different cinemas stays separate');
+});
+
+test('dedupe: PL/UA versions of the same film (film slug) merge per cinema, keep Polish, earliest hour', () => {
+  const t = Date.parse('2026-08-22T18:30:00+02:00');
+  const pl = cand({
+    source: ProviderId.MULTIKINO, externalId: 'pl', title: 'Spider-Man: Całkiem nowy dzień',
+    startMs: t, venue: 'Multikino Katowice, ul. 3 Maja 30',
+    link: 'https://www.multikino.pl/repertuar/katowice/filmy/spider-man-calkiem-nowy-dzien',
+  });
+  const ua = cand({
+    source: ProviderId.MULTIKINO, externalId: 'ua', title: 'ЛЮДИНА-ПАВУК: АБСОЛЮТНО НОВИЙ ДЕНЬ',
+    startMs: t - 3_600_000, venue: 'Multikino Katowice, ul. 3 Maja 30',
+    link: 'https://www.multikino.pl/repertuar/katowice/filmy/spider-man-calkiem-nowy-dzien-ukrainian-dubbing',
+  });
+  const out = dedupe([pl, ua]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].externalId, 'pl', 'Polish version must be kept even when it is later');
+  assert.equal(out[0].startMs, ua.startMs, 'earliest hour in the group becomes the winner time');
+});
+
+test('dedupe: same film slug at different cinemas -> NOT merged', () => {
+  const a = cand({
+    source: ProviderId.MULTIKINO, externalId: 'a', title: 'Odyseja',
+    venue: 'Multikino Katowice, ul. 3 Maja 30',
+    link: 'https://www.multikino.pl/repertuar/katowice/filmy/odyseja',
+  });
+  const b = cand({
+    source: ProviderId.MULTIKINO, externalId: 'b', title: 'Odyseja',
+    venue: 'Multikino Wrocław Pasaż Grunwaldzki, pl. Grunwaldzki 22',
+    link: 'https://www.multikino.pl/repertuar/wroclaw-pasaz-grunwaldzki/filmy/odyseja',
+  });
   assert.equal(dedupe([a, b]).length, 2);
+});
+
+test('dedupe: Ukrainian-dubbing variant merges into the base film at the same cinema', () => {
+  const a = cand({ source: ProviderId.CINEMACITY, externalId: 'a', title: 'Koniec ulicy Dębowej', venue: 'Cinema City Kraków - Bonarka' });
+  const b = cand({ source: ProviderId.CINEMACITY, externalId: 'b', title: 'Koniec ulicy Dębowej ukraiński dubbing', venue: 'Cinema City Kraków - Bonarka' });
+  const out = dedupe([a, b]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].externalId, 'a');
+});
+
+test('dedupe: Obsesja and Odyseja are different films -> stay separate', () => {
+  const a = cand({ source: ProviderId.MULTIKINO, externalId: 'a', title: 'Obsesja', venue: 'Multikino Katowice' });
+  const b = cand({ source: ProviderId.MULTIKINO, externalId: 'b', title: 'Odyseja', venue: 'Multikino Katowice' });
+  assert.equal(dedupe([a, b]).length, 2);
+});
+
+test('dedupe: same special event at different cinemas -> NOT merged (per-cinema)', () => {
+  const mk = (ext: string, venue: string) => cand({
+    source: ProviderId.DZISAPP, externalId: ext,
+    title: 'André Rieu. Niech żyje Maastricht! – Retransmisja letniego koncertu z Maastricht',
+    venue,
+  });
+  const apollo = mk('a', 'Kinoteatr Apollo, ul. Głogowska 14');
+  const multikino = mk('b', 'Multikino Poznań Stary Browar, ul. Półwiejska 42');
+  assert.equal(dedupe([apollo, multikino]).length, 2);
+});
+
+test('dedupe: same title+venue on a DIFFERENT day -> NOT merged', () => {
+  const a = cand({ externalId: 'a', title: 'Koncert X', startMs: Date.parse('2026-08-21T18:30:00+02:00'), venue: 'Sala A' });
+  const b = cand({ externalId: 'b', title: 'Koncert X', startMs: Date.parse('2026-08-22T18:30:00+02:00'), venue: 'Sala A' });
+  assert.equal(dedupe([a, b]).length, 2, 'each day is its own event');
+});
+
+test('dedupe: festival prefix + different film slug -> NOT merged (NMF guard)', () => {
+  const a = cand({
+    source: ProviderId.MULTIKINO, externalId: 'a', title: 'NMF: Noc Władcy Pierścieni (wersje rozszerzone)',
+    venue: 'Multikino Katowice', link: 'https://www.multikino.pl/repertuar/katowice/filmy/noc-wladcy-pierscieni-wersje-rozszerzone',
+  });
+  const b = cand({
+    source: ProviderId.MULTIKINO, externalId: 'b', title: 'Noc Władcy Pierścieni',
+    venue: 'Multikino Katowice', link: 'https://www.multikino.pl/repertuar/katowice/filmy/noc-wladcy-pierscieni',
+  });
+  assert.equal(dedupe([a, b]).length, 2, 'containment alone must not merge two different films');
+});
+
+test('dedupe: fuzzy venue (>=0.8) merges cross-provider theater spellings', () => {
+  const going = cand({
+    source: ProviderId.GOING, externalId: 'g', title: 'Boeing Boeing',
+    venue: 'Teatr Capitol, ul. Marszałkowska 115', lat: 52.230, lng: 21.012,
+  });
+  const evl = cand({
+    source: ProviderId.EVENTYLIVE, externalId: 'e', title: 'Boeing Boeing - Teatr Capitol',
+    venue: 'Teatr Capitol w Warszawie, Marszałkowska 115', lat: 52.230, lng: 21.012,
+  });
+  const out = dedupe([going, evl]);
+  assert.equal(out.length, 1, 'same theater under two spellings is one event');
+  assert.equal(out[0].externalId, 'g');
+});
+
+test('dedupe: geo fallback merges when one venue is TBA and geo is close', () => {
+  const a = cand({ externalId: 'a', title: 'Event', venue: 'Poznań - różne lokalizacje', lat: 52.408, lng: 16.938 });
+  const b = cand({ externalId: 'b', title: 'Event', venue: '3ecia Strona Baru', lat: 52.4081, lng: 16.9378 });
+  assert.equal(dedupe([a, b]).length, 1, 'TBA venue + <1.5km geo = same event');
+});
+
+test('dedupe: two known venues stay separate even when geo is close (no geo fallback)', () => {
+  const a = cand({ externalId: 'a', title: 'Event', venue: 'Kino Rialto', lat: 52.406, lng: 16.925 });
+  const b = cand({ externalId: 'b', title: 'Event', venue: 'Multikino Stary Browar', lat: 52.403, lng: 16.931 });
+  assert.equal(dedupe([a, b]).length, 2, 'known venues never fall back to geo');
 });
 
 test('dedupe: all-day eventylive collapses into timed going/dzis duplicate', () => {

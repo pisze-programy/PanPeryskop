@@ -1,100 +1,102 @@
 import { SeedCandidate, ProviderId } from './types';
 import { toWarsawIso } from './dates';
 import { priorityOf } from '../providers/registry';
+import {
+  titleTokens, linkKey, filmSlug, isUkrainian, venuesMatch, containment, isTba,
+} from './match';
 
-function normVenue(s: string): string {
-  return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-}
-// Normalized title tokens (len>=3, no diacritics) for fuzzy title matching.
-function titleTokens(s: string): string[] {
-  return (s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .split(/\s+/)
-    .filter((w) => w.length >= 3);
-}
-// Fraction of title tokens of `a` that appear in `b` (both directions).
-function titleOverlap(a: string, b: string): number {
-  const A = titleTokens(a), B = titleTokens(b);
-  if (!A.length || !B.length) return 0;
-  const hits = A.filter((w) => B.includes(w)).length;
-  return Math.max(hits / A.length, hits / B.length);
-}
-
-// Canonical-link preference: when several sources carry the same event (same hour
-// + venue), the one with the LOWEST rank wins — its link/geo becomes canonical.
-// Lower is better. Rank lives in the provider registry (single source of truth);
-// unknown sources rank last.
+// Canonical-link preference: when several sources carry the same event, the one
+// with the LOWEST rank wins — its link/geo becomes canonical. Lower is better.
+// Rank lives in the provider registry (single source of truth).
 const sourceRank = (s: ProviderId): number => priorityOf(s);
 
-// Return whichever candidate is canonical for the two (same-key) candidates.
-function preferCanonical(a: SeedCandidate, b: SeedCandidate): SeedCandidate {
-  return sourceRank(a.source) <= sourceRank(b.source) ? a : b;
-}
+// Dedupe scope is the DAY (not the hour): "godzina może być różna" — providers
+// list the same event at slightly different hours, and PL/UA film versions run
+// at different times in the same cinema.
+const dayKey = (startMs: number): string => toWarsawIso(startMs).slice(0, 10);
 
 export function dedupe(events: SeedCandidate[]): SeedCandidate[] {
-  const seen = new Map<string, SeedCandidate>();
-  const out: SeedCandidate[] = [];
+  const byDay = new Map<string, SeedCandidate[]>();
   for (const e of events) {
-    const key = `${Math.floor(e.startMs / 3600000)}|${normVenue(e.venue)}`;
-    const prev = seen.get(key);
-    if (prev) {
-      // Same hour + venue but a clearly different event (e.g. two distinct films
-      // in the same cinema). Keep both by disambiguating the key with the title.
-      if (titleOverlap(prev.title, e.title) < 0.5) {
-        const tkey = `${key}|${titleTokens(e.title).sort().join(' ')}`;
-        const tprev = seen.get(tkey);
-        if (tprev) {
-          const tw = preferCanonical(tprev, e);
-          if (tw !== tprev) {
-            const i = out.indexOf(tprev);
-            out[i] = tw;
-            seen.set(tkey, tw);
-          }
-          continue;
-        }
-        seen.set(tkey, e);
-        out.push(e);
-        continue;
-      }
-      const winner = preferCanonical(prev, e);
-      if (winner !== prev) {
-        const i = out.indexOf(prev);
-        out[i] = winner;
-        seen.set(key, winner);
-      }
-      continue;
-    }
-    seen.set(key, e);
-    out.push(e);
+    const k = dayKey(e.startMs);
+    const arr = byDay.get(k);
+    if (arr) arr.push(e);
+    else byDay.set(k, [e]);
   }
 
-  // Pass 2: all-day events (startMs at city midnight, e.g. eventylive which has no
-  // time) duplicate timed events from other sources by title+venue. Keep all-day
-  // events only when they are NOT covered by a timed event of the same venue with
-  // overlapping title.
-  const isAllDay = (e: SeedCandidate) => {
-    const hm = toWarsawIso(e.startMs).slice(11, 16);
-    return hm === '00:00';
-  };
-  const timed = out.filter((e) => !isAllDay(e));
-  const allDay = out.filter((e) => isAllDay(e));
-  const covers = (e: SeedCandidate) => timed.some((t) => {
-    if (t.venue && e.venue && normVenue(t.venue) !== normVenue(e.venue)) return false;
-    return titleOverlap(t.title, e.title) >= 0.6;
-  });
-  const result = [...timed];
-  const allDayAdded = new Set<string>();
-  for (const e of allDay) {
-    if (covers(e)) continue;
-    const key = `${normVenue(e.venue)}|${titleTokens(e.title).sort().join(' ')}`;
-    if (allDayAdded.has(key)) continue;
-    allDayAdded.add(key);
-    result.push(e);
+  const out: SeedCandidate[] = [];
+  for (const arr of byDay.values()) {
+    const n = arr.length;
+    const slugOf = arr.map((e) => filmSlug(e.link, e.source));
+    const tokensOf = arr.map((e) => titleTokens(e.title, e.venue));
+
+    const parent = arr.map((_, i) => i);
+    const find = (x: number): number => {
+      while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+      return x;
+    };
+    const union = (a: number, b: number): void => {
+      const ra = find(a), rb = find(b);
+      if (ra !== rb) parent[rb] = ra;
+    };
+
+    // R1 — same event page (identical link). Same link is authoritative UNLESS
+    // both sides have distinct known venues: cinema-city shares ONE per-film link
+    // across all its cinemas, so that must not collapse them.
+    const byLink = new Map<string, number[]>();
+    arr.forEach((e, i) => {
+      const k = linkKey(e.link);
+      if (k) { const l = byLink.get(k) ?? []; l.push(i); byLink.set(k, l); }
+    });
+    for (const idx of byLink.values()) {
+      for (let a = 0; a < idx.length; a++) for (let b = a + 1; b < idx.length; b++) {
+        const x = arr[idx[a]], y = arr[idx[b]];
+        const bothKnown = !!x.venue.trim() && !!y.venue.trim() && !isTba(x.venue) && !isTba(y.venue);
+        if (!bothKnown || venuesMatch(x, y)) union(idx[a], idx[b]);
+      }
+    }
+
+    // R2 — film slug (PL/UA versions of the same film) at the same venue.
+    const bySlug = new Map<string, number[]>();
+    arr.forEach((_, i) => {
+      const k = slugOf[i];
+      if (k) { const l = bySlug.get(k) ?? []; l.push(i); bySlug.set(k, l); }
+    });
+    for (const idx of bySlug.values()) {
+      for (let a = 0; a < idx.length; a++) for (let b = a + 1; b < idx.length; b++) {
+        if (venuesMatch(arr[idx[a]], arr[idx[b]])) union(idx[a], idx[b]);
+      }
+    }
+
+    // R3 — title containment + venue match. Different film slugs rule the pair
+    // out (e.g. "NMF: Noc Władcy Pierścieni" vs "Noc Władcy Pierścieni").
+    // Same-source pairs need IDENTICAL tokens (1.0) — two real concerts of the
+    // "przy świecach" series share 0.8 and must stay separate.
+    for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
+      if (find(a) === find(b)) continue;
+      const sa = slugOf[a], sb = slugOf[b];
+      if (sa && sb && sa !== sb) continue;
+      const minContainment = arr[a].source === arr[b].source ? 1.0 : 0.8;
+      if (containment(tokensOf[a], tokensOf[b], minContainment) && venuesMatch(arr[a], arr[b])) union(a, b);
+    }
+
+    // Pick the canonical per group: lowest priority, then the non-UA version,
+    // then the earliest start. Winner's hour = earliest in the group.
+    const groups = new Map<number, number[]>();
+    arr.forEach((_, i) => { const r = find(i); const l = groups.get(r) ?? []; l.push(i); groups.set(r, l); });
+    for (const idx of groups.values()) {
+      if (idx.length < 2) { out.push(arr[idx[0]]); continue; }
+      const members = idx.map((i) => arr[i]).sort((x, y) =>
+        sourceRank(x.source) - sourceRank(y.source) ||
+        (isUkrainian(x.title) ? 1 : 0) - (isUkrainian(y.title) ? 1 : 0) ||
+        x.startMs - y.startMs
+      );
+      const winner = members[0];
+      winner.startMs = Math.min(...members.map((m) => m.startMs));
+      out.push(winner);
+    }
   }
-  return result;
+  return out;
 }
 
 export function buildDescription(c: SeedCandidate): string {

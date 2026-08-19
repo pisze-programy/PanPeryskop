@@ -1,10 +1,14 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @EnvironmentObject private var authManager: AuthManager
     @AppStorage(Haptics.enabledKey) private var hapticsEnabled = true
     @AppStorage(NotificationSettings.mediaNearbyLiveKey) private var mediaNearbyLive = true
     @AppStorage(NotificationSettings.mediaNearbyEventsKey) private var mediaNearbyEvents = true
     @AppStorage(NotificationSettings.mediaNearbyRangeKey) private var mediaNearbyRange = "city"
+
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
 
     var body: some View {
         ScrollView {
@@ -32,11 +36,98 @@ struct SettingsView: View {
                 notificationsCard
 
                 PermissionCardsView(showsHeader: true)
+
+                accountSection
             }
             .padding(.vertical, 20)
         }
         .navigationTitle("Ustawienia")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Usunąć konto?", isPresented: $showDeleteConfirm) {
+            Button("Usuń konto", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+            Button("Anuluj", role: .cancel) {}
+        } message: {
+            Text("To usunie na zawsze Twoje konto i całą zawartość — posty, zdjęcia i filmy. Tej operacji nie można cofnąć.")
+        }
+    }
+
+    private var accountSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button(role: .destructive) {
+                showDeleteConfirm = true
+            } label: {
+                HStack(spacing: 12) {
+                    if isDeleting {
+                        ProgressView()
+                            .tint(.red)
+                            .frame(width: 32)
+                    } else {
+                        Image(systemName: "trash.fill")
+                            .font(.title3)
+                            .foregroundColor(.red)
+                            .frame(width: 32)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Usuń konto")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.red)
+                        Text("Na zawsze usuwa konto i wszystkie Twoje treści.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(12)
+                .background(.regularMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .disabled(isDeleting)
+
+            Text("Uwaga: usunięcie konta usuwa również całą Twoją zawartość z mapy — posty, zdjęcia i filmy. Nie będzie można ich przywrócić.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 4)
+
+            Divider()
+                .padding(.vertical, 8)
+
+            Button {
+                Task { await authManager.logout() }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.title3)
+                        .foregroundColor(.primary)
+                        .frame(width: 32)
+                    Text("Wyloguj się")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(12)
+                .background(.regularMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal)
+    }
+
+    @MainActor
+    private func deleteAccount() async {
+        isDeleting = true
+        defer { isDeleting = false }
+        do {
+            try await APIClient.postEmpty("/users/me/delete")
+            await authManager.logout()
+        } catch {
+            ToastManager.shared.show("Nie udało się usunąć konta. Spróbuj ponownie.")
+        }
     }
 
     private var notificationsCard: some View {

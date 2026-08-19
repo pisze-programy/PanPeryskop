@@ -15,7 +15,7 @@
 // compressed through the same pipeline as camera posts (sips / ffmpeg).
 //
 // Env:
-//   BASE_URL       default https://panperyskop-api.dev-4cb.workers.dev (remote)
+//   BASE_URL       default https://api.panperyskop.app (remote)
 //   SEED_DEVICE_ID default 'panperyskop-seed'
 //   ADMIN_SECRET   required for --approve
 //
@@ -27,7 +27,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BASE_URL = process.env.BASE_URL || 'https://panperyskop-api.dev-4cb.workers.dev';
+const BASE_URL = process.env.BASE_URL || 'https://api.panperyskop.app';
 const SEED_DEVICE_ID = process.env.SEED_DEVICE_ID || 'panperyskop-seed';
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 const PHOTO_MAX = 1080;

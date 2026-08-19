@@ -1,5 +1,7 @@
 name = "panperyskop-api"
 main = "src/index.ts"
+# workers.dev is intentionally disabled (no `workers_dev` key) — the only entrypoint
+# is the custom domain api.panperyskop.app.
 # 2026-03-24+: required by Browser Run binding's .quickAction() (kupbilecik scraping).
 compatibility_date = "2026-03-24"
 compatibility_flags = ["nodejs_compat"]
@@ -105,18 +107,13 @@ CRON_SCHEDULE = "0 2 * * *"
 # (wrangler secret put ALGOLIA_API_KEY / CLOUDINARY_SIG)
 ALGOLIA_APP_ID = "FAFFKUSLK0"
 # GOOGLE_CLIENT_ID = ""  # set once an OAuth client is created in Google Cloud Console
+# NOTE: ENVIRONMENT intentionally NOT set (kept as "dev") until Sign in with Apple
+# is configured — the real id_token verification gate in api/auth.ts is what flips
+# off the Apple/Google dev simulation. Add ENVIRONMENT="production" here when SIWA
+# is ready and redeploy.
 
-[env.prod]
-[env.prod.vars]
-ENVIRONMENT = "production"
-CORS_ORIGIN = "panperyskop://app"
-APPLE_CLIENT_ID = "com.panperyskop.PanPeryskop"
-
-[[env.prod.d1_databases]]
-binding = "DB"
-database_name = "panperyskop-db"
-database_id = "c9fed854-29bc-4ea7-9242-d0a7bc6abee0"
-
-[[env.prod.r2_buckets]]
-binding = "MEDIA"
-bucket_name = "panperyskop-media"
+# Production entrypoint — single worker served on the custom domain. Media URLs are
+# derived from the request origin (core/media.ts), so /media/* works here too.
+[[routes]]
+pattern = "api.panperyskop.app"
+custom_domain = true

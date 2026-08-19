@@ -80,6 +80,59 @@ usersRoutes.get('/me/posts', async (c) => {
   );
 });
 
+// Hard account deletion (Apple 5.1.1(v)): removes the account and ALL of its data —
+// posts (with R2 media), engagement rows, media requests, avatar, and telemetry.
+usersRoutes.post('/me/delete', async (c) => {
+  const user = await authenticate(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const db = c.env.DB;
+  const userId = user.id;
+  const deviceId = user.device_id;
+
+  const { results: posts } = await db
+    .prepare('SELECT id, media_key, thumb_key, grid_cell_id FROM posts WHERE user_id = ?')
+    .bind(userId)
+    .all<{ id: string; media_key: string | null; thumb_key: string | null; grid_cell_id: string | null }>();
+
+  // Engagement + auxiliary rows (child tables first).
+  await db.prepare('DELETE FROM likes WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM dislikes WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM views WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM shares WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM media_requests WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM auth_events WHERE user_id = ?').bind(userId).run();
+  await db.prepare('DELETE FROM client_errors WHERE device_id = ?').bind(deviceId).run();
+
+  // Engagement rows from OTHER users pointing at this user's posts (FK on post_id
+  // blocks the posts DELETE below — D1 enforces foreign keys).
+  await db.prepare('DELETE FROM likes WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)').bind(userId).run();
+  await db.prepare('DELETE FROM dislikes WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)').bind(userId).run();
+  await db.prepare('DELETE FROM views WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)').bind(userId).run();
+  await db.prepare('DELETE FROM shares WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?)').bind(userId).run();
+
+  // Grid heat down, then posts.
+  for (const post of posts) {
+    if (post.grid_cell_id) {
+      await db.prepare('UPDATE grid_cells SET heat = MAX(0, heat - 1) WHERE id = ?').bind(post.grid_cell_id).run();
+    }
+  }
+  await db.prepare('DELETE FROM posts WHERE user_id = ?').bind(userId).run();
+
+  // R2 media (best-effort).
+  const deletions: Promise<unknown>[] = [];
+  for (const post of posts) {
+    if (post.media_key) deletions.push(c.env.MEDIA.delete(post.media_key));
+    if (post.thumb_key) deletions.push(c.env.MEDIA.delete(post.thumb_key));
+  }
+  if (user.avatar_key) deletions.push(c.env.MEDIA.delete(user.avatar_key));
+  await Promise.all(deletions).catch(() => {});
+
+  await db.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
+
+  return c.json({ ok: true });
+});
+
 usersRoutes.post('/avatar', async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);

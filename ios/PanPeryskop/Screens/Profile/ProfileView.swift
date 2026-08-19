@@ -58,15 +58,6 @@ struct ProfileView: View {
 
                     menuList
 
-                    Button(role: .destructive) {
-                        Task { await authManager.logout() }
-                    } label: {
-                        Label("Wyloguj się", systemImage: "rectangle.portrait.and.arrow.right")
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                    }
-                    .padding(.horizontal, 32)
-
                     Spacer().frame(height: 120)
                 }
             }

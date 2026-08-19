@@ -46,7 +46,7 @@ export function findRepoDir(start: string): string {
 const REPO_DIR = findRepoDir(__dirname);
 const SEED_DIR = join(REPO_DIR, 'admin', 'seed');
 const LOGS_DIR = join(REPO_DIR, 'admin', 'vps', 'logs');
-const BASE_URL = process.env.BASE_URL || 'https://panperyskop-api.dev-4cb.workers.dev';
+const BASE_URL = process.env.BASE_URL || 'https://api.panperyskop.app';
 const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
 export const PACING_MS = 500;
 

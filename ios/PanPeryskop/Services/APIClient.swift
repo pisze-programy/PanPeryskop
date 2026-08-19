@@ -16,7 +16,7 @@ private struct ServerError: Decodable {
 }
 
 struct APIClient {
-    static let baseURL = "https://panperyskop-api.dev-4cb.workers.dev"
+    static let baseURL = "https://api.panperyskop.app"
 
     static func authHeaders() -> [String: String] {
         var headers = ["Content-Type": "application/json"]
@@ -61,7 +61,8 @@ struct APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = authHeaders()
-        let (_, _) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
     }
 
     static func patch<T: Decodable, B: Encodable>(_ path: String, body: B) async throws -> T {

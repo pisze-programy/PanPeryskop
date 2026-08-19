@@ -257,7 +257,7 @@ function markComplete(spec: VpsSpec, target: string): void {
 // backfills the window. Bounded to once per calendar day via lastBackfillDay.
 async function coverageGapDay(source: string, env: Record<string, string>): Promise<string | null> {
   try {
-    const base = env.BASE_URL || 'https://panperyskop-api.dev-4cb.workers.dev';
+    const base = env.BASE_URL || 'https://api.panperyskop.app';
     const res = await fetch(`${base}/admin/seed/coverage`, {
       headers: { Authorization: `Bearer ${env.ADMIN_SECRET}` },
       signal: AbortSignal.timeout(15_000),

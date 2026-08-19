@@ -82,7 +82,7 @@ saved) when the box is busy — the next kick resumes.
 
 | Var | Required | Purpose |
 |---|---|---|
-| `BASE_URL` | ✅ | PanPeryskop API URL (default `https://panperyskop-api.dev-4cb.workers.dev`) |
+| `BASE_URL` | ✅ | PanPeryskop API URL (default `https://api.panperyskop.app`) |
 | `ADMIN_SECRET` | ✅ | Bearer token for `seed-ingest --approve` and `POST /admin/seed` |
 
 Location: `/opt/panperyskop/admin/vps/.env` (one `KEY=VALUE` per line). Copy it to a fresh box

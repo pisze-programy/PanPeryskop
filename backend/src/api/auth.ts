@@ -143,7 +143,8 @@ async function appleOrGoogleLogin(
       });
       provider_id = payload.sub;
       display_name = provider === 'apple' ? undefined : payload.given_name || payload.name;
-    } catch {
+    } catch (e) {
+      console.error(`${provider} id_token verify failed: ${(e as Error).message} (aud=${audience})`);
       return c.json({ error: 'Invalid identity_token' }, 401);
     }
   } else {

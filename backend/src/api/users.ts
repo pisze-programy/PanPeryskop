@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { fileField, ParsedForm } from '../core/form';
-import { PostRow, TTL_MS, normalizeUsername } from '../core/models';
+import { PostRow, TTL_MS, normalizeUsername, User } from '../core/models';
 import { mediaUrl, originFromRequest } from '../core/media';
 
 export const usersRoutes = new Hono<{ Bindings: Env }>();
@@ -85,8 +85,17 @@ usersRoutes.get('/me/posts', async (c) => {
 usersRoutes.post('/me/delete', async (c) => {
   const user = await authenticate(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
+  await deleteUserAccount(c.env, user);
+  return c.json({ ok: true });
+});
 
-  const db = c.env.DB;
+// Shared by POST /users/me/delete and the Sign in with Apple `accountDelete`
+// server-to-server notification (which only knows the apple_id sub).
+export async function deleteUserAccount(
+  env: { DB: D1Database; MEDIA: R2Bucket },
+  user: User
+): Promise<void> {
+  const db = env.DB;
   const userId = user.id;
   const deviceId = user.device_id;
 
@@ -122,16 +131,14 @@ usersRoutes.post('/me/delete', async (c) => {
   // R2 media (best-effort).
   const deletions: Promise<unknown>[] = [];
   for (const post of posts) {
-    if (post.media_key) deletions.push(c.env.MEDIA.delete(post.media_key));
-    if (post.thumb_key) deletions.push(c.env.MEDIA.delete(post.thumb_key));
+    if (post.media_key) deletions.push(env.MEDIA.delete(post.media_key));
+    if (post.thumb_key) deletions.push(env.MEDIA.delete(post.thumb_key));
   }
-  if (user.avatar_key) deletions.push(c.env.MEDIA.delete(user.avatar_key));
+  if (user.avatar_key) deletions.push(env.MEDIA.delete(user.avatar_key));
   await Promise.all(deletions).catch(() => {});
 
   await db.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
-
-  return c.json({ ok: true });
-});
+}
 
 usersRoutes.post('/avatar', async (c) => {
   const user = await authenticate(c);

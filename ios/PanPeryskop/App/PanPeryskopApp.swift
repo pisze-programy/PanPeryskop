@@ -1,5 +1,4 @@
 import SwiftUI
-import GoogleSignIn
 import UserNotifications
 import BackgroundTasks
 
@@ -40,7 +39,6 @@ struct PanPeryskopApp: App {
                 }
             }
             .onOpenURL { url in
-                GIDSignIn.sharedInstance.handle(url)
                 if let id = DeepLink.storyId(from: url) {
                     pendingStoryId = id
                 }

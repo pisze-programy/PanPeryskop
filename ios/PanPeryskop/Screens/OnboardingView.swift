@@ -61,15 +61,6 @@ struct OnboardingView: View {
                     )
                     .frame(height: 50)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
-
-                    GoogleSignInButton(
-                        onSuccess: { result in
-                            Task { await handleGoogleLogin(result) }
-                        },
-                        onError: { error in
-                            errorMessage = error.localizedDescription
-                        }
-                    )
                 }
                 .padding(.horizontal, 32)
 
@@ -86,21 +77,18 @@ struct OnboardingView: View {
             try await authManager.loginWithApple(result)
         } catch let error as AuthError where error == .banned {
             errorMessage = "Twoje urządzenie jest zbanowane."
+        } catch let error as AuthError {
+            if case .server(let statusCode, _) = error, statusCode == 401 {
+                #if DEBUG
+                errorMessage = "Produkcja odrzuca symulowany token Apple (dev-sim). Zaloguj się buildem Release."
+                #else
+                errorMessage = "Nie udało się zalogować przez Apple. Spróbuj ponownie."
+                #endif
+            } else {
+                errorMessage = "Nie udało się zalogować przez Apple. Sprawdź połączenie i spróbuj ponownie."
+            }
         } catch {
-            errorMessage = "Błąd logowania przez Apple. Spróbuj ponownie."
-        }
-        isLoading = false
-    }
-
-    private func handleGoogleLogin(_ result: GoogleSignInResult) async {
-        isLoading = true
-        errorMessage = nil
-        do {
-            try await authManager.loginWithGoogle(result)
-        } catch let error as AuthError where error == .banned {
-            errorMessage = "Twoje urządzenie jest zbanowane."
-        } catch {
-            errorMessage = "Błąd logowania przez Google. Spróbuj ponownie."
+            errorMessage = "Nie udało się zalogować przez Apple. Sprawdź połączenie i spróbuj ponownie."
         }
         isLoading = false
     }

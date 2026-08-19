@@ -100,17 +100,16 @@ binding = "MEDIA"
 bucket_name = "panperyskop-media"
 
 [vars]
-APPLE_CLIENT_ID = "com.panperyskop.PanPeryskop"
+# Production mode: real OAuth id_token verification (Sign in with Apple is the
+# only login). Local dev can override via .dev.vars (ENVIRONMENT=development).
+ENVIRONMENT = "production"
+APPLE_CLIENT_ID = "pl.piszeprogramy.panperyskop"
 # Cron schedule mirrors [triggers] crons — dashboard reads this as single source of truth.
 CRON_SCHEDULE = "0 2 * * *"
 # goingapp scraping. Public Algolia app id; API key + Cloudinary sig are secrets
 # (wrangler secret put ALGOLIA_API_KEY / CLOUDINARY_SIG)
 ALGOLIA_APP_ID = "FAFFKUSLK0"
-# GOOGLE_CLIENT_ID = ""  # set once an OAuth client is created in Google Cloud Console
-# NOTE: ENVIRONMENT intentionally NOT set (kept as "dev") until Sign in with Apple
-# is configured — the real id_token verification gate in api/auth.ts is what flips
-# off the Apple/Google dev simulation. Add ENVIRONMENT="production" here when SIWA
-# is ready and redeploy.
+# GOOGLE_CLIENT_ID = ""  # removed with Google Sign-In (Apple-only login)
 
 # Production entrypoint — single worker served on the custom domain. Media URLs are
 # derived from the request origin (core/media.ts), so /media/* works here too.

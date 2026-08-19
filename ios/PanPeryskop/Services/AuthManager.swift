@@ -112,14 +112,6 @@ class AuthManager: ObservableObject {
         )
     }
 
-    func loginWithGoogle(_ result: GoogleSignInResult) async throws {
-        try await performOAuthLogin(
-            path: "/auth/google",
-            identityToken: result.identityToken,
-            provider: "google"
-        )
-    }
-
     private func performOAuthLogin(path: String, identityToken: String, provider: String) async throws {
         struct OAuthBody: Encodable {
             let device_id: String
@@ -133,8 +125,11 @@ class AuthManager: ObservableObject {
         request.httpBody = try JSONEncoder().encode(OAuthBody(device_id: deviceId, identity_token: identityToken, full_name: nil))
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        if let http = response as? HTTPURLResponse, http.statusCode == 403 {
-            throw AuthError.banned
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            if http.statusCode == 403 { throw AuthError.banned }
+            struct ServerError: Decodable { let error: String? }
+            let message = (try? JSONDecoder().decode(ServerError.self, from: data))?.error
+            throw AuthError.server(statusCode: http.statusCode, message: message)
         }
         let resp = try JSONDecoder().decode(AuthResponse.self, from: data)
 
@@ -192,13 +187,16 @@ class AuthManager: ObservableObject {
     }
 }
 
-enum AuthError: LocalizedError {
+enum AuthError: LocalizedError, Equatable {
     case banned
+    case server(statusCode: Int, message: String?)
 
     var errorDescription: String? {
         switch self {
         case .banned:
             return "Urządzenie zbanowane"
+        case .server(let statusCode, let message):
+            return message ?? "Błąd serwera (\(statusCode))"
         }
     }
 }

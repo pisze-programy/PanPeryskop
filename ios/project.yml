@@ -8,7 +8,7 @@ settings:
   INFOPLIST_KEY_CFBundleDisplayName: "Pan Peryskop"
 
 options:
-  bundleIdPrefix: com.panperyskop
+  bundleIdPrefix: pl.piszeprogramy
   deploymentTarget:
     iOS: "18.0"
   xcodeVersion: "16.0"
@@ -24,9 +24,6 @@ packages:
     from: 0.0.6
   YPImagePicker:
     path: vendor/YPImagePicker
-  GoogleSignIn:
-    url: https://github.com/google/GoogleSignIn-iOS
-    from: 7.1.0
 
 targets:
   PanPeryskop:
@@ -43,8 +40,6 @@ targets:
         product: FYVideoCompressor
       - package: YPImagePicker
         product: YPImagePicker
-      - package: GoogleSignIn
-        product: GoogleSignIn
     info:
       path: PanPeryskop/Info.plist
       properties:
@@ -52,19 +47,13 @@ targets:
           - CFBundleURLName: com.panperyskop
             CFBundleURLSchemes:
               - panperyskop
-          # TODO: replace with the reversed client ID from Google Cloud Console,
-          # e.g. com.googleusercontent.apps.<client-id> — enables the real Google Sign-In.
-          - CFBundleURLName: com.google.signin
-            CFBundleURLSchemes:
-              - com.googleusercontent.apps.REPLACE_WITH_CLIENT_ID
-        # TODO: replace with the real iOS client ID from Google Cloud Console.
-        GIDClientID: "REPLACE_WITH_CLIENT_ID"
         BGTaskSchedulerPermittedIdentifiers:
           - com.panperyskop.refresh.media
     entitlements:
       path: PanPeryskop/SignInWithApple.entitlements
     settings:
       base:
+        PRODUCT_BUNDLE_IDENTIFIER: pl.piszeprogramy.panperyskop
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES

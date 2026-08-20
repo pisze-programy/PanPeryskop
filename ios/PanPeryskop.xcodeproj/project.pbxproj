@@ -43,6 +43,7 @@
 		C14FAEA338016F3239B4D78E /* NicknameEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C953E9B4F30356C1AF058A /* NicknameEditView.swift */; };
 		C80A8E2C26F7DF70940D2A66 /* PanPeryskopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF363C9DF35DD8CFF0D626AB /* PanPeryskopApp.swift */; };
 		CA6B53CF05EDBC94617C3745 /* StoryFullScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD807EFE91A16807FF11C921 /* StoryFullScreenView.swift */; };
+		0C6D7E8F90011223344556677 /* InAppBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1B2C3D4E5F60718293A4B5C /* InAppBrowserView.swift */; };
 		D9702F1880D277CD3D4CE45E /* AddContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B96C79BC78BFB8995717B7 /* AddContentView.swift */; };
 		DCA8A572B7CEBBBBAE9492B7 /* FaveLikeButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 364467F234AEB3E0D0E2513C /* FaveLikeButton.swift */; };
 		DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBDD7756E22141DD95593257 /* City.swift */; };
@@ -89,6 +90,7 @@
 		C8D6796591AD82A922A91F5E /* PermissionGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGateView.swift; sourceTree = "<group>"; };
 		C9FE43E3CC773AD637F3A523 /* Post.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Post.swift; sourceTree = "<group>"; };
 		CD807EFE91A16807FF11C921 /* StoryFullScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryFullScreenView.swift; sourceTree = "<group>"; };
+		0A1B2C3D4E5F60718293A4B5C /* InAppBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppBrowserView.swift; sourceTree = "<group>"; };
 		CF363C9DF35DD8CFF0D626AB /* PanPeryskopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanPeryskopApp.swift; sourceTree = "<group>"; };
 		D6B96C79BC78BFB8995717B7 /* AddContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContentView.swift; sourceTree = "<group>"; };
 		D9D108F77E19B9CD9251305B /* MediaCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCaptureView.swift; sourceTree = "<group>"; };
@@ -219,6 +221,7 @@
 			isa = PBXGroup;
 			children = (
 				364467F234AEB3E0D0E2513C /* FaveLikeButton.swift */,
+				0A1B2C3D4E5F60718293A4B5C /* InAppBrowserView.swift */,
 				CD807EFE91A16807FF11C921 /* StoryFullScreenView.swift */,
 				BA12A53A9C156B8B3251CBA3 /* StoryGradientBackground.swift */,
 			);
@@ -368,6 +371,7 @@
 				07C0E84951D3E2FF925CC951 /* ProximityMonitor.swift in Sources */,
 				206660903D27130B55C2095D /* SettingsView.swift in Sources */,
 				CA6B53CF05EDBC94617C3745 /* StoryFullScreenView.swift in Sources */,
+				0C6D7E8F90011223344556677 /* InAppBrowserView.swift in Sources */,
 				1CB0FED0894277F43672BBC2 /* StoryGradientBackground.swift in Sources */,
 				8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */,
 				B75E0DBA2194C2670F968BDD /* User.swift in Sources */,

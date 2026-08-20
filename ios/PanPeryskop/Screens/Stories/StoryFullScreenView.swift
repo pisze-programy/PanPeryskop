@@ -23,6 +23,11 @@ struct StoryFullScreenView: View {
     @State private var pressStart = Date()
     /// Showtime chosen in the pager — drives which booking deep-link opens.
     @State private var selectedShowtime: String?
+    /// External web link opened in the in-app browser (bottom panel overlay).
+    @State private var browserURL: URL?
+    @State private var showBrowser = false
+    /// Downward drag offset while pulling the browser panel to dismiss it.
+    @State private var browserOffset: CGFloat = 0
     /// What is currently rendered; updated at the slide midpoint (swap).
     @State private var displayIndex: Int
     /// Manual horizontal slide offset: current page slides out to the edge, the new
@@ -140,10 +145,19 @@ struct StoryFullScreenView: View {
                     StoryBlurBar(bottomFade: false)
                         .frame(height: 330)
                 }
+
+                if showBrowser, let url = browserURL {
+                    browserOverlay(url: url)
+                }
             }
         .ignoresSafeArea()
         .onAppear { photoTimer = startPhotoTimer() }
         .onDisappear { photoTimer?.cancel() }
+        .onChange(of: showBrowser) { _, open in
+            // Hold the story timer while the browser is open; resume on close
+            // (covers both the close button and the drag-to-dismiss gesture).
+            open ? pausePlayback() : resumePlayback()
+        }
         .sheet(item: $shareItem) { item in
             ActivityViewController(items: [item.text])
                 .onDisappear { resumePlayback() }
@@ -304,7 +318,7 @@ struct StoryFullScreenView: View {
             // fall back to the event page link when the post has no booking.
             if let url = currentPost.bookingURL(for: effectiveShowtime ?? clockTime) ?? currentPost.link_url.flatMap(URL.init) {
                 Button {
-                    UIApplication.shared.open(url)
+                    openBrowser(url)
                 } label: {
                     Label("Strona wydarzenia", systemImage: "arrow.up.right")
                         .font(.subheadline)
@@ -325,6 +339,80 @@ struct StoryFullScreenView: View {
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
         }
+    }
+
+    // MARK: - In-app browser (custom full-bleed bottom panel)
+
+    private var browserPanelHeight: CGFloat {
+        UIScreen.main.bounds.height * 0.7
+    }
+
+    private func openBrowser(_ url: URL) {
+        browserURL = url
+        showBrowser = true
+        browserOffset = browserPanelHeight
+        DispatchQueue.main.async {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                browserOffset = 0
+            }
+        }
+    }
+
+    private func closeBrowser() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+            browserOffset = browserPanelHeight
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+            showBrowser = false
+            browserOffset = 0
+        }
+    }
+
+    /// Native swipe-down-to-close on the grab strip — no custom drag-follow.
+    private var browserDragGesture: some Gesture {
+        DragGesture(minimumDistance: 24)
+            .onEnded { value in
+                let downward = value.translation.height
+                let velocity = value.predictedEndTranslation.height - downward
+                if downward > 80 || velocity > 500 {
+                    closeBrowser()
+                }
+            }
+    }
+
+    private func browserOverlay(url: URL) -> some View {
+        ZStack(alignment: .bottom) {
+            Color.black
+                .opacity(0.35 * (1 - min(browserOffset, browserPanelHeight) / browserPanelHeight))
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture { closeBrowser() }
+
+            VStack(spacing: 0) {
+                Color.clear
+                    .frame(height: 30)
+                    .contentShape(Rectangle())
+                    .overlay {
+                        Capsule()
+                            .fill(Color.secondary.opacity(0.5))
+                            .frame(width: 36, height: 5)
+                    }
+                    .gesture(browserDragGesture)
+
+                InAppBrowserView(url: url, bottomInset: bottomSafeAreaInset, onClose: closeBrowser)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(height: browserPanelHeight)
+            .background(Color(.systemBackground))
+            .clipShape(UnevenRoundedRectangle(
+                topLeadingRadius: 16, bottomLeadingRadius: 0,
+                bottomTrailingRadius: 0, topTrailingRadius: 16
+            ))
+            .shadow(color: .black.opacity(0.5), radius: 30, y: -12)
+            .offset(y: browserOffset)
+        }
+        .ignoresSafeArea(edges: .bottom)
+        .zIndex(1000)
     }
 
     private var badgesRow: some View {

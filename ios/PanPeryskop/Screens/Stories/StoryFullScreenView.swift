@@ -115,12 +115,32 @@ struct StoryFullScreenView: View {
                     }
                     .padding(.horizontal, 16)
 
-                    HStack(spacing: 4) {
-                        ForEach(posts.indices, id: \.self) { idx in
-                            ProgressBar(fraction: idx == currentIndex ? progressFraction : (idx < currentIndex ? 1 : 0))
+                    // Story progress — full width. Many stories (>10) render the
+                    // active one as a large bar and the rest as thin notches so the
+                    // row never squeezes; width animates between active/notch.
+                    GeometryReader { geo in
+                        let spacing: CGFloat = 4
+                        let n = posts.count
+                        let many = n > 10
+                        let inactiveW: CGFloat = many
+                            ? max(1.5, min(6, (geo.size.width / 2 - spacing * CGFloat(n - 1)) / CGFloat(max(1, n - 1))))
+                            : 0
+                        let activeW: CGFloat = many
+                            ? geo.size.width - spacing * CGFloat(n - 1) - inactiveW * CGFloat(n - 1)
+                            : 0
+                        HStack(spacing: spacing) {
+                            ForEach(posts.indices, id: \.self) { idx in
+                                let isActive = idx == currentIndex
+                                ProgressBar(fraction: isActive ? progressFraction : (idx < currentIndex ? 1 : 0))
+                                    .frame(width: many ? (isActive ? activeW : inactiveW) : nil)
+                                    .animation(.easeInOut(duration: 0.25), value: isActive)
+                                    .animation(.linear(duration: 0.1), value: progressFraction)
+                            }
                         }
+                        .frame(maxWidth: .infinity)
                     }
-                    .padding(.horizontal, 12)
+                    .frame(height: 3)
+                    .padding(.horizontal, 8)
                     .padding(.top, 16)
                     Spacer()
                 }
@@ -653,10 +673,13 @@ struct StoryContent: View {
     let onFinished: () -> Void
     let onProgress: (Double) -> Void
     @State private var showThumb = true
+    /// Full-res image fade-in over the pixelated thumb preview (photo stories).
+    @State private var fullLoaded = false
+    @State private var fullFailed = false
 
     var body: some View {
         Group {
-            if post.type == .video, let url = post.resolvedMediaURL {
+        if post.type == .video, let url = post.resolvedMediaURL {
             ZStack {
                 StoryVideoPlayer(
                     url: url,
@@ -685,39 +708,44 @@ struct StoryContent: View {
                 }
             }
         } else if let url = post.resolvedMediaURL {
-                let frameHeight = UIScreen.main.bounds.height * 0.7
-                let frameWidth = frameHeight * 9 / 16
-                
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        ZStack(alignment: .center) {
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
-                                .clipped()
-                                .blur(radius: 12)
-                                .opacity(0.8)
-                                .scaleEffect(1.05)
-
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: frameWidth, height: frameHeight)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .clipped()
+                // Thumb preview renders immediately (pixelated, no background, no
+                // spinner); the full image + its background fade in once loaded.
+                ZStack(alignment: .center) {
+                    if post.hasThumb, let thumbURL = post.resolvedThumbURL {
+                        AsyncImage(url: thumbURL) { tp in
+                            switch tp {
+                            case .success(let thumb):
+                                photoLayout(thumb, withBg: false)
+                                    .blur(radius: 3)
+                            default:
+                                Color.clear
+                            }
                         }
-                        .clipped()
-                        .onAppear { onLoaded(post) }
-                    case .failure:
-                        placeholderView
-                    case .empty:
-                        thumbPlaceholder
-                    @unknown default:
-                        placeholderView
+                    } else {
+                        Color.clear
+                    }
+
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            photoLayout(image, withBg: true)
+                                .opacity(fullLoaded ? 1 : 0)
+                                .onAppear {
+                                    onLoaded(post)
+                                    withAnimation(.easeOut(duration: 0.3)) { fullLoaded = true }
+                                }
+                        case .failure:
+                            placeholderView
+                                .opacity(fullFailed ? 1 : 0)
+                                .onAppear { withAnimation(.easeIn(duration: 0.2)) { fullFailed = true } }
+                        case .empty:
+                            Color.clear
+                        @unknown default:
+                            Color.clear
+                        }
                     }
                 }
+                .clipped()
         } else {
             placeholderView
         }
@@ -725,21 +753,34 @@ struct StoryContent: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 }
 
-    private var thumbPlaceholder: some View {
-        Group {
-            if post.hasThumb, let thumbURL = post.resolvedThumbURL {
-                AsyncImage(url: thumbURL) { tp in
-                    switch tp {
-                    case .success(let thumb):
-                        thumb.resizable().aspectRatio(contentMode: .fit)
-                    default:
-                        ProgressView().tint(.white)
-                    }
-                }
-            } else {
-                ProgressView().tint(.white)
+    /// The exact photo composition used by the story — a 9:16 foreground band,
+    /// plus the blurred cover background only when `withBg` (the thumb preview is
+    /// band-only; the background fades in together with the full-res image).
+    private func photoLayout(_ image: Image, withBg: Bool) -> some View {
+        let frameHeight = UIScreen.main.bounds.height * 0.7
+        let frameWidth = frameHeight * 9 / 16
+
+        return ZStack(alignment: .center) {
+            if withBg {
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                    .clipped()
+                    .blur(radius: 12)
+                    .opacity(0.8)
+                    .scaleEffect(1.05)
             }
+
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .padding(.vertical, 90)
+                .frame(width: frameWidth, height: frameHeight)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .clipped()
         }
+        .clipped()
     }
 
     private var placeholderView: some View {

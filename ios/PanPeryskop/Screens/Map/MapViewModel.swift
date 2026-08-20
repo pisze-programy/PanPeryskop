@@ -37,6 +37,13 @@ class MapViewModel: ObservableObject {
 
     private var serverPosts: [Post] = []
     private var serverRequests: [MediaRequest] = []
+    /// Merged post cache per (category, day, tag) — panning/zooming never drops
+    /// already-loaded pins; the 20s polling completes the cache and new pins appear.
+    private var postsCache: [String: [String: Post]] = [:]
+    private var postsCacheKey: String {
+        let day = feedCategory == .events ? dayString(offset: selectedDayOffset) : "live"
+        return "\(feedCategory.rawValue)|\(day)|\(selectedTag ?? "")"
+    }
     var currentUserId: String? {
         didSet { MediaNearbyNotifier.persistCurrentUserId(currentUserId) }
     }
@@ -243,7 +250,10 @@ class MapViewModel: ObservableObject {
         }
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)
-            serverPosts = resp.stories
+            var bucket = postsCache[postsCacheKey] ?? [:]
+            for p in resp.stories { bucket[p.id] = p }
+            postsCache[postsCacheKey] = bucket
+            serverPosts = Array(bucket.values)
             posts = allPosts
             // Request pins ("?") are a Live-category feature — not shown in Wydarzenia.
             if feedCategory == .live,
@@ -310,60 +320,6 @@ class MapViewModel: ObservableObject {
         if hasNew && !suppressToast {
             ToastManager.shared.show("Nowe!")
         }
-    }
-
-    func visiblePosts(in bbox: MapBBox) -> [Post] {
-        posts.filter { bbox.contains(lat: $0.lat, lng: $0.lng) && ($0.isEvent || !$0.watched) }
-    }
-
-    func viewerPosts(for clicked: Post, in bbox: MapBBox) -> [Post] {
-        let near = visiblePosts(in: previewBBox(around: clicked, in: bbox))
-            .filter { $0.id != clicked.id }
-            .sorted { distanceSquared(clicked, $0) < distanceSquared(clicked, $1) }
-            .prefix(14)
-        return [clicked] + near
-    }
-
-    /// Squared lat/lng distance (approx — fine for the small Polish region).
-    private func distanceSquared(_ a: Post, _ b: Post) -> Double {
-        let dLat = a.lat - b.lat
-        let dLng = a.lng - b.lng
-        return dLat * dLat + dLng * dLng
-    }
-
-    /// Shrinks the viewport around the tapped post so the story preview only queues
-    /// nearby pins — posts at/near the screen edges stay out of the queue.
-    func previewBBox(around post: Post, in viewport: MapBBox) -> MapBBox {
-        let latDelta = min(max((viewport.neLat - viewport.swLat) * 0.35, 0.004), 0.035)
-        let lngDelta = min(max((viewport.neLng - viewport.swLng) * 0.35, 0.004), 0.035)
-        return MapBBox(
-            swLat: post.lat - latDelta / 2,
-            swLng: post.lng - lngDelta / 2,
-            neLat: post.lat + latDelta / 2,
-            neLng: post.lng + lngDelta / 2
-        )
-    }
-
-    func viewerPosts(forCluster clusterPosts: [Post], in bbox: MapBBox) -> [Post] {
-        let clusterIds = Set(clusterPosts.map(\.id))
-        return clusterPosts.filter { $0.isEvent || !$0.watched }
-            + visiblePosts(in: bbox).filter { !clusterIds.contains($0.id) }
-    }
-
-    func viewerPosts(for clicked: Post) -> [Post] {
-        let bbox: MapBBox
-        if let viewport {
-            bbox = viewport
-        } else {
-            let region = selectedCity.region
-            bbox = MapBBox(
-                swLat: region.center.latitude - region.span.latitudeDelta / 2,
-                swLng: region.center.longitude - region.span.longitudeDelta / 2,
-                neLat: region.center.latitude + region.span.latitudeDelta / 2,
-                neLng: region.center.longitude + region.span.longitudeDelta / 2
-            )
-        }
-        return viewerPosts(for: clicked, in: bbox)
     }
 
     func markWatched(_ postId: String) async {
@@ -465,7 +421,10 @@ class MapViewModel: ObservableObject {
         }
         do {
             let post: Post = try await APIClient.get("/posts/\(id)")
-            serverPosts.append(post)
+            var bucket = postsCache[postsCacheKey] ?? [:]
+            bucket[post.id] = post
+            postsCache[postsCacheKey] = bucket
+            serverPosts = Array(bucket.values)
             posts = allPosts
             return post
         } catch {

@@ -24,7 +24,7 @@ struct MediaCaptureView: UIViewControllerRepresentable {
         config.usesFrontCamera = false
         config.silentMode = true
 
-        config.video.recordingTimeLimit = 60
+        config.video.recordingTimeLimit = 15
         config.video.minimumTimeLimit = 3
         config.video.libraryTimeLimit = 300
         config.video.compression = AVAssetExportPreset1280x720

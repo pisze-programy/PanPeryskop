@@ -32,16 +32,16 @@ struct MapScreen: View {
                 onCameraSettled: { region in
                     viewModel.saveViewport(region)
                 },
-                onTapPost: { post, bbox in
+                onTapPost: { post, _ in
                     guard !post.watched || post.isEvent else { return }
                     Haptics.impact(.medium)
-                    storyPosts = viewModel.viewerPosts(for: post, in: bbox)
+                    storyPosts = [post]
                     selectedStoryIndex = 0
                     showStoryViewer = true
                 },
-                onTapCluster: { cluster, bbox in
+                onTapCluster: { cluster, _ in
                     Haptics.impact(.medium)
-                    storyPosts = viewModel.viewerPosts(forCluster: cluster.posts, in: bbox)
+                    storyPosts = cluster.posts
                     selectedStoryIndex = 0
                     showStoryViewer = true
                 },
@@ -57,7 +57,7 @@ struct MapScreen: View {
                         cityButton
                         if viewModel.feedCategory == .events {
                             allChip
-                                .padding(.trailing, 10)
+                                .padding(.leading, 10)
                             ForEach(viewModel.tags) { tag in
                                 tagChip(tag)
                             }

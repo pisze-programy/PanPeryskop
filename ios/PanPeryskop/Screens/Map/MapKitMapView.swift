@@ -46,7 +46,21 @@ struct MapKitMapView: View {
     }
 
     private static let pitchDegrees: Double = 60
-    private static let maxDistance: CLLocationDistance = 40_000
+    /// Max pinch zoom-out distance (~100 km — fits Warsaw + the surrounding region).
+    private static let maxDistance: CLLocationDistance = 100_000
+    /// "Fly to city" framing — moderate so it still shows the city + its region.
+    private static let cityFlyDistance: CLLocationDistance = 60_000
+    /// Cluster radius in screen points — pins within ~this distance on screen group
+    /// together; the value is translated to degrees from the current camera span.
+    private static let clusterPixels: Double = 48
+
+    /// Cluster radius for the current zoom (deg) so grouping is screen-constant:
+    /// pins separate when zoomed in, group when zoomed out.
+    private var clusterRadiusDegrees: Double {
+        let screenHeight = UIScreen.main.bounds.height
+        let degreesPerPixel = visibleRegion.span.latitudeDelta / Double(screenHeight)
+        return max(degreesPerPixel * Self.clusterPixels, 0.00005)
+    }
 
     private static func cameraDistance(for region: MKCoordinateRegion) -> CLLocationDistance {
         let meters = region.span.latitudeDelta * 111_320
@@ -66,7 +80,7 @@ struct MapKitMapView: View {
     private static func maxOutCamera(center: CLLocationCoordinate2D) -> MapCamera {
         MapCamera(
             centerCoordinate: center,
-            distance: maxDistance,
+            distance: cityFlyDistance,
             heading: 0,
             pitch: pitchDegrees
         )
@@ -81,7 +95,7 @@ struct MapKitMapView: View {
             ) {
                 UserAnnotation()
 
-                ForEach(makeClusters(posts)) { cluster in
+                ForEach(makeClusters(posts, radiusDegrees: clusterRadiusDegrees)) { cluster in
                     Annotation(coordinate: cluster.coord, anchor: .center) {
                         ClusterBadge(
                             cluster: cluster,
@@ -202,16 +216,16 @@ struct ClusterBadge: View {
                 SinglePostPin(post: post, currentUserId: currentUserId)
                     .allowsHitTesting(false)
             } else {
-                Button(action: onTap) {
-                    SinglePostPin(post: post, currentUserId: currentUserId)
-                }
-                .buttonStyle(.plain)
+                // onTapGesture (not a Button) so multi-touch map gestures (pinch/pan)
+                // still work even when the touch starts on a pin.
+                SinglePostPin(post: post, currentUserId: currentUserId)
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: onTap)
             }
         } else {
-            Button(action: onTap) {
-                ClusterPin(cluster: cluster)
-            }
-            .buttonStyle(.plain)
+            ClusterPin(cluster: cluster)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onTap)
         }
     }
 }
@@ -440,9 +454,9 @@ struct PostCluster: Identifiable {
     let posts: [Post]
 }
 
-private func makeClusters(_ posts: [Post]) -> [PostCluster] {
+private func makeClusters(_ posts: [Post], radiusDegrees: Double) -> [PostCluster] {
     let mediaPosts = posts
-    let radius = 0.0008
+    let radius = radiusDegrees
     var used = Set<String>()
     var clusters: [PostCluster] = []
 

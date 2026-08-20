@@ -111,7 +111,7 @@ struct ContentView: View {
         selectedTab = 0
         do {
             if let post = await mapViewModel.ensurePost(id: id) {
-                storyPosts = mapViewModel.viewerPosts(for: post)
+                storyPosts = [post]
                 selectedStoryIndex = 0
                 NotificationCenter.default.post(name: .scrollToPost, object: post)
                 try? await Task.sleep(nanoseconds: 700_000_000)
@@ -129,7 +129,7 @@ struct ContentView: View {
         selectedTab = 0
         mapViewModel.selectFeedCategory(FeedCategory(rawValue: payload.category) ?? .live)
         if let post = await mapViewModel.ensurePost(id: payload.postId) {
-            storyPosts = mapViewModel.viewerPosts(for: post)
+            storyPosts = [post]
             selectedStoryIndex = 0
             NotificationCenter.default.post(name: .scrollToPost, object: post)
             try? await Task.sleep(nanoseconds: 700_000_000)

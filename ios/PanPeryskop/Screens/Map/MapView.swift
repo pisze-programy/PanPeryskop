@@ -56,6 +56,8 @@ struct MapScreen: View {
                     HStack(spacing: 8) {
                         cityButton
                         if viewModel.feedCategory == .events {
+                            allChip
+                                .padding(.trailing, 10)
                             ForEach(viewModel.tags) { tag in
                                 tagChip(tag)
                             }
@@ -232,18 +234,15 @@ struct MapScreen: View {
         .buttonStyle(.plain)
     }
 
-    /// A single tag chip (events mode only). Selected state keeps the glass look
-    /// but tints with the accent color. Single-select; tapping again returns to
-    /// "all" (no tag selected).
-    private func tagChip(_ tag: TagPill) -> some View {
-        let isSelected = viewModel.selectedTag == tag.id
-        return Button {
+    /// Shared glass chip look (selected = accent tint + stroke). Pure visualization.
+    private func chipButton(_ label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button {
             Haptics.selection()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                viewModel.toggleTag(tag.id)
+                action()
             }
         } label: {
-            Text(tag.label)
+            Text(label)
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(isSelected ? .accentColor : .primary)
                 .padding(.horizontal, 16)
@@ -254,6 +253,24 @@ struct MapScreen: View {
                 .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 3)
         }
         .buttonStyle(.plain)
+    }
+
+    /// "Wszystkie" — the no-tag state. Selected when nothing is filtered; cannot be
+    /// deselected by tapping it (already-all → no-op, no refetch). Selecting another
+    /// tag deselects it.
+    private var allChip: some View {
+        chipButton("Wszystkie", isSelected: viewModel.selectedTag == nil) {
+            viewModel.selectAll()
+        }
+    }
+
+    /// A single tag chip (events mode only). Selected state keeps the glass look
+    /// but tints with the accent color. Single-select; tapping again returns to
+    /// "all" (no tag selected).
+    private func tagChip(_ tag: TagPill) -> some View {
+        chipButton(tag.label, isSelected: viewModel.selectedTag == tag.id) {
+            viewModel.toggleTag(tag.id)
+        }
     }
 
     private var categoryPill: some View {

@@ -101,6 +101,14 @@ class MapViewModel: ObservableObject {
         refreshCurrentRegion()
     }
 
+    /// Back to "Wszystkie" (no tag filter). Already "all" → no-op (no refetch);
+    /// otherwise clears the selection and refetches so all approved pins return.
+    func selectAll() {
+        guard selectedTag != nil else { return }
+        selectedTag = nil
+        refreshCurrentRegion()
+    }
+
     var restoredViewport: MKCoordinateRegion? {
         let d = UserDefaults.standard
         guard d.object(forKey: MapPrefs.vpLat) != nil else { return nil }

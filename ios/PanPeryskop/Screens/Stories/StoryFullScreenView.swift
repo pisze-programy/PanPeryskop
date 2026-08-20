@@ -216,12 +216,11 @@ struct StoryFullScreenView: View {
                     .lineLimit(2)
             }
 
-            HStack(alignment: currentPost.isEvent ? .bottom : .center, spacing: 16) {
+            HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .center, spacing: 6) {
                     Text(EventDateFormatter.eventDay(currentPost.created_at))
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .textCase(.uppercase)
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity)
                     if let times = currentPost.showtimes, times.count > 1 {
@@ -951,13 +950,20 @@ enum StoryDateFormatter {
 }
 
 /// Event day (the seed anchor is 06:00 Europe/Warsaw of the event date) — shown
-/// as a small label above the flip-clock time.
+/// as a small label above the flip-clock time. Relative for the current window
+/// (Dziś/Jutro/Pojutrze), otherwise the full weekday name (no DD/MM).
 enum EventDateFormatter {
-    private static let dayFormatter: DateFormatter = {
+    private static let calendar: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "Europe/Warsaw")!
+        return c
+    }()
+
+    private static let weekdayFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "pl_PL")
         f.timeZone = TimeZone(identifier: "Europe/Warsaw")
-        f.dateFormat = "EEE d MMM"
+        f.dateFormat = "EEEE"
         return f
     }()
 
@@ -970,7 +976,16 @@ enum EventDateFormatter {
     }()
 
     static func eventDay(_ ms: Int64) -> String {
-        dayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000)).uppercased()
+        let date = Date(timeIntervalSince1970: TimeInterval(ms) / 1000)
+        let day = calendar.startOfDay(for: date)
+        let today = calendar.startOfDay(for: Date())
+        let diff = calendar.dateComponents([.day], from: today, to: day).day ?? 0
+        switch diff {
+        case 0: return "Dziś"
+        case 1: return "Jutro"
+        case 2: return "Pojutrze"
+        default: return weekdayFormatter.string(from: date)
+        }
     }
 
     static func time(_ ms: Int64) -> String {

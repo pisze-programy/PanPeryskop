@@ -239,9 +239,9 @@ postsRoutes.get('/:id', async (c) => {
        FROM posts p
        JOIN users u ON p.user_id = u.id
        WHERE p.id = ? AND p.status = '${STATUS_APPROVED}'
-       AND p.created_at >= ? AND p.created_at <= ?`
+       AND p.created_at >= ?`
     )
-    .bind(c.req.param('id'), now - TTL_MS, now)
+    .bind(c.req.param('id'), now - TTL_MS)
     .first<PostRow & { author_name: string; author_avatar_key: string | null }>();
 
   if (!post) return c.json({ error: 'Not found' }, 404);

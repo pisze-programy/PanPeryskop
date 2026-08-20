@@ -12,8 +12,8 @@ actionsRoutes.post('/:id/like', async (c) => {
   const postId = c.req.param('id');
 
   const post = await db
-    .prepare('SELECT status FROM posts WHERE id = ? AND created_at >= ? AND created_at <= ?')
-    .bind(postId, Date.now() - TTL_MS, Date.now())
+    .prepare('SELECT status FROM posts WHERE id = ? AND created_at >= ?')
+    .bind(postId, Date.now() - TTL_MS)
     .first<{ status: string }>();
   if (!post || post.status !== STATUS_APPROVED) return c.json({ error: 'Not found' }, 404);
 
@@ -40,8 +40,8 @@ actionsRoutes.post('/:id/dislike', async (c) => {
   const postId = c.req.param('id');
 
   const post = await db
-    .prepare('SELECT status FROM posts WHERE id = ? AND created_at >= ? AND created_at <= ?')
-    .bind(postId, Date.now() - TTL_MS, Date.now())
+    .prepare('SELECT status FROM posts WHERE id = ? AND created_at >= ?')
+    .bind(postId, Date.now() - TTL_MS)
     .first<{ status: string }>();
   if (!post || post.status !== STATUS_APPROVED) return c.json({ error: 'Not found' }, 404);
 
@@ -68,8 +68,8 @@ actionsRoutes.post('/:id/share', async (c) => {
   const postId = c.req.param('id');
 
   const post = await db
-    .prepare('SELECT status FROM posts WHERE id = ? AND created_at >= ? AND created_at <= ?')
-    .bind(postId, Date.now() - TTL_MS, Date.now())
+    .prepare('SELECT status FROM posts WHERE id = ? AND created_at >= ?')
+    .bind(postId, Date.now() - TTL_MS)
     .first<{ status: string }>();
   if (!post || post.status !== STATUS_APPROVED) return c.json({ error: 'Not found' }, 404);
 
@@ -89,8 +89,8 @@ actionsRoutes.post('/:id/watched', async (c) => {
   const postId = c.req.param('id');
 
   const post = await db
-    .prepare('SELECT status FROM posts WHERE id = ? AND created_at >= ? AND created_at <= ?')
-    .bind(postId, Date.now() - TTL_MS, Date.now())
+    .prepare('SELECT status FROM posts WHERE id = ? AND created_at >= ?')
+    .bind(postId, Date.now() - TTL_MS)
     .first<{ status: string }>();
   if (!post || post.status !== STATUS_APPROVED) return c.json({ error: 'Not found' }, 404);
 

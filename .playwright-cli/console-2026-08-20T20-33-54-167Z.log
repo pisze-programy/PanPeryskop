@@ -1,4 +1,0 @@
-[     138ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:blank:0
-[    1063ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ chrome-error://chromewebdata/:0
-[    1065ms] [ERROR] Refused to display 'https://dzis.app/' in a frame because it set 'X-Frame-Options' to 'deny'. @ chrome-error://chromewebdata/:0
-[    5456ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://example.com/test:0

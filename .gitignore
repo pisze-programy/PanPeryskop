@@ -61,3 +61,4 @@ admin/seed/events-meetup.json
 admin/seed/events-meetup-media/
 admin/vps/logs/
 admin/vps/.env
+.playwright-cli/

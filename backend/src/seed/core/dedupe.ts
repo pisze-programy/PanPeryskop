@@ -121,3 +121,9 @@ export function showtimeBookingJson(c: SeedCandidate): string | null {
   if (c.showtimeBooking && c.showtimeBooking.length > 0) return JSON.stringify(c.showtimeBooking);
   return null;
 }
+
+// Canonical tags — JSON array of canonical tag ids or null when none.
+export function tagsJson(c: SeedCandidate): string | null {
+  if (c.tags && c.tags.length > 0) return JSON.stringify(c.tags);
+  return null;
+}

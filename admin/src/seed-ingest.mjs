@@ -145,6 +145,7 @@ async function upload(token, entry, media, createdAt) {
   form.append('external_id', entry.external_id);
   if (entry.showtimes) form.append('showtimes', JSON.stringify(entry.showtimes));
   if (entry.showtime_booking) form.append('showtime_booking', JSON.stringify(entry.showtime_booking));
+  if (entry.tags && entry.tags.length) form.append('tags', JSON.stringify(entry.tags));
   form.append('file', new Blob([media.file], { type: media.mime }), media.fileName);
   form.append('thumb', new Blob([media.thumb], { type: 'image/jpeg' }), 'thumb.jpg');
 

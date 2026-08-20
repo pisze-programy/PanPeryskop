@@ -39,7 +39,9 @@ apiRoutes.get('/events', (c) => api(c, async (env) => {
     cityId: q.city ? String(q.city) : null,
     source: q.source ? String(q.source) : null,
     status: q.status ? String(q.status) : null,
-    day: q.day ? String(q.day) : null,
+    from: q.from ? String(q.from) : null,
+    to: q.to ? String(q.to) : null,
+    tag: q.tag ? String(q.tag) : null,
     fromMs: null, toMs: null, limit: 300,
   });
   const { results } = await env.DB.prepare(sql).bind(...binds).all();

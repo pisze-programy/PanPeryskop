@@ -40,29 +40,48 @@ export interface EventFilter {
   cityId: string | null;
   source: string | null;
   status: string | null;
-  day: string | null;
+  from: string | null;
+  to: string | null;
+  tag: string | null;
   fromMs: number | null;
   toMs: number | null;
   limit: number;
+  offset?: number;
 }
 
-// Build SQL + binds for events, with optional city bbox + day window.
-export function eventsSql(f: EventFilter): { sql: string; binds: unknown[] } {
-  let sql = `SELECT p.id, p.external_id, p.description, p.created_at, p.status, p.link_url, p.thumb_key,
-             p.lat, p.lng,
-             substr(p.external_id,1,instr(p.external_id,'-')-1) AS source
-             FROM posts p WHERE p.category='events'`;
+function eventsWhere(f: EventFilter): { where: string; binds: unknown[] } {
+  let where = `p.category='events'`;
   const binds: unknown[] = [];
   const bbox = f.cityId ? cityBbox(f.cityId) : null;
-  if (bbox) { sql += ' AND p.lat BETWEEN ? AND ? AND p.lng BETWEEN ? AND ?'; binds.push(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng); }
-  if (f.source) { sql += " AND substr(p.external_id,1,instr(p.external_id,'-')-1)=?"; binds.push(f.source); }
-  if (f.status) { sql += ' AND p.status=?'; binds.push(f.status); }
-  if (f.day) { sql += ' AND date(p.created_at/1000,\'unixepoch\',\'+2 hours\')=?'; binds.push(f.day); }
-  if (f.fromMs) { sql += ' AND p.created_at>=?'; binds.push(f.fromMs); }
-  if (f.toMs) { sql += ' AND p.created_at<=?'; binds.push(f.toMs); }
-  sql += ' ORDER BY p.created_at DESC LIMIT ?';
-  binds.push(f.limit);
-  return { sql, binds };
+  if (bbox) { where += ' AND p.lat BETWEEN ? AND ? AND p.lng BETWEEN ? AND ?'; binds.push(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng); }
+  if (f.source) { where += " AND substr(p.external_id,1,instr(p.external_id,'-')-1)=?"; binds.push(f.source); }
+  if (f.status) { where += ' AND p.status=?'; binds.push(f.status); }
+  if (f.from) { where += ' AND p.event_date >= ?'; binds.push(f.from); }
+  if (f.to) { where += ' AND p.event_date <= ?'; binds.push(f.to); }
+  if (f.tag) { where += f.tag === 'none' ? ' AND (p.tags IS NULL OR p.tags = ?)' : ' AND p.tags LIKE ?'; binds.push(f.tag === 'none' ? '[]' : `%"${f.tag}"%`); }
+  if (f.fromMs) { where += ' AND p.created_at>=?'; binds.push(f.fromMs); }
+  if (f.toMs) { where += ' AND p.created_at<=?'; binds.push(f.toMs); }
+  return { where, binds };
+}
+
+// Build SQL + binds for events, with optional city bbox + date window.
+export function eventsSql(f: EventFilter): { sql: string; binds: unknown[] } {
+  const { where, binds } = eventsWhere(f);
+  const offset = f.offset ?? 0;
+  return {
+    sql: `SELECT p.id, p.external_id, p.description, p.created_at, p.status, p.link_url,
+          p.thumb_key, p.media_key, p.tags, p.event_date, p.showtimes,
+          p.lat, p.lng,
+          substr(p.external_id,1,instr(p.external_id,'-')-1) AS source
+          FROM posts p WHERE ${where} ORDER BY p.event_date DESC, p.created_at DESC LIMIT ? OFFSET ?`,
+    binds: [...binds, f.limit, offset],
+  };
+}
+
+// Count query matching eventsSql filters — used for pagination.
+export function eventsCountSql(f: EventFilter): { sql: string; binds: unknown[] } {
+  const { where, binds } = eventsWhere(f);
+  return { sql: `SELECT COUNT(*) AS n FROM posts p WHERE ${where}`, binds };
 }
 
 // Simple haversine distance (km).

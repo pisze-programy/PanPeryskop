@@ -99,6 +99,7 @@ export function parseMeetupNode(n: MeetupNode, cityName: string, fallback: { lat
       link: n.eventUrl || `https://www.meetup.com/group/${n.group?.urlname || ''}/events/${n.id}/`,
       mediaUrl: n.featuredEventPhoto?.highResUrl || '',
       thumbUrl: null, // meetupstatic thumb_ variants are ~3 KB; seed-ingest builds the thumb
+      tags: ['meetup'],
     };
   })();
 }

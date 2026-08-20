@@ -54,6 +54,7 @@ export function parseCcScope(data: unknown, code: string, day: string): SeedCand
       startMs,
       times,
       showtimeBooking,
+      tags: ['filmy'],
       lat: cinema?.lat ?? null, lng: cinema?.lng ?? null,
       city: cinema?.city || '',
       venue: `Cinema City ${cinema?.name || code}`,

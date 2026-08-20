@@ -14,6 +14,7 @@ import { browserContent } from './browser';
 import { getBytes, getText } from './http';
 import { KUP_BASE, KUP_LISTINGS, KUP_MAX_PAGES } from '../core/constants';
 import { resolveVenueGeo, upsertVenue } from '../venues/venueStore';
+import { normalizeTags } from '../core/tags';
 
 const MONTHS = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
 
@@ -70,10 +71,10 @@ async function fetchKupCategory(ctx: SeedContext, listing: string, seen: Set<str
           const id = (href.match(/\/(?:imprezy|wydarzenia)\/(\d+)\//) || [])[1];
           if (!id || seen.has(id)) continue;
           seen.add(id);
-          const c = buildFromHtml(ctx, href, content, id, timeM && timeM[1]);
+          const c = buildFromHtml(ctx, href, content, id, timeM && timeM[1], listing);
           if (c) list.push(c);
         } else {
-          const sub = await expandFestival(ctx, href, seen);
+          const sub = await expandFestival(ctx, href, seen, listing);
           list.push(...sub);
         }
       }
@@ -86,7 +87,7 @@ async function fetchKupCategory(ctx: SeedContext, listing: string, seen: Set<str
 }
 
 // Build a candidate from a listing/festival HTML fragment — zero browser calls.
-async function expandFestival(ctx: SeedContext, href: string, seen: Set<string>): Promise<SeedCandidate[]> {
+async function expandFestival(ctx: SeedContext, href: string, seen: Set<string>, listing: string): Promise<SeedCandidate[]> {
   const out: SeedCandidate[] = [];
   try {
     const page = await kupGetText(ctx, href);
@@ -96,7 +97,7 @@ async function expandFestival(ctx: SeedContext, href: string, seen: Set<string>)
       if (!id || seen.has(id)) continue;
       seen.add(id);
       // Festival page: reuse listing extraction from the festival HTML block.
-      const c = buildFromHtml(ctx, `${KUP_BASE}${link}`, page, id);
+      const c = buildFromHtml(ctx, `${KUP_BASE}${link}`, page, id, null, listing);
       if (c) out.push(c);
     }
   } catch (e) {
@@ -143,7 +144,7 @@ export async function resolveKupGeo(
 // Parse a kupbilecik event from raw HTML (listing block or festival page).
 // Extracts everything from HTML — no extra browser calls.
 function buildFromHtml(
-  ctx: SeedContext, href: string, html: string, id: string, fallbackTime: string | null = null
+  ctx: SeedContext, href: string, html: string, id: string, fallbackTime: string | null = null, listing = ''
 ): SeedCandidate | null {
   const titleM = html.match(/<h2 class="blackLine">[^<]*<a href="https:\/\/www\.kupbilecik\.pl\/imprezy\/\d+\/[^"]+"[^>]*>\s*<b>([^<]+)<\/b>/);
   const title = titleM ? decode(titleM[1]) : '';
@@ -180,6 +181,7 @@ function buildFromHtml(
     thumbUrl: thumb,
     isSoldOut,
     geoRef: venueId || null,
+    tags: normalizeTags({ source: ProviderId.KUPBILECIK, rawTags: [listing], title }),
   };
 }
 

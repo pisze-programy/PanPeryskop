@@ -177,6 +177,7 @@ export function parseMkFilms(data: unknown, cinemaId: string, days: string[]): S
         startMs,
         times,
         showtimeBooking,
+        tags: ['filmy'],
         lat: null, lng: null, // resolved via cinema geo (venues store / SSR)
         city: cinemaCity(cinemaId),
         venue: `Multikino ${cinemaName(cinemaId)}`,

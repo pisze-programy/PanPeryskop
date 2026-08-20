@@ -73,11 +73,12 @@ test('cities: bbox is centered and nearestCity works', () => {
   assert.equal(cityBbox('nope'), null);
 });
 
-test('eventsSql: city filter adds bbox binds, day filter uses date()', () => {
-  const { sql, binds } = eventsSql({ cityId: 'warszawa', source: ProviderId.GOING, status: null, day: '2026-08-16', fromMs: null, toMs: null, limit: 50 });
+test('eventsSql: city filter adds bbox binds, date range uses event_date', () => {
+  const { sql, binds } = eventsSql({ cityId: 'warszawa', source: ProviderId.GOING, status: null, from: '2026-08-16', to: '2026-08-16', tag: null, fromMs: null, toMs: null, limit: 50 });
   assert.ok(sql.includes('p.lat BETWEEN'));
-  assert.ok(sql.includes('date(p.created_at/1000'));
+  assert.ok(sql.includes('p.event_date'));
   assert.ok(sql.includes('LIMIT ?'));
+  assert.ok(sql.includes('OFFSET ?'));
   assert.ok(binds.length >= 4);
-  assert.equal(binds[binds.length - 1], 50);
+  assert.equal(binds[binds.length - 2], 50);
 });

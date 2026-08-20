@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { nanoid } from 'nanoid';
 import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, POST_TYPE_SET, STATUS_APPROVED, PostRow } from '../core/models';
+import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { strField, fileField, ParsedForm } from '../core/form';
 import { mediaUrl, originFromRequest } from '../core/media';
 import { detectMediaType, extForMediaType } from '../core/mediaFormat';
@@ -146,9 +147,22 @@ postsRoutes.post('/', async (c) => {
     showtimeBookingJson = JSON.stringify(entries);
   }
 
+  // Optional canonical tags (JSON array) — seed-only. Only closed-set ids pass.
+  let tagsJson: string | null = null;
+  const tagsRaw = strField(form, 'tags');
+  if (tagsRaw) {
+    let parsed: unknown;
+    try { parsed = JSON.parse(tagsRaw); } catch { return c.json({ error: 'Invalid tags' }, 400); }
+    const tags = Array.isArray(parsed)
+      ? parsed.filter((t): t is string => typeof t === 'string' && CANONICAL_TAG_SET.has(t))
+      : null;
+    if (!tags) return c.json({ error: 'Invalid tags' }, 400);
+    tagsJson = JSON.stringify([...new Set(tags)].sort());
+  }
+
   const result = await doSavePost(
     c.env, user, postId, type, lat, lng, description,
-    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate, false, showtimesJson, showtimeBookingJson
+    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate, false, showtimesJson, showtimeBookingJson, tagsJson
   );
   return c.json(result, isUpdate ? 200 : 201);
 });
@@ -170,7 +184,8 @@ export async function doSavePost(
   isUpdate: boolean,
   isSoldOut = false,
   showtimes: string | null = null,
-  showtimeBooking: string | null = null
+  showtimeBooking: string | null = null,
+  tags: string | null = null
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
@@ -186,19 +201,19 @@ export async function doSavePost(
         `UPDATE posts
          SET type = ?, lat = ?, lng = ?, description = ?, media_key = ?, thumb_key = ?,
              is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?,
-             is_sold_out = ?, event_date = ?, showtimes = ?, showtime_booking = ?
+             is_sold_out = ?, event_date = ?, showtimes = ?, showtime_booking = ?, tags = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, eventDate, showtimes, showtimeBooking, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes, showtime_booking)
-         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags)
+         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking)
+      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags)
       .run();
     await db
       .prepare(
@@ -226,6 +241,7 @@ export async function doSavePost(
     event_date: eventDate,
     showtimes: showtimes ? (JSON.parse(showtimes) as string[]) : null,
     showtime_booking: showtimeBooking ? JSON.parse(showtimeBooking) : null,
+    tags: tags ? JSON.parse(tags) : null,
   };
 }
 
@@ -260,5 +276,6 @@ postsRoutes.get('/:id', async (c) => {
     media_url: mediaUrlV,
     thumb_url: mediaUrl(origin, post.thumb_key) ?? mediaUrlV,
     showtime_booking: post.showtime_booking ? JSON.parse(post.showtime_booking) : null,
+    tags: post.tags ? JSON.parse(post.tags) : null,
   });
 });

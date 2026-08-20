@@ -35,6 +35,7 @@ export interface StoryJson {
   external_id: string | null;
   showtimes: string[] | null;
   showtime_booking: { time: string; kind: string; params: Record<string, string> }[] | null;
+  tags: string[] | null;
   liked: boolean;
   disliked: boolean;
   watched: boolean;
@@ -72,6 +73,7 @@ function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): StoryJso
     external_id: r.external_id,
     showtimes: r.showtimes ? (JSON.parse(r.showtimes) as string[]) : null,
     showtime_booking: r.showtime_booking ? JSON.parse(r.showtime_booking) : null,
+    tags: r.tags ? JSON.parse(r.tags) : null,
     liked: false,
     disliked: (r.disliked ?? 0) === 1,
     watched: (r.watched ?? 0) === 1,

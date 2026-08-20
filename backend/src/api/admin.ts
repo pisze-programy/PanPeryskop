@@ -63,9 +63,43 @@ adminRoutes.get('/seed/coverage', async (c) => {
   return c.json({ window, counts });
 });
 
+// One-off data cleanup: delete all event posts earlier than today (Europe/Warsaw),
+// their R2 media and dependent rows (reports/likes/dislikes/views/shares).
+adminRoutes.post('/events/cleanup', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const db = c.env.DB;
+  const today = todayWarsaw();
+  const todayStart = Date.parse(`${today}T00:00:00+02:00`);
+  const scope = `category='events' AND (event_date < ?1 OR (event_date IS NULL AND created_at < ?2))`;
+  const binds = [today, todayStart];
+
+  const { results } = await db.prepare(
+    `SELECT id, media_key, thumb_key FROM posts WHERE ${scope}`
+  ).bind(...binds).all<{ id: string; media_key: string | null; thumb_key: string | null }>();
+  const rows = results || [];
+  if (!rows.length) return c.json({ deleted: 0, mediaDeleted: 0 });
+
+  // Remove R2 objects (media + thumb) for the deleted posts — parallel batches.
+  const keys = rows.flatMap((r) => [r.media_key, r.thumb_key]).filter((k): k is string => !!k);
+  let mediaDeleted = 0;
+  const CONCURRENCY = 25;
+  for (let i = 0; i < keys.length; i += CONCURRENCY) {
+    const chunk = keys.slice(i, i + CONCURRENCY);
+    const res = await Promise.allSettled(chunk.map((k) => c.env.MEDIA.delete(k)));
+    mediaDeleted += res.filter((r) => r.status === 'fulfilled').length;
+  }
+
+  // Dependent rows first, then the posts themselves (no FK constraints in D1).
+  for (const table of ['reports', 'likes', 'dislikes', 'views', 'shares']) {
+    await db.prepare(`DELETE FROM ${table} WHERE post_id IN (SELECT id FROM posts WHERE ${scope})`).bind(...binds).run();
+  }
+  const del = await db.prepare(`DELETE FROM posts WHERE ${scope}`).bind(...binds).run();
+
+  return c.json({ deleted: rows.length, mediaDeleted, rowsDeleted: del.meta.changes });
+});
+
 adminRoutes.post('/posts/:id/approve', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
-
   const db = c.env.DB;
   const postId = c.req.param('id');
 

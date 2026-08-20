@@ -135,6 +135,7 @@ export function parseLumaEntry(e: LumaEntry, cityName: string, fallback: { lat: 
       link: `${LUMA_EVENT_WEB}/${ev.url || ev.api_id}`,
       mediaUrl: isUsableImage(ev.cover_url) || isUsableImage(ev.social_image_url),
       thumbUrl: null, // lumacdn has no resize; the VPS/seed-ingest path builds the thumb
+      tags: ['meetup'],
     };
   })();
 }

@@ -108,6 +108,7 @@ export function parseHeliosPayload(payload: HeliosPayload, cinemaId: number, day
       startMs,
       times,
       showtimeBooking,
+      tags: ['filmy'],
       lat: cinema.lat, lng: cinema.lng,
       city: cinema.city,
       venue: cinema.name,

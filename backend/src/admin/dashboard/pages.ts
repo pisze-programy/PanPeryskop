@@ -2,11 +2,12 @@
 import { Hono } from 'hono';
 import { bars, cards, empty, esc, fmtDate, fmtDur, fmtPct, page, pill } from '../ui';
 import { adminLogin, getClientIp } from '../auth';
-import { CITIES } from '../cities';
-import { browserBudget, cronInfo, daySeries, eventsSql, nearestCity } from '../queries';
+import { CITIES, cityBbox } from '../cities';
+import { browserBudget, cronInfo, daySeries, eventsSql, eventsCountSql, nearestCity, EventFilter } from '../queries';
 import { seedTomorrow } from '../../seed';
 import { clearCookie, fmtPctNum, requireSession, setSessionCookie } from './common';
 import { STATUS_REJECTED } from '../../core/models';
+import { CANONICAL_TAGS, CANONICAL_TAG_SET } from '../../seed/core/tags';
 
 export const pageRoutes = new Hono<{ Bindings: Env }>();
 
@@ -124,43 +125,301 @@ pageRoutes.get('/', async (c) => {
   return renderPage(c, 'Overview', '/admin', body);
 });
 
-// ---------- Events ----------
+// ---------- Events / Moderacja ----------
+const EVENT_SOURCES = ['helios', 'multikino', 'cinemacity', 'going', 'kupbilecik', 'dzisapp', 'eventylive', 'luma', 'meetup'];
+const TAG_LABELS: Record<string, string> = { filmy: 'Filmy', muzyka: 'Muzyka', meetup: 'Meetup', komedia: 'Komedia' };
+
+function norm(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// Escape a string for embedding inside a single-quoted JS string in an onclick attr.
+function jsStr(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+}
+
+function parseTags(t: string | null | undefined): string[] {
+  if (!t) return [];
+  try {
+    const v = JSON.parse(t);
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch { return []; }
+}
+
+// "Tytuł: HH:MM, Lokalizacja" → { title, time, loc } — the seed description format.
+function descParts(description: string): { title: string; time: string; loc: string } {
+  const m = /^(.+?):\s*(\d{2}:\d{2}),\s*(.*)$/.exec(description || '');
+  return m ? { title: m[1], time: m[2], loc: m[3] } : { title: description || '', time: '', loc: '' };
+}
+
+// Status dropdown — colored per status, auto-submits on change; carries the
+// current single tag as a hidden field so a status change never wipes it.
+function statusSelect(e: { id: string; status: string; tag: string }): string {
+  const colorCls = e.status === 'approved' ? ' text-success' : e.status === 'pending' ? ' text-warning' : ' text-danger';
+  const opts = ['approved', 'pending', 'rejected'].map((s) =>
+    `<option value="${s}" ${e.status === s ? 'selected' : ''} style="color:var(--tblr-${s === 'approved' ? 'success' : s === 'pending' ? 'warning' : 'danger'})">${s}</option>`).join('');
+  return `<form method="post" action="/admin/events/${esc(e.id)}">
+    <select name="status" class="form-select form-select-sm${colorCls}" onchange="ppUpdate('${esc(e.id)}', this.form)">${opts}</select>
+    <input type="hidden" name="tags" value="${esc(e.tag)}" /></form>`;
+}
+
+// Single tag dropdown — one tag per event, "— brak —" when none (highlighted so
+// missing tags are visible). Auto-submits on change; carries status hidden.
+function tagSelect(e: { id: string; status: string; tag: string }): string {
+  const hasTag = e.tag !== '';
+  const missingCls = hasTag ? '' : ' text-warning';
+  const opts = `<option value="" ${!hasTag ? 'selected' : ''}>— brak —</option>` + CANONICAL_TAGS.map((t) =>
+    `<option value="${t}" ${e.tag === t ? 'selected' : ''}>${esc(TAG_LABELS[t] ?? t)}</option>`).join('');
+  return `<form method="post" action="/admin/events/${esc(e.id)}">
+    <select name="tags" class="form-select form-select-sm${missingCls}" onchange="ppUpdate('${esc(e.id)}', this.form)">${opts}</select>
+    <input type="hidden" name="status" value="${esc(e.status)}" /></form>`;
+}
+
+function eventThumb(e: { thumb_key?: string | null; media_key?: string | null }): string {
+  const key = e.thumb_key || e.media_key;
+  const full = e.media_key || e.thumb_key;
+  if (!key) return '—';
+  return `<img src="/media/${esc(key)}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px;cursor:zoom-in" loading="lazy" onerror="this.style.display='none'" onclick="ppMediaOpen('/media/${esc(full)}')" />`;
+}
+
+// Title: opens the event page in a modal (iframe); a missing link is a DATA
+// ERROR → alert (ESC closes). Source shown as a muted suffix.
+function titleHtml(linkUrl: string | null, title: string, id: string, source: string): string {
+  const t = esc(title || '—');
+  const src = `<span class="text-muted" style="font-size:11px">(${esc(source)})</span>`;
+  if (linkUrl) {
+    return `<a href="javascript:void(0)" onclick="ppLinkOpen('${jsStr(linkUrl)}');return false;" class="text-reset text-decoration-none">${t}</a> ${src}`;
+  }
+  return `<a href="javascript:void(0)" onclick="ppAlertOpen('Błąd danych','Wydarzenie nie ma linku (${esc(id)}). Eventy zawsze powinny mieć link.');return false;" class="text-danger text-decoration-none">${t} ⚠</a> ${src}`;
+}
+
+// Which city id is mentioned in the location string (fallback geo for null coords).
+function cityByLoc(loc: string): string | null {
+  const l = norm(loc);
+  for (const ct of CITIES) {
+    if (l.includes(norm(ct.name))) return ct.id;
+  }
+  return null;
+}
+
+// Google Maps embed URL (shown in the link modal) — exact coords when available,
+// otherwise the city bbox center (same fallback as the app).
+function placeEmbed(lat: number | null, lng: number | null, loc: string): string | null {
+  let base: string | null = null;
+  if (lat != null && lng != null) base = `https://www.google.com/maps?q=${lat},${lng}`;
+  else {
+    const cid = cityByLoc(loc);
+    if (cid) {
+      const b = cityBbox(cid);
+      if (b) base = `https://www.google.com/maps?q=${b.swLat + (b.neLat - b.swLat) / 2},${b.swLng + (b.neLng - b.swLng) / 2}`;
+    }
+  }
+  return base ? `${base}&output=embed` : null;
+}
+
+function placeLabel(loc: string, lat: number | null, lng: number | null): string {
+  const city = lat != null && lng != null ? nearestCity(lat, lng) : '';
+  const venue = (loc.split(',')[0] || '').trim();
+  if (!city && !venue) return '--- Brak';
+  return [city, venue].filter(Boolean).join(', ');
+}
+
+const PIN_ICON = `<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><use href="#icon-map-pin"/></svg>`;
+
+// Place row: pin icon + "Miasto, VENUE"; the whole thing opens a Google Maps
+// embed in the modal (ESC closes) — a live pin check on the map.
+function placeHtml(lat: number | null, lng: number | null, loc: string): string {
+  const label = esc(placeLabel(loc, lat, lng));
+  const embed = placeEmbed(lat, lng, loc);
+  if (!embed) return `<div class="text-secondary" style="font-size:13px">${PIN_ICON} ${label}</div>`;
+  return `<div class="text-secondary" style="font-size:13px"><a href="javascript:void(0)" onclick="ppLinkOpen('${jsStr(embed)}');return false;" class="text-reset text-decoration-none">${PIN_ICON} ${label}</a></div>`;
+}
+
+function dateHtml(eventDate: string | null, showtime: string | null, time: string): string {
+  const d = eventDate || '';
+  const t = showtime || time;
+  return `<div class="text-muted" style="font-size:12px">${esc(d)}${t ? ' · ' + esc(t) : ''}</div>`;
+}
+
 pageRoutes.get('/events', async (c) => {
   const db = c.env.DB;
   const q = c.req.query();
   const cityId = q.city ? String(q.city) : null;
   const source = q.source ? String(q.source) : null;
-  const day = q.day ? String(q.day) : null;
-  const { sql, binds } = eventsSql({ cityId, source, status: null, day, fromMs: null, toMs: null, limit: 300 });
+  const status = q.status ? String(q.status) : null;
+  const from = q.from ? String(q.from) : null;
+  const to = q.to ? String(q.to) : null;
+  const tag = q.tag ? String(q.tag) : null;
+  const page = Math.max(1, parseInt(String(q.page || '1'), 10) || 1);
+  const PAGE_SIZE = 100;
+
+  const filter: EventFilter = { cityId, source, status, from, to, tag, fromMs: null, toMs: null, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE };
+  const { sql, binds } = eventsSql(filter);
   const { results } = await db.prepare(sql).bind(...binds).all();
+  const cnt = eventsCountSql(filter);
+  const cntRow = await db.prepare(cnt.sql).bind(...cnt.binds).first<{ n: number }>();
+  const total = cntRow?.n ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const cityOpts = `<option value="">Wszystkie miasta</option>` + CITIES.map((ct) =>
     `<option value="${ct.id}" ${cityId === ct.id ? 'selected' : ''}>${esc(ct.name)}</option>`).join('');
-  const srcOpts = `<option value="">Wszystkie źródła</option>
-    <option value="going" ${source === 'going' ? 'selected' : ''}>going</option>
-    <option value="kupbilecik" ${source === 'kupbilecik' ? 'selected' : ''}>kupbilecik</option>`;
+  const srcOpts = `<option value="">Wszystkie źródła</option>` + EVENT_SOURCES.map((s) =>
+    `<option value="${s}" ${source === s ? 'selected' : ''}>${s}</option>`).join('');
+  const statusOpts = ['', 'pending', 'approved', 'rejected'].map((s) =>
+    `<option value="${s}" ${status === s ? 'selected' : ''}>${s === '' ? 'Wszystkie statusy' : s}</option>`).join('');
+  const tagOpts = `<option value="">Wszystkie tagi</option><option value="none" ${tag === 'none' ? 'selected' : ''}>Brak</option>` + CANONICAL_TAGS.map((t) =>
+    `<option value="${t}" ${tag === t ? 'selected' : ''}>${esc(TAG_LABELS[t] ?? t)}</option>`).join('');
 
-  const rows = (results as any[]).map((e) => `<tr>
-    <td>${pill(esc(e.source), e.source === 'going' ? 'ok' : 'muted')}</td>
-    <td>${esc((e.description || e.external_id || '').slice(0, 60))}</td>
-    <td>${esc(nearestCity(e.lat, e.lng))}</td>
-    <td>${fmtDate(e.created_at)}</td>
-    <td>${e.status === 'approved' ? pill('approved', 'ok') : pill(esc(e.status), 'err')}</td>
-    <td>${e.link_url ? `<a href="${esc(e.link_url)}" target="_blank" rel="noopener">link</a>` : '—'}</td>
-    ${e.thumb_key ? `<td><img src="/media/${esc(e.thumb_key)}" style="width:44px;height:44px;object-fit:cover;border-radius:6px" loading="lazy" /></td>` : '<td>—</td>'}</tr>`).join('');
+  const qs = new URLSearchParams();
+  if (cityId) qs.set('city', cityId);
+  if (source) qs.set('source', source);
+  if (status) qs.set('status', status);
+  if (tag) qs.set('tag', tag);
+  if (from) qs.set('from', from);
+  if (to) qs.set('to', to);
+  const qstr = qs.toString();
+  const prevHref = page > 1 ? `/admin/events?${qstr}${qstr ? '&' : ''}page=${page - 1}` : null;
+  const nextHref = page < totalPages ? `/admin/events?${qstr}${qstr ? '&' : ''}page=${page + 1}` : null;
+  const pager = `<div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+    <span class="text-secondary">${total} wydarzeń · strona ${page} / ${totalPages}</span>
+    <div class="btn-group">
+      ${prevHref ? `<a class="btn btn-outline-secondary btn-sm" href="${esc(prevHref)}">‹ Poprzednia</a>` : '<span class="btn btn-outline-secondary btn-sm disabled">‹ Poprzednia</span>'}
+      ${nextHref ? `<a class="btn btn-outline-secondary btn-sm" href="${esc(nextHref)}">Następna ›</a>` : '<span class="btn btn-outline-secondary btn-sm disabled">Następna ›</span>'}
+    </div></div>`;
 
-  const body = `<h2 class="mb-3">Eventy</h2>
+  const rows = (results as any[]).map((e) => {
+    const { title, time, loc } = descParts(e.description);
+    const tag = parseTags(e.tags)[0] ?? '';
+    const firstShowtime = (() => {
+      try { const t = JSON.parse(e.showtimes); return Array.isArray(t) && t.length ? String(t[0]) : null; } catch { return null; }
+    })();
+    return `<tr>
+      <td>${eventThumb(e)}</td>
+      <td>
+        <div class="fw-semibold">${titleHtml(e.link_url, title, e.id, e.source)}</div>
+        ${placeHtml(e.lat, e.lng, loc)}
+        ${dateHtml(e.event_date, firstShowtime, time)}
+      </td>
+      <td>${statusSelect({ id: e.id, status: e.status, tag })}</td>
+      <td>${tagSelect({ id: e.id, status: e.status, tag })}</td></tr>`;
+  }).join('');
+
+  const body = `<h2 class="mb-3">${status === 'pending' ? 'Moderacja' : 'Eventy'}</h2>
   <form method="get" action="/admin/events" class="row g-2 mb-3">
-    <div class="col-6 col-md-3"><label class="form-label">Miasto</label><select name="city" class="form-select">${cityOpts}</select></div>
-    <div class="col-6 col-md-3"><label class="form-label">Źródło</label><select name="source" class="form-select">${srcOpts}</select></div>
-    <div class="col-6 col-md-3"><label class="form-label">Dzień (YYYY-MM-DD)</label><input name="day" type="date" class="form-control" value="${esc(day || '')}" /></div>
-    <div class="col-6 col-md-3 d-flex align-items-end"><button class="btn btn-primary">Filtruj</button>
+    <div class="col-6 col-md-2"><label class="form-label">Miasto</label><select name="city" class="form-select">${cityOpts}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label">Źródło</label><select name="source" class="form-select">${srcOpts}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label">Status</label><select name="status" class="form-select">${statusOpts}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label">Tag</label><select name="tag" class="form-select">${tagOpts}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label">Data od</label><input name="from" type="date" class="form-control" value="${esc(from || '')}" /></div>
+    <div class="col-6 col-md-2"><label class="form-label">Data do</label><input name="to" type="date" class="form-control" value="${esc(to || '')}" /></div>
+    <div class="col-12 d-flex align-items-end"><button class="btn btn-primary me-2">Filtruj</button>
       <a class="btn btn-link text-decoration-none" href="/admin/events">Wyczyść</a></div>
   </form>
+  ${pager}
   <div class="card"><div class="table-responsive"><table class="table table-vcenter card-table">
-    <thead><tr><th>Źródło</th><th>Opis</th><th>Miasto</th><th>Czas</th><th>Status</th><th>Link</th><th>Media</th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="7">${empty()}</td></tr>`}</tbody></table></div></div>`;
-  return renderPage(c, 'Eventy', '/admin/events', body);
+    <thead><tr><th>Media</th><th>Wydarzenie</th><th>Status</th><th>Tagi</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="4">${empty()}</td></tr>`}</tbody></table></div></div>
+  ${pager}
+  <div id="ppMediaModal" onclick="ppMediaClose()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out">
+    <img id="ppMediaImg" alt="" style="max-width:92vw;max-height:92vh;border-radius:8px" />
+  </div>
+  <div id="ppLinkModal" tabindex="-1" onkeydown="if(event.key==='Escape'){event.preventDefault();ppLinkClose();}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;padding:16px;outline:none">
+    <div style="width:100%;max-width:960px;height:86vh;background:#fff;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:flex-end;padding:6px 8px;background:#fff;border-bottom:1px solid #e9ecef">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="ppLinkClose()">Zamknij (ESC)</button>
+      </div>
+      <iframe id="ppLinkFrame" title="Podgląd" style="flex:1;border:0;width:100%" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+    </div>
+  </div>
+  <div id="ppAlertModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+    <div class="card" style="max-width:440px;width:92%">
+      <div class="card-header"><h3 class="card-title mb-0" id="ppAlertTitle">Uwaga</h3></div>
+      <div class="card-body" id="ppAlertMsg"></div>
+      <div class="card-footer text-end"><button type="button" class="btn btn-secondary" onclick="ppAlertClose()">OK (ESC)</button></div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    var media=document.getElementById('ppMediaModal'), alertM=document.getElementById('ppAlertModal'), linkM=document.getElementById('ppLinkModal');
+    window.ppMediaOpen=function(src){var img=document.getElementById('ppMediaImg'); if(img){img.style.maxWidth='92vw';img.style.maxHeight='92vh';img.src=src;} media.style.display='flex';};
+    window.ppMediaClose=function(){media.style.display='none';};
+    window.ppLinkOpen=function(url){
+      var f=document.getElementById('ppLinkFrame');
+      if(f) f.src=url;
+      linkM.style.display='flex';
+      // Focus the modal chrome so ESC reaches the parent document immediately.
+      setTimeout(function(){linkM.focus();},0);
+    };
+    window.ppLinkClose=function(){var f=document.getElementById('ppLinkFrame'); if(f) f.src='about:blank'; linkM.style.display='none';};
+    window.ppAlertOpen=function(title,msg){document.getElementById('ppAlertTitle').textContent=title;document.getElementById('ppAlertMsg').textContent=msg;alertM.style.display='flex';};
+    window.ppAlertClose=function(){alertM.style.display='none';};
+    // A loaded page/iframe steals focus (e.g. a site calling focus()) — pull focus
+    // back to the modal chrome so ESC keeps working.
+    var frame=document.getElementById('ppLinkFrame');
+    if(frame){frame.addEventListener('load',function(){linkM.focus();});}
+    // Capture-phase listener as a safety net for controls inside the modal chrome.
+    window.addEventListener('keydown',function(e){if(e.key==='Escape'){ppMediaClose();ppLinkClose();ppAlertClose();}},true);
+    // In-place save of a status/tag change — no page reload.
+    window.ppUpdate=function(id,formEl){
+      var sel=formEl.querySelector('select');
+      var fd=new FormData(formEl);
+      fetch('/admin/events/'+encodeURIComponent(id),{method:'POST',body:fd})
+        .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
+        .then(function(){
+          if(sel){
+            sel.classList.remove('text-success','text-warning','text-danger');
+            if(sel.name==='status'){
+              if(sel.value==='approved') sel.classList.add('text-success');
+              else if(sel.value==='pending') sel.classList.add('text-warning');
+              else sel.classList.add('text-danger');
+            }else if(sel.name==='tags'){
+              if(!sel.value) sel.classList.add('text-warning');
+            }
+            sel.style.outline='2px solid var(--tblr-success)';
+            setTimeout(function(){sel.style.outline='';},700);
+          }
+        })
+        .catch(function(){window.ppAlertOpen('Błąd','Nie udało się zapisać zmiany.');});
+    };
+    var KEYS=['city','source','status','tag','from','to'];
+    var q=new URLSearchParams(location.search);
+    var hasQ=[...q.keys()].length>0;
+    if(hasQ){KEYS.forEach(function(k){var v=q.get(k); if(v) localStorage.setItem('evFilter:'+k,v);});}
+    else{
+      var saved={},any=false;
+      KEYS.forEach(function(k){var v=localStorage.getItem('evFilter:'+k); if(v){saved[k]=v;any=true;}});
+      if(any){Object.keys(saved).forEach(function(k){q.set(k,saved[k]);}); location.replace('/admin/events?'+q.toString()); return;}
+    }
+    var form=document.querySelector('form[action="/admin/events"]');
+    if(form){form.addEventListener('submit',function(){KEYS.forEach(function(k){var el=form.elements[k]; if(el) localStorage.setItem('evFilter:'+k,el.value);});});}
+  })();
+  </script>`;
+  return renderPage(c, status === 'pending' ? 'Moderacja' : 'Eventy', '/admin/events', body);
+});
+
+pageRoutes.post('/events/:id', async (c) => {
+  const session = await requireSession(c);
+  if (!session) return c.redirect('/admin/login');
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const form = (await c.req.parseBody({ all: true }).catch(() => ({}))) as Record<string, unknown>;
+
+  const rawStatus = Array.isArray(form.status) ? String(form.status[0]) : String(form.status ?? '');
+  const status = rawStatus === 'approved' || rawStatus === 'pending' || rawStatus === 'rejected' ? rawStatus : null;
+  if (status) {
+    if (status === 'rejected') {
+      await db.prepare('UPDATE posts SET status = ? WHERE id = ?').bind(status, id).run();
+    } else {
+      await db.prepare('UPDATE posts SET status = ?, rejection_reason = NULL WHERE id = ?').bind(status, id).run();
+    }
+  }
+
+  const tagsRaw = Array.isArray(form.tags) ? String(form.tags[0]) : String(form.tags ?? '');
+  const tag = CANONICAL_TAG_SET.has(tagsRaw) ? tagsRaw : null;
+  const tagsJsonStr = tag ? JSON.stringify([tag]) : null;
+  await db.prepare('UPDATE posts SET tags = ? WHERE id = ?').bind(tagsJsonStr, id).run();
+
+  return c.json({ ok: true, status, tag });
 });
 
 // ---------- Users ----------

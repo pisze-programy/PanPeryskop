@@ -63,6 +63,7 @@ export interface PostRow {
   is_sold_out: number;
   event_date: string | null;
   showtime_booking?: string | null;
+  tags?: string | null;
 }
 
 // A post row joined with author info (and optional watched flag) for /stories.
@@ -86,7 +87,8 @@ export const POST_TYPE_SET: ReadonlySet<string> = new Set<string>(POST_TYPES);
 
 export const STATUS_APPROVED = 'approved';
 export const STATUS_REJECTED = 'rejected';
-export const POST_STATUSES = [STATUS_APPROVED, STATUS_REJECTED] as const;
+export const STATUS_PENDING = 'pending';
+export const POST_STATUSES = [STATUS_PENDING, STATUS_APPROVED, STATUS_REJECTED] as const;
 export type PostStatus = (typeof POST_STATUSES)[number];
 
 export interface Story extends Omit<Post, 'status'> {

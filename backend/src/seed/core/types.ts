@@ -62,6 +62,8 @@ export interface SeedCandidate {
   /** Per-showtime booking identity (cinema providers) — the client builds the
    *  deep booking URL from it; absent for non-bookable sources. */
   showtimeBooking?: ShowtimeBooking[];
+  /** Canonical tags (subset of the closed tag set) — empty/absent = none. */
+  tags?: string[];
 }
 
 export interface SeedProviderResult {

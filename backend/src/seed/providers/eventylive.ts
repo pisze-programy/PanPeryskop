@@ -8,6 +8,7 @@ import { CITIES, cityById, cityBbox } from '../../admin/cities';
 import { matchVenueGeo, VenueEntry } from '../venues/venueMatch';
 import { upsertVenuesBatch, listVenues, venueKey } from '../venues/venueStore';
 import { DZIS_API, DZIS_LIMIT, EVL_BASE, EVL_LIST_BASE, EVL_MAX_PAGES } from '../core/constants';
+import { normalizeTags } from '../core/tags';
 
 const UA = { 'User-Agent': 'Mozilla/5.0' };
 
@@ -229,6 +230,7 @@ export async function fetchEventyliveCity(ctx: SeedContext, cityId: string): Pro
         mediaUrl: img || '',
         thumbUrl: img || null,
         isSoldOut,
+        tags: normalizeTags({ source: ProviderId.EVENTYLIVE, title: evl.name }),
       });
     }
   return out;

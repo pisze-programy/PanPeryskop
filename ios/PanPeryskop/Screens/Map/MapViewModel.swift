@@ -337,7 +337,7 @@ class MapViewModel: ObservableObject {
             liked: post.liked, disliked: post.disliked, watched: watched,
             author_name: post.author_name, media_url: post.media_url, thumb_url: post.thumb_url,
             author_avatar_url: post.author_avatar_url,
-            is_sponsored: post.is_sponsored, category: post.category, link_url: post.link_url, is_sold_out: post.is_sold_out, showtimes: post.showtimes
+            is_sponsored: post.is_sponsored, category: post.category, link_url: post.link_url, is_sold_out: post.is_sold_out, showtimes: post.showtimes, showtime_booking: post.showtime_booking
         )
     }
 
@@ -359,7 +359,7 @@ class MapViewModel: ObservableObject {
                     liked: resp.liked, disliked: updated.disliked, watched: updated.watched,
                     author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
                     author_avatar_url: updated.author_avatar_url,
-                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url, is_sold_out: updated.is_sold_out, showtimes: updated.showtimes
+                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url, is_sold_out: updated.is_sold_out, showtimes: updated.showtimes, showtime_booking: updated.showtime_booking
                 )
                 posts[idx] = updated
             }
@@ -387,7 +387,7 @@ class MapViewModel: ObservableObject {
                     liked: updated.liked, disliked: resp.disliked, watched: updated.watched,
                     author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
                     author_avatar_url: updated.author_avatar_url,
-                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url, is_sold_out: updated.is_sold_out, showtimes: updated.showtimes
+                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url, is_sold_out: updated.is_sold_out, showtimes: updated.showtimes, showtime_booking: updated.showtime_booking
                 )
                 posts[idx] = updated
             }

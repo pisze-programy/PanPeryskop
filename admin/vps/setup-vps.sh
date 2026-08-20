@@ -121,8 +121,10 @@ cd /
 cat <<'SUMMARY'
 
 === PanPeryskop VPS ready ===
-Następny krok (pierwszy seed całego okna, jednorazowo):
-  sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --full
+Następny krok (pierwszy seed całego okna, jednorazowo) — przez orchestrator,
+żeby bundle dostał proxy env przed startem node (NODE_USE_ENV_PROXY czyta się
+tylko przy starcie; `sudo node …/vps-seed.mjs` egressuje z datacenter IP → 403):
+  sudo -n sh /opt/panperyskop/admin/vps/orchestrator.sh --full
 
 Status / logi:
   cat /opt/panperyskop/admin/vps/logs/status.json

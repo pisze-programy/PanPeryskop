@@ -6,7 +6,7 @@
 //
 // Granularity: ONE candidate per film×cinema×day (startMs = earliest showtime).
 // Queue scope = cinema (numeric id); each scope is one API call.
-import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId, ShowtimeBooking } from '../core/types';
 import { getBytes } from './http';
 import { warsawMidnightMs } from '../core/dates';
 import { HELIOS_CINEMAS, HELIOS_FILM, HELIOS_SCREENINGS, HELIOS_TIMEOUT_MS, heliosScopes } from '../core/constants';
@@ -17,11 +17,37 @@ function cinemaById(id: number) {
 
 // The screenings response wraps everything under data: data.screenings[day][m<id>|e<id>]
 // holds the showtimes; data.movies/data.events map each key to its metadata.
-interface HeliosDayEntry { screenings: { timeFrom: string }[] }
+interface HeliosMovie {
+  id?: number;
+  sourceId?: string;
+  title?: string;
+  name?: string;
+  slug?: string;
+  posterPhoto?: { url?: string };
+}
+interface HeliosScreening {
+  timeFrom?: string;
+  sourceId?: string;
+  cinemaSourceId?: string;
+  screeningMovies?: { movie?: HeliosMovie }[];
+}
+interface HeliosDayEntry { screenings: HeliosScreening[] }
 interface HeliosPayload {
   movies?: Record<string, any>;
   events?: Record<string, any>;
   screenings?: Record<string, Record<string, HeliosDayEntry>>;
+}
+
+// The authoritative film identity for a screening entry. Events (e*) reuse their
+// events-map metadata across different films over time, so the embedded
+// screeningMovies[].movie is preferred; regular films (m*) live in data.movies.
+function filmFor(key: string, entries: HeliosDayEntry, payload: HeliosPayload): HeliosMovie | null {
+  for (const s of entries.screenings) {
+    const mv = s.screeningMovies?.[0]?.movie;
+    if (mv && mv.id != null && mv.slug) return mv;
+  }
+  const meta = key.startsWith('m') ? payload.movies?.[key] : payload.events?.[key];
+  return meta || null;
 }
 
 function startMsFor(day: string, entries: HeliosDayEntry): number | null {
@@ -51,24 +77,42 @@ export function parseHeliosPayload(payload: HeliosPayload, cinemaId: number, day
       .map((s) => { const m = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})/.exec(s.timeFrom || ''); return m ? `${m[2]}:${m[3]}` : null; })
       .filter((x): x is string => x !== null)
       .sort();
-    const meta = key.startsWith('m') ? payload.movies?.[key] : payload.events?.[key];
-    if (!meta) continue;
-    const title = meta.title || meta.name;
-    const slug = meta.slug || '';
-    const poster = meta.posterPhoto?.url || '';
-    if (!title || !poster) continue;
-    const filmId = slug ? `${slug}-${meta.id}` : String(meta.id);
+    const movie = filmFor(key, entries, payload);
+    if (!movie) continue;
+    const title = movie.title || movie.name;
+    const slug = movie.slug || '';
+    const poster = movie.posterPhoto?.url || '';
+    const filmIdNum = movie.id;
+    if (!title || !poster || filmIdNum == null) continue;
+    const filmId = slug ? `${slug}-${filmIdNum}` : String(filmIdNum);
+    const showtimeBooking: ShowtimeBooking[] = [];
+    for (const s of entries.screenings) {
+      const m = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})/.exec(s.timeFrom || '');
+      if (!m) continue;
+      if (!s.sourceId || !s.cinemaSourceId || !movie.sourceId) continue;
+      showtimeBooking.push({
+        time: `${m[2]}:${m[3]}`,
+        kind: 'helios',
+        params: {
+          screen: s.sourceId,
+          cinema: s.cinemaSourceId,
+          itemId: movie.sourceId,
+          itemSourceId: String(filmIdNum),
+        },
+      });
+    }
     out.push({
       source: ProviderId.HELIOS,
       externalId: `helios-${cinema.citySlug}-${cinema.slug}-${filmId}-${day}`,
       title,
       startMs,
       times,
+      showtimeBooking,
       lat: cinema.lat, lng: cinema.lng,
       city: cinema.city,
       venue: cinema.name,
       address: cinema.address,
-      link: HELIOS_FILM(cinema, slug, meta.id),
+      link: HELIOS_FILM(cinema, slug, filmIdNum),
       mediaUrl: poster,
       thumbUrl: null,
     });

@@ -28,6 +28,7 @@ struct Post: Codable, Identifiable, Equatable {
     let link_url: String?
     let is_sold_out: Bool?
     let showtimes: [String]?
+    var showtime_booking: [ShowtimeBooking]? = nil
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lng)
@@ -102,11 +103,56 @@ struct Post: Codable, Identifiable, Equatable {
         resolvedThumbURL != nil
     }
 
+    /// Deep booking link for a chosen showtime, composed on the fly from the
+    /// provider-specific booking identity. `nil` when the post has no bookable
+    /// sessions (callers fall back to `link_url`).
+    func bookingURL(for time: String) -> URL? {
+        guard let booking = showtime_booking?.first(where: { $0.time == time }) else { return nil }
+        switch booking.kind {
+        case "helios":
+            guard
+                let screen = booking.params["screen"],
+                let cinema = booking.params["cinema"],
+                let itemId = booking.params["itemId"],
+                let itemSourceId = booking.params["itemSourceId"],
+                let back = link_url
+            else { return nil }
+            var comps = URLComponents(string: "https://bilety.helios.pl/screen/\(screen)")
+            comps?.queryItems = [
+                URLQueryItem(name: "cinemaId", value: cinema),
+                URLQueryItem(name: "backUrl", value: back),
+                URLQueryItem(name: "item_id", value: itemId),
+                URLQueryItem(name: "item_source_id", value: itemSourceId),
+            ]
+            return comps?.url
+        case "cinemacity":
+            guard let order = booking.params["order"], let cinema = booking.params["cinema"] else { return nil }
+            return URL(string: "https://tickets.cinema-city.pl/order/\(order)?lang=pl&x-cinema=\(cinema)")
+        case "multikino":
+            guard
+                let cinemaId = booking.params["cinemaId"],
+                let filmId = booking.params["filmId"],
+                let sessionId = booking.params["sessionId"]
+            else { return nil }
+            return URL(string: "https://www.multikino.pl/rezerwacja-biletow/podsumowanie/\(cinemaId)/\(filmId)/\(sessionId)")
+        default:
+            return nil
+        }
+    }
+
     static func == (lhs: Post, rhs: Post) -> Bool { lhs.id == rhs.id }
 
     enum MediaType: String, Codable {
         case photo, video
     }
+}
+
+/// Per-showtime booking identity for cinema events. The app composes the deep
+/// booking URL on the fly — the backend never stores links.
+struct ShowtimeBooking: Codable, Equatable {
+    let time: String
+    let kind: String
+    let params: [String: String]
 }
 
 struct PostListResponse: Codable {

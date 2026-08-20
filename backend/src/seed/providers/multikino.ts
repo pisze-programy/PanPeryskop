@@ -8,7 +8,7 @@
 // target day). Geo + address are parsed from the cinema's SSR repertuar page and
 // upserted into the shared venues store, so only the first-ever seed pays for a
 // page fetch per cinema; later days resolve from the store.
-import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId, ShowtimeBooking } from '../core/types';
 import { getBytes, getText, UA_HEADERS } from './http';
 import { MK_BASE, MK_API, MK_AUTH, MK_EMBARGO, MK_CINEMAS, MK_THUMB_QUERY, MK_TOKEN_TTL_MS, PROVIDER_FETCH_TIMEOUT_MS, mkScopes } from '../core/constants';
 import { resolveVenueGeo, upsertVenue } from '../venues/venueStore';
@@ -112,6 +112,8 @@ interface MkSession {
   startTime?: string;
   showTimeWithTimeZone?: string;
   isSoldOut?: boolean;
+  /** Booking token for the session (e.g. "110205") — present when includesSession=true. */
+  sessionId?: string;
 }
 interface MkShowingGroup { date?: string; sessions?: MkSession[] }
 interface MkFilm {
@@ -158,12 +160,23 @@ export function parseMkFilms(data: unknown, cinemaId: string, days: string[]): S
         })
         .filter((x): x is string => x !== null)
         .sort();
+      const showtimeBooking: ShowtimeBooking[] = [];
+      for (const s of sessions) {
+        const mm = /T(\d{2}:\d{2})/.exec(s.showTimeWithTimeZone || '') || /^.*T(\d{2}:\d{2})/.exec(s.startTime || '');
+        if (!mm || !s.sessionId) continue;
+        showtimeBooking.push({
+          time: mm[1],
+          kind: 'multikino',
+          params: { cinemaId, filmId: f.filmId, sessionId: s.sessionId },
+        });
+      }
       out.push({
         source: ProviderId.MULTIKINO,
         externalId: `multikino-${cinemaId}-${f.filmId}-${day}`,
         title: f.filmTitle,
         startMs,
         times,
+        showtimeBooking,
         lat: null, lng: null, // resolved via cinema geo (venues store / SSR)
         city: cinemaCity(cinemaId),
         venue: `Multikino ${cinemaName(cinemaId)}`,

@@ -21,6 +21,8 @@ struct StoryFullScreenView: View {
 
     @State private var isPressing = false
     @State private var pressStart = Date()
+    /// Showtime chosen in the pager — drives which booking deep-link opens.
+    @State private var selectedShowtime: String?
     /// What is currently rendered; updated at the slide midpoint (swap).
     @State private var displayIndex: Int
     /// Manual horizontal slide offset: current page slides out to the edge, the new
@@ -219,6 +221,8 @@ struct StoryFullScreenView: View {
                                 progressFraction = 0
                                 resumePlayback()
                             }
+                        } onSelect: { time in
+                            selectedShowtime = time
                         }
                         .id(currentPost.id)
                     } else {
@@ -280,6 +284,13 @@ struct StoryFullScreenView: View {
         return EventDateFormatter.time(currentPost.created_at)
     }
 
+    /// The pager selection, only if it still belongs to the current post's showtimes
+    /// (the selection resets when the user navigates to a different story).
+    private var effectiveShowtime: String? {
+        guard let sel = selectedShowtime, let times = currentPost.showtimes, times.contains(sel) else { return nil }
+        return sel
+    }
+
     /// Events: venue above the link; both bottom-aligned with the flip-clock.
     private var eventDetails: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -289,7 +300,9 @@ struct StoryFullScreenView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(2)
             }
-            if let link = currentPost.link_url, let url = URL(string: link) {
+            // Deep-link to the showtime selected in the pager (default: first);
+            // fall back to the event page link when the post has no booking.
+            if let url = currentPost.bookingURL(for: effectiveShowtime ?? clockTime) ?? currentPost.link_url.flatMap(URL.init) {
                 Button {
                     UIApplication.shared.open(url)
                 } label: {
@@ -933,6 +946,7 @@ struct FlipClockDigit: View {
 struct ShowtimesPager: View {
     let times: [String]
     var onInteraction: (Bool) -> Void = { _ in }
+    var onSelect: (String) -> Void = { _ in }
     @State private var page: Int?
     @State private var isInteracting = false
 
@@ -972,6 +986,7 @@ struct ShowtimesPager: View {
         }
         .onChange(of: page) { old, new in
             if old != new { Haptics.impact(.light) }
+            if let idx = new, idx < times.count { onSelect(times[idx]) }
         }
     }
 }

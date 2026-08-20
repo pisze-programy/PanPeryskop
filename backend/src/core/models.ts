@@ -62,6 +62,7 @@ export interface PostRow {
   rejection_reason: string | null;
   is_sold_out: number;
   event_date: string | null;
+  showtime_booking?: string | null;
 }
 
 // A post row joined with author info (and optional watched flag) for /stories.

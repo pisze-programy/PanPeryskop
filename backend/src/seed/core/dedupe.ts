@@ -114,3 +114,10 @@ export function showtimesJson(c: SeedCandidate): string | null {
   const hm = hhmm(c.startMs);
   return hm ? JSON.stringify([hm]) : null;
 }
+
+// Per-showtime booking identity (cinema providers) — JSON array of
+// {time, kind, params} or null when the candidate carries none.
+export function showtimeBookingJson(c: SeedCandidate): string | null {
+  if (c.showtimeBooking && c.showtimeBooking.length > 0) return JSON.stringify(c.showtimeBooking);
+  return null;
+}

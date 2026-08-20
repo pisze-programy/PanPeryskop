@@ -160,6 +160,7 @@ export interface SeedEntry {
   post_id: string | null;
   error: string | null;
   showtimes?: string[] | null;
+  showtime_booking?: { time: string; kind: string; params: Record<string, string> }[] | null;
 }
 export type EntryMap = Map<string, SeedEntry>;
 
@@ -252,6 +253,7 @@ export function entryFor(c: SeedCandidate & { lat: number; lng: number }, mediaR
     post_id: null,
     error: null,
     showtimes: c.times?.length ? c.times : null,
+    showtime_booking: c.showtimeBooking?.length ? c.showtimeBooking : null,
   };
 }
 

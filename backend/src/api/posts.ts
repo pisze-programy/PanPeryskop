@@ -128,9 +128,27 @@ postsRoutes.post('/', async (c) => {
     showtimesJson = JSON.stringify(times);
   }
 
+  // Optional per-showtime booking identity (cinema providers) — seed-only.
+  let showtimeBookingJson: string | null = null;
+  const bookingRaw = strField(form, 'showtime_booking');
+  if (bookingRaw) {
+    let parsed: unknown;
+    try { parsed = JSON.parse(bookingRaw); } catch { return c.json({ error: 'Invalid showtime_booking' }, 400); }
+    const entries = Array.isArray(parsed)
+      ? parsed.filter(
+          (b): b is { time: string; kind: string; params: Record<string, string> } =>
+            !!b && typeof b === 'object' && typeof (b as any).time === 'string' && typeof (b as any).kind === 'string' && !!((b as any).params)
+        )
+      : null;
+    if (!entries || entries.length === 0 || entries.length > 30) {
+      return c.json({ error: 'Invalid showtime_booking' }, 400);
+    }
+    showtimeBookingJson = JSON.stringify(entries);
+  }
+
   const result = await doSavePost(
     c.env, user, postId, type, lat, lng, description,
-    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate, false, showtimesJson
+    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate, false, showtimesJson, showtimeBookingJson
   );
   return c.json(result, isUpdate ? 200 : 201);
 });
@@ -151,7 +169,8 @@ export async function doSavePost(
   externalId: string | null,
   isUpdate: boolean,
   isSoldOut = false,
-  showtimes: string | null = null
+  showtimes: string | null = null,
+  showtimeBooking: string | null = null
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
@@ -167,19 +186,19 @@ export async function doSavePost(
         `UPDATE posts
          SET type = ?, lat = ?, lng = ?, description = ?, media_key = ?, thumb_key = ?,
              is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?,
-             is_sold_out = ?, event_date = ?, showtimes = ?
+             is_sold_out = ?, event_date = ?, showtimes = ?, showtime_booking = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, eventDate, showtimes, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, eventDate, showtimes, showtimeBooking, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes)
-         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes, showtime_booking)
+         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes)
+      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking)
       .run();
     await db
       .prepare(
@@ -206,6 +225,7 @@ export async function doSavePost(
     is_sold_out: soldOut,
     event_date: eventDate,
     showtimes: showtimes ? (JSON.parse(showtimes) as string[]) : null,
+    showtime_booking: showtimeBooking ? JSON.parse(showtimeBooking) : null,
   };
 }
 
@@ -239,5 +259,6 @@ postsRoutes.get('/:id', async (c) => {
     author_avatar_url: mediaUrl(origin, post.author_avatar_key),
     media_url: mediaUrlV,
     thumb_url: mediaUrl(origin, post.thumb_key) ?? mediaUrlV,
+    showtime_booking: post.showtime_booking ? JSON.parse(post.showtime_booking) : null,
   });
 });

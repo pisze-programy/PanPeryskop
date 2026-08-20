@@ -5,7 +5,7 @@
 //
 // Granularity: ONE candidate per film×cinema×day (startMs = earliest showtime).
 // Queue scope = cinema (externalCode); each scope is one API call.
-import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
+import { SeedProvider, SeedContext, SeedCandidate, ProviderId, ShowtimeBooking } from '../core/types';
 import { getBytes } from './http';
 import { warsawMidnightMs } from '../core/dates';
 import { CC_CINEMAS, CC_FILM_EVENTS, CC_FILM_URL, CC_TIMEOUT_MS, ccScopes } from '../core/constants';
@@ -34,6 +34,17 @@ export function parseCcScope(data: unknown, code: string, day: string): SeedCand
       .map((e) => { const mm = /T(\d{2}):(\d{2})/.exec(e.eventDateTime || ''); return mm ? `${mm[1]}:${mm[2]}` : null; })
       .filter((x): x is string => x !== null)
       .sort();
+    const showtimeBooking: ShowtimeBooking[] = [];
+    for (const e of dayEvents) {
+      const mm = /T(\d{2}):(\d{2})/.exec(e.eventDateTime || '');
+      if (!mm) continue;
+      if (!e.id) continue;
+      showtimeBooking.push({
+        time: `${mm[1]}:${mm[2]}`,
+        kind: 'cinemacity',
+        params: { order: String(e.id), cinema: code },
+      });
+    }
     const poster = f.posterLink || '';
     if (!poster) continue;
     out.push({
@@ -42,6 +53,7 @@ export function parseCcScope(data: unknown, code: string, day: string): SeedCand
       title: f.name,
       startMs,
       times,
+      showtimeBooking,
       lat: cinema?.lat ?? null, lng: cinema?.lng ?? null,
       city: cinema?.city || '',
       venue: `Cinema City ${cinema?.name || code}`,

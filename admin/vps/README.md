@@ -137,10 +137,15 @@ the box, no TS at runtime.
 Requirements on a fresh box: the `HOST` SSH alias + key (see SSH notes below), the `.env`
 (see Environment variables), and an initial root/console login for the first `sudo`.
 
-After `deploy.sh`, **first seed** (whole window, one-time):
+After `deploy.sh`, **first seed** (whole window, one-time). ALWAYS run it via the
+**orchestrator** (`orchestrator.sh`), never `node …/vps-seed.mjs` directly — the
+orchestrator exports `HTTPS_PROXY` + `NODE_USE_ENV_PROXY` BEFORE node starts, and
+Node reads `NODE_USE_ENV_PROXY` **only at process launch** (a runtime assignment is
+a no-op). Running the bundle via bare `sudo -n node` egresses from the VPS's
+datacenter IP → every Cloudflare-fronted provider (multikino) returns 403.
 
 ```sh
-ssh frog 'sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --full'
+ssh frog 'sudo -n sh /opt/panperyskop/admin/vps/orchestrator.sh --full'
 ```
 
 (`--full` backfills [today, today+3]; the daily cron afterwards only fetches the new far edge.)
@@ -153,11 +158,11 @@ current source, so a fresh deploy always carries the latest fixes.
 ## Verification / ops
 
 ```sh
-# plan (no side effects)
-ssh frog 'sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --dry'
+# plan (no side effects) — via the orchestrator so the bundle inherits proxy env
+ssh frog 'sudo -n sh /opt/panperyskop/admin/vps/orchestrator.sh --dry'
 
-# single provider
-ssh frog 'sudo -n node /opt/panperyskop/backend/dist/vps-seed.mjs --provider multikino'
+# single provider (whole window: add --full)
+ssh frog 'sudo -n sh /opt/panperyskop/admin/vps/orchestrator.sh --provider multikino --full'
 
 # status + logs
 cat /opt/panperyskop/admin/vps/logs/status.json
@@ -166,6 +171,12 @@ tail -f /opt/panperyskop/admin/vps/logs/orchestrator.log
 # egress check (multikino auth through the exit node)
 ssh frog 'sh /opt/panperyskop/admin/vps/check-exit.sh'
 ```
+
+> **Gotcha (post-mortem 2026-08-20):** running `sudo -n node …/vps-seed.mjs …` directly
+> drops the proxy env (`sudo` strips it, and `NODE_USE_ENV_PROXY` is parsed at launch),
+> so every fetch egresses from the datacenter IP → multikino `auth -> 403`. Always go
+> through `orchestrator.sh` (`sudo -n sh /opt/panperyskop/admin/vps/orchestrator.sh …`),
+> which exports the proxy vars before `node` starts.
 
 DB check after a seed:
 

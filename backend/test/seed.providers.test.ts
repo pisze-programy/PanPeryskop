@@ -5,6 +5,8 @@ import { ProviderId, SeedContext } from '../src/seed/core/types';
 import { parseLocalDateTime, externalOfferUrl, primaryOutHref, resolveDzisLink } from '../src/seed/providers/dzisapp';
 import { parseEvlEvent, getOfferUrl } from '../src/seed/providers/eventylive';
 import { parseMkFilms, extractToken, resolveMkGeo } from '../src/seed/providers/multikino';
+import { parseHeliosPayload } from '../src/seed/providers/helios';
+import { parseCcScope } from '../src/seed/providers/cinemacity';
 import { mkScopes, MK_CINEMAS, MK_ALL_CINEMAS } from '../src/seed/core/constants';
 import { PROVIDER_CONFIGS, enabledForExecutor, configOf, priorityOf, EXECUTOR } from '../src/seed/providers/registry';
 import { workerExecutor } from '../src/seed/executors/worker';
@@ -93,8 +95,8 @@ test('multikino: parseMkFilms builds one film×cinema candidate per day', () => 
         hasSessions: true,
         showingGroups: [
           { date: '2026-08-22T00:00:00', sessions: [
-            { startTime: '2026-08-22T14:15:00', showTimeWithTimeZone: '2026-08-22T14:15:00+02:00', isSoldOut: false },
-            { startTime: '2026-08-22T18:15:00', showTimeWithTimeZone: '2026-08-22T18:15:00+02:00', isSoldOut: false },
+            { startTime: '2026-08-22T14:15:00', showTimeWithTimeZone: '2026-08-22T14:15:00+02:00', isSoldOut: false, sessionId: '110205' },
+            { startTime: '2026-08-22T18:15:00', showTimeWithTimeZone: '2026-08-22T18:15:00+02:00', isSoldOut: false, sessionId: '110116' },
           ]},
         ],
       },
@@ -113,6 +115,10 @@ test('multikino: parseMkFilms builds one film×cinema candidate per day', () => 
   assert.equal(c.mediaUrl, 'https://www.multikino.pl/-/media/spider-man.jpg?rev=abc');
   assert.equal(c.thumbUrl, 'https://www.multikino.pl/-/media/spider-man.jpg?rev=abc&mw=240&mh=350');
   assert.equal(c.isSoldOut, false);
+  assert.deepEqual(c.showtimeBooking, [
+    { time: '14:15', kind: 'multikino', params: { cinemaId: '0013', filmId: 'HO00002696', sessionId: '110205' } },
+    { time: '18:15', kind: 'multikino', params: { cinemaId: '0013', filmId: 'HO00002696', sessionId: '110116' } },
+  ]);
 });
 
 test('multikino: parseMkFilms marks sold out only when ALL sessions are sold out', () => {
@@ -229,6 +235,74 @@ test('multikino: scopes cover the 18 cinemas in app cities (38 total)', () => {
   assert.ok(scopes.includes('0004'));
   assert.ok(!scopes.includes('0026'));
   assert.ok(!scopes.includes('0003'));
+});
+
+test('helios: link and booking come from the embedded movie, not the stale events map', () => {
+  // Real API shape: e* keys carry stale events-map metadata (id/slug reused over
+  // time), while the actual film is embedded per screening in screeningMovies.
+  const payload = {
+    movies: {
+      m4506: { id: 4506, slug: 'ksiega-pustyni', title: 'Księga pustyni', sourceId: '971dfcb2-c70f-4461-b173-33d62be92867', posterPhoto: { url: 'https://img.helios.pl/filmy/ksiega-pustyni.jpg' } },
+    },
+    events: {
+      e2677: { id: 2677, slug: 'drugie-zycie-salon-kultury-helios', name: 'Drugie życie - Salon Kultury Helios', posterPhoto: { url: 'https://img.helios.pl/events/2677.jpg' } },
+    },
+    screenings: {
+      '2026-08-22': {
+        m4506: {
+          screenings: [
+            { timeFrom: '2026-08-22 10:00:00', sourceId: '88567103-f418-4a7c-a8bf-e2e279cffb8f', cinemaSourceId: '815face9-2a1d-4c62-9b2f-a361574b79a2' },
+            { timeFrom: '2026-08-22 14:40:00', sourceId: '4937d946-8177-4ca4-ae1a-ed1f63e2aa39', cinemaSourceId: '815face9-2a1d-4c62-9b2f-a361574b79a2' },
+          ],
+        },
+        e2677: {
+          screenings: [
+            { timeFrom: '2026-08-22 17:00:00', sourceId: '6fe7acaa-9ace-4c92-a3a7-6e878eddac5b', cinemaSourceId: '815face9-2a1d-4c62-9b2f-a361574b79a2', screeningMovies: [{ movie: { id: 4484, slug: 'drugie-zycie', title: 'Drugie życie', sourceId: 'efba3b90-d2db-4d41-b474-60d596a59302', posterPhoto: { url: 'https://img.helios.pl/filmy/drugie-zycie.jpg' } } }] },
+          ],
+        },
+      },
+    },
+  };
+  const out = parseHeliosPayload(payload as any, 25, '2026-08-22');
+  assert.equal(out.length, 2);
+
+  const film = out.find((c) => c.externalId.includes('ksiega-pustyni'))!;
+  assert.equal(film.link, 'https://www.helios.pl/poznan/kino-helios/filmy/ksiega-pustyni-4506');
+  assert.deepEqual(film.showtimeBooking, [
+    { time: '10:00', kind: 'helios', params: { screen: '88567103-f418-4a7c-a8bf-e2e279cffb8f', cinema: '815face9-2a1d-4c62-9b2f-a361574b79a2', itemId: '971dfcb2-c70f-4461-b173-33d62be92867', itemSourceId: '4506' } },
+    { time: '14:40', kind: 'helios', params: { screen: '4937d946-8177-4ca4-ae1a-ed1f63e2aa39', cinema: '815face9-2a1d-4c62-9b2f-a361574b79a2', itemId: '971dfcb2-c70f-4461-b173-33d62be92867', itemSourceId: '4506' } },
+  ]);
+
+  // The event key must link the ACTUAL film (embedded movie), not the stale
+  // events-map slug/id (which previously produced e.g. in-the-heights-2677).
+  const event = out.find((c) => c.externalId.includes('drugie-zycie'))!;
+  assert.equal(event.title, 'Drugie życie');
+  assert.equal(event.link, 'https://www.helios.pl/poznan/kino-helios/filmy/drugie-zycie-4484');
+  assert.equal(event.mediaUrl, 'https://img.helios.pl/filmy/drugie-zycie.jpg');
+  assert.deepEqual(event.showtimeBooking, [
+    { time: '17:00', kind: 'helios', params: { screen: '6fe7acaa-9ace-4c92-a3a7-6e878eddac5b', cinema: '815face9-2a1d-4c62-9b2f-a361574b79a2', itemId: 'efba3b90-d2db-4d41-b474-60d596a59302', itemSourceId: '4484' } },
+  ]);
+});
+
+test('cinemacity: booking carries the per-event order id and cinema code', () => {
+  const data = {
+    body: {
+      films: [{ id: '8295s2r', name: 'Buntownik', posterLink: 'https://img.cc.pl/buntownik.jpg' }],
+      events: [
+        { id: '1647332', filmId: '8295s2r', eventDateTime: '2026-08-22T10:10:00', soldOut: false },
+        { id: '1646304', filmId: '8295s2r', eventDateTime: '2026-08-22T11:50:00', soldOut: false },
+      ],
+    },
+  };
+  const out = parseCcScope(data, '1081', '2026-08-22');
+  assert.equal(out.length, 1);
+  const c = out[0];
+  assert.equal(c.link, 'https://www.cinema-city.pl/filmy/8295s2r');
+  assert.deepEqual(c.times, ['10:10', '11:50']);
+  assert.deepEqual(c.showtimeBooking, [
+    { time: '10:10', kind: 'cinemacity', params: { order: '1647332', cinema: '1081' } },
+    { time: '11:50', kind: 'cinemacity', params: { order: '1646304', cinema: '1081' } },
+  ]);
 });
 
 test('dzisapp: parseLocalDateTime handles Warsaw local time', () => {

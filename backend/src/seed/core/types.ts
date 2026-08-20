@@ -31,6 +31,14 @@ export const CandidateStatus = {
 } as const;
 export type CandidateStatus = (typeof CandidateStatus)[keyof typeof CandidateStatus];
 
+/** Per-showtime booking identity for a cinema event. The provider kind lets the
+ *  client compose the deep booking URL on the fly (no links are stored). */
+export interface ShowtimeBooking {
+  time: string;
+  kind: 'helios' | 'cinemacity' | 'multikino';
+  params: Record<string, string>;
+}
+
 export interface SeedCandidate {
   source: ProviderId;
   externalId: string;
@@ -51,6 +59,9 @@ export interface SeedCandidate {
   /** All showtimes for the target day ("HH:MM", sorted). Cinema providers carry
    *  every session; may be a single entry or empty when unknown. */
   times?: string[];
+  /** Per-showtime booking identity (cinema providers) — the client builds the
+   *  deep booking URL from it; absent for non-bookable sources. */
+  showtimeBooking?: ShowtimeBooking[];
 }
 
 export interface SeedProviderResult {

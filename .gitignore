@@ -4,6 +4,7 @@
 *.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 *.xcuserstate
 DerivedData/
+build/
 *.ipa
 
 # Xcode

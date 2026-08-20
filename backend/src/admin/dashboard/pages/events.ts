@@ -52,7 +52,7 @@ function descParts(description: string): { title: string; time: string; loc: str
 function statusSelect(e: { id: string; status: string; tag: string }): string {
   const colorCls = e.status === 'approved' ? ' text-success' : e.status === 'pending' ? ' text-warning' : ' text-danger';
   const opts = ['approved', 'pending', 'rejected'].map((s) =>
-    `<option value="${s}" ${e.status === s ? 'selected' : ''} style="color:var(--tblr-${s === 'approved' ? 'success' : s === 'pending' ? 'warning' : 'danger'})">${s}</option>`).join('');
+    `<option value="${s}" ${e.status === s ? 'selected' : ''} class="text-${s === 'approved' ? 'success' : s === 'pending' ? 'warning' : 'danger'}">${s}</option>`).join('');
   return `<form method="post" action="/admin/events/${esc(e.id)}">
     <select name="status" class="form-select form-select-sm${colorCls}" onchange="ppUpdate('${esc(e.id)}', this.form)">${opts}</select>
     <input type="hidden" name="field" value="status" />
@@ -76,7 +76,8 @@ function eventThumb(e: { thumb_key?: string | null; media_key?: string | null })
   const key = e.thumb_key || e.media_key;
   const full = e.media_key || e.thumb_key;
   if (!key) return '—';
-  return `<img src="/media/${esc(key)}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px;cursor:zoom-in" loading="lazy" onerror="this.style.display='none'" onclick="ppMediaOpen('/media/${esc(full)}')" />`;
+  return `<a href="javascript:void(0)" onclick="ppMediaOpen('/media/${esc(full)}');return false;" title="Podgląd">
+    <span class="avatar avatar-sm rounded"><img src="/media/${esc(key)}" alt="" loading="lazy" onerror="this.closest('.avatar').classList.add('bg-secondary-lt')" /></span></a>`;
 }
 
 // Title: opens the event link (resolved per selected showtime). multikino.pl
@@ -84,7 +85,7 @@ function eventThumb(e: { thumb_key?: string | null; media_key?: string | null })
 // the modal. Missing link = DATA ERROR.
 function titleHtml(linkUrl: string | null, title: string, id: string, source: string): string {
   const t = esc(title || '—');
-  const src = `<span class="text-muted" style="font-size:11px">(${esc(source)})</span>`;
+  const src = `<span class="text-muted fs-6">(${esc(source)})</span>`;
   if (linkUrl) {
     return `<a href="javascript:void(0)" onclick="ppOpenLink(ppLinkFor('${esc(id)}', '${jsStr(linkUrl)}'));return false;" class="text-reset text-decoration-none">${t}</a> ${src}`;
   }
@@ -123,15 +124,15 @@ function placeLabel(loc: string, lat: number | null, lng: number | null): string
   return [city, venue].filter(Boolean).join(', ');
 }
 
-const PIN_ICON = `<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><use href="#icon-map-pin"/></svg>`;
+const PIN_ICON = `<svg xmlns="http://www.w3.org/2000/svg" class="icon align-middle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-map-pin"/></svg>`;
 
 // Place row: pin icon + "Miasto, VENUE"; opens the Google Maps embed in the modal
 // (ESC closes), with the plain maps page as the "open in new tab" target.
 function placeHtml(lat: number | null, lng: number | null, loc: string): string {
   const label = esc(placeLabel(loc, lat, lng));
   const urls = placeUrls(lat, lng, loc);
-  if (!urls.embed) return `<div class="text-secondary" style="font-size:13px">${PIN_ICON} ${label}</div>`;
-  return `<div class="text-secondary" style="font-size:13px"><a href="javascript:void(0)" onclick="ppLinkOpen('${jsStr(urls.embed)}', '${jsStr(urls.plain!)}');return false;" class="text-reset text-decoration-none">${PIN_ICON} ${label}</a></div>`;
+  if (!urls.embed) return `<div class="text-secondary fs-4">${PIN_ICON} ${label}</div>`;
+  return `<div class="text-secondary fs-4"><a href="javascript:void(0)" onclick="ppLinkOpen('${jsStr(urls.embed)}', '${jsStr(urls.plain!)}');return false;" class="text-reset text-decoration-none">${PIN_ICON} ${label}</a></div>`;
 }
 
 // Full place cell (wrapped so the "Zmień GEO" save can swap it in place).
@@ -193,12 +194,12 @@ function bookingURLFor(bookingJson: string | null | undefined, time: string, lin
 function dateCell(e: { id: string; event_date?: string | null; showtimes?: string | null; time?: string }): string {
   const d = esc(e.event_date || '');
   const times = parseShowtimes(e.showtimes);
-  if (times.length === 0) return `<div class="text-muted" style="font-size:12px">${d}</div>`;
-  if (times.length === 1) return `<div class="text-muted" style="font-size:12px">${d} · ${esc(times[0])}</div>`;
+  if (times.length === 0) return `<div class="text-muted fs-5">${d}</div>`;
+  if (times.length === 1) return `<div class="text-muted fs-5">${d} · ${esc(times[0])}</div>`;
   const opts = times.map((t, i) => `<option value="${esc(t)}" ${i === 0 ? 'selected' : ''}>${esc(t)}</option>`).join('');
-  const sel = `<select class="form-select form-select-sm" style="width:110px" onchange="window.ppSel['${esc(e.id)}']=this.value">${opts}</select>`;
-  return `<div class="d-flex align-items-center gap-1">
-    <span class="text-muted" style="font-size:12px">${d}</span>${sel}
+  const sel = `<select class="form-select form-select-sm w-25" onchange="window.ppSel['${esc(e.id)}']=this.value">${opts}</select>`;
+  return `<div class="d-flex align-items-center gap-2">
+    <span class="text-muted fs-5">${d}</span>${sel}
   </div>`;
 }
 
@@ -296,35 +297,45 @@ pageRoutes.get('/events', async (c) => {
     <thead><tr><th>Media</th><th>Wydarzenie</th><th>Status</th><th>Tagi</th><th></th></tr></thead>
     <tbody>${rows || `<tr><td colspan="5">${empty()}</td></tr>`}</tbody></table></div></div>
   ${pager}
-  <div id="ppMediaModal" onclick="ppMediaClose()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out">
-    <img id="ppMediaImg" alt="" style="max-width:92vw;max-height:92vh;border-radius:8px" />
-  </div>
-  <div id="ppLinkModal" tabindex="-1" onkeydown="if(event.key==='Escape'){event.preventDefault();ppLinkClose();}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;padding:16px;outline:none">
-    <div style="width:100%;max-width:960px;height:86vh;background:#fff;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
-      <div style="display:flex;justify-content:space-between;padding:6px 8px;background:#fff;border-bottom:1px solid #e9ecef">
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open(window.ppCurExternal||window.ppCurLink||'', '_blank', 'noopener')">Otwórz w nowej karcie</button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="ppLinkClose()">Zamknij (ESC)</button>
+  <div class="modal fade" id="ppMediaModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content bg-transparent border-0 shadow-none">
+        <img id="ppMediaImg" alt="" class="img-fluid mx-auto rounded" onclick="ppMediaClose()" />
       </div>
-      <iframe id="ppLinkFrame" title="Podgląd" style="flex:1;border:0;width:100%" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
     </div>
   </div>
-  <div id="ppAlertModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center">
-    <div class="card" style="max-width:440px;width:92%">
-      <div class="card-header"><h3 class="card-title mb-0" id="ppAlertTitle">Uwaga</h3></div>
-      <div class="card-body" id="ppAlertMsg"></div>
-      <div class="card-footer text-end"><button type="button" class="btn btn-secondary" onclick="ppAlertClose()">OK (ESC)</button></div>
+  <div class="modal fade" id="ppLinkModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open(window.ppCurExternal||window.ppCurLink||'', '_blank', 'noopener')">Otwórz w nowej karcie</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="ppLinkClose()">Zamknij (ESC)</button>
+        </div>
+        <div class="modal-body p-0">
+          <iframe id="ppLinkFrame" title="Podgląd" class="w-100 border-0 d-block" height="640" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+        </div>
+      </div>
     </div>
   </div>
-  <div id="ppGeoModal" tabindex="-1" onkeydown="if(event.key==='Escape'){event.preventDefault();ppGeoClose();}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;outline:none">
-    <div class="card" style="max-width:460px;width:100%">
-      <div class="card-header"><h3 class="card-title mb-0">Zmień GEO</h3></div>
-      <div class="card-body">
-        <div class="mb-3"><label class="form-label">Nazwa lokalizacji</label><input id="ppGeoName" class="form-control" placeholder="np. Multikino Złote Tarasy" /></div>
-        <div class="mb-1"><label class="form-label">Geo (lat, lng)</label><input id="ppGeoCoord" class="form-control" placeholder="54.42656865607224, 18.58054868650763" /></div>
-        <div class="text-secondary" style="font-size:12px">Wklej współrzędne z Google Maps (np. <span class="font-monospace">54.42656865607224, 18.58054868650763</span>). Zmiana jest trwała — nadpisuje dane seeda dla tego wydarzenia.</div>
+  <div class="modal fade" id="ppAlertModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header"><h3 class="modal-title" id="ppAlertTitle">Uwaga</h3></div>
+        <div class="modal-body" id="ppAlertMsg"></div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="ppAlertClose()">OK (ESC)</button></div>
       </div>
-      <div class="card-footer d-flex justify-content-end align-items-center">
-        <div>
+    </div>
+  </div>
+  <div class="modal fade" id="ppGeoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header"><h3 class="modal-title">Zmień GEO</h3></div>
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label">Nazwa lokalizacji</label><input id="ppGeoName" class="form-control" placeholder="np. Multikino Złote Tarasy" /></div>
+          <div class="mb-1"><label class="form-label">Geo (lat, lng)</label><input id="ppGeoCoord" class="form-control" placeholder="54.42656865607224, 18.58054868650763" /></div>
+          <div class="text-secondary fs-5">Wklej współrzędne z Google Maps (np. <span class="font-monospace">54.42656865607224, 18.58054868650763</span>). Zmiana jest trwała — nadpisuje dane seeda dla tego wydarzenia.</div>
+        </div>
+        <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" onclick="ppGeoClose()">Anuluj</button>
           <button type="button" class="btn btn-primary" onclick="ppGeoSave()">Zapisz</button>
         </div>
@@ -335,30 +346,34 @@ pageRoutes.get('/events', async (c) => {
   <script>
   (function(){
     var media=document.getElementById('ppMediaModal'), alertM=document.getElementById('ppAlertModal'), linkM=document.getElementById('ppLinkModal');
-    window.ppMediaOpen=function(src){var img=document.getElementById('ppMediaImg'); if(img){img.style.maxWidth='92vw';img.style.maxHeight='92vh';img.src=src;} media.style.display='flex';};
-    window.ppMediaClose=function(){media.style.display='none';};
+    // Tabler JS loads at the END of layout, after this inline script — resolve the
+    // Modal class at call time, not at init time.
+    var modalShow=function(el){var B=window.tabler||window.bootstrap; if(B&&B.Modal&&el) B.Modal.getOrCreateInstance(el).show();};
+    var modalHide=function(el){var B=window.tabler||window.bootstrap; if(B&&B.Modal&&el){var m=B.Modal.getInstance(el); if(m) m.hide();}};
+    window.ppMediaOpen=function(src){var img=document.getElementById('ppMediaImg'); if(img) img.src=src; modalShow(media);};
+    window.ppMediaClose=function(){modalHide(media);};
     window.ppLinkOpen=function(url,external){
       window.ppCurLink=url;
       window.ppCurExternal=external||url;
       var f=document.getElementById('ppLinkFrame');
       if(f) f.src=url;
-      linkM.style.display='flex';
+      modalShow(linkM);
       // Focus the modal chrome so ESC reaches the parent document immediately.
       setTimeout(function(){linkM.focus();},0);
     };
-    window.ppLinkClose=function(){var f=document.getElementById('ppLinkFrame'); if(f) f.src='about:blank'; linkM.style.display='none';};
-    window.ppAlertOpen=function(title,msg){document.getElementById('ppAlertTitle').textContent=title;document.getElementById('ppAlertMsg').textContent=msg;alertM.style.display='flex';};
-    window.ppAlertClose=function(){alertM.style.display='none';};
+    window.ppLinkClose=function(){var f=document.getElementById('ppLinkFrame'); if(f) f.src='about:blank'; modalHide(linkM);};
+    window.ppAlertOpen=function(title,msg){document.getElementById('ppAlertTitle').textContent=title;document.getElementById('ppAlertMsg').textContent=msg;modalShow(alertM);};
+    window.ppAlertClose=function(){modalHide(alertM);};
     var geoM=document.getElementById('ppGeoModal');
     window.ppGeoId=null;
     window.ppGeoOpen=function(id,loc,lat,lng){
       window.ppGeoId=id;
       document.getElementById('ppGeoName').value=loc||'';
       document.getElementById('ppGeoCoord').value=(lat&&lng)?lat+', '+lng:'';
-      geoM.style.display='flex';
+      modalShow(geoM);
       setTimeout(function(){geoM.focus();document.getElementById('ppGeoName').select();},0);
     };
-    window.ppGeoClose=function(){geoM.style.display='none';window.ppGeoId=null;};
+    window.ppGeoClose=function(){modalHide(geoM);window.ppGeoId=null;};
     window.ppGeoSwap=function(id,placeHtml,geoBtn){
       var cell=document.querySelector('.pp-place-cell[data-id="'+id+'"]');
       if(cell&&placeHtml) cell.outerHTML=placeHtml;
@@ -385,8 +400,6 @@ pageRoutes.get('/events', async (c) => {
     // back to the modal chrome so ESC keeps working.
     var frame=document.getElementById('ppLinkFrame');
     if(frame){frame.addEventListener('load',function(){linkM.focus();});}
-    // Capture-phase listener as a safety net for controls inside the modal chrome.
-    window.addEventListener('keydown',function(e){if(e.key==='Escape'){ppMediaClose();ppLinkClose();ppAlertClose();ppGeoClose();}},true);
     // In-place save of a status/tag change — no page reload.
     window.ppUpdate=function(id,formEl){
       var sel=formEl.querySelector('select');

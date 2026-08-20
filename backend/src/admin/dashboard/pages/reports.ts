@@ -21,7 +21,7 @@ pageRoutes.get('/reports', async (c) => {
     ORDER BY (r.status = 'open') DESC, r.created_at DESC LIMIT 200`).all();
   const rows = (results as any[]).map((r) => {
     const thumb = r.thumb_key
-      ? `<img src="/media/${esc(r.thumb_key)}" style="width:44px;height:44px;object-fit:cover;border-radius:6px" loading="lazy" />`
+      ? `<span class="avatar avatar-sm rounded"><img src="/media/${esc(r.thumb_key)}" loading="lazy" /></span>`
       : '—';
     const status = r.status === 'open' ? pill('open', 'warn') : pill(r.status, 'muted');
     const actions = r.status === 'open'

@@ -17,7 +17,7 @@ pageRoutes.get('/posts', async (c) => {
     <td>${esc(p.author)}</td><td>${esc((p.description || '').slice(0, 50))}</td>
     <td>${fmtDate(p.created_at)}</td><td>${p.likes_count}</td><td>${p.views_count}</td>
     <td>${p.status === 'approved' ? pill('approved', 'ok') : pill(esc(p.status), 'err')}</td>
-    ${p.thumb_key ? `<td><img src="/media/${esc(p.thumb_key)}" style="width:44px;height:44px;object-fit:cover;border-radius:6px" loading="lazy" /></td>` : '<td>—</td>'}</tr>`).join('');
+    ${p.thumb_key ? `<td><span class="avatar avatar-sm rounded"><img src="/media/${esc(p.thumb_key)}" loading="lazy" /></span></td>` : '<td>—</td>'}</tr>`).join('');
   const body = `<h2 class="mb-3">Posty (live)</h2>
   <div class="card"><div class="table-responsive"><table class="table table-vcenter card-table">
     <thead><tr><th>Autor</th><th>Opis</th><th>Czas</th><th>Like</th><th>Views</th><th>Status</th><th>Media</th></tr></thead>

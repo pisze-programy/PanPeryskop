@@ -83,23 +83,23 @@ pageRoutes.get('/seed', async (c) => {
       <td>${r.candidates}</td><td>${r.ingested}</td><td>${r.skipped}</td>
       <td class="${r.errors ? 'text-danger fw-bold' : 'text-success'}">${r.errors}</td>
       <td>${fmtDur(r.duration_ms)}</td><td>${fmtDur(r.browser_ms)}</td></tr>`).join('');
-    const scopesBlock = `<div class="text-secondary mb-1" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em">Scopy</div>
+    const scopesBlock = `<div class="text-secondary mb-1 fs-5 text-uppercase">Scopy</div>
       <div class="table-responsive mb-3"><table class="table table-sm table-vcenter">
         <thead><tr><th>Provider</th><th>Scope</th><th>Status</th><th>Próby</th><th>Błąd</th></tr></thead>
         <tbody>${scopeRows || `<tr><td colspan="5" class="text-secondary">Brak scopów.</td></tr>`}</tbody></table></div>`;
-    const runsBlock = `<div class="text-secondary mb-1" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em">Uruchomienia (seed_runs)</div>
+    const runsBlock = `<div class="text-secondary mb-1 fs-5 text-uppercase">Uruchomienia (seed_runs)</div>
       <div class="table-responsive"><table class="table table-sm table-vcenter">
         <thead><tr><th>Czas</th><th>Provider</th><th>Transport</th><th>Cand</th><th>Ingest</th><th>Skip</th><th>Err</th><th>Czas</th><th>Browser</th></tr></thead>
         <tbody>${runRows || `<tr><td colspan="9" class="text-secondary">Brak logów (batch sprzed linkowania runów).</td></tr>`}</tbody></table></div>`;
     return `<details class="card mb-2">
-      <summary class="card-header py-2" style="cursor:pointer">
+      <summary class="card-header py-2 cursor-pointer">
         <div class="d-flex flex-wrap align-items-center gap-2">
           <span class="fw-bold">${esc(b.day)}</span>
           ${b.run_type === 'cron' ? pill('cron', 'ok') : pill('manual', 'muted')}
           ${batchStatusPill(b.status)}
-          <span class="text-secondary" style="font-size:12px">Scopy ${b.scopes_done}/${b.scopes_total} · Providerzy ${b.providers_done}/${b.providers_total}</span>
-          <span class="text-secondary" style="font-size:12px">${fmtDate(b.updated_at)}</span>
-          ${b.reason ? `<span class="text-danger" style="font-size:12px" title="${esc(b.reason)}">${esc((b.reason as string).slice(0, 40))}</span>` : ''}
+          <span class="text-secondary fs-5">Scopy ${b.scopes_done}/${b.scopes_total} · Providerzy ${b.providers_done}/${b.providers_total}</span>
+          <span class="text-secondary fs-5">${fmtDate(b.updated_at)}</span>
+          ${b.reason ? `<span class="text-danger fs-5" title="${esc(b.reason)}">${esc((b.reason as string).slice(0, 40))}</span>` : ''}
         </div>
       </summary>
       <div class="card-body">${scopesBlock}${runsBlock}</div>
@@ -117,11 +117,11 @@ pageRoutes.get('/seed', async (c) => {
 
   let budgetHtml = '';
   if (budget) {
-    budgetHtml = `<div class="alert ${budget.exceeded ? 'alert-danger' : 'alert-success'} d-flex align-items-center" style="gap:12px">
+    budgetHtml = `<div class="alert ${budget.exceeded ? 'alert-danger' : 'alert-success'} d-flex align-items-center gap-3">
       <span>Budget Browser Run (miesiąc): <strong>${fmtPct(budget.monthMs, budget.limitMs)}</strong> (${fmtDur(budget.monthMs)} / ${fmtDur(budget.limitMs)})</span>
       ${budget.exceeded ? '<strong>PRZEKROCZONY</strong>' : ''}</div>`;
   }
-  const cronHtml = `<div class="alert alert-light d-flex align-items-center" style="gap:12px;flex-wrap:wrap">
+  const cronHtml = `<div class="alert alert-light d-flex align-items-center gap-3 flex-wrap">
     <span><strong>Cron:</strong> ${esc(cron.schedules.join(', '))} — ${esc(cron.summary)}</span>
     ${cron.nextRunMs ? `<span class="text-secondary">Następny: <strong>${fmtDate(cron.nextRunMs)}</strong></span>` : ''}
     ${cron.lastCronRunMs ? `<span class="text-secondary">Ostatni: ${fmtDate(cron.lastCronRunMs)}</span>` : '<span class="text-warning">Cron nie wystartował</span>'}</div>`;
@@ -131,11 +131,11 @@ pageRoutes.get('/seed', async (c) => {
     `<select name="${name}" class="form-select" onchange="this.form.submit()">${opts.map((o) =>
       `<option value="${o}" ${cur === o ? 'selected' : ''}>${o || 'Wszystkie'}</option>`).join('')}</select>`;
   const filterHtml = `<form method="get" action="/admin/seed" class="row g-2 mb-3">
-    <div class="col-12"><span class="text-secondary text-uppercase fw-bold" style="font-size:11px">Filtry · Batche</span></div>
+    <div class="col-12"><span class="text-secondary text-uppercase fw-bold fs-6">Filtry · Batche</span></div>
     <div class="col-6 col-md-2"><label class="form-label">Dzień od</label><input name="dfrom" type="date" class="form-control" value="${esc(dFrom || '')}" onchange="this.form.submit()" /></div>
     <div class="col-6 col-md-2"><label class="form-label">Dzień do</label><input name="dto" type="date" class="form-control" value="${esc(dTo || '')}" onchange="this.form.submit()" /></div>
     <div class="col-6 col-md-2"><label class="form-label">Status</label>${sel('bstatus', bStatus, ['', 'created', 'fetching', 'fetch_done', 'ingesting', 'done', 'failed'])}</div>
-    <div class="col-12"><span class="text-secondary text-uppercase fw-bold" style="font-size:11px">Filtry · Rundy (seed_runs)</span></div>
+    <div class="col-12"><span class="text-secondary text-uppercase fw-bold fs-6">Filtry · Rundy (seed_runs)</span></div>
     <div class="col-6 col-md-2"><label class="form-label">Provider</label>${sel('provider', provider, ['', ...providers])}</div>
     <div class="col-6 col-md-2"><label class="form-label">Transport</label>${sel('transport', transport, ['', 'fetch', 'browser', 'mixed'])}</div>
     <div class="col-6 col-md-2"><label class="form-label">Typ</label>${sel('rtype', runType, ['', 'cron', 'manual'])}</div>
@@ -143,7 +143,7 @@ pageRoutes.get('/seed', async (c) => {
   </form>`;
 
   const body = `<h2 class="mb-3">Seed</h2>
-  <div class="alert alert-light mb-3" style="font-size:13px">
+  <div class="alert alert-light mb-3 fs-4">
     <strong>Jak to czytać?</strong> Seed działa automatycznie (cron, bez przycisków w panelu). Każde uruchomienie tworzy jeden
     <strong>batch</strong> = pełny seed jednego dnia. W batchu <strong>scopy</strong> (jednostki fetch per provider + sekcja)
     przechodzą przez kolejkę; każdy scope loguje uruchomienie w <strong>seed_runs</strong>; pobrane eventy

@@ -1,5 +1,6 @@
 // SSR admin dashboard UI using Tabler (CDN). Shared layout, navigation, helpers.
 // https://github.com/tabler/tabler — MIT. No build step; CSS/JS from jsDelivr.
+// Design follows Tabler: no custom styles unless Tabler offers none.
 export function esc(v: unknown): string {
   return String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
 }
@@ -30,32 +31,39 @@ export const NAV = [
   { href: '/admin/reports', label: 'Raporty', icon: 'flag' },
 ];
 
+// Tabler horizontal layout: top navbar + content wrapper (no sidebar).
 export function layout(title: string, active: string, body: string): string {
   const nav = NAV.map((n) => {
     const cls = n.href === active ? 'active' : '';
     return `<li class="nav-item"><a class="nav-link ${cls}" href="${n.href}">
-      <span class="nav-link-icon d-md-none d-lg-inline-block"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-${esc(n.icon)}"></use></svg></span>
+      <span class="nav-link-icon d-none-navbar-horizontal"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-${esc(n.icon)}"></use></svg></span>
       <span class="nav-link-title">${esc(n.label)}</span></a></li>`;
   }).join('');
   return `<!doctype html><html lang="pl"><head>
 <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${esc(title)} · PanPeryskop Admin</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css">
-<style>
-body{background:var(--tblr-bg-surface-secondary)}
-.page{margin:0 auto;max-width:1400px}
-.tblr-body{min-height:100vh}
-</style></head><body>
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none" id="tabler-icons">${ICONS}</svg>
-<div class="tblr-body page">
-<div class="row g-0" style="min-height:100vh">
-  <aside class="col-12 col-lg-3 col-xl-2 border-end">
-    <div class="p-3"><h1 class="h3 mb-0">PanPeryskop <span class="text-secondary">Admin</span></h1></div>
-    <ul class="nav nav-pills nav-vertical flex-column">${nav}</ul>
-    <div class="p-3"><a class="text-danger text-decoration-none" href="/admin/logout">Wyloguj</a></div>
-  </aside>
-  <main class="col-12 col-lg-9 col-xl-10 p-3 p-md-4">${body}</main>
-</div></div>
+</head><body class="bg-surface-secondary">
+<svg xmlns="http://www.w3.org/2000/svg" class="d-none" id="tabler-icons">${ICONS}</svg>
+<div class="page">
+  <header class="navbar navbar-expand-md navbar-light d-print-none">
+    <div class="container-xl">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+      <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">PanPeryskop <span class="text-secondary">Admin</span></h1>
+      <div class="collapse navbar-collapse" id="navbar-menu">
+        <div class="d-flex flex-column flex-md-row flex-fill align-items-stretch align-items-md-center">
+          <ul class="navbar-nav">${nav}</ul>
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item"><a class="nav-link text-danger" href="/admin/logout">Wyloguj</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="page-wrapper">
+    <div class="container-xl py-3 py-md-4">${body}</div>
+  </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script>
 </body></html>`;
 }
@@ -65,10 +73,10 @@ export function page(title: string, active: string, body: string): Response {
 }
 
 export function cards(items: { label: string; value: string | number; color?: string }[]): string {
-  return `<div class="row g-3 mb-3">${items.map((it) => `
+  return `<div class="row row-cards mb-3">${items.map((it) => `
     <div class="col-6 col-md-4 col-xl-3">
       <div class="card card-sm"><div class="card-body">
-        <div class="text-secondary text-uppercase fw-bold" style="font-size:11px">${esc(it.label)}</div>
+        <div class="text-secondary text-uppercase fw-bold fs-6">${esc(it.label)}</div>
         <div class="h2 mb-0 ${it.color ? 'text-' + esc(it.color) : ''}">${esc(it.value)}</div>
       </div></div>
     </div>`).join('')}</div>`;
@@ -79,10 +87,10 @@ export function bars(data: { label: string; value: number }[]): string {
   const max = Math.max(1, ...data.map((d) => d.value));
   return data.map((d) => {
     const w = max > 0 ? Math.max(0.5, (d.value / max) * 100) : 0;
-    return `<div class="d-flex align-items-center mb-1" style="gap:8px">
-      <span class="text-secondary" style="width:70px;flex-shrink:0">${esc(d.label)}</span>
-      <div class="progress flex-grow-1" style="height:8px"><div class="progress-bar" style="width:${w}%"></div></div>
-      <span class="text-muted" style="width:44px;text-align:right">${d.value}</span>
+    return `<div class="d-flex align-items-center mb-2 gap-2">
+      <span class="text-secondary">${esc(d.label)}</span>
+      <div class="progress flex-grow-1 progress-sm"><div class="progress-bar" style="width:${w}%"></div></div>
+      <span class="text-muted text-end">${d.value}</span>
     </div>`;
   }).join('');
 }
@@ -94,7 +102,7 @@ export function pill(text: string, kind: 'ok' | 'err' | 'muted' | 'warn'): strin
 }
 
 export function empty(): string {
-  return `<div class="alert alert-light text-secondary">Brak danych.</div>`;
+  return `<div class="empty"><p class="empty-title text-secondary">Brak danych.</p></div>`;
 }
 
 // Tabler icon sprite subset (feather-compatible stroke icons).

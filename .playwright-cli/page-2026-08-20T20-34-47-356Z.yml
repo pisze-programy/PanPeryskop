@@ -1,0 +1,2846 @@
+- generic [ref=f10e2]:
+  - banner [ref=f10e3]:
+    - generic [ref=f10e4]:
+      - heading "PanPeryskop Admin" [level=1] [ref=f10e5]:
+        - text: PanPeryskop
+        - generic [ref=f10e6]: Admin
+      - generic [ref=f10e8]:
+        - list [ref=f10e9]:
+          - listitem [ref=f10e10]:
+            - link "Overview" [ref=f10e11] [cursor=pointer]:
+              - /url: /admin
+          - listitem [ref=f10e16]:
+            - link "Eventy" [ref=f10e17] [cursor=pointer]:
+              - /url: /admin/events
+          - listitem [ref=f10e22]:
+            - link "Tagi" [ref=f10e23] [cursor=pointer]:
+              - /url: /admin/tags
+          - listitem [ref=f10e28]:
+            - link "Użytkownicy" [ref=f10e29] [cursor=pointer]:
+              - /url: /admin/users
+          - listitem [ref=f10e34]:
+            - link "Posty" [ref=f10e35] [cursor=pointer]:
+              - /url: /admin/posts
+          - listitem [ref=f10e40]:
+            - link "Seed" [ref=f10e41] [cursor=pointer]:
+              - /url: /admin/seed
+          - listitem [ref=f10e46]:
+            - link "Statystyki" [ref=f10e47] [cursor=pointer]:
+              - /url: /admin/stats
+          - listitem [ref=f10e52]:
+            - link "Błędy" [ref=f10e53] [cursor=pointer]:
+              - /url: /admin/errors
+          - listitem [ref=f10e58]:
+            - link "Media Requests" [ref=f10e59] [cursor=pointer]:
+              - /url: /admin/media-requests
+          - listitem [ref=f10e64]:
+            - link "Raporty" [ref=f10e65] [cursor=pointer]:
+              - /url: /admin/reports
+        - list [ref=f10e70]:
+          - listitem [ref=f10e71]:
+            - link "Wyloguj" [ref=f10e72] [cursor=pointer]:
+              - /url: /admin/logout
+  - generic [ref=f10e74]:
+    - heading "Eventy" [level=2] [ref=f10e75]
+    - generic [ref=f10e76]:
+      - generic [ref=f10e77]:
+        - generic [ref=f10e78]: Miasto
+        - combobox [ref=f10e79]:
+          - option "Wszystkie miasta" [selected]
+          - option "Poznań"
+          - option "Warszawa"
+          - option "Gdańsk"
+          - option "Kraków"
+          - option "Łódź"
+          - option "Wrocław"
+          - option "Szczecin"
+          - option "Bydgoszcz"
+          - option "Lublin"
+          - option "Katowice"
+          - option "Białystok"
+          - option "Sopot"
+          - option "Gdynia"
+          - option "Toruń"
+          - option "Kielce"
+          - option "Rzeszów"
+          - option "Olsztyn"
+          - option "Bielsko-Biała"
+          - option "Zielona Góra"
+          - option "Koszalin"
+          - option "Częstochowa"
+      - generic [ref=f10e80]:
+        - generic [ref=f10e81]: Źródło
+        - combobox [ref=f10e82]:
+          - option "Wszystkie źródła" [selected]
+          - option "helios"
+          - option "multikino"
+          - option "cinemacity"
+          - option "going"
+          - option "kupbilecik"
+          - option "dzisapp"
+          - option "eventylive"
+          - option "luma"
+          - option "meetup"
+      - generic [ref=f10e83]:
+        - generic [ref=f10e84]: Status
+        - combobox [ref=f10e85]:
+          - option "Wszystkie statusy" [selected]
+          - option "pending"
+          - option "approved"
+          - option "rejected"
+      - generic [ref=f10e86]:
+        - generic [ref=f10e87]: Tag
+        - combobox [ref=f10e88]:
+          - option "Wszystkie tagi" [selected]
+          - option "Brak"
+          - option "Filmy"
+          - option "Muzyka"
+          - option "Meetup"
+          - option "Komedia"
+          - option "Teatr"
+          - option "Inne"
+      - generic [ref=f10e89]:
+        - generic [ref=f10e90]: Geo
+        - combobox [ref=f10e91]:
+          - option "Wszystkie" [selected]
+          - option "Default bbox"
+      - generic [ref=f10e92]:
+        - generic [ref=f10e93]: Data od
+        - textbox [ref=f10e94]
+      - generic [ref=f10e95]:
+        - generic [ref=f10e96]: Data do
+        - textbox [ref=f10e97]
+      - link "Wyczyść" [ref=f10e99] [cursor=pointer]:
+        - /url: /admin/events
+    - generic [ref=f10e100]:
+      - generic [ref=f10e101]: 347 wydarzeń · strona 1 / 4
+      - generic [ref=f10e102]:
+        - generic: ‹ Poprzednia
+        - link "Następna ›" [ref=f10e103] [cursor=pointer]:
+          - /url: /admin/events?page=2
+    - table [ref=f10e106]:
+      - rowgroup [ref=f10e107]:
+        - row [ref=f10e108]:
+          - columnheader "Media" [ref=f10e109]
+          - columnheader "Wydarzenie" [ref=f10e110]
+          - columnheader "Status" [ref=f10e111]
+          - columnheader "Tagi" [ref=f10e112]
+          - columnheader [ref=f10e113]
+      - rowgroup [ref=f10e114]:
+        - row [ref=f10e115]:
+          - cell "—" [ref=f10e116]
+          - cell "Test Film (multikino) Gdynia, Multikino Gdynia 2026-08-21 · 20:00" [ref=f10e117]:
+            - generic [ref=f10e118]:
+              - link "Test Film" [ref=f10e119] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdynia, Multikino Gdynia" [ref=f10e122] [cursor=pointer]:
+              - /url: javascript:void(0)
+            - generic [ref=f10e125]: 2026-08-21 · 20:00
+          - cell [ref=f10e126]:
+            - combobox [ref=f10e128]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e129]:
+            - combobox [ref=f10e131]:
+              - option "— brak —"
+              - option "Filmy" [selected]
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e132]:
+            - button "⋯" [ref=f10e133] [cursor=pointer]
+        - row [ref=f10e134]:
+          - cell "—" [ref=f10e135]
+          - cell "No Link ⚠ (dzisapp) Warszawa, Teatr 2026-08-21" [ref=f10e136]:
+            - generic [ref=f10e137]:
+              - link "No Link ⚠" [ref=f10e138] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Warszawa, Teatr" [ref=f10e141] [cursor=pointer]:
+              - /url: javascript:void(0)
+            - generic [ref=f10e144]: 2026-08-21
+          - cell [ref=f10e145]:
+            - combobox [ref=f10e147]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e148]:
+            - combobox [ref=f10e150]:
+              - option "— brak —"
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr" [selected]
+              - option "Inne"
+          - cell [ref=f10e151]:
+            - button "⋯" [ref=f10e152] [cursor=pointer]
+        - row [ref=f10e153]:
+          - cell "—" [ref=f10e154]
+          - cell "Test Koncert (going) Warszawa, Stodola Warszawa 2026-08-21 · 19:00" [ref=f10e155]:
+            - generic [ref=f10e156]:
+              - link "Test Koncert" [ref=f10e157] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (going)
+            - link "Warszawa, Stodola Warszawa" [ref=f10e160] [cursor=pointer]:
+              - /url: javascript:void(0)
+            - generic [ref=f10e163]: 2026-08-21 · 19:00
+          - cell [ref=f10e164]:
+            - combobox [ref=f10e166]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e167]:
+            - combobox [ref=f10e169]:
+              - option "— brak —"
+              - option "Filmy"
+              - option "Muzyka" [selected]
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e170]:
+            - button "⋯" [ref=f10e171] [cursor=pointer]
+        - row "„That’s My Game” (kupbilecik) Gdynia, Blues Club approved — brak — ⋯" [ref=f10e172]:
+          - cell [ref=f10e173]:
+            - link "Podgląd" [ref=f10e174] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e176]:
+            - generic [ref=f10e177]:
+              - link "„That’s My Game”" [ref=f10e178] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (kupbilecik)
+            - link "Gdynia, Blues Club" [ref=f10e181] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e184]:
+            - combobox [ref=f10e186]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e187]:
+            - combobox [ref=f10e189]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e190]:
+            - button "⋯" [ref=f10e191] [cursor=pointer]
+        - row "Marcin Wądołowski feat. Joanna Knitter (dzisapp) Gdynia, Blues Club approved — brak — ⋯" [ref=f10e192]:
+          - cell [ref=f10e193]:
+            - link "Podgląd" [ref=f10e194] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e196]:
+            - generic [ref=f10e197]:
+              - link "Marcin Wądołowski feat. Joanna Knitter" [ref=f10e198] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Gdynia, Blues Club" [ref=f10e201] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e204]:
+            - combobox [ref=f10e206]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e207]:
+            - combobox [ref=f10e209]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e210]:
+            - button "⋯" [ref=f10e211] [cursor=pointer]
+        - row "Spacer z przewodnikiem po Westerplatte (dzisapp) Gdańsk, Przystań na Westerplatte approved — brak — ⋯" [ref=f10e212]:
+          - cell [ref=f10e213]:
+            - link "Podgląd" [ref=f10e214] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e216]:
+            - generic [ref=f10e217]:
+              - link "Spacer z przewodnikiem po Westerplatte" [ref=f10e218] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Gdańsk, Przystań na Westerplatte" [ref=f10e221] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e224]:
+            - combobox [ref=f10e226]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e227]:
+            - combobox [ref=f10e229]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e230]:
+            - button "⋯" [ref=f10e231] [cursor=pointer]
+        - row "Bilety do Papugarni Gdańsk (dzisapp) Gdańsk, Papugarnia Gdańsk approved — brak — ⋯" [ref=f10e232]:
+          - cell [ref=f10e233]:
+            - link "Podgląd" [ref=f10e234] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e236]:
+            - generic [ref=f10e237]:
+              - link "Bilety do Papugarni Gdańsk" [ref=f10e238] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Gdańsk, Papugarnia Gdańsk" [ref=f10e241] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e244]:
+            - combobox [ref=f10e246]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e247]:
+            - combobox [ref=f10e249]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e250]:
+            - button "⋯" [ref=f10e251] [cursor=pointer]
+        - row "Flavia de luce (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e252]:
+          - cell [ref=f10e253]:
+            - link "Podgląd" [ref=f10e254] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e256]:
+            - generic [ref=f10e257]:
+              - link "Flavia de luce" [ref=f10e258] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e261] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e264]:
+            - combobox [ref=f10e266]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e267]:
+            - combobox [ref=f10e269]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e270]:
+            - button "⋯" [ref=f10e271] [cursor=pointer]
+        - row "Wszyscy moi wrogowie (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e272]:
+          - cell [ref=f10e273]:
+            - link "Podgląd" [ref=f10e274] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e276]:
+            - generic [ref=f10e277]:
+              - link "Wszyscy moi wrogowie" [ref=f10e278] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e281] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e284]:
+            - combobox [ref=f10e286]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e287]:
+            - combobox [ref=f10e289]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e290]:
+            - button "⋯" [ref=f10e291] [cursor=pointer]
+        - row "Ice Cream Man (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e292]:
+          - cell [ref=f10e293]:
+            - link "Podgląd" [ref=f10e294] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e296]:
+            - generic [ref=f10e297]:
+              - link "Ice Cream Man" [ref=f10e298] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e301] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e304]:
+            - combobox [ref=f10e306]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e307]:
+            - combobox [ref=f10e309]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e310]:
+            - button "⋯" [ref=f10e311] [cursor=pointer]
+        - row "Minionki i straszydła (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e312]:
+          - cell [ref=f10e313]:
+            - link "Podgląd" [ref=f10e314] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e316]:
+            - generic [ref=f10e317]:
+              - link "Minionki i straszydła" [ref=f10e318] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e321] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e324]:
+            - combobox [ref=f10e326]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e327]:
+            - combobox [ref=f10e329]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e330]:
+            - button "⋯" [ref=f10e331] [cursor=pointer]
+        - row "Pucio (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e332]:
+          - cell [ref=f10e333]:
+            - link "Podgląd" [ref=f10e334] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e336]:
+            - generic [ref=f10e337]:
+              - link "Pucio" [ref=f10e338] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e341] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e344]:
+            - combobox [ref=f10e346]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e347]:
+            - combobox [ref=f10e349]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e350]:
+            - button "⋯" [ref=f10e351] [cursor=pointer]
+        - row "Toy Story 5 (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e352]:
+          - cell [ref=f10e353]:
+            - link "Podgląd" [ref=f10e354] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e356]:
+            - generic [ref=f10e357]:
+              - link "Toy Story 5" [ref=f10e358] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e361] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e364]:
+            - combobox [ref=f10e366]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e367]:
+            - combobox [ref=f10e369]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e370]:
+            - button "⋯" [ref=f10e371] [cursor=pointer]
+        - row "Historie równoległe (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e372]:
+          - cell [ref=f10e373]:
+            - link "Podgląd" [ref=f10e374] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e376]:
+            - generic [ref=f10e377]:
+              - link "Historie równoległe" [ref=f10e378] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e381] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e384]:
+            - combobox [ref=f10e386]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e387]:
+            - combobox [ref=f10e389]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e390]:
+            - button "⋯" [ref=f10e391] [cursor=pointer]
+        - row "Pucio kocha zwierzaki (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e392]:
+          - cell [ref=f10e393]:
+            - link "Podgląd" [ref=f10e394] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e396]:
+            - generic [ref=f10e397]:
+              - link "Pucio kocha zwierzaki" [ref=f10e398] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e401] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e404]:
+            - combobox [ref=f10e406]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e407]:
+            - combobox [ref=f10e409]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e410]:
+            - button "⋯" [ref=f10e411] [cursor=pointer]
+        - row "Odyseja (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e412]:
+          - cell [ref=f10e413]:
+            - link "Podgląd" [ref=f10e414] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e416]:
+            - generic [ref=f10e417]:
+              - link "Odyseja" [ref=f10e418] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e421] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e424]:
+            - combobox [ref=f10e426]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e427]:
+            - combobox [ref=f10e429]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e430]:
+            - button "⋯" [ref=f10e431] [cursor=pointer]
+        - row "Tylko jedna noc (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e432]:
+          - cell [ref=f10e433]:
+            - link "Podgląd" [ref=f10e434] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e436]:
+            - generic [ref=f10e437]:
+              - link "Tylko jedna noc" [ref=f10e438] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e441] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e444]:
+            - combobox [ref=f10e446]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e447]:
+            - combobox [ref=f10e449]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e450]:
+            - button "⋯" [ref=f10e451] [cursor=pointer]
+        - row "Koniec ulicy Dębowej (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e452]:
+          - cell [ref=f10e453]:
+            - link "Podgląd" [ref=f10e454] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e456]:
+            - generic [ref=f10e457]:
+              - link "Koniec ulicy Dębowej" [ref=f10e458] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e461] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e464]:
+            - combobox [ref=f10e466]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e467]:
+            - combobox [ref=f10e469]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e470]:
+            - button "⋯" [ref=f10e471] [cursor=pointer]
+        - row "Psi patrol i dinozaury (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e472]:
+          - cell [ref=f10e473]:
+            - link "Podgląd" [ref=f10e474] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e476]:
+            - generic [ref=f10e477]:
+              - link "Psi patrol i dinozaury" [ref=f10e478] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e481] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e484]:
+            - combobox [ref=f10e486]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e487]:
+            - combobox [ref=f10e489]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e490]:
+            - button "⋯" [ref=f10e491] [cursor=pointer]
+        - 'row "Spider-Man: Całkiem nowy dzień (multikino) Gdańsk, Multikino Gdańsk approved — brak — ⋯" [ref=f10e492]':
+          - cell [ref=f10e493]:
+            - link "Podgląd" [ref=f10e494] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e496]:
+            - generic [ref=f10e497]:
+              - 'link "Spider-Man: Całkiem nowy dzień" [ref=f10e498] [cursor=pointer]':
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Gdańsk, Multikino Gdańsk" [ref=f10e501] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e504]:
+            - combobox [ref=f10e506]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e507]:
+            - combobox [ref=f10e509]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e510]:
+            - button "⋯" [ref=f10e511] [cursor=pointer]
+        - row "I like Queen - Piano Show (dzisapp) Gdańsk, I like Chopin approved — brak — ⋯" [ref=f10e512]:
+          - cell [ref=f10e513]:
+            - link "Podgląd" [ref=f10e514] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e516]:
+            - generic [ref=f10e517]:
+              - link "I like Queen - Piano Show" [ref=f10e518] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Gdańsk, I like Chopin" [ref=f10e521] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e524]:
+            - combobox [ref=f10e526]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e527]:
+            - combobox [ref=f10e529]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e530]:
+            - button "⋯" [ref=f10e531] [cursor=pointer]
+        - row "I like Chopin - kameralny koncert przy świecach (dzisapp) Gdańsk, I like Chopin approved — brak — ⋯" [ref=f10e532]:
+          - cell [ref=f10e533]:
+            - link "Podgląd" [ref=f10e534] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e536]:
+            - generic [ref=f10e537]:
+              - link "I like Chopin - kameralny koncert przy świecach" [ref=f10e538] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Gdańsk, I like Chopin" [ref=f10e541] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e544]:
+            - combobox [ref=f10e546]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e547]:
+            - combobox [ref=f10e549]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e550]:
+            - button "⋯" [ref=f10e551] [cursor=pointer]
+        - row "Chopin & Friends Concert By Candle Glow (dzisapp) Gdańsk, Kościół Rektorski Ojców Karmelitów pw. św. Katarzyny approved — brak — ⋯" [ref=f10e552]:
+          - cell [ref=f10e553]:
+            - link "Podgląd" [ref=f10e554] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e556]:
+            - generic [ref=f10e557]:
+              - link "Chopin & Friends Concert By Candle Glow" [ref=f10e558] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Gdańsk, Kościół Rektorski Ojców Karmelitów pw. św. Katarzyny" [ref=f10e561] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e564]:
+            - combobox [ref=f10e566]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e567]:
+            - combobox [ref=f10e569]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e570]:
+            - button "⋯" [ref=f10e571] [cursor=pointer]
+        - row "Cyrk Arena - to jest Cyrk! (eventylive) Gdańsk, Namiot Cyrkowy - Gdańsk Osowa approved — brak — ⋯" [ref=f10e572]:
+          - cell [ref=f10e573]:
+            - link "Podgląd" [ref=f10e574] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e576]:
+            - generic [ref=f10e577]:
+              - link "Cyrk Arena - to jest Cyrk!" [ref=f10e578] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (eventylive)
+            - link "Gdańsk, Namiot Cyrkowy - Gdańsk Osowa" [ref=f10e581] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e584]:
+            - combobox [ref=f10e586]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e587]:
+            - combobox [ref=f10e589]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e590]:
+            - button "⋯" [ref=f10e591] [cursor=pointer]
+        - row "\"Pucio kocha zwierzaki\" (eventylive) Gdańsk, Winda GAK approved — brak — ⋯" [ref=f10e592]:
+          - cell [ref=f10e593]:
+            - link "Podgląd" [ref=f10e594] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e596]:
+            - generic [ref=f10e597]:
+              - link "\"Pucio kocha zwierzaki\"" [ref=f10e598] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (eventylive)
+            - link "Gdańsk, Winda GAK" [ref=f10e601] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e604]:
+            - combobox [ref=f10e606]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e607]:
+            - combobox [ref=f10e609]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e610]:
+            - button "⋯" [ref=f10e611] [cursor=pointer]
+        - row "I like Chopin (dzisapp) Gdańsk, Sala koncertowa I like CHOPIN approved — brak — ⋯" [ref=f10e612]:
+          - cell [ref=f10e613]:
+            - link "Podgląd" [ref=f10e614] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e616]:
+            - generic [ref=f10e617]:
+              - link "I like Chopin" [ref=f10e618] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Gdańsk, Sala koncertowa I like CHOPIN" [ref=f10e621] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e624]:
+            - combobox [ref=f10e626]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e627]:
+            - combobox [ref=f10e629]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e630]:
+            - button "⋯" [ref=f10e631] [cursor=pointer]
+        - row "Upiory (dzisapp) Gdańsk, Stara Apteka Gdańsk approved — brak — ⋯" [ref=f10e632]:
+          - cell [ref=f10e633]:
+            - link "Podgląd" [ref=f10e634] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e636]:
+            - generic [ref=f10e637]:
+              - link "Upiory" [ref=f10e638] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Gdańsk, Stara Apteka Gdańsk" [ref=f10e641] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e644]:
+            - combobox [ref=f10e646]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e647]:
+            - combobox [ref=f10e649]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e650]:
+            - button "⋯" [ref=f10e651] [cursor=pointer]
+        - row "Candlelight Chopin Concert Old Town Gdańsk (dzisapp) Gdańsk, Sala pod Bazyliką Mariacką approved — brak — ⋯" [ref=f10e652]:
+          - cell [ref=f10e653]:
+            - link "Podgląd" [ref=f10e654] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e656]:
+            - generic [ref=f10e657]:
+              - link "Candlelight Chopin Concert Old Town Gdańsk" [ref=f10e658] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Gdańsk, Sala pod Bazyliką Mariacką" [ref=f10e661] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e664]:
+            - combobox [ref=f10e666]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e667]:
+            - combobox [ref=f10e669]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e670]:
+            - button "⋯" [ref=f10e671] [cursor=pointer]
+        - row "Pucio (multikino) Koszalin, Multikino Koszalin approved — brak — ⋯" [ref=f10e672]:
+          - cell [ref=f10e673]:
+            - link "Podgląd" [ref=f10e674] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e676]:
+            - generic [ref=f10e677]:
+              - link "Pucio" [ref=f10e678] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Koszalin, Multikino Koszalin" [ref=f10e681] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e684]:
+            - combobox [ref=f10e686]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e687]:
+            - combobox [ref=f10e689]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e690]:
+            - button "⋯" [ref=f10e691] [cursor=pointer]
+        - row "Ice Cream Man (multikino) Koszalin, Multikino Koszalin approved — brak — ⋯" [ref=f10e692]:
+          - cell [ref=f10e693]:
+            - link "Podgląd" [ref=f10e694] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e696]:
+            - generic [ref=f10e697]:
+              - link "Ice Cream Man" [ref=f10e698] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Koszalin, Multikino Koszalin" [ref=f10e701] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e704]:
+            - combobox [ref=f10e706]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e707]:
+            - combobox [ref=f10e709]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e710]:
+            - button "⋯" [ref=f10e711] [cursor=pointer]
+        - row "Obsesja (multikino) Koszalin, Multikino Koszalin approved — brak — ⋯" [ref=f10e712]:
+          - cell [ref=f10e713]:
+            - link "Podgląd" [ref=f10e714] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e716]:
+            - generic [ref=f10e717]:
+              - link "Obsesja" [ref=f10e718] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Koszalin, Multikino Koszalin" [ref=f10e721] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e724]:
+            - combobox [ref=f10e726]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e727]:
+            - combobox [ref=f10e729]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e730]:
+            - button "⋯" [ref=f10e731] [cursor=pointer]
+        - row "Pucio kocha zwierzaki (multikino) Koszalin, Multikino Koszalin approved — brak — ⋯" [ref=f10e732]:
+          - cell [ref=f10e733]:
+            - link "Podgląd" [ref=f10e734] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e736]:
+            - generic [ref=f10e737]:
+              - link "Pucio kocha zwierzaki" [ref=f10e738] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Koszalin, Multikino Koszalin" [ref=f10e741] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e744]:
+            - combobox [ref=f10e746]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e747]:
+            - combobox [ref=f10e749]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e750]:
+            - button "⋯" [ref=f10e751] [cursor=pointer]
+        - row "Minionki i straszydła (multikino) Koszalin, Multikino Koszalin approved — brak — ⋯" [ref=f10e752]:
+          - cell [ref=f10e753]:
+            - link "Podgląd" [ref=f10e754] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e756]:
+            - generic [ref=f10e757]:
+              - link "Minionki i straszydła" [ref=f10e758] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Koszalin, Multikino Koszalin" [ref=f10e761] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e764]:
+            - combobox [ref=f10e766]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e767]:
+            - combobox [ref=f10e769]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e770]:
+            - button "⋯" [ref=f10e771] [cursor=pointer]
+        - row "Odyseja (multikino) Koszalin, Multikino Koszalin approved — brak — ⋯" [ref=f10e772]:
+          - cell [ref=f10e773]:
+            - link "Podgląd" [ref=f10e774] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e776]:
+            - generic [ref=f10e777]:
+              - link "Odyseja" [ref=f10e778] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Koszalin, Multikino Koszalin" [ref=f10e781] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e784]:
+            - combobox [ref=f10e786]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e787]:
+            - combobox [ref=f10e789]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e790]:
+            - button "⋯" [ref=f10e791] [cursor=pointer]
+        - row "Koniec ulicy Dębowej (multikino) Koszalin, Multikino Koszalin approved — brak — ⋯" [ref=f10e792]:
+          - cell [ref=f10e793]:
+            - link "Podgląd" [ref=f10e794] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e796]:
+            - generic [ref=f10e797]:
+              - link "Koniec ulicy Dębowej" [ref=f10e798] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Koszalin, Multikino Koszalin" [ref=f10e801] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e804]:
+            - combobox [ref=f10e806]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e807]:
+            - combobox [ref=f10e809]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e810]:
+            - button "⋯" [ref=f10e811] [cursor=pointer]
+        - row "Tylko jedna noc (multikino) Koszalin, Multikino Koszalin approved — brak — ⋯" [ref=f10e812]:
+          - cell [ref=f10e813]:
+            - link "Podgląd" [ref=f10e814] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e816]:
+            - generic [ref=f10e817]:
+              - link "Tylko jedna noc" [ref=f10e818] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Koszalin, Multikino Koszalin" [ref=f10e821] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e824]:
+            - combobox [ref=f10e826]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e827]:
+            - combobox [ref=f10e829]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e830]:
+            - button "⋯" [ref=f10e831] [cursor=pointer]
+        - row "Psi patrol i dinozaury (multikino) Koszalin, Multikino Koszalin approved — brak — ⋯" [ref=f10e832]:
+          - cell [ref=f10e833]:
+            - link "Podgląd" [ref=f10e834] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e836]:
+            - generic [ref=f10e837]:
+              - link "Psi patrol i dinozaury" [ref=f10e838] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Koszalin, Multikino Koszalin" [ref=f10e841] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e844]:
+            - combobox [ref=f10e846]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e847]:
+            - combobox [ref=f10e849]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e850]:
+            - button "⋯" [ref=f10e851] [cursor=pointer]
+        - 'row "Spider-Man: Całkiem nowy dzień (multikino) Koszalin, Multikino Koszalin approved — brak — ⋯" [ref=f10e852]':
+          - cell [ref=f10e853]:
+            - link "Podgląd" [ref=f10e854] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e856]:
+            - generic [ref=f10e857]:
+              - 'link "Spider-Man: Całkiem nowy dzień" [ref=f10e858] [cursor=pointer]':
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Koszalin, Multikino Koszalin" [ref=f10e861] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e864]:
+            - combobox [ref=f10e866]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e867]:
+            - combobox [ref=f10e869]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e870]:
+            - button "⋯" [ref=f10e871] [cursor=pointer]
+        - row "Wszyscy moi wrogowie (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e872]:
+          - cell [ref=f10e873]:
+            - link "Podgląd" [ref=f10e874] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e876]:
+            - generic [ref=f10e877]:
+              - link "Wszyscy moi wrogowie" [ref=f10e878] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e881] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e884]:
+            - combobox [ref=f10e886]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e887]:
+            - combobox [ref=f10e889]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e890]:
+            - button "⋯" [ref=f10e891] [cursor=pointer]
+        - row "Ice Cream Man (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e892]:
+          - cell [ref=f10e893]:
+            - link "Podgląd" [ref=f10e894] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e896]:
+            - generic [ref=f10e897]:
+              - link "Ice Cream Man" [ref=f10e898] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e901] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e904]:
+            - combobox [ref=f10e906]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e907]:
+            - combobox [ref=f10e909]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e910]:
+            - button "⋯" [ref=f10e911] [cursor=pointer]
+        - row "Historie równoległe (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e912]:
+          - cell [ref=f10e913]:
+            - link "Podgląd" [ref=f10e914] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e916]:
+            - generic [ref=f10e917]:
+              - link "Historie równoległe" [ref=f10e918] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e921] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e924]:
+            - combobox [ref=f10e926]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e927]:
+            - combobox [ref=f10e929]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e930]:
+            - button "⋯" [ref=f10e931] [cursor=pointer]
+        - row "Flavia de luce (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e932]:
+          - cell [ref=f10e933]:
+            - link "Podgląd" [ref=f10e934] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e936]:
+            - generic [ref=f10e937]:
+              - link "Flavia de luce" [ref=f10e938] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e941] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e944]:
+            - combobox [ref=f10e946]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e947]:
+            - combobox [ref=f10e949]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e950]:
+            - button "⋯" [ref=f10e951] [cursor=pointer]
+        - row "Pucio (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e952]:
+          - cell [ref=f10e953]:
+            - link "Podgląd" [ref=f10e954] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e956]:
+            - generic [ref=f10e957]:
+              - link "Pucio" [ref=f10e958] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e961] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e964]:
+            - combobox [ref=f10e966]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e967]:
+            - combobox [ref=f10e969]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e970]:
+            - button "⋯" [ref=f10e971] [cursor=pointer]
+        - row "Toy Story 5 (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e972]:
+          - cell [ref=f10e973]:
+            - link "Podgląd" [ref=f10e974] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e976]:
+            - generic [ref=f10e977]:
+              - link "Toy Story 5" [ref=f10e978] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e981] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e984]:
+            - combobox [ref=f10e986]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e987]:
+            - combobox [ref=f10e989]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e990]:
+            - button "⋯" [ref=f10e991] [cursor=pointer]
+        - row "Pucio kocha zwierzaki (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e992]:
+          - cell [ref=f10e993]:
+            - link "Podgląd" [ref=f10e994] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e996]:
+            - generic [ref=f10e997]:
+              - link "Pucio kocha zwierzaki" [ref=f10e998] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e1001] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1004]:
+            - combobox [ref=f10e1006]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1007]:
+            - combobox [ref=f10e1009]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1010]:
+            - button "⋯" [ref=f10e1011] [cursor=pointer]
+        - row "Minionki i straszydła (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e1012]:
+          - cell [ref=f10e1013]:
+            - link "Podgląd" [ref=f10e1014] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1016]:
+            - generic [ref=f10e1017]:
+              - link "Minionki i straszydła" [ref=f10e1018] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e1021] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1024]:
+            - combobox [ref=f10e1026]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1027]:
+            - combobox [ref=f10e1029]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1030]:
+            - button "⋯" [ref=f10e1031] [cursor=pointer]
+        - row "Odyseja (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e1032]:
+          - cell [ref=f10e1033]:
+            - link "Podgląd" [ref=f10e1034] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1036]:
+            - generic [ref=f10e1037]:
+              - link "Odyseja" [ref=f10e1038] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e1041] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1044]:
+            - combobox [ref=f10e1046]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1047]:
+            - combobox [ref=f10e1049]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1050]:
+            - button "⋯" [ref=f10e1051] [cursor=pointer]
+        - row "Obsesja (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e1052]:
+          - cell [ref=f10e1053]:
+            - link "Podgląd" [ref=f10e1054] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1056]:
+            - generic [ref=f10e1057]:
+              - link "Obsesja" [ref=f10e1058] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e1061] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1064]:
+            - combobox [ref=f10e1066]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1067]:
+            - combobox [ref=f10e1069]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1070]:
+            - button "⋯" [ref=f10e1071] [cursor=pointer]
+        - row "Koniec ulicy Dębowej (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e1072]:
+          - cell [ref=f10e1073]:
+            - link "Podgląd" [ref=f10e1074] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1076]:
+            - generic [ref=f10e1077]:
+              - link "Koniec ulicy Dębowej" [ref=f10e1078] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e1081] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1084]:
+            - combobox [ref=f10e1086]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1087]:
+            - combobox [ref=f10e1089]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1090]:
+            - button "⋯" [ref=f10e1091] [cursor=pointer]
+        - row "Psi patrol i dinozaury (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e1092]:
+          - cell [ref=f10e1093]:
+            - link "Podgląd" [ref=f10e1094] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1096]:
+            - generic [ref=f10e1097]:
+              - link "Psi patrol i dinozaury" [ref=f10e1098] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e1101] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1104]:
+            - combobox [ref=f10e1106]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1107]:
+            - combobox [ref=f10e1109]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1110]:
+            - button "⋯" [ref=f10e1111] [cursor=pointer]
+        - row "Tylko jedna noc (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e1112]:
+          - cell [ref=f10e1113]:
+            - link "Podgląd" [ref=f10e1114] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1116]:
+            - generic [ref=f10e1117]:
+              - link "Tylko jedna noc" [ref=f10e1118] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e1121] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1124]:
+            - combobox [ref=f10e1126]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1127]:
+            - combobox [ref=f10e1129]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1130]:
+            - button "⋯" [ref=f10e1131] [cursor=pointer]
+        - 'row "Spider-Man: Całkiem nowy dzień (multikino) Olsztyn, Multikino Olsztyn approved — brak — ⋯" [ref=f10e1132]':
+          - cell [ref=f10e1133]:
+            - link "Podgląd" [ref=f10e1134] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1136]:
+            - generic [ref=f10e1137]:
+              - 'link "Spider-Man: Całkiem nowy dzień" [ref=f10e1138] [cursor=pointer]':
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Olsztyn, Multikino Olsztyn" [ref=f10e1141] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1144]:
+            - combobox [ref=f10e1146]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1147]:
+            - combobox [ref=f10e1149]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1150]:
+            - button "⋯" [ref=f10e1151] [cursor=pointer]
+        - row "Wszyscy moi wrogowie (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1152]:
+          - cell [ref=f10e1153]:
+            - link "Podgląd" [ref=f10e1154] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1156]:
+            - generic [ref=f10e1157]:
+              - link "Wszyscy moi wrogowie" [ref=f10e1158] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1161] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1164]:
+            - combobox [ref=f10e1166]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1167]:
+            - combobox [ref=f10e1169]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1170]:
+            - button "⋯" [ref=f10e1171] [cursor=pointer]
+        - row "Historie równoległe (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1172]:
+          - cell [ref=f10e1173]:
+            - link "Podgląd" [ref=f10e1174] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1176]:
+            - generic [ref=f10e1177]:
+              - link "Historie równoległe" [ref=f10e1178] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1181] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1184]:
+            - combobox [ref=f10e1186]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1187]:
+            - combobox [ref=f10e1189]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1190]:
+            - button "⋯" [ref=f10e1191] [cursor=pointer]
+        - row "Ice Cream Man (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1192]:
+          - cell [ref=f10e1193]:
+            - link "Podgląd" [ref=f10e1194] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1196]:
+            - generic [ref=f10e1197]:
+              - link "Ice Cream Man" [ref=f10e1198] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1201] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1204]:
+            - combobox [ref=f10e1206]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1207]:
+            - combobox [ref=f10e1209]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1210]:
+            - button "⋯" [ref=f10e1211] [cursor=pointer]
+        - row "Vaiana (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1212]:
+          - cell [ref=f10e1213]:
+            - link "Podgląd" [ref=f10e1214] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1216]:
+            - generic [ref=f10e1217]:
+              - link "Vaiana" [ref=f10e1218] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1221] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1224]:
+            - combobox [ref=f10e1226]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1227]:
+            - combobox [ref=f10e1229]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1230]:
+            - button "⋯" [ref=f10e1231] [cursor=pointer]
+        - row "Pucio (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1232]:
+          - cell [ref=f10e1233]:
+            - link "Podgląd" [ref=f10e1234] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1236]:
+            - generic [ref=f10e1237]:
+              - link "Pucio" [ref=f10e1238] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1241] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1244]:
+            - combobox [ref=f10e1246]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1247]:
+            - combobox [ref=f10e1249]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1250]:
+            - button "⋯" [ref=f10e1251] [cursor=pointer]
+        - row "Obsesja (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1252]:
+          - cell [ref=f10e1253]:
+            - link "Podgląd" [ref=f10e1254] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1256]:
+            - generic [ref=f10e1257]:
+              - link "Obsesja" [ref=f10e1258] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1261] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1264]:
+            - combobox [ref=f10e1266]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1267]:
+            - combobox [ref=f10e1269]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1270]:
+            - button "⋯" [ref=f10e1271] [cursor=pointer]
+        - row "Toy Story 5 (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1272]:
+          - cell [ref=f10e1273]:
+            - link "Podgląd" [ref=f10e1274] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1276]:
+            - generic [ref=f10e1277]:
+              - link "Toy Story 5" [ref=f10e1278] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1281] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1284]:
+            - combobox [ref=f10e1286]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1287]:
+            - combobox [ref=f10e1289]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1290]:
+            - button "⋯" [ref=f10e1291] [cursor=pointer]
+        - row "Pucio kocha zwierzaki (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1292]:
+          - cell [ref=f10e1293]:
+            - link "Podgląd" [ref=f10e1294] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1296]:
+            - generic [ref=f10e1297]:
+              - link "Pucio kocha zwierzaki" [ref=f10e1298] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1301] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1304]:
+            - combobox [ref=f10e1306]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1307]:
+            - combobox [ref=f10e1309]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1310]:
+            - button "⋯" [ref=f10e1311] [cursor=pointer]
+        - row "Minionki i straszydła (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1312]:
+          - cell [ref=f10e1313]:
+            - link "Podgląd" [ref=f10e1314] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1316]:
+            - generic [ref=f10e1317]:
+              - link "Minionki i straszydła" [ref=f10e1318] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1321] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1324]:
+            - combobox [ref=f10e1326]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1327]:
+            - combobox [ref=f10e1329]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1330]:
+            - button "⋯" [ref=f10e1331] [cursor=pointer]
+        - row "Psi patrol i dinozaury (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1332]:
+          - cell [ref=f10e1333]:
+            - link "Podgląd" [ref=f10e1334] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1336]:
+            - generic [ref=f10e1337]:
+              - link "Psi patrol i dinozaury" [ref=f10e1338] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1341] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1344]:
+            - combobox [ref=f10e1346]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1347]:
+            - combobox [ref=f10e1349]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1350]:
+            - button "⋯" [ref=f10e1351] [cursor=pointer]
+        - row "Odyseja (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1352]:
+          - cell [ref=f10e1353]:
+            - link "Podgląd" [ref=f10e1354] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1356]:
+            - generic [ref=f10e1357]:
+              - link "Odyseja" [ref=f10e1358] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1361] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1364]:
+            - combobox [ref=f10e1366]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1367]:
+            - combobox [ref=f10e1369]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1370]:
+            - button "⋯" [ref=f10e1371] [cursor=pointer]
+        - row "Koniec ulicy Dębowej (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1372]:
+          - cell [ref=f10e1373]:
+            - link "Podgląd" [ref=f10e1374] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1376]:
+            - generic [ref=f10e1377]:
+              - link "Koniec ulicy Dębowej" [ref=f10e1378] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1381] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1384]:
+            - combobox [ref=f10e1386]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1387]:
+            - combobox [ref=f10e1389]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1390]:
+            - button "⋯" [ref=f10e1391] [cursor=pointer]
+        - row "Tylko jedna noc (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1392]:
+          - cell [ref=f10e1393]:
+            - link "Podgląd" [ref=f10e1394] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1396]:
+            - generic [ref=f10e1397]:
+              - link "Tylko jedna noc" [ref=f10e1398] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1401] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1404]:
+            - combobox [ref=f10e1406]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1407]:
+            - combobox [ref=f10e1409]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1410]:
+            - button "⋯" [ref=f10e1411] [cursor=pointer]
+        - 'row "Spider-Man: Całkiem nowy dzień (multikino) Szczecin, Multikino Szczecin approved — brak — ⋯" [ref=f10e1412]':
+          - cell [ref=f10e1413]:
+            - link "Podgląd" [ref=f10e1414] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1416]:
+            - generic [ref=f10e1417]:
+              - 'link "Spider-Man: Całkiem nowy dzień" [ref=f10e1418] [cursor=pointer]':
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Szczecin, Multikino Szczecin" [ref=f10e1421] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1424]:
+            - combobox [ref=f10e1426]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1427]:
+            - combobox [ref=f10e1429]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1430]:
+            - button "⋯" [ref=f10e1431] [cursor=pointer]
+        - row "Cyrk na wodzie Imperial Show (eventylive) Białystok, Namiot Cyrkowy approved — brak — ⋯" [ref=f10e1432]:
+          - cell [ref=f10e1433]:
+            - link "Podgląd" [ref=f10e1434] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1436]:
+            - generic [ref=f10e1437]:
+              - link "Cyrk na wodzie Imperial Show" [ref=f10e1438] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (eventylive)
+            - link "Białystok, Namiot Cyrkowy" [ref=f10e1441] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1444]:
+            - combobox [ref=f10e1446]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1447]:
+            - combobox [ref=f10e1449]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1450]:
+            - button "⋯" [ref=f10e1451] [cursor=pointer]
+        - row "Ice Cream Man (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1452]:
+          - cell [ref=f10e1453]:
+            - link "Podgląd" [ref=f10e1454] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1456]:
+            - generic [ref=f10e1457]:
+              - link "Ice Cream Man" [ref=f10e1458] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1461] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1464]:
+            - combobox [ref=f10e1466]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1467]:
+            - combobox [ref=f10e1469]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1470]:
+            - button "⋯" [ref=f10e1471] [cursor=pointer]
+        - row "Wszyscy moi wrogowie (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1472]:
+          - cell [ref=f10e1473]:
+            - link "Podgląd" [ref=f10e1474] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1476]:
+            - generic [ref=f10e1477]:
+              - link "Wszyscy moi wrogowie" [ref=f10e1478] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1481] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1484]:
+            - combobox [ref=f10e1486]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1487]:
+            - combobox [ref=f10e1489]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1490]:
+            - button "⋯" [ref=f10e1491] [cursor=pointer]
+        - row "Historie równoległe (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1492]:
+          - cell [ref=f10e1493]:
+            - link "Podgląd" [ref=f10e1494] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1496]:
+            - generic [ref=f10e1497]:
+              - link "Historie równoległe" [ref=f10e1498] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1501] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1504]:
+            - combobox [ref=f10e1506]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1507]:
+            - combobox [ref=f10e1509]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1510]:
+            - button "⋯" [ref=f10e1511] [cursor=pointer]
+        - row "Flavia de luce (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1512]:
+          - cell [ref=f10e1513]:
+            - link "Podgląd" [ref=f10e1514] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1516]:
+            - generic [ref=f10e1517]:
+              - link "Flavia de luce" [ref=f10e1518] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1521] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1524]:
+            - combobox [ref=f10e1526]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1527]:
+            - combobox [ref=f10e1529]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1530]:
+            - button "⋯" [ref=f10e1531] [cursor=pointer]
+        - row "Vaiana (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1532]:
+          - cell [ref=f10e1533]:
+            - link "Podgląd" [ref=f10e1534] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1536]:
+            - generic [ref=f10e1537]:
+              - link "Vaiana" [ref=f10e1538] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1541] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1544]:
+            - combobox [ref=f10e1546]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1547]:
+            - combobox [ref=f10e1549]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1550]:
+            - button "⋯" [ref=f10e1551] [cursor=pointer]
+        - row "Pucio (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1552]:
+          - cell [ref=f10e1553]:
+            - link "Podgląd" [ref=f10e1554] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1556]:
+            - generic [ref=f10e1557]:
+              - link "Pucio" [ref=f10e1558] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1561] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1564]:
+            - combobox [ref=f10e1566]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1567]:
+            - combobox [ref=f10e1569]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1570]:
+            - button "⋯" [ref=f10e1571] [cursor=pointer]
+        - row "Toy Story 5 (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1572]:
+          - cell [ref=f10e1573]:
+            - link "Podgląd" [ref=f10e1574] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1576]:
+            - generic [ref=f10e1577]:
+              - link "Toy Story 5" [ref=f10e1578] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1581] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1584]:
+            - combobox [ref=f10e1586]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1587]:
+            - combobox [ref=f10e1589]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1590]:
+            - button "⋯" [ref=f10e1591] [cursor=pointer]
+        - row "Pucio kocha zwierzaki (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1592]:
+          - cell [ref=f10e1593]:
+            - link "Podgląd" [ref=f10e1594] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1596]:
+            - generic [ref=f10e1597]:
+              - link "Pucio kocha zwierzaki" [ref=f10e1598] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1601] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1604]:
+            - combobox [ref=f10e1606]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1607]:
+            - combobox [ref=f10e1609]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1610]:
+            - button "⋯" [ref=f10e1611] [cursor=pointer]
+        - row "Minionki i straszydła (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1612]:
+          - cell [ref=f10e1613]:
+            - link "Podgląd" [ref=f10e1614] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1616]:
+            - generic [ref=f10e1617]:
+              - link "Minionki i straszydła" [ref=f10e1618] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1621] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1624]:
+            - combobox [ref=f10e1626]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1627]:
+            - combobox [ref=f10e1629]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1630]:
+            - button "⋯" [ref=f10e1631] [cursor=pointer]
+        - row "Odyseja (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1632]:
+          - cell [ref=f10e1633]:
+            - link "Podgląd" [ref=f10e1634] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1636]:
+            - generic [ref=f10e1637]:
+              - link "Odyseja" [ref=f10e1638] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1641] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1644]:
+            - combobox [ref=f10e1646]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1647]:
+            - combobox [ref=f10e1649]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1650]:
+            - button "⋯" [ref=f10e1651] [cursor=pointer]
+        - row "Tylko jedna noc (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1652]:
+          - cell [ref=f10e1653]:
+            - link "Podgląd" [ref=f10e1654] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1656]:
+            - generic [ref=f10e1657]:
+              - link "Tylko jedna noc" [ref=f10e1658] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1661] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1664]:
+            - combobox [ref=f10e1666]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1667]:
+            - combobox [ref=f10e1669]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1670]:
+            - button "⋯" [ref=f10e1671] [cursor=pointer]
+        - row "Koniec ulicy Dębowej (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1672]:
+          - cell [ref=f10e1673]:
+            - link "Podgląd" [ref=f10e1674] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1676]:
+            - generic [ref=f10e1677]:
+              - link "Koniec ulicy Dębowej" [ref=f10e1678] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1681] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1684]:
+            - combobox [ref=f10e1686]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1687]:
+            - combobox [ref=f10e1689]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1690]:
+            - button "⋯" [ref=f10e1691] [cursor=pointer]
+        - 'row "ЩЕНЯЧИЙ ПАТРУЛЬ: ДИНОФІЛЬМ (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1692]':
+          - cell [ref=f10e1693]:
+            - link "Podgląd" [ref=f10e1694] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1696]:
+            - generic [ref=f10e1697]:
+              - 'link "ЩЕНЯЧИЙ ПАТРУЛЬ: ДИНОФІЛЬМ" [ref=f10e1698] [cursor=pointer]':
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1701] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1704]:
+            - combobox [ref=f10e1706]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1707]:
+            - combobox [ref=f10e1709]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1710]:
+            - button "⋯" [ref=f10e1711] [cursor=pointer]
+        - row "Psi patrol i dinozaury (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1712]:
+          - cell [ref=f10e1713]:
+            - link "Podgląd" [ref=f10e1714] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1716]:
+            - generic [ref=f10e1717]:
+              - link "Psi patrol i dinozaury" [ref=f10e1718] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1721] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1724]:
+            - combobox [ref=f10e1726]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1727]:
+            - combobox [ref=f10e1729]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1730]:
+            - button "⋯" [ref=f10e1731] [cursor=pointer]
+        - 'row "ЛЮДИНА-ПАВУК: АБСОЛЮТНО НОВИЙ ДЕНЬ (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1732]':
+          - cell [ref=f10e1733]:
+            - link "Podgląd" [ref=f10e1734] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1736]:
+            - generic [ref=f10e1737]:
+              - 'link "ЛЮДИНА-ПАВУК: АБСОЛЮТНО НОВИЙ ДЕНЬ" [ref=f10e1738] [cursor=pointer]':
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1741] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1744]:
+            - combobox [ref=f10e1746]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1747]:
+            - combobox [ref=f10e1749]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1750]:
+            - button "⋯" [ref=f10e1751] [cursor=pointer]
+        - 'row "Spider-Man: Całkiem nowy dzień (multikino) Bydgoszcz, Multikino Bydgoszcz approved — brak — ⋯" [ref=f10e1752]':
+          - cell [ref=f10e1753]:
+            - link "Podgląd" [ref=f10e1754] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1756]:
+            - generic [ref=f10e1757]:
+              - 'link "Spider-Man: Całkiem nowy dzień" [ref=f10e1758] [cursor=pointer]':
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Bydgoszcz, Multikino Bydgoszcz" [ref=f10e1761] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1764]:
+            - combobox [ref=f10e1766]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1767]:
+            - combobox [ref=f10e1769]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1770]:
+            - button "⋯" [ref=f10e1771] [cursor=pointer]
+        - 'row "Robótki: tkanie - warsztaty kreatywne (eventylive) Toruń, Muzeum Etnograficzne w Toruniu approved — brak — ⋯" [ref=f10e1772]':
+          - cell [ref=f10e1773]:
+            - link "Podgląd" [ref=f10e1774] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1776]:
+            - generic [ref=f10e1777]:
+              - 'link "Robótki: tkanie - warsztaty kreatywne" [ref=f10e1778] [cursor=pointer]':
+                - /url: javascript:void(0)
+              - text: (eventylive)
+            - link "Toruń, Muzeum Etnograficzne w Toruniu" [ref=f10e1781] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1784]:
+            - combobox [ref=f10e1786]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1787]:
+            - combobox [ref=f10e1789]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1790]:
+            - button "⋯" [ref=f10e1791] [cursor=pointer]
+        - 'row "Letnia szkoła eksperymentu: Eksperysunki (eventylive) Toruń, Centrum Sztuki Współczesnej „Znaki Czasu” approved — brak — ⋯" [ref=f10e1792]':
+          - cell [ref=f10e1793]:
+            - link "Podgląd" [ref=f10e1794] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1796]:
+            - generic [ref=f10e1797]:
+              - 'link "Letnia szkoła eksperymentu: Eksperysunki" [ref=f10e1798] [cursor=pointer]':
+                - /url: javascript:void(0)
+              - text: (eventylive)
+            - link "Toruń, Centrum Sztuki Współczesnej „Znaki Czasu”" [ref=f10e1801] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1804]:
+            - combobox [ref=f10e1806]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1807]:
+            - combobox [ref=f10e1809]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1810]:
+            - button "⋯" [ref=f10e1811] [cursor=pointer]
+        - row "MOZART KAMERALNIE - Paweł Kowalski, Krzysztof Stencel & Reed Connection (eventylive) Toruń, Dwór Artusa w Gdańsku approved — brak — ⋯" [ref=f10e1812]:
+          - cell [ref=f10e1813]:
+            - link "Podgląd" [ref=f10e1814] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1816]:
+            - generic [ref=f10e1817]:
+              - link "MOZART KAMERALNIE - Paweł Kowalski, Krzysztof Stencel & Reed Connection" [ref=f10e1818] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (eventylive)
+            - link "Toruń, Dwór Artusa w Gdańsku" [ref=f10e1821] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1824]:
+            - combobox [ref=f10e1826]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1827]:
+            - combobox [ref=f10e1829]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1830]:
+            - button "⋯" [ref=f10e1831] [cursor=pointer]
+        - row "Chopin & Friends - koncerty fortepianowe przy świecach (dzisapp) Poznań, Sala koncertowa w podziemiach Bazyliki św. Józefa approved — brak — ⋯" [ref=f10e1832]:
+          - cell [ref=f10e1833]:
+            - link "Podgląd" [ref=f10e1834] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1836]:
+            - generic [ref=f10e1837]:
+              - link "Chopin & Friends - koncerty fortepianowe przy świecach" [ref=f10e1838] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Poznań, Sala koncertowa w podziemiach Bazyliki św. Józefa" [ref=f10e1841] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1844]:
+            - combobox [ref=f10e1846]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1847]:
+            - combobox [ref=f10e1849]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1850]:
+            - button "⋯" [ref=f10e1851] [cursor=pointer]
+        - row "Rodzinne zwiedzanie Zamku (eventylive) Poznań, Zamek Cesarski w Poznaniu approved — brak — ⋯" [ref=f10e1852]:
+          - cell [ref=f10e1853]:
+            - link "Podgląd" [ref=f10e1854] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1856]:
+            - generic [ref=f10e1857]:
+              - link "Rodzinne zwiedzanie Zamku" [ref=f10e1858] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (eventylive)
+            - link "Poznań, Zamek Cesarski w Poznaniu" [ref=f10e1861] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1864]:
+            - combobox [ref=f10e1866]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1867]:
+            - combobox [ref=f10e1869]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1870]:
+            - button "⋯" [ref=f10e1871] [cursor=pointer]
+        - row "Beksiński w Poznaniu (dzisapp) Poznań, MTP approved — brak — ⋯" [ref=f10e1872]:
+          - cell [ref=f10e1873]:
+            - link "Podgląd" [ref=f10e1874] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1876]:
+            - generic [ref=f10e1877]:
+              - link "Beksiński w Poznaniu" [ref=f10e1878] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (dzisapp)
+            - link "Poznań, MTP" [ref=f10e1881] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1884]:
+            - combobox [ref=f10e1886]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1887]:
+            - combobox [ref=f10e1889]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1890]:
+            - button "⋯" [ref=f10e1891] [cursor=pointer]
+        - row "Wszyscy moi wrogowie (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e1892]:
+          - cell [ref=f10e1893]:
+            - link "Podgląd" [ref=f10e1894] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1896]:
+            - generic [ref=f10e1897]:
+              - link "Wszyscy moi wrogowie" [ref=f10e1898] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e1901] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1904]:
+            - combobox [ref=f10e1906]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1907]:
+            - combobox [ref=f10e1909]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1910]:
+            - button "⋯" [ref=f10e1911] [cursor=pointer]
+        - row "Historie równoległe (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e1912]:
+          - cell [ref=f10e1913]:
+            - link "Podgląd" [ref=f10e1914] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1916]:
+            - generic [ref=f10e1917]:
+              - link "Historie równoległe" [ref=f10e1918] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e1921] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1924]:
+            - combobox [ref=f10e1926]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1927]:
+            - combobox [ref=f10e1929]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1930]:
+            - button "⋯" [ref=f10e1931] [cursor=pointer]
+        - row "Ice Cream Man (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e1932]:
+          - cell [ref=f10e1933]:
+            - link "Podgląd" [ref=f10e1934] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1936]:
+            - generic [ref=f10e1937]:
+              - link "Ice Cream Man" [ref=f10e1938] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e1941] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1944]:
+            - combobox [ref=f10e1946]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1947]:
+            - combobox [ref=f10e1949]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1950]:
+            - button "⋯" [ref=f10e1951] [cursor=pointer]
+        - row "Flavia de luce (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e1952]:
+          - cell [ref=f10e1953]:
+            - link "Podgląd" [ref=f10e1954] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1956]:
+            - generic [ref=f10e1957]:
+              - link "Flavia de luce" [ref=f10e1958] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e1961] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1964]:
+            - combobox [ref=f10e1966]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1967]:
+            - combobox [ref=f10e1969]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1970]:
+            - button "⋯" [ref=f10e1971] [cursor=pointer]
+        - row "Pucio (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e1972]:
+          - cell [ref=f10e1973]:
+            - link "Podgląd" [ref=f10e1974] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1976]:
+            - generic [ref=f10e1977]:
+              - link "Pucio" [ref=f10e1978] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e1981] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1984]:
+            - combobox [ref=f10e1986]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e1987]:
+            - combobox [ref=f10e1989]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e1990]:
+            - button "⋯" [ref=f10e1991] [cursor=pointer]
+        - row "Obsesja (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e1992]:
+          - cell [ref=f10e1993]:
+            - link "Podgląd" [ref=f10e1994] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e1996]:
+            - generic [ref=f10e1997]:
+              - link "Obsesja" [ref=f10e1998] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e2001] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2004]:
+            - combobox [ref=f10e2006]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e2007]:
+            - combobox [ref=f10e2009]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e2010]:
+            - button "⋯" [ref=f10e2011] [cursor=pointer]
+        - row "Vaiana (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e2012]:
+          - cell [ref=f10e2013]:
+            - link "Podgląd" [ref=f10e2014] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2016]:
+            - generic [ref=f10e2017]:
+              - link "Vaiana" [ref=f10e2018] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e2021] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2024]:
+            - combobox [ref=f10e2026]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e2027]:
+            - combobox [ref=f10e2029]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e2030]:
+            - button "⋯" [ref=f10e2031] [cursor=pointer]
+        - row "Toy Story 5 (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e2032]:
+          - cell [ref=f10e2033]:
+            - link "Podgląd" [ref=f10e2034] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2036]:
+            - generic [ref=f10e2037]:
+              - link "Toy Story 5" [ref=f10e2038] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e2041] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2044]:
+            - combobox [ref=f10e2046]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e2047]:
+            - combobox [ref=f10e2049]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e2050]:
+            - button "⋯" [ref=f10e2051] [cursor=pointer]
+        - row "Minionki i straszydła (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e2052]:
+          - cell [ref=f10e2053]:
+            - link "Podgląd" [ref=f10e2054] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2056]:
+            - generic [ref=f10e2057]:
+              - link "Minionki i straszydła" [ref=f10e2058] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e2061] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2064]:
+            - combobox [ref=f10e2066]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e2067]:
+            - combobox [ref=f10e2069]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e2070]:
+            - button "⋯" [ref=f10e2071] [cursor=pointer]
+        - row "Odyseja. Ukrainian dubbing (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e2072]:
+          - cell [ref=f10e2073]:
+            - link "Podgląd" [ref=f10e2074] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2076]:
+            - generic [ref=f10e2077]:
+              - link "Odyseja. Ukrainian dubbing" [ref=f10e2078] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e2081] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2084]:
+            - combobox [ref=f10e2086]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e2087]:
+            - combobox [ref=f10e2089]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e2090]:
+            - button "⋯" [ref=f10e2091] [cursor=pointer]
+        - row "Pucio kocha zwierzaki (multikino) Poznań, Multikino Poznań Stary Browar approved — brak — ⋯" [ref=f10e2092]:
+          - cell [ref=f10e2093]:
+            - link "Podgląd" [ref=f10e2094] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2096]:
+            - generic [ref=f10e2097]:
+              - link "Pucio kocha zwierzaki" [ref=f10e2098] [cursor=pointer]:
+                - /url: javascript:void(0)
+              - text: (multikino)
+            - link "Poznań, Multikino Poznań Stary Browar" [ref=f10e2101] [cursor=pointer]:
+              - /url: javascript:void(0)
+          - cell [ref=f10e2104]:
+            - combobox [ref=f10e2106]:
+              - option "approved" [selected]
+              - option "pending"
+              - option "rejected"
+          - cell [ref=f10e2107]:
+            - combobox [ref=f10e2109]:
+              - option "— brak —" [selected]
+              - option "Filmy"
+              - option "Muzyka"
+              - option "Meetup"
+              - option "Komedia"
+              - option "Teatr"
+              - option "Inne"
+          - cell [ref=f10e2110]:
+            - button "⋯" [ref=f10e2111] [cursor=pointer]
+    - generic [ref=f10e2112]:
+      - generic [ref=f10e2113]: 347 wydarzeń · strona 1 / 4
+      - generic [ref=f10e2114]:
+        - generic: ‹ Poprzednia
+        - link "Następna ›" [ref=f10e2115] [cursor=pointer]:
+          - /url: /admin/events?page=2
+    - dialog [active] [ref=f10e2124]:
+      - generic [ref=f10e2125]:
+        - heading "Zmień GEO" [level=3] [ref=f10e2127]
+        - generic [ref=f10e2128]:
+          - generic [ref=f10e2129]:
+            - generic [ref=f10e2130]: Nazwa lokalizacji
+            - textbox "np. Multikino Złote Tarasy" [ref=f10e2131]: Multikino Gdynia
+          - generic [ref=f10e2132]:
+            - generic [ref=f10e2133]: Geo (lat, lng)
+            - textbox "54.42656865607224, 18.58054868650763" [ref=f10e2134]: 54.511028, 18.5406347
+          - generic [ref=f10e2135]: Wklej współrzędne z Google Maps (np. 54.42656865607224, 18.58054868650763). Zmiana jest trwała — nadpisuje dane seeda dla tego wydarzenia.
+        - generic [ref=f10e2136]:
+          - button "Anuluj" [ref=f10e2137] [cursor=pointer]
+          - button "Zapisz" [ref=f10e2138] [cursor=pointer]

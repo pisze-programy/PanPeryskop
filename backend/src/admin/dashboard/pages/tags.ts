@@ -63,11 +63,11 @@ pageRoutes.get('/tags', async (c) => {
   ])}
   <div class="card mb-3"><div class="card-header"><h3 class="card-title mb-0">Dodaj nowy tag</h3></div>
     <div class="card-body">
-      <form method="post" action="/admin/tags" class="d-flex gap-2" style="max-width:480px">
+      <form method="post" action="/admin/tags" class="d-flex gap-2 w-50">
         <input name="label" class="form-control" placeholder="np. Sport" required />
         <button class="btn btn-primary flex-shrink-0">Dodaj</button>
       </form>
-      <div class="text-secondary mt-2" style="font-size:12px">Nowy tag pojawi się w aplikacji (chipy mapy) i w edycji eventów. Kanoniczne tagi (Filmy, Muzyka…) są w kodzie i zawsze na liście. Tagi można tylko dodawać — usuwanie nie jest obsługiwane.</div>
+      <div class="text-secondary mt-2 fs-5">Nowy tag pojawi się w aplikacji (chipy mapy) i w edycji eventów. Kanoniczne tagi (Filmy, Muzyka…) są w kodzie i zawsze na liście. Tagi można tylko dodawać — usuwanie nie jest obsługiwane.</div>
     </div></div>
   <div class="card"><div class="card-header"><h3 class="card-title mb-0">Rozkład per tag</h3></div>
     <div class="table-responsive"><table class="table table-vcenter card-table">

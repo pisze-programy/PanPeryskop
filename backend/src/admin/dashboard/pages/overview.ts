@@ -114,22 +114,22 @@ pageRoutes.get('/', async (c) => {
       s === 'ingesting' ? pill('ingesting', 'warn') :
       s === 'fetching' ? pill('fetching', 'warn') : pill(esc(s), 'muted');
     seedHtml += `<div class="row g-3">
-      <div class="col-6 col-md-3"><div class="text-secondary" style="font-size:11px">Dzień</div><div class="fw-bold">${esc(batch.day)}</div></div>
-      <div class="col-6 col-md-3"><div class="text-secondary" style="font-size:11px">Typ</div><div>${esc(batch.run_type)}</div></div>
-      <div class="col-6 col-md-3"><div class="text-secondary" style="font-size:11px">Status</div><div>${st(batch.status)}</div></div>
-      <div class="col-6 col-md-3"><div class="text-secondary" style="font-size:11px">Scope</div><div class="fw-bold">${batch.scopes_done}/${batch.scopes_total}</div></div>
-      <div class="col-6 col-md-3"><div class="text-secondary" style="font-size:11px">Ingest</div><div class="fw-bold">${agg?.ingested ?? 0}/${agg?.cands ?? 0}</div></div>
-      <div class="col-6 col-md-3"><div class="text-secondary" style="font-size:11px">Błędy</div><div class="${(agg?.errors ?? 0) ? 'text-danger' : 'text-success'}">${agg?.errors ?? 0}</div></div>
-      <div class="col-6 col-md-3"><div class="text-secondary" style="font-size:11px">Czas</div><div>${fmtDur(agg?.dur ?? 0)}</div></div>
-      <div class="col-6 col-md-3"><div class="text-secondary" style="font-size:11px">Browser</div><div>${fmtDur(agg?.browser ?? 0)}</div></div>
-      <div class="col-6 col-md-3"><div class="text-secondary" style="font-size:11px">Aktualizacja</div><div>${fmtDate(batch.updated_at)}</div></div>
-      ${batch.reason ? `<div class="col-12"><div class="text-danger" style="font-size:12px">Powód: ${esc(batch.reason)}</div></div>` : ''}
+      <div class="col-6 col-md-3"><div class="text-secondary fs-6">Dzień</div><div class="fw-bold">${esc(batch.day)}</div></div>
+      <div class="col-6 col-md-3"><div class="text-secondary fs-6">Typ</div><div>${esc(batch.run_type)}</div></div>
+      <div class="col-6 col-md-3"><div class="text-secondary fs-6">Status</div><div>${st(batch.status)}</div></div>
+      <div class="col-6 col-md-3"><div class="text-secondary fs-6">Scope</div><div class="fw-bold">${batch.scopes_done}/${batch.scopes_total}</div></div>
+      <div class="col-6 col-md-3"><div class="text-secondary fs-6">Ingest</div><div class="fw-bold">${agg?.ingested ?? 0}/${agg?.cands ?? 0}</div></div>
+      <div class="col-6 col-md-3"><div class="text-secondary fs-6">Błędy</div><div class="${(agg?.errors ?? 0) ? 'text-danger' : 'text-success'}">${agg?.errors ?? 0}</div></div>
+      <div class="col-6 col-md-3"><div class="text-secondary fs-6">Czas</div><div>${fmtDur(agg?.dur ?? 0)}</div></div>
+      <div class="col-6 col-md-3"><div class="text-secondary fs-6">Browser</div><div>${fmtDur(agg?.browser ?? 0)}</div></div>
+      <div class="col-6 col-md-3"><div class="text-secondary fs-6">Aktualizacja</div><div>${fmtDate(batch.updated_at)}</div></div>
+      ${batch.reason ? `<div class="col-12"><div class="text-danger fs-5">Powód: ${esc(batch.reason)}</div></div>` : ''}
     </div>`;
   } else seedHtml += '<p class="text-secondary mb-0">Brak uruchomień seeda.</p>';
   if (budget) {
-    seedHtml += `<div class="mt-3 d-flex align-items-center" style="gap:10px">
+    seedHtml += `<div class="mt-3 d-flex align-items-center gap-2">
       <span class="text-secondary">Budget Browser Run</span>
-      <div class="progress flex-grow-1" style="height:8px"><div class="progress-bar ${budget.exceeded ? 'bg-danger' : 'bg-primary'}" style="width:${Math.min(100, fmtPctNum(budget.monthMs, budget.limitMs))}%"></div></div>
+      <div class="progress flex-grow-1 progress-sm"><div class="progress-bar ${budget.exceeded ? 'bg-danger' : 'bg-primary'}" style="width:${Math.min(100, fmtPctNum(budget.monthMs, budget.limitMs))}%"></div></div>
       <span class="${budget.exceeded ? 'text-danger fw-bold' : ''}">${fmtPct(budget.monthMs, budget.limitMs)} (${fmtDur(budget.monthMs)} / ${fmtDur(budget.limitMs)})</span>
     </div>`;
   }

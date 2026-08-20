@@ -10,8 +10,8 @@ const pageRoutes = new Hono<{ Bindings: Env }>();
 pageRoutes.get('/login', async (c) => {
   const session = await requireSession(c);
   if (session) return c.redirect('/admin');
-  const body = `<div style="max-width:380px;margin:10vh auto">
-    <div class="card card-lg"><div class="card-body p-4">
+  const body = `<div class="container-tight py-5">
+    <div class="card card-md"><div class="card-body p-4">
       <h2 class="card-title mb-1">PanPeryskop · Admin</h2>
       <p class="text-secondary mb-3">Zaloguj się (sesja 4h)</p>
       <form method="post" action="/admin/login">
@@ -32,7 +32,7 @@ pageRoutes.post('/login', async (c) => {
     reason === 'rate' ? 'Za dużo prób. Spróbuj za 15 min.' :
     reason === 'unconfigured' ? 'Hasło admina nie jest skonfigurowane (ADMIN_PASSWORD_HASH).' :
     'Nieprawidłowe hasło.';
-  const body = `<div style="max-width:380px;margin:10vh auto"><div class="card"><div class="card-body p-4">
+  const body = `<div class="container-tight py-5"><div class="card"><div class="card-body p-4">
     <div class="alert alert-danger">${esc(msg)}</div>
     <a class="btn btn-outline-secondary" href="/admin/login">Wróć</a></div></div></div>`;
   return page('Logowanie', '', body);

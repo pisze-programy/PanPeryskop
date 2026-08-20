@@ -1,0 +1,48 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - heading "PanPeryskop Admin" [level=1] [ref=e5]:
+        - text: PanPeryskop
+        - generic [ref=e6]: Admin
+      - generic [ref=e8]:
+        - list [ref=e9]:
+          - listitem [ref=e10]:
+            - link "Overview" [ref=e11] [cursor=pointer]:
+              - /url: /admin
+          - listitem [ref=e16]:
+            - link "Eventy" [ref=e17] [cursor=pointer]:
+              - /url: /admin/events
+          - listitem [ref=e22]:
+            - link "Tagi" [ref=e23] [cursor=pointer]:
+              - /url: /admin/tags
+          - listitem [ref=e28]:
+            - link "Użytkownicy" [ref=e29] [cursor=pointer]:
+              - /url: /admin/users
+          - listitem [ref=e34]:
+            - link "Posty" [ref=e35] [cursor=pointer]:
+              - /url: /admin/posts
+          - listitem [ref=e40]:
+            - link "Seed" [ref=e41] [cursor=pointer]:
+              - /url: /admin/seed
+          - listitem [ref=e46]:
+            - link "Statystyki" [ref=e47] [cursor=pointer]:
+              - /url: /admin/stats
+          - listitem [ref=e52]:
+            - link "Błędy" [ref=e53] [cursor=pointer]:
+              - /url: /admin/errors
+          - listitem [ref=e58]:
+            - link "Media Requests" [ref=e59] [cursor=pointer]:
+              - /url: /admin/media-requests
+          - listitem [ref=e64]:
+            - link "Raporty" [ref=e65] [cursor=pointer]:
+              - /url: /admin/reports
+        - list [ref=e70]:
+          - listitem [ref=e71]:
+            - link "Wyloguj" [ref=e72] [cursor=pointer]:
+              - /url: /admin/logout
+  - generic [ref=e77]:
+    - heading "PanPeryskop · Admin" [level=2] [ref=e78]
+    - paragraph [ref=e79]: Zaloguj się (sesja 4h)
+    - generic [ref=e80]:
+      - textbox "Hasło" [active] [ref=e82]
+      - button "Zaloguj" [ref=e83] [cursor=pointer]

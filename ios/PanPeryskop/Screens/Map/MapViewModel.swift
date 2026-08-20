@@ -27,6 +27,10 @@ class MapViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var selectedCity: City = City.all[0]
     @Published var feedCategory: FeedCategory = .events
+    /// Canonical event tags for the map filter chips (backend order).
+    @Published var tags: [TagPill] = []
+    /// Active tag filter — nil = all approved events. Session-only (never persisted).
+    @Published var selectedTag: String?
     // Selected day offset 0…3 (dziś / jutro / +2 / +3). Kept only as a live variable
     // (no persistence) — resets to today on a fresh launch, survives view switches.
     @Published var selectedDayOffset: Int = 0
@@ -58,6 +62,43 @@ class MapViewModel: ObservableObject {
     init() {
         let savedCityId = UserDefaults.standard.string(forKey: MapPrefs.cityId)
         selectedCity = City.all.first { $0.id == savedCityId } ?? City.all[0]
+        loadTags()
+    }
+
+    // MARK: - Tag filter (events only)
+
+    private static let tagsCacheKey = "tags.cache"
+
+    /// Fetch the canonical tag list once at startup; cache in UserDefaults and
+    /// overwrite it whenever fresh data arrives. On a network failure fall back
+    /// to the cached list so the chips still render.
+    @MainActor
+    func loadTags() {
+        Task {
+            if let cached = UserDefaults.standard.string(forKey: Self.tagsCacheKey),
+               let data = cached.data(using: .utf8),
+               let decoded = try? JSONDecoder().decode(TagsResponse.self, from: data),
+               !decoded.tags.isEmpty {
+                tags = decoded.tags
+            }
+            do {
+                let resp: TagsResponse = try await APIClient.get("/stories/tags")
+                tags = resp.tags
+                if let data = try? JSONEncoder().encode(resp),
+                   let json = String(data: data, encoding: .utf8) {
+                    UserDefaults.standard.set(json, forKey: Self.tagsCacheKey)
+                }
+            } catch {
+                print("Failed to load tags:", error)
+            }
+        }
+    }
+
+    /// Toggle a tag on/off — selecting the active tag returns to "all" (nil).
+    /// Session-only; survives category switches, profile/story navigation.
+    func toggleTag(_ id: String) {
+        selectedTag = (selectedTag == id) ? nil : id
+        refreshCurrentRegion()
     }
 
     var restoredViewport: MKCoordinateRegion? {
@@ -187,6 +228,10 @@ class MapViewModel: ObservableObject {
         if feedCategory == .events, selectedDayOffset > 0 {
             params["day"] = dayString(offset: selectedDayOffset)
             params["limit"] = "1000"
+        }
+        // Tag filter — events only; the backend validates the tag + keeps status=approved.
+        if feedCategory == .events, let selectedTag {
+            params["tag"] = selectedTag
         }
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)

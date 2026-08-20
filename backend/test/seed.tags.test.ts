@@ -1,11 +1,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeTags, CANONICAL_TAGS, CANONICAL_TAG_SET } from '../src/seed/core/tags';
+import { normalizeTags, CANONICAL_TAGS, CANONICAL_TAG_SET, TAG_LABELS, tagLabel } from '../src/seed/core/tags';
 import { ProviderId } from '../src/seed/core/types';
 
 test('tags: canonical set is closed and small', () => {
-  assert.deepEqual(CANONICAL_TAGS, ['filmy', 'muzyka', 'meetup', 'komedia']);
+  assert.deepEqual(CANONICAL_TAGS, ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'inne']);
   assert.equal(CANONICAL_TAG_SET.size, CANONICAL_TAGS.length);
+});
+
+test('tags: every canonical tag has a display label', () => {
+  const mapped = CANONICAL_TAGS.map((id) => ({ id, label: tagLabel(id) }));
+  assert.deepEqual(mapped, [
+    { id: 'filmy', label: 'Filmy' },
+    { id: 'muzyka', label: 'Muzyka' },
+    { id: 'meetup', label: 'Meetup' },
+    { id: 'komedia', label: 'Komedia' },
+    { id: 'teatr', label: 'Teatr' },
+    { id: 'inne', label: 'Inne' },
+  ]);
+  assert.equal(TAG_LABELS['nieznany'], undefined);
+  assert.equal(tagLabel('nieznany'), 'nieznany', 'unknown tag falls back to its id');
 });
 
 test('tags: cinemas are always filmy', () => {
@@ -40,7 +54,13 @@ test('tags: kupbilecik listing path maps to the canonical set', () => {
 test('tags: eventylive title heuristic (no structured category)', () => {
   assert.deepEqual(normalizeTags({ source: ProviderId.EVENTYLIVE, title: 'Wielki Koncert Chopinowski' }), ['muzyka']);
   assert.deepEqual(normalizeTags({ source: ProviderId.EVENTYLIVE, title: 'Stand-up z Rafałem' }), ['komedia']);
+  assert.deepEqual(normalizeTags({ source: ProviderId.EVENTYLIVE, title: 'Spektakl teatralny' }), ['teatr']);
   assert.deepEqual(normalizeTags({ source: ProviderId.EVENTYLIVE, title: 'Spotkanie autorskie' }), []);
+});
+
+test('tags: dzisapp theatre category maps to teatr', () => {
+  assert.deepEqual(normalizeTags({ source: ProviderId.DZISAPP, rawTags: ['teatr'] }), ['teatr']);
+  assert.deepEqual(normalizeTags({ source: ProviderId.DZISAPP, rawTags: ['spektakl', 'teatralne'] }), ['teatr']);
 });
 
 test('tags: deterministic and deduped', () => {

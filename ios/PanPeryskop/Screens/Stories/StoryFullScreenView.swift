@@ -214,6 +214,8 @@ struct StoryFullScreenView: View {
                     .font(.headline)
                     .foregroundColor(.primary)
                     .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
             }
 
             HStack(alignment: .center, spacing: 16) {

@@ -52,30 +52,20 @@ struct MapScreen: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Button {
-                        Haptics.selection()
-                        showCityList = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text(viewModel.selectedCity.name)
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                            Image(systemName: "chevron.down")
-                                .font(.caption2.weight(.semibold))
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        cityButton
+                        if viewModel.feedCategory == .events {
+                            ForEach(viewModel.tags) { tag in
+                                tagChip(tag)
+                            }
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
-                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 3)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
                     .padding(.top, 12)
-                    Spacer()
+                    .padding(.bottom, 6)
                 }
-                .padding(.top, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Spacer()
             }
@@ -218,6 +208,52 @@ struct MapScreen: View {
         let dlat = lat1 - lat2
         let dlng = lng1 - lng2
         return sqrt(dlat * dlat + dlng * dlng)
+    }
+
+    /// City navigation pill — independent of the tag filter (just flies to the city).
+    private var cityButton: some View {
+        Button {
+            Haptics.selection()
+            showCityList = true
+        } label: {
+            HStack(spacing: 6) {
+                Text(viewModel.selectedCity.name)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.semibold))
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// A single tag chip (events mode only). Selected state keeps the glass look
+    /// but tints with the accent color. Single-select; tapping again returns to
+    /// "all" (no tag selected).
+    private func tagChip(_ tag: TagPill) -> some View {
+        let isSelected = viewModel.selectedTag == tag.id
+        return Button {
+            Haptics.selection()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                viewModel.toggleTag(tag.id)
+            }
+        } label: {
+            Text(tag.label)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(isSelected ? .accentColor : .primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Capsule().fill(.ultraThinMaterial))
+                .overlay(Capsule().fill(isSelected ? Color.accentColor.opacity(0.25) : .clear))
+                .overlay(Capsule().stroke(isSelected ? Color.accentColor : Color.white.opacity(0.2), lineWidth: isSelected ? 1.5 : 1))
+                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 3)
+        }
+        .buttonStyle(.plain)
     }
 
     private var categoryPill: some View {

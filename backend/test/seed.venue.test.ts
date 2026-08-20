@@ -78,6 +78,18 @@ test('venueMatch: live production pairs match to the right city geo', () => {
   assert.equal(matchVenueGeo('Kościół św. Katarzyny', mixed, 'warszawa'), null);
 });
 
+test('venueMatch: generic name must not match a different-city venue', () => {
+  // City-less Warszawa-geo "Amfiteatr" + the correct Mrągowo one.
+  const cache = [
+    { name: 'Amfiteatr Wolskiego Centrum Kultury', geo: { lat: 52.2309856, lng: 20.9492338 }, city: 'warszawa' },
+    { name: 'Amfiteatr w Mrągowie', geo: { lat: 53.8719008, lng: 21.3242328 }, city: 'mragowo' },
+  ];
+  const mragowo = matchVenueGeo('Amfiteatr', cache, 'mragowo');
+  assert.ok(mragowo && Math.abs(mragowo.lat - 53.8719008) < 0.001, 'should pick the Mrągowo amphitheater');
+  // A city with no same-name venue → null (never falls back to Warszawa).
+  assert.equal(matchVenueGeo('Amfiteatr', cache, 'krakow'), null);
+});
+
 // In-memory D1 mock with a `venues` table (minimal, only what venueStore needs).
 function mockDb() {
   const db = {
@@ -112,7 +124,7 @@ function mockDb() {
             first: async () => null,
             all: async () => ({
               results: sql.includes('WHERE city = ?')
-                ? db._venues.filter((r) => (r.city || '').toLowerCase() === String(params[0] ?? '').toLowerCase() || !r.city)
+                ? db._venues.filter((r) => (r.city || '').toLowerCase() === String(params[0] ?? '').toLowerCase())
                 : [...db._venues],
             }),
           };
@@ -154,9 +166,24 @@ test('venueStore: same venue name in different cities resolves to the right geo'
   const poz = await resolveVenueGeo(db, 'Tama', 'poznan');
   assert.ok(poz);
   assert.ok(Math.abs(poz!.lat - 52.4064) < 0.001, `poznan lat=${poz?.lat}`);
-  // Unknown city falls back to the full pool (mock order → warszawa first).
+  // Unknown city must NOT fall back to another city's venue (no cross-city match).
   const noCity = await resolveVenueGeo(db, 'Tama', 'nieznane');
-  assert.ok(noCity);
+  assert.equal(noCity, null);
+});
+
+test('venueStore: generic name never resolves to a different city venue', async () => {
+  const db = mockDb();
+  // The real polluted case: a city-less "Amfiteatr" with Warszawa geo + the
+  // correct Mrągowo amphitheater.
+  await upsertVenue(db, { name: 'Amfiteatr Wolskiego Centrum Kultury', lat: 52.2309856, lng: 20.9492338, provider: 'dzisapp' });
+  await upsertVenue(db, { name: 'Amfiteatr w Mrągowie', lat: 53.8719008, lng: 21.3242328, city: 'mragowo', provider: 'going' });
+
+  // Mrągowo "Amfiteatr" → the Mrągowo amphitheater, NOT the Warszawa one.
+  const mragowo = await resolveVenueGeo(db, 'Amfiteatr', 'mragowo');
+  assert.ok(mragowo);
+  assert.ok(Math.abs(mragowo!.lat - 53.8719008) < 0.001, `mragowo lat=${mragowo?.lat}`);
+  // City-less Warszawa row must not match a different city.
+  assert.equal(await resolveVenueGeo(db, 'Amfiteatr', 'krakow'), null);
 });
 
 test('venueStore: venueKey normalizes diacritics and spaces', () => {

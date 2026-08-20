@@ -80,13 +80,14 @@ function initialsOf(words: string[]): string {
 export const VENUE_MATCH_THRESHOLD = 0.55;
 
 // Find best matching venue geo from a cache (dzis.app venues). Returns geo or null.
-// When a city is given, only candidates in the same city are considered — "Tama"
-// in Warszawa is not "Tama" in Poznań.
+// When a city is given, ONLY candidates in the same city are considered — "Tama"
+// in Warszawa is not "Tama" in Poznań, and a city-less row must never hijack a
+// different city (generic names like "Amfiteatr"). No cross-city fallback.
 export function matchVenueGeo(name: string, cache: VenueEntry[], city?: string | null): GeoPoint | null {
   if (!name || cache.length === 0) return null;
   const cityNorm = city ? city.toLowerCase() : null;
-  const pool = cityNorm ? cache.filter((v) => (v.city || '').toLowerCase() === cityNorm) : cache;
-  const candidates = pool.length > 0 ? pool : cache; // fall back to all cities when none match
+  const candidates = cityNorm ? cache.filter((v) => (v.city || '').toLowerCase() === cityNorm) : cache;
+  if (candidates.length === 0) return null;
   let best: VenueEntry | null = null;
   let bestScore = 0;
   for (const v of candidates) {

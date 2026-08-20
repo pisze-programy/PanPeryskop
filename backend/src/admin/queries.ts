@@ -70,7 +70,7 @@ export function eventsSql(f: EventFilter): { sql: string; binds: unknown[] } {
   const offset = f.offset ?? 0;
   return {
     sql: `SELECT p.id, p.external_id, p.description, p.created_at, p.status, p.link_url,
-          p.thumb_key, p.media_key, p.tags, p.event_date, p.showtimes,
+          p.thumb_key, p.media_key, p.tags, p.event_date, p.showtimes, p.showtime_booking,
           p.lat, p.lng,
           substr(p.external_id,1,instr(p.external_id,'-')-1) AS source
           FROM posts p WHERE ${where} ORDER BY p.event_date DESC, p.created_at DESC LIMIT ? OFFSET ?`,

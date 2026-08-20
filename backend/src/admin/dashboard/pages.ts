@@ -7,7 +7,7 @@ import { browserBudget, cronInfo, daySeries, eventsSql, eventsCountSql, nearestC
 import { seedTomorrow } from '../../seed';
 import { clearCookie, fmtPctNum, requireSession, setSessionCookie } from './common';
 import { STATUS_REJECTED } from '../../core/models';
-import { CANONICAL_TAGS, CANONICAL_TAG_SET } from '../../seed/core/tags';
+import { CANONICAL_TAGS, CANONICAL_TAG_SET, TAG_LABELS } from '../../seed/core/tags';
 
 export const pageRoutes = new Hono<{ Bindings: Env }>();
 
@@ -127,7 +127,6 @@ pageRoutes.get('/', async (c) => {
 
 // ---------- Events / Moderacja ----------
 const EVENT_SOURCES = ['helios', 'multikino', 'cinemacity', 'going', 'kupbilecik', 'dzisapp', 'eventylive', 'luma', 'meetup'];
-const TAG_LABELS: Record<string, string> = { filmy: 'Filmy', muzyka: 'Muzyka', meetup: 'Meetup', komedia: 'Komedia' };
 
 function norm(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -182,13 +181,14 @@ function eventThumb(e: { thumb_key?: string | null; media_key?: string | null })
   return `<img src="/media/${esc(key)}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px;cursor:zoom-in" loading="lazy" onerror="this.style.display='none'" onclick="ppMediaOpen('/media/${esc(full)}')" />`;
 }
 
-// Title: opens the event page in a modal (iframe); a missing link is a DATA
-// ERROR → alert (ESC closes). Source shown as a muted suffix.
+// Title: opens the event link (resolved per selected showtime). multikino.pl
+// refuses iframes → opened in a new tab automatically; everything else renders in
+// the modal. Missing link = DATA ERROR.
 function titleHtml(linkUrl: string | null, title: string, id: string, source: string): string {
   const t = esc(title || '—');
   const src = `<span class="text-muted" style="font-size:11px">(${esc(source)})</span>`;
   if (linkUrl) {
-    return `<a href="javascript:void(0)" onclick="ppLinkOpen('${jsStr(linkUrl)}');return false;" class="text-reset text-decoration-none">${t}</a> ${src}`;
+    return `<a href="javascript:void(0)" onclick="ppOpenLink(ppLinkFor('${esc(id)}', '${jsStr(linkUrl)}'));return false;" class="text-reset text-decoration-none">${t}</a> ${src}`;
   }
   return `<a href="javascript:void(0)" onclick="ppAlertOpen('Błąd danych','Wydarzenie nie ma linku (${esc(id)}). Eventy zawsze powinny mieć link.');return false;" class="text-danger text-decoration-none">${t} ⚠</a> ${src}`;
 }
@@ -235,10 +235,52 @@ function placeHtml(lat: number | null, lng: number | null, loc: string): string 
   return `<div class="text-secondary" style="font-size:13px"><a href="javascript:void(0)" onclick="ppLinkOpen('${jsStr(embed)}');return false;" class="text-reset text-decoration-none">${PIN_ICON} ${label}</a></div>`;
 }
 
-function dateHtml(eventDate: string | null, showtime: string | null, time: string): string {
-  const d = eventDate || '';
-  const t = showtime || time;
-  return `<div class="text-muted" style="font-size:12px">${esc(d)}${t ? ' · ' + esc(t) : ''}</div>`;
+function parseShowtimes(s: string | null | undefined): string[] {
+  if (!s) return [];
+  try {
+    const v = JSON.parse(s);
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch { return []; }
+}
+
+// Replicates the app's per-showtime deep-link builder (Post.bookingURL(for:)).
+// Only cinema providers carry showtime_booking; everything else → null (the
+// event's link_url is used instead).
+function bookingURLFor(bookingJson: string | null | undefined, time: string, linkUrl: string | null): string | null {
+  if (!bookingJson) return null;
+  let entries: Array<{ time?: string; kind?: string; params?: Record<string, string> }> = [];
+  try { entries = JSON.parse(bookingJson); } catch { return null; }
+  const b = entries.find((x) => x.time === time);
+  if (!b || !b.kind || !b.params) return null;
+  const p = b.params;
+  if (b.kind === 'helios') {
+    if (p.screen && p.cinema && p.itemId && p.itemSourceId && linkUrl)
+      return `https://bilety.helios.pl/screen/${p.screen}?cinemaId=${p.cinema}&backUrl=${encodeURIComponent(linkUrl)}&item_id=${p.itemId}&item_source_id=${p.itemSourceId}`;
+    return null;
+  }
+  if (b.kind === 'cinemacity') {
+    if (p.order && p.cinema) return `https://tickets.cinema-city.pl/order/${p.order}?lang=pl&x-cinema=${p.cinema}`;
+    return null;
+  }
+  if (b.kind === 'multikino') {
+    if (p.cinemaId && p.filmId && p.sessionId) return `https://www.multikino.pl/rezerwacja-biletow/podsumowanie/${p.cinemaId}/${p.filmId}/${p.sessionId}`;
+    return null;
+  }
+  return null;
+}
+
+// Date + showtime selector. The selector drives the row link (ppLinkFor) so the
+// admin previews the deep-link of the chosen showtime; disabled when only one.
+function dateCell(e: { id: string; event_date?: string | null; showtimes?: string | null; time?: string }): string {
+  const d = esc(e.event_date || '');
+  const times = parseShowtimes(e.showtimes);
+  if (times.length === 0) return `<div class="text-muted" style="font-size:12px">${d}</div>`;
+  if (times.length === 1) return `<div class="text-muted" style="font-size:12px">${d} · ${esc(times[0])}</div>`;
+  const opts = times.map((t, i) => `<option value="${esc(t)}" ${i === 0 ? 'selected' : ''}>${esc(t)}</option>`).join('');
+  const sel = `<select class="form-select form-select-sm" style="width:110px" onchange="window.ppSel['${esc(e.id)}']=this.value">${opts}</select>`;
+  return `<div class="d-flex align-items-center gap-1">
+    <span class="text-muted" style="font-size:12px">${d}</span>${sel}
+  </div>`;
 }
 
 pageRoutes.get('/events', async (c) => {
@@ -287,18 +329,24 @@ pageRoutes.get('/events', async (c) => {
       ${nextHref ? `<a class="btn btn-outline-secondary btn-sm" href="${esc(nextHref)}">Następna ›</a>` : '<span class="btn btn-outline-secondary btn-sm disabled">Następna ›</span>'}
     </div></div>`;
 
+  const ppLinkMap: Record<string, Record<string, string>> = {};
+  const ppSel: Record<string, string> = {};
   const rows = (results as any[]).map((e) => {
     const { title, time, loc } = descParts(e.description);
     const tag = parseTags(e.tags)[0] ?? '';
-    const firstShowtime = (() => {
-      try { const t = JSON.parse(e.showtimes); return Array.isArray(t) && t.length ? String(t[0]) : null; } catch { return null; }
-    })();
+    const times = parseShowtimes(e.showtimes);
+    if (times.length > 0) {
+      ppSel[e.id] = times[0];
+      const map: Record<string, string> = {};
+      for (const t of times) { const u = bookingURLFor(e.showtime_booking, t, e.link_url); if (u) map[t] = u; }
+      if (Object.keys(map).length) ppLinkMap[e.id] = map;
+    }
     return `<tr>
       <td>${eventThumb(e)}</td>
       <td>
         <div class="fw-semibold">${titleHtml(e.link_url, title, e.id, e.source)}</div>
         ${placeHtml(e.lat, e.lng, loc)}
-        ${dateHtml(e.event_date, firstShowtime, time)}
+        ${dateCell({ id: e.id, event_date: e.event_date, showtimes: e.showtimes, time })}
       </td>
       <td>${statusSelect({ id: e.id, status: e.status, tag })}</td>
       <td>${tagSelect({ id: e.id, status: e.status, tag })}</td></tr>`;
@@ -306,14 +354,15 @@ pageRoutes.get('/events', async (c) => {
 
   const body = `<h2 class="mb-3">${status === 'pending' ? 'Moderacja' : 'Eventy'}</h2>
   <form method="get" action="/admin/events" class="row g-2 mb-3">
-    <div class="col-6 col-md-2"><label class="form-label">Miasto</label><select name="city" class="form-select">${cityOpts}</select></div>
-    <div class="col-6 col-md-2"><label class="form-label">Źródło</label><select name="source" class="form-select">${srcOpts}</select></div>
-    <div class="col-6 col-md-2"><label class="form-label">Status</label><select name="status" class="form-select">${statusOpts}</select></div>
-    <div class="col-6 col-md-2"><label class="form-label">Tag</label><select name="tag" class="form-select">${tagOpts}</select></div>
-    <div class="col-6 col-md-2"><label class="form-label">Data od</label><input name="from" type="date" class="form-control" value="${esc(from || '')}" /></div>
-    <div class="col-6 col-md-2"><label class="form-label">Data do</label><input name="to" type="date" class="form-control" value="${esc(to || '')}" /></div>
-    <div class="col-12 d-flex align-items-end"><button class="btn btn-primary me-2">Filtruj</button>
-      <a class="btn btn-link text-decoration-none" href="/admin/events">Wyczyść</a></div>
+    <div class="col-6 col-md-2"><label class="form-label">Miasto</label><select name="city" class="form-select" onchange="this.form.submit()">${cityOpts}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label">Źródło</label><select name="source" class="form-select" onchange="this.form.submit()">${srcOpts}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label">Status</label><select name="status" class="form-select" onchange="this.form.submit()">${statusOpts}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label">Tag</label><select name="tag" class="form-select" onchange="this.form.submit()">${tagOpts}</select></div>
+    <div class="col-6 col-md-2"><label class="form-label">Data od</label><input name="from" type="date" class="form-control" value="${esc(from || '')}" onchange="this.form.submit()" /></div>
+    <div class="col-6 col-md-2"><label class="form-label">Data do</label><input name="to" type="date" class="form-control" value="${esc(to || '')}" onchange="this.form.submit()" /></div>
+    <div class="col-12 d-flex align-items-end">
+      <a class="btn btn-outline-secondary" href="/admin/events" onclick="try{['city','source','status','tag','from','to'].forEach(function(k){localStorage.removeItem('evFilter:'+k);});}catch(e){}">Wyczyść</a>
+    </div>
   </form>
   ${pager}
   <div class="card"><div class="table-responsive"><table class="table table-vcenter card-table">
@@ -325,7 +374,8 @@ pageRoutes.get('/events', async (c) => {
   </div>
   <div id="ppLinkModal" tabindex="-1" onkeydown="if(event.key==='Escape'){event.preventDefault();ppLinkClose();}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;padding:16px;outline:none">
     <div style="width:100%;max-width:960px;height:86vh;background:#fff;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
-      <div style="display:flex;justify-content:flex-end;padding:6px 8px;background:#fff;border-bottom:1px solid #e9ecef">
+      <div style="display:flex;justify-content:space-between;padding:6px 8px;background:#fff;border-bottom:1px solid #e9ecef">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open(window.ppCurLink||'', '_blank', 'noopener')">Otwórz w nowej karcie</button>
         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="ppLinkClose()">Zamknij (ESC)</button>
       </div>
       <iframe id="ppLinkFrame" title="Podgląd" style="flex:1;border:0;width:100%" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
@@ -338,12 +388,14 @@ pageRoutes.get('/events', async (c) => {
       <div class="card-footer text-end"><button type="button" class="btn btn-secondary" onclick="ppAlertClose()">OK (ESC)</button></div>
     </div>
   </div>
+  <script>window.ppLinkMap=${JSON.stringify(ppLinkMap)};window.ppSel=${JSON.stringify(ppSel)};window.ppLinkFor=function(id,fb){var m=window.ppLinkMap[id],s=window.ppSel[id];if(m&&s&&m[s])return m[s];return fb;};window.ppBlockedHosts=['multikino.pl','ebilet.pl'];window.ppOpenLink=function(u){var h=(u||'').split('/')[2]||'';var blocked=window.ppBlockedHosts.some(function(b){return h.indexOf(b)!==-1;});if(blocked){window.open(u,'_blank','noopener');}else{ppLinkOpen(u);}};</script>
   <script>
   (function(){
     var media=document.getElementById('ppMediaModal'), alertM=document.getElementById('ppAlertModal'), linkM=document.getElementById('ppLinkModal');
     window.ppMediaOpen=function(src){var img=document.getElementById('ppMediaImg'); if(img){img.style.maxWidth='92vw';img.style.maxHeight='92vh';img.src=src;} media.style.display='flex';};
     window.ppMediaClose=function(){media.style.display='none';};
     window.ppLinkOpen=function(url){
+      window.ppCurLink=url;
       var f=document.getElementById('ppLinkFrame');
       if(f) f.src=url;
       linkM.style.display='flex';

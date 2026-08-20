@@ -8,9 +8,23 @@
 import { ProviderId } from './types';
 import { diacriticFold } from './match';
 
-export const CANONICAL_TAGS = ['filmy', 'muzyka', 'meetup', 'komedia'] as const;
+export const CANONICAL_TAGS = ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'inne'] as const;
 export type CanonicalTag = (typeof CANONICAL_TAGS)[number];
 export const CANONICAL_TAG_SET: ReadonlySet<string> = new Set(CANONICAL_TAGS);
+
+/** Display labels for the canonical tags (single source of truth — admin + API). */
+export const TAG_LABELS: Record<string, string> = {
+  filmy: 'Filmy',
+  muzyka: 'Muzyka',
+  meetup: 'Meetup',
+  komedia: 'Komedia',
+  teatr: 'Teatr',
+  inne: 'Inne',
+};
+
+export function tagLabel(id: string): string {
+  return TAG_LABELS[id] ?? id;
+}
 
 /** A tag string is canonical when it is one of the closed-set ids. */
 export function isCanonicalTag(value: string): value is CanonicalTag {
@@ -52,6 +66,16 @@ const VALUE_TAGS: Record<string, CanonicalTag> = {
   seans: 'filmy',
   cinema: 'filmy',
   filmowa: 'filmy',
+  // teatr
+  teatr: 'teatr',
+  teatry: 'teatr',
+  teatralne: 'teatr',
+  teatralny: 'teatr',
+  spektakl: 'teatr',
+  spektakle: 'teatr',
+  przedstawienie: 'teatr',
+  theatre: 'teatr',
+  theater: 'teatr',
 };
 
 // Title-keyword heuristic for providers with no structured category (eventylive).
@@ -68,6 +92,9 @@ const TITLE_KEYWORDS: Array<[string, CanonicalTag]> = [
   ['premiera film', 'filmy'],
   ['kino', 'filmy'],
   ['seans', 'filmy'],
+  ['teatr', 'teatr'],
+  ['spektakl', 'teatr'],
+  ['przedstawienie', 'teatr'],
 ];
 
 function keyOf(value: string): string {

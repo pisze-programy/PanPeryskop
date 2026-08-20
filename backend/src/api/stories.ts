@@ -2,8 +2,14 @@ import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED } from '../core/models';
 import { mediaUrl, originFromRequest } from '../core/media';
+import { CANONICAL_TAGS, CANONICAL_TAG_SET, tagLabel } from '../seed/core/tags';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
+
+// Canonical tag list for the map filter chips (public, ordered as the backend).
+storiesRoutes.get('/tags', (c) => c.json({
+  tags: CANONICAL_TAGS.map((id) => ({ id, label: tagLabel(id) })),
+}));
 
 // Mirrors models.popularityScore so ORDER BY matches the ranking algorithm.
 function popularityExpr(): string {
@@ -113,6 +119,13 @@ storiesRoutes.get('/', async (c) => {
   const windowStart = now - TTL_MS;
   const category = q.category && POST_CATEGORY_SET.has(q.category) ? q.category : null;
   const catCond = category ? 'AND p.category = ?' : '';
+  // Tag filter (map chips) — events only. Validated against the closed canonical
+  // set; the approved filter below is hardcoded server-side (the client can never
+  // ask for rejected/pending posts).
+  const tag = q.tag ? String(q.tag) : null;
+  if (tag && !CANONICAL_TAG_SET.has(tag)) return c.json({ error: 'Invalid tag' }, 400);
+  const tagCond = tag ? 'AND p.tags LIKE ?' : '';
+  const tagBind = tag ? `%"${tag}"%` : null;
   // Seen (watched) media is hidden from the Live feed entirely — the map removes
   // it locally and future fetches must not return it either.
   const hideWatchedLive = category === 'live';
@@ -146,14 +159,15 @@ storiesRoutes.get('/', async (c) => {
            LEFT JOIN dislikes d ON d.post_id = p.id AND d.user_id = ?
            WHERE p.lat BETWEEN ? AND ?
            AND p.lng BETWEEN ? AND ?
-           AND p.status = '${STATUS_APPROVED}'
-           AND ${timeCond}
-           ${catCond}
-           ${hideWatchedLive ? 'AND v.post_id IS NULL' : ''}
-           ORDER BY ${popularityExpr()} DESC
-           LIMIT ${limit}`
+            AND p.status = '${STATUS_APPROVED}'
+            AND ${timeCond}
+            ${catCond}
+            ${tagCond}
+            ${hideWatchedLive ? 'AND v.post_id IS NULL' : ''}
+            ORDER BY ${popularityExpr()} DESC
+            LIMIT ${limit}`
         )
-        .bind(user.id, user.id, swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []))
+        .bind(user.id, user.id, swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []), ...(tag ? [tagBind] : []))
         .all<StoryRow>();
 
       return c.json({
@@ -170,13 +184,14 @@ storiesRoutes.get('/', async (c) => {
        JOIN users u ON p.user_id = u.id
        WHERE p.lat BETWEEN ? AND ?
        AND p.lng BETWEEN ? AND ?
-       AND p.status = '${STATUS_APPROVED}'
-       AND ${timeCond}
-       ${catCond}
-       ORDER BY ${popularityExpr()} DESC
-       LIMIT ${limit}`
+        AND p.status = '${STATUS_APPROVED}'
+        AND ${timeCond}
+        ${catCond}
+        ${tagCond}
+        ORDER BY ${popularityExpr()} DESC
+        LIMIT ${limit}`
     )
-    .bind(swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []))
+    .bind(swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []), ...(tag ? [tagBind] : []))
     .all<StoryRow>();
 
   return c.json({

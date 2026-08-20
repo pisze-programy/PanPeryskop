@@ -159,6 +159,16 @@ struct PostListResponse: Codable {
     let stories: [Post]
 }
 
+/// Canonical event tag offered by the map filter chips (backend order).
+struct TagPill: Codable, Equatable, Identifiable {
+    let id: String
+    let label: String
+}
+
+struct TagsResponse: Codable {
+    let tags: [TagPill]
+}
+
 /// Parsed seed-event details (from the `Tytuł: HH:MM, Lokalizacja` description).
 struct EventInfo {
     let title: String

@@ -108,30 +108,26 @@ export async function upsertVenue(db: D1Database, v: VenueInput): Promise<string
   return id;
 }
 
-// Resolve geo for a venue name by fuzzy match, preferring the same city ("Tama"
-// in Warszawa is not "Tama" in Poznań). Returns {lat, lng, id} or null.
+// Resolve geo for a venue name by fuzzy match, scoped to the SAME city only
+// ("Tama" in Warszawa is not "Tama" in Poznań). City-less rows are NEVER matched
+// when a city is known — a generic name like "Amfiteatr" must not resolve to a
+// same-named venue in a different city. Returns {lat, lng, id} or null.
 export async function resolveVenueGeo(
   db: D1Database, name: string, city?: string | null
 ): Promise<{ lat: number; lng: number; id: string } | null> {
   if (!name) return null;
-  let rows = await loadVenuePool(db, city);
-  let match = bestVenueMatch(name, rows);
-  if (!match && city) {
-    // Fall back to the whole store when nothing matched in the given city (the
-    // city may be unknown in older rows, or the venue is genuinely elsewhere).
-    rows = await loadVenuePool(db, null);
-    match = bestVenueMatch(name, rows);
-  }
+  const rows = await loadVenuePool(db, city);
+  const match = bestVenueMatch(name, rows);
   if (!match) return null;
   await db.prepare('UPDATE venues SET hit_count=hit_count+1, last_seen=? WHERE id=?').bind(Date.now(), match.id).run();
   return { lat: match.lat, lng: match.lng, id: match.id };
 }
 
-// Load the candidate venue rows: same-city rows plus any that have no city yet
-// (older rows predate city tracking). Narrowing by city keeps the fuzzy scan tiny.
+// Load the candidate venue rows. With a known city ONLY exact same-city rows are
+// candidates — city-less rows are ambiguous ("Amfiteatr" could be any city's).
 async function loadVenuePool(db: D1Database, city?: string | null): Promise<VenueRow[]> {
   if (city) {
-    const { results } = await db.prepare("SELECT * FROM venues WHERE city = ? OR city IS NULL OR city = ''")
+    const { results } = await db.prepare('SELECT * FROM venues WHERE city = ?')
       .bind(city.toLowerCase()).all<VenueRow>();
     return results || [];
   }

@@ -43,11 +43,15 @@ export interface EventFilter {
   from: string | null;
   to: string | null;
   tag: string | null;
+  geo: string | null;
   fromMs: number | null;
   toMs: number | null;
   limit: number;
   offset?: number;
 }
+
+// "Default bbox" geo = the seed fallback pin at a city's bbox center (CITIES lat/lng).
+const GEO_DEFAULT_EPS = 0.002;
 
 function eventsWhere(f: EventFilter): { where: string; binds: unknown[] } {
   let where = `p.category='events'`;
@@ -59,6 +63,11 @@ function eventsWhere(f: EventFilter): { where: string; binds: unknown[] } {
   if (f.from) { where += ' AND p.event_date >= ?'; binds.push(f.from); }
   if (f.to) { where += ' AND p.event_date <= ?'; binds.push(f.to); }
   if (f.tag) { where += f.tag === 'none' ? ' AND (p.tags IS NULL OR p.tags = ?)' : ' AND p.tags LIKE ?'; binds.push(f.tag === 'none' ? '[]' : `%"${f.tag}"%`); }
+  if (f.geo === 'default') {
+    const eps = GEO_DEFAULT_EPS;
+    const ors = CITIES.map((c) => `(ABS(p.lat - ${c.lat}) < ${eps} AND ABS(p.lng - ${c.lng}) < ${eps})`).join(' OR ');
+    where += ` AND (${ors})`;
+  }
   if (f.fromMs) { where += ' AND p.created_at>=?'; binds.push(f.fromMs); }
   if (f.toMs) { where += ' AND p.created_at<=?'; binds.push(f.toMs); }
   return { where, binds };

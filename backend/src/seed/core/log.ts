@@ -16,19 +16,20 @@ export interface SeedRunLog {
   errorDetail: string | null;
   durationMs: number;
   browserMs: number;
+  batchId?: string | null;
 }
 
 export async function writeSeedRun(env: Env, log: SeedRunLog): Promise<void> {
   await env.DB
     .prepare(
       `INSERT INTO seed_runs
-        (id, run_type, day, provider, transport, candidates, ingested, skipped, errors, error_detail, duration_ms, browser_ms, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        (id, run_type, day, provider, transport, candidates, ingested, skipped, errors, error_detail, duration_ms, browser_ms, batch_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       nanoid(24), log.runType, log.day, log.provider, log.transport,
       log.candidates, log.ingested, log.skipped, log.errors, log.errorDetail,
-      log.durationMs, log.browserMs, Date.now()
+      log.durationMs, log.browserMs, log.batchId ?? null, Date.now()
     )
     .run();
 }

@@ -2,13 +2,14 @@ import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED } from '../core/models';
 import { mediaUrl, originFromRequest } from '../core/media';
-import { CANONICAL_TAGS, CANONICAL_TAG_SET, tagLabel } from '../seed/core/tags';
+import { tagCatalog, tagIdSet } from '../core/tagCatalog';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
 
-// Canonical tag list for the map filter chips (public, ordered as the backend).
-storiesRoutes.get('/tags', (c) => c.json({
-  tags: CANONICAL_TAGS.map((id) => ({ id, label: tagLabel(id) })),
+// Canonical + admin-created tags for the map filter chips (public, ordered:
+// canonical vocabulary first, then custom tags alphabetically).
+storiesRoutes.get('/tags', async (c) => c.json({
+  tags: (await tagCatalog(c.env.DB)).map((t) => ({ id: t.id, label: t.label })),
 }));
 
 // Mirrors models.popularityScore so ORDER BY matches the ranking algorithm.
@@ -119,11 +120,11 @@ storiesRoutes.get('/', async (c) => {
   const windowStart = now - TTL_MS;
   const category = q.category && POST_CATEGORY_SET.has(q.category) ? q.category : null;
   const catCond = category ? 'AND p.category = ?' : '';
-  // Tag filter (map chips) — events only. Validated against the closed canonical
-  // set; the approved filter below is hardcoded server-side (the client can never
-  // ask for rejected/pending posts).
+  // Tag filter (map chips) — events only. An unknown tag is not an error: the app
+  // can hold a stale cached chip (a tag removed or renamed on the backend), so we
+  // return an empty list instead of 400 — the map simply shows no pins for it.
   const tag = q.tag ? String(q.tag) : null;
-  if (tag && !CANONICAL_TAG_SET.has(tag)) return c.json({ error: 'Invalid tag' }, 400);
+  if (tag && !(await tagIdSet(db)).has(tag)) return c.json({ stories: [] });
   const tagCond = tag ? 'AND p.tags LIKE ?' : '';
   const tagBind = tag ? `%"${tag}"%` : null;
   // Seen (watched) media is hidden from the Live feed entirely — the map removes

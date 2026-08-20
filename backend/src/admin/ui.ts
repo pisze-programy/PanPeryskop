@@ -20,6 +20,7 @@ export function fmtPct(usedMs: number, limitMs: number): string {
 export const NAV = [
   { href: '/admin', label: 'Overview', icon: 'layout-dashboard' },
   { href: '/admin/events', label: 'Eventy', icon: 'calendar-event' },
+  { href: '/admin/tags', label: 'Tagi', icon: 'tags' },
   { href: '/admin/users', label: 'Użytkownicy', icon: 'users' },
   { href: '/admin/posts', label: 'Posty', icon: 'photo' },
   { href: '/admin/seed', label: 'Seed', icon: 'refresh' },
@@ -106,6 +107,7 @@ const ICONS = `
 <symbol id="icon-chart-line" viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M7 15l4-6 4 3 5-8"/></symbol>
 <symbol id="icon-alert-triangle" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
 <symbol id="icon-map-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+<symbol id="icon-tags" viewBox="0 0 24 24"><path d="M3 7v4a1 1 0 0 0 .3.7l9 9a1 1 0 0 0 1.4 0l4-4a1 1 0 0 0 0-1.4l-9-9a1 1 0 0 0-.7-.3H4a1 1 0 0 0-1 1z"/><circle cx="7.5" cy="7.5" r="1.5"/></symbol>
 <symbol id="icon-flag" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h14l-2 4l2 4H5"/></symbol>
 <symbol id="icon-shield-check" viewBox="0 0 24 24"><path d="M12 3l8 3v5c0 5-3.5 8-8 10c-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2l4-4"/></symbol>
 `;

@@ -112,7 +112,7 @@ export async function handleFetch(env: EnvQ, m: Extract<SeedQueueMessage, { type
     runType: batch.run_type, day, provider: m.provider, transport: provider.transport,
     candidates: candidates.length, ingested: 0, skipped: 0,
     errors: 0, errorDetail: null,
-    durationMs: now() - scopeStart, browserMs,
+    durationMs: now() - scopeStart, browserMs, batchId: m.batchId,
   });
 
   await setScopeStatus(env, m.batchId, m.provider, m.scope, 'done');
@@ -256,7 +256,7 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     await writeSeedRun(env as unknown as Env, {
       runType: batch.run_type, day, provider: row.provider, transport: provider.transport,
       candidates: 0, ingested: 1, skipped: 0, errors: 0, errorDetail: null,
-      durationMs: now() - ingestStart, browserMs,
+      durationMs: now() - ingestStart, browserMs, batchId: row.batch_id,
     });
 
     await maybeComplete(env, row.batch_id);

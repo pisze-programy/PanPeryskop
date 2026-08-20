@@ -75,3 +75,15 @@ test('tags: never invents tags outside the closed set', () => {
     assert.deepEqual(normalizeTags({ source: ProviderId.GOING, rawTags: [value] }), []);
   }
 });
+
+test('tagCatalog: canonical vocabulary first, then admin-created tags', async () => {
+  const db = { prepare: () => ({ all: async () => ({ results: [{ id: 'sport', label: 'Sport' }, { id: 'wystawa', label: 'Wystawa' }] }) }) } as unknown as D1Database;
+  const { tagCatalog, tagIdSet } = await import('../src/core/tagCatalog');
+  const catalog = await tagCatalog(db);
+  assert.deepEqual(catalog.slice(0, 6).map((t) => t.id), ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'inne']);
+  assert.deepEqual(catalog.slice(6), [{ id: 'sport', label: 'Sport' }, { id: 'wystawa', label: 'Wystawa' }]);
+  const ids = await tagIdSet(db);
+  assert.ok(ids.has('filmy'));
+  assert.ok(ids.has('sport'));
+  assert.ok(!ids.has('cyrk'));
+});

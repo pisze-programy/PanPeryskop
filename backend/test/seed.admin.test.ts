@@ -74,11 +74,19 @@ test('cities: bbox is centered and nearestCity works', () => {
 });
 
 test('eventsSql: city filter adds bbox binds, date range uses event_date', () => {
-  const { sql, binds } = eventsSql({ cityId: 'warszawa', source: ProviderId.GOING, status: null, from: '2026-08-16', to: '2026-08-16', tag: null, fromMs: null, toMs: null, limit: 50 });
+  const { sql, binds } = eventsSql({ cityId: 'warszawa', source: ProviderId.GOING, status: null, from: '2026-08-16', to: '2026-08-16', tag: null, geo: null, fromMs: null, toMs: null, limit: 50 });
   assert.ok(sql.includes('p.lat BETWEEN'));
   assert.ok(sql.includes('p.event_date'));
   assert.ok(sql.includes('LIMIT ?'));
   assert.ok(sql.includes('OFFSET ?'));
   assert.ok(binds.length >= 4);
   assert.equal(binds[binds.length - 2], 50);
+});
+
+test('eventsSql: geo=default filters to city bbox centers (seed fallback pins)', () => {
+  const { sql } = eventsSql({ cityId: null, source: null, status: null, from: null, to: null, tag: null, geo: 'default', fromMs: null, toMs: null, limit: 50 });
+  assert.ok(sql.includes('ABS(p.lat -'));
+  assert.ok(sql.includes('ABS(p.lng -'));
+  const { sql: other } = eventsSql({ cityId: null, source: null, status: null, from: null, to: null, tag: null, geo: 'default', fromMs: null, toMs: null, limit: 50 });
+  assert.equal(other, sql, 'geo clause is deterministic');
 });

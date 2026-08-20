@@ -234,5 +234,11 @@ export async function authenticate(
     .first<User>();
   if (!user) return null;
   if (await isBanned(db, user.device_id)) return null;
+  // Touch last-seen, throttled (one write per user per 5 min) — powers the admin
+  // "Ostatnia aktywność" column without writing on every request.
+  await db
+    .prepare('UPDATE users SET last_seen = ? WHERE id = ? AND (last_seen IS NULL OR last_seen < ?)')
+    .bind(Date.now(), user.id, Date.now() - 5 * 60 * 1000)
+    .run();
   return user;
 }

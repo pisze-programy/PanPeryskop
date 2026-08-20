@@ -199,9 +199,13 @@ export async function doSavePost(
     await db
       .prepare(
         `UPDATE posts
-         SET type = ?, lat = ?, lng = ?, description = ?, media_key = ?, thumb_key = ?,
+         SET type = ?, lat = CASE WHEN geo_locked = 1 THEN lat ELSE ? END,
+             lng = CASE WHEN geo_locked = 1 THEN lng ELSE ? END,
+             description = CASE WHEN geo_locked = 1 THEN description ELSE ? END,
+             media_key = ?, thumb_key = ?,
              is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?,
-             is_sold_out = ?, event_date = ?, showtimes = ?, showtime_booking = ?, tags = ?
+             is_sold_out = ?, event_date = ?, showtimes = ?, showtime_booking = ?,
+             tags = CASE WHEN tags_locked = 1 THEN tags ELSE ? END
          WHERE id = ?`
       )
       .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, postId)

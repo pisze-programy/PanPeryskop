@@ -38,7 +38,7 @@ pageRoutes.post('/login', async (c) => {
   const password = String(parsed.password || '');
   const ip = getClientIp(c);
   const { cookie, reason } = await adminLogin(c.env, password, ip);
-  if (cookie) return setSessionCookie(c.redirect('/admin'), cookie, 4 * 3600);
+  if (cookie) return setSessionCookie(c.redirect('/admin'), cookie, 72 * 3600);
   const msg =
     reason === 'rate' ? 'Za dużo prób. Spróbuj za 15 min.' :
     reason === 'unconfigured' ? 'Hasło admina nie jest skonfigurowane (ADMIN_PASSWORD_HASH).' :

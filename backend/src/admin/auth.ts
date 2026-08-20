@@ -5,7 +5,7 @@
 import { nanoid } from 'nanoid';
 
 export const COOKIE_NAME = 'pp_admin';
-export const SESSION_TTL_MS = 4 * 3_600_000;
+export const SESSION_TTL_MS = 72 * 3_600_000; // 72h admin session
 const MAX_ATTEMPTS = 5;
 const RATE_LIMIT_MS = 15 * 60_000;
 

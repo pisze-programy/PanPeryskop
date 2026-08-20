@@ -39,6 +39,11 @@ struct PanPeryskopApp: App {
                 }
             }
             .background(MeshGradientWarmup())
+            .overlay(alignment: .bottom) {
+                #if DEBUG
+                DevelopmentModeBar()
+                #endif
+            }
             .onOpenURL { url in
                 if let id = DeepLink.storyId(from: url) {
                     pendingStoryId = id
@@ -68,3 +73,21 @@ struct PanPeryskopApp: App {
         }
     }
 }
+
+#if DEBUG
+/// Full-width red DEV bar pinned to the bottom edge — DEBUG builds only, compiled
+/// out of Release so it never ships to the store.
+struct DevelopmentModeBar: View {
+    var body: some View {
+        Text("DEVELOPMENT MODE")
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 3)
+            .background(Color.red)
+            .allowsHitTesting(false)
+            .ignoresSafeArea(edges: .bottom)
+    }
+}
+#endif

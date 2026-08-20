@@ -79,7 +79,7 @@ final class MediaNearbyNotifier {
 
     private static var selectedCity: City {
         let id = UserDefaults.standard.string(forKey: "map.last_city_id")
-        return City.all.first { $0.id == id } ?? .poznan
+        return City.all.first { $0.id == id } ?? City.all[0]
     }
 
     private func persistSeen() {

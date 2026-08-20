@@ -6,6 +6,18 @@ struct OnboardingView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
 
+    /// Brand gradient (matches the story-background palette) — diagonal, used for
+    /// both the logo ring and the app name so they line up.
+    private static let brandGradient = LinearGradient(
+        colors: [
+            Color(hue: 0.55, saturation: 0.75, brightness: 0.65),
+            Color(hue: 0.68, saturation: 0.75, brightness: 0.65),
+            Color(hue: 0.82, saturation: 0.75, brightness: 0.65),
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
     var body: some View {
         ZStack {
             Color(.systemBackground)
@@ -20,20 +32,24 @@ struct OnboardingView: View {
                     .frame(width: 140, height: 140)
                     .clipShape(Circle())
                     .shadow(color: .primary.opacity(0.15), radius: 10, x: 0, y: 4)
+                    .overlay(
+                        Circle()
+                            .stroke(Self.brandGradient, lineWidth: 3)
+                    )
 
                 Text("Pan Peryskop")
                     .font(.system(size: 42, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(Self.brandGradient)
 
-                Text("Zobacz co się dzieje\nw Twoim mieście")
+                Text("Od Warszawy, Krakowa i Poznania\npo Trójmiasto! Mamy je wszystkie!")
                     .font(.title3)
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)
 
                 VStack(alignment: .leading, spacing: 16) {
-                    Label("Treści widoczne przez 24 godziny", systemImage: "clock")
-                    Label("Twoja lokalizacja jest przypisywana automatycznie", systemImage: "location.fill")
-                    Label("Publikujesz za darmo i bez rejestracji", systemImage: "lock.open.fill")
+                    Label("Koncerty, kino, teatr, spotkania i więcej!", systemImage: "map")
+                    Label("Treści na żywo od innych użytkowników", systemImage: "video.fill")
+                    Label("Zobacz co się, dzieje w Twojej okolicy!", systemImage: "bell.fill")
                 }
                 .font(.subheadline)
                 .foregroundColor(.secondary)

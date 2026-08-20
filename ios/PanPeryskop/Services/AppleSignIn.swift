@@ -19,10 +19,18 @@ struct AppleSignInButton: UIViewRepresentable {
     func makeUIView(context: Context) -> ASAuthorizationAppleIDButton {
         let button = ASAuthorizationAppleIDButton(type: .signIn, style: .black)
         button.addTarget(context.coordinator, action: #selector(Coordinator.handleTap), for: .touchUpInside)
+        button.layer.cornerRadius = 16
+        button.clipsToBounds = true
         return button
     }
 
-    func updateUIView(_ uiView: ASAuthorizationAppleIDButton, context: Context) {}
+    func updateUIView(_ uiView: ASAuthorizationAppleIDButton, context: Context) {
+        // Apple's Sign in with Apple guidance: the black button needs a light border
+        // in dark environments so it doesn't disappear on a dark background.
+        let isDark = context.environment.colorScheme == .dark
+        uiView.layer.borderWidth = isDark ? 1 : 0
+        uiView.layer.borderColor = UIColor.white.withAlphaComponent(0.5).cgColor
+    }
 
     final class Coordinator: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
         private let parent: AppleSignInButton

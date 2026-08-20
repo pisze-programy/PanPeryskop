@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var authManager: AuthManager
-    @AppStorage(Haptics.enabledKey) private var hapticsEnabled = true
     @AppStorage(NotificationSettings.mediaNearbyLiveKey) private var mediaNearbyLive = true
     @AppStorage(NotificationSettings.mediaNearbyEventsKey) private var mediaNearbyEvents = true
     @AppStorage(NotificationSettings.mediaNearbyRangeKey) private var mediaNearbyRange = "city"
@@ -13,26 +12,6 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                HStack(spacing: 12) {
-                    Image(systemName: "waveform")
-                        .font(.title3)
-                        .foregroundColor(.accentColor)
-                        .frame(width: 32)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Toggle("Wibracje", isOn: $hapticsEnabled)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Text("Delikatne wibracje przy tapnięciach i akcjach.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(12)
-                .background(.regularMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal)
-
                 notificationsCard
 
                 PermissionCardsView(showsHeader: true)

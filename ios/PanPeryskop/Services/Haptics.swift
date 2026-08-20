@@ -3,34 +3,23 @@ import UIKit
 
 @MainActor
 enum Haptics {
-    static let enabledKey = "settings.hapticsEnabled"
-
-    static var isEnabled: Bool {
-        UserDefaults.standard.object(forKey: enabledKey) as? Bool ?? true
-    }
-
     static func selection() {
-        guard isEnabled else { return }
         UISelectionFeedbackGenerator().selectionChanged()
     }
 
     static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
-        guard isEnabled else { return }
         UIImpactFeedbackGenerator(style: style).impactOccurred()
     }
 
     static func success() {
-        guard isEnabled else { return }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     static func error() {
-        guard isEnabled else { return }
         UINotificationFeedbackGenerator().notificationOccurred(.error)
     }
 
     static func explosion() {
-        guard isEnabled else { return }
         Task { @MainActor in
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.prepare()
@@ -44,7 +33,7 @@ enum Haptics {
     private static var tickTask: Task<Void, Never>?
 
     static func startTickLoop(interval: UInt64 = 400_000_000) {
-        guard isEnabled, tickTask == nil else { return }
+        guard tickTask == nil else { return }
         tickTask = Task { @MainActor in
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.prepare()
@@ -77,7 +66,6 @@ enum Haptics {
     /// Detent haptic per tick, intensity scales with how far the drag jumped
     /// (fast drags feel stronger).
     static func sliderTick(intensity: CGFloat) {
-        guard isEnabled else { return }
         let now = ProcessInfo.processInfo.systemUptime
         guard now - lastSliderFire >= sliderMinInterval else { return }
         lastSliderFire = now
@@ -87,7 +75,6 @@ enum Haptics {
     /// Soft detent fired when the drag crosses a minor graduation (the thin ticks
     /// between days) — so the user feels each sub-step, not just whole days.
     static func sliderMinor(steps: Int = 1) {
-        guard isEnabled else { return }
         let now = ProcessInfo.processInfo.systemUptime
         for _ in 0..<steps {
             guard now - lastMinorFire >= minorMinInterval else { return }
@@ -98,7 +85,6 @@ enum Haptics {
 
     /// "Wall" haptic fired when the user drags past the range at either end.
     static func sliderWall() {
-        guard isEnabled else { return }
         let now = ProcessInfo.processInfo.systemUptime
         guard now - lastSliderFire >= 0.12 else { return }
         lastSliderFire = now

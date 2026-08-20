@@ -25,7 +25,7 @@ class MapViewModel: ObservableObject {
     @Published var posts: [Post] = []
     @Published var mediaRequests: [MediaRequest] = []
     @Published var isLoading = false
-    @Published var selectedCity: City = .poznan
+    @Published var selectedCity: City = City.all[0]
     @Published var feedCategory: FeedCategory = .events
     // Selected day offset 0…3 (dziś / jutro / +2 / +3). Kept only as a live variable
     // (no persistence) — resets to today on a fresh launch, survives view switches.
@@ -57,7 +57,7 @@ class MapViewModel: ObservableObject {
 
     init() {
         let savedCityId = UserDefaults.standard.string(forKey: MapPrefs.cityId)
-        selectedCity = City.all.first { $0.id == savedCityId } ?? .poznan
+        selectedCity = City.all.first { $0.id == savedCityId } ?? City.all[0]
     }
 
     var restoredViewport: MKCoordinateRegion? {
@@ -264,7 +264,18 @@ class MapViewModel: ObservableObject {
     }
 
     func viewerPosts(for clicked: Post, in bbox: MapBBox) -> [Post] {
-        [clicked] + visiblePosts(in: previewBBox(around: clicked, in: bbox)).filter { $0.id != clicked.id }
+        let near = visiblePosts(in: previewBBox(around: clicked, in: bbox))
+            .filter { $0.id != clicked.id }
+            .sorted { distanceSquared(clicked, $0) < distanceSquared(clicked, $1) }
+            .prefix(14)
+        return [clicked] + near
+    }
+
+    /// Squared lat/lng distance (approx — fine for the small Polish region).
+    private func distanceSquared(_ a: Post, _ b: Post) -> Double {
+        let dLat = a.lat - b.lat
+        let dLng = a.lng - b.lng
+        return dLat * dLat + dLng * dLng
     }
 
     /// Shrinks the viewport around the tapped post so the story preview only queues

@@ -64,7 +64,7 @@ struct StoryFullScreenView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
-                .gesture(navigationGesture(width: geo.size.width))
+                .gesture(navigationGesture(width: geo.size.width, height: geo.size.height))
                 .onAppear { slideWidth = geo.size.width }
             }
             .ignoresSafeArea()
@@ -83,26 +83,28 @@ struct StoryFullScreenView: View {
                                 .clipShape(Circle())
                         }
                         Spacer()
-                        Menu {
-                            Button {
-                                pausePlayback()
-                                // Defer until the menu has fully dismissed — presenting
-                                // an alert straight from a Menu item is flaky on iOS.
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                    showReportDialog = true
+                        if !currentPost.isEvent {
+                            Menu {
+                                Button {
+                                    pausePlayback()
+                                    // Defer until the menu has fully dismissed — presenting
+                                    // an alert straight from a Menu item is flaky on iOS.
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                        showReportDialog = true
+                                    }
+                                } label: {
+                                    Label("Zgłoś", systemImage: "flag")
                                 }
                             } label: {
-                                Label("Zgłoś", systemImage: "flag")
+                                Image(systemName: "ellipsis")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 40, height: 40)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(Circle())
                             }
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(width: 40, height: 40)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Circle())
+                            .simultaneousGesture(TapGesture().onEnded { Haptics.selection() })
                         }
-                        .simultaneousGesture(TapGesture().onEnded { Haptics.selection() })
                     }
                     .padding(.horizontal, 16)
 
@@ -198,7 +200,7 @@ struct StoryFullScreenView: View {
                     .lineLimit(2)
             }
 
-            HStack(alignment: .bottom, spacing: 16) {
+            HStack(alignment: currentPost.isEvent ? .bottom : .center, spacing: 16) {
                 VStack(alignment: .center, spacing: 6) {
                     Text(EventDateFormatter.eventDay(currentPost.created_at))
                         .font(.caption)
@@ -481,9 +483,10 @@ struct StoryFullScreenView: View {
         }
     }
 
-    /// Tap zones: left/right thirds navigate; a long press pauses playback and its
-    /// release never navigates — only a quick tap does.
-    private func navigationGesture(width: CGFloat) -> some Gesture {
+    /// Tap zones: only the left/right corners in a ±25% vertical band from the
+    /// center navigate; a long press pauses playback and its release never
+    /// navigates — only a quick tap does.
+    private func navigationGesture(width: CGFloat, height: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { _ in
                 if !isPressing {
@@ -497,9 +500,10 @@ struct StoryFullScreenView: View {
                 let duration = Date().timeIntervalSince(pressStart)
                 resumePlayback()
                 guard duration < Self.longPressDuration else { return }
-                if value.location.x < width * 0.35 {
+                guard abs(value.location.y - height / 2) <= height * 0.25 else { return }
+                if value.location.x < width * 0.3 {
                     goPrev()
-                } else if value.location.x > width * 0.65 {
+                } else if value.location.x > width * 0.7 {
                     goNext()
                 }
             }
@@ -549,7 +553,8 @@ struct StoryContent: View {
     @State private var showThumb = true
 
     var body: some View {
-        if post.type == .video, let url = post.resolvedMediaURL {
+        Group {
+            if post.type == .video, let url = post.resolvedMediaURL {
             ZStack {
                 StoryVideoPlayer(
                     url: url,
@@ -578,23 +583,45 @@ struct StoryContent: View {
                 }
             }
         } else if let url = post.resolvedMediaURL {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().aspectRatio(contentMode: .fit)
+                let frameHeight = UIScreen.main.bounds.height * 0.7
+                let frameWidth = frameHeight * 9 / 16
+                
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        ZStack(alignment: .center) {
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                                .clipped()
+                                .blur(radius: 12)
+                                .opacity(0.8)
+                                .scaleEffect(1.05)
+
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: frameWidth, height: frameHeight)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .clipped()
+                        }
+                        .clipped()
                         .onAppear { onLoaded(post) }
-                case .failure:
-                    placeholderView
-                case .empty:
-                    thumbPlaceholder
-                @unknown default:
-                    placeholderView
+                    case .failure:
+                        placeholderView
+                    case .empty:
+                        thumbPlaceholder
+                    @unknown default:
+                        placeholderView
+                    }
                 }
-            }
         } else {
             placeholderView
         }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+}
 
     private var thumbPlaceholder: some View {
         Group {

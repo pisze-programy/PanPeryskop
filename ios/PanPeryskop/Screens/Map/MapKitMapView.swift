@@ -297,20 +297,9 @@ struct SinglePostPin: View {
                         .clipShape(Circle())
                 }
             }
-            .opacity(post.watched && !post.isEvent ? 0.4 : 1)
-            .saturation(post.watched && !post.isEvent ? 0.3 : 1)
+            .opacity(post.watched ? 0.4 : 1)
+            .saturation(post.watched ? 0.3 : 1)
             .offset(y: bounceOffset)
-        }
-        .overlay(alignment: .topTrailing) {
-            if post.watched && !post.isEvent {
-                Image(systemName: "eye.slash.fill")
-                    .font(.system(size: 9))
-                    .foregroundColor(.red)
-                    .padding(3)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
-                    .offset(x: 6, y: -6)
-            }
         }
     }
 

@@ -142,6 +142,20 @@ export async function resolveKupGeo(
 
 // Parse a kupbilecik event from raw HTML (listing block or festival page).
 // Extracts everything from HTML — no extra browser calls.
+// kupbilecik renders events OUTSIDE the covered cities with a parenthetical like
+// "(poza miastem 5829 km)" in the venue/address. That text is informational junk
+// for the user AND poisons geo resolution (fallbackSeedGeo can't place it) — so
+// it is STRIPPED from the venue/city/address (the event itself is kept).
+export function stripOutsideCityText(s: string): string {
+  return (s || '')
+    .replace(/\(\s*[^)]*(?:poza\s*miast|[0-9]{2,}\s*km)[^)]*\)/gi, '')
+    .replace(/\s+,/g, ',') // "Festiwal , Warszawa" → "Festiwal, Warszawa"
+    .replace(/,{2,}/g, ',')
+    .replace(/[,\s]+$/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 function buildFromHtml(
   ctx: SeedContext, href: string, html: string, id: string, fallbackTime: string | null = null, listing = ''
 ): SeedCandidate | null {
@@ -153,9 +167,9 @@ function buildFromHtml(
   if (!time) return null;
 
   const cityM = html.match(/href="\/miasta\/\d+\/[^"]+"[^>]*>\s*<b>([^<]+)<\/b>/);
-  const city = cityM ? decode(cityM[1]) : '';
+  const city = stripOutsideCityText(cityM ? decode(cityM[1]) : '');
   const venueM = html.match(/href="\/obiekty\/(\d+)\/[^"]+"[^>]*>\s*([^<]+?)<\/a>/);
-  const venueName = venueM ? decode(venueM[2]) : '';
+  const venueName = stripOutsideCityText(venueM ? decode(venueM[2]) : '');
   const venueId = venueM ? venueM[1] : '';
 
   const posterM = html.match(/data-src="(https:\/\/www\.kupbilecik\.pl\/img\/(?:gal_plakaty|gal_baza)\/[^"'?\s]+)/);

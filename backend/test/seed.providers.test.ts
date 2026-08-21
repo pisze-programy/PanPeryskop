@@ -7,6 +7,7 @@ import { parseEvlEvent, getOfferUrl } from '../src/seed/providers/eventylive';
 import { parseMkFilms, extractToken, resolveMkGeo } from '../src/seed/providers/multikino';
 import { parseHeliosPayload } from '../src/seed/providers/helios';
 import { parseCcScope } from '../src/seed/providers/cinemacity';
+import { stripOutsideCityText } from '../src/seed/providers/kupbilecik';
 import { mkScopes, MK_CINEMAS, MK_ALL_CINEMAS } from '../src/seed/core/constants';
 import { PROVIDER_CONFIGS, enabledForExecutor, configOf, priorityOf, EXECUTOR } from '../src/seed/providers/registry';
 import { workerExecutor } from '../src/seed/executors/worker';
@@ -501,4 +502,13 @@ test('meetup: parseMeetupNode uses venue coords, resolves (0,0) via fallback, PH
   // ONLINE → dropped
   const online = await parseMeetupNode({ ...node, eventType: 'ONLINE' }, 'Poznań', fb, opts);
   assert.equal(online, null);
+});
+
+test('kupbilecik: stripOutsideCityText removes the "(poza miastem … km)" parenthetical, keeps the event text', () => {
+  assert.equal(stripOutsideCityText('Centrum Kultury i Wypoczynku (poza miastem 5829 km)'), 'Centrum Kultury i Wypoczynku');
+  assert.equal(stripOutsideCityText('Festiwal (Poza miastami 12 km), Warszawa'), 'Festiwal, Warszawa');
+  assert.equal(stripOutsideCityText('Klub (poza miastem)'), 'Klub');
+  assert.equal(stripOutsideCityText('Normalne Miejsce, ul. Testowa'), 'Normalne Miejsce, ul. Testowa', 'normal text untouched');
+  assert.equal(stripOutsideCityText('(poza miastem 5829 km)'), '', 'garbage-only becomes empty (event still collected, geo falls back)');
+  assert.equal(stripOutsideCityText(''), '');
 });

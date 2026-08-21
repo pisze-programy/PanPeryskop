@@ -39,7 +39,7 @@ import process from 'node:process';
 import { enabledForExecutor } from '../../../../src/seed/providers/registry';
 import { EXECUTOR } from '../types';
 import type { ProviderConfig, VpsSpec } from '../../../../src/seed/providers/registry';
-import { runScopeSource, findRepoDir, loadCp, saveCp } from './runtime';
+import { runScopeSource, findRepoDir, loadCp, saveCp, logLoad, gcNow, resourcesOk, resetResourceCheck } from './runtime';
 import type { ScopeSource } from './runtime';
 import { lumaSource } from './runners/luma';
 import { meetupSource } from './runners/meetup';
@@ -63,6 +63,23 @@ const LOG = join(VPS_LOGS_DIR, 'orchestrator.log');
 const STATUS = join(VPS_LOGS_DIR, 'status.json');
 const LOCK = join(VPS_LOGS_DIR, 'orchestrator.lock');
 const PROXY_URL = `http://${VPS_IPV4_PROXY_HOST}:${VPS_IPV4_PROXY_PORT}`;
+
+// Light providers first, heaviest LAST: an OOM mid-cinemacity must never take
+// luma/meetup/multikino down with it (they already ran + uploaded).
+const VPS_RUN_ORDER: Record<string, number> = {
+  luma: 0, meetup: 1, multikino: 2, cinemacity: 3,
+};
+
+// Log process state before dying — uncaught errors give us the last known good
+// scope/phase (the OS OOM-killer can't, but anything catchable can).
+process.on('uncaughtException', (e) => {
+  logLoad('uncaughtException', e instanceof Error ? e.message : String(e));
+  process.exit(1);
+});
+process.on('unhandledRejection', (e) => {
+  logLoad('unhandledRejection', e instanceof Error ? e.message : String(e));
+  process.exit(1);
+});
 
 const SOURCES: Partial<Record<ProviderId, ScopeSource>> = {
   [lumaSource.source]: lumaSource,
@@ -234,10 +251,14 @@ function upload(cfg: ProviderConfig, env: Record<string, string>): void {
     return;
   }
   log(`upload ${cfg.id}: ${out}`);
-  const r = runSync('node', [join(REPO_DIR, 'admin', 'src', 'seed-ingest.mjs'), out, '--approve'], {
+  logLoad('upload:start', cfg.id);
+  // Own heap cap — seed-ingest runs in PARALLEL with the orchestrator, so both
+  // processes must fit the 256 MB box together.
+  const r = runSync('node', ['--max-old-space-size=64', join(REPO_DIR, 'admin', 'src', 'seed-ingest.mjs'), out, '--approve'], {
     cwd: REPO_DIR,
     env,
   });
+  logLoad('upload:end', `${cfg.id} exit=${r.status}`);
   if (r.output.trim()) log(`${cfg.id} upload: ${r.output.trim().slice(0, 2000)}`);
   if (r.status !== 0) throw new Error(`seed-ingest ${cfg.id} exit ${r.status}`);
 }
@@ -290,6 +311,7 @@ async function main(): Promise<void> {
     log('another orchestrator instance running — skip');
     return;
   }
+  logLoad('pass:start');
 
   const plan = enabledForExecutor(EXECUTOR.VPS).filter((c) => !onlyProvider || c.id === onlyProvider);
   if (!plan.length) {
@@ -297,6 +319,9 @@ async function main(): Promise<void> {
     releaseLock();
     return;
   }
+  // Deterministic run order: lightest first, heaviest (cinemacity) last.
+  plan.sort((a, b) => (VPS_RUN_ORDER[a.id] ?? 99) - (VPS_RUN_ORDER[b.id] ?? 99));
+  log(`plan order: ${plan.map((p) => p.id).join(', ')}`);
 
   if (DRY) {
     const dry = plan.map((c) => {
@@ -370,7 +395,18 @@ async function main(): Promise<void> {
 
     // In-process, chunked and resource-gated: runScopeSource pauses (checkpoint
     // saved) when the box is busy; the next 5-min kick resumes. No subprocess.
+    logLoad('provider:start', cfg.id);
     const completed = await runScopeSource(sourceFor(cfg.id), { full: doFull });
+    logLoad('provider:end', cfg.id);
+    gcNow(`after-provider:${cfg.id}`);
+    // When the box is still tight after a provider, stop the pass — the remaining
+    // providers resume on the next kick instead of stacking heap on top of heap.
+    resetResourceCheck();
+    if (!resourcesOk(`between-providers:${cfg.id}`)) {
+      log(`resources tight after ${cfg.id} — stop pass, resume next kick`);
+      status('paused', `${cfg.id} (resources)`);
+      break;
+    }
     if (completed) {
       try {
         upload(cfg, env);
@@ -393,6 +429,7 @@ async function main(): Promise<void> {
   releaseLock();
   const dur = Math.round((Date.now() - t0) / 1000);
   const stats = runSync('sh', ['-c', "awk '/MemAvailable/{print \"MemAvail=\"int($2/1024)\"MB\"}' /proc/meminfo; cut -d' ' -f1 /proc/loadavg | xargs printf 'load1=%s'"], { cwd: REPO_DIR });
+  logLoad('pass:end', `dur=${dur}s ${stats.output.trim().replace(/\n/g, ' ')}`);
   log(`pass done in ${dur}s ${stats.output.trim().replace(/\n/g, ' ')}`);
 }
 

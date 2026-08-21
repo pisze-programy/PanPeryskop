@@ -15,7 +15,7 @@
 // Output layout (output/mediaDir/checkpoint) comes from the provider registry —
 // the single source of truth shared with the Worker and every executor.
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync, existsSync, renameSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, renameSync, rmSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -52,6 +52,43 @@ export const PACING_MS = 500;
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export { SEED_DAYS_AHEAD };
+
+// ---------- load instrumentation (admin/vps/logs/load.log) ----------
+// Always-on sampler correlating phases with process RSS/heap and box memory/load,
+// so a memory spike (or OOM) is traceable to the exact scope/phase that caused it.
+// logLoad ALWAYS reads /proc fresh (never the gate's 10s cache).
+const LOAD_LOG = join(LOGS_DIR, 'load.log');
+const LOAD_LOG_MAX = 5 * 1024 * 1024;
+export function logLoad(phase: string, meta = ''): void {
+  try {
+    const u = process.memoryUsage();
+    const line = `[${new Date().toISOString()}] ${phase} | rss=${Math.round(u.rss / 1048576)}MB heap=${Math.round(u.heapUsed / 1048576)}/${Math.round(u.heapTotal / 1048576)}MB ext=${Math.round(u.external / 1048576)}MB avail=${memAvailableMb()}MB load1=${load1()}${meta ? ` | ${meta}` : ''}\n`;
+    mkdirSync(LOGS_DIR, { recursive: true });
+    let size = 0;
+    try { size = statSync(LOAD_LOG).size; } catch { /* first write */ }
+    if (size > LOAD_LOG_MAX) {
+      try { renameSync(LOAD_LOG, `${LOAD_LOG}.1`); } catch { /* noop */ }
+    }
+    writeFileSync(LOAD_LOG, line, { flag: 'a' });
+  } catch { /* logging must never break seeding */ }
+}
+// Periodic in-run sampler — even a hung phase keeps showing what it was doing.
+setInterval(() => logLoad('tick'), 30_000).unref();
+// Explicit GC (requires --expose-gc) with before/after deltas — shows what V8
+// returns to the OS and keeps the heap from ratcheting up over a long pass.
+export function gcNow(phase: string): void {
+  const g = (globalThis as { gc?: () => void }).gc;
+  if (typeof g !== 'function') return;
+  const before = Math.round(process.memoryUsage().heapUsed / 1048576);
+  g();
+  const after = Math.round(process.memoryUsage().heapUsed / 1048576);
+  logLoad(`gc:${phase}`, `heap ${before}MB -> ${after}MB (freed ${Math.max(0, before - after)}MB)`);
+}
+// Force the next resourcesOk() to re-read /proc (used between providers).
+export function resetResourceCheck(): void {
+  lastCheck = 0;
+  lastOk = true;
+}
 
 // ---------- CLI ----------
 export interface CommonArgs {
@@ -381,32 +418,44 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
   const scopes = src.scopes();
   let processed = 0;
   let done = 0;
-  const stagedCands: SeedCandidate[] = [];
+  let paused = false;
+  logLoad('run-start', `${src.source} target=${target} scopes=${scopes.length} full=${full} entries=${entries.size}`);
   for (const scope of scopes) {
     if (cp.scopes?.[scope] === 'done') { done++; continue; }
     if (args.limit && processed >= args.limit) break;
     // Resource gate: the VPS is a small shared box. When memory/load is tight we
     // PAUSE (progress is checkpointed) so other processes are never starved — the
     // next cron kick (30 min) resumes from here.
-    if (!resourcesOk()) {
+    if (!resourcesOk(`scope-start:${scope}`)) {
       console.log(`[${src.source}] resources tight — pausing (${done}/${scopes.length} scopes done, resume next kick)`);
+      paused = true;
       break;
     }
     processed++;
+    const t0 = Date.now();
     try {
       const cands = (await src.fetchScope(scope, ctx))
         .filter((c) => c.startMs >= windowStart && c.startMs <= windowEnd);
       console.log(`[${src.source}] ✓ ${scope}: ${cands.length} candidates`);
+      logLoad('scope:fetch', `${src.source}/${scope} cands=${cands.length} ${Date.now() - t0}ms`);
 
       const rejectGeo = src.scopeGeo(scope) ?? firstCoords(cands);
       if (rejectGeo && !args.noReject) await rejectDisplaced(scope, rejectGeo, cands);
 
       let staged = 0;
+      let cancelled = 0;
+      let i = 0;
       for (const c of cands) {
+        i++;
+        // Mid-scope gate: a whole cinema/day is staged here (JSON parse + media),
+        // which can spike memory WITHOUT the scope-boundary gate ever firing.
+        if (i % 10 === 0 && !resourcesOk(`scope:stage:${scope}`)) { paused = true; break; }
         if (!hasCoords(c)) {
           console.error(`✗ ${c.externalId}: missing coordinates — skipped`);
           continue;
         }
+        // Cancelled entries are dropped here (not staged) — saves media download.
+        if (isCancelled(c.title)) { cancelled++; continue; }
         const ext = mediaExt(c.mediaUrl || '');
         const stem = mediaStem(c.mediaUrl || '');
         const rel = `${spec.mediaDir}/${stem}.${ext}`;
@@ -415,41 +464,34 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
           if (!c.mediaUrl) throw new Error('no media url');
           if (!args.noMedia && !existsSync(file)) await downloadMedia(c.mediaUrl, file);
           entries.set(c.externalId, entryFor(c, rel));
-          stagedCands.push(c);
           staged++;
         } catch (e) {
           console.error(`✗ media ${c.externalId}: ${(e as Error).message}`);
         }
       }
+      if (paused) { logLoad('gate-pause', `mid-scope:${scope} staged=${staged}/${cands.length}`); break; }
 
       cp.scopes![scope] = 'done';
       done++;
       saveCp(cpPath, cp);
       writeEntries(jsonPath, entries);
-      console.log(`  staged ${staged}/${cands.length}`);
+      console.log(`  staged ${staged}/${cands.length} (cancelled ${cancelled})`);
+      logLoad('scope:done', `${src.source}/${scope} staged=${staged}/${cands.length} cancelled=${cancelled} entries=${entries.size} ${Date.now() - t0}ms`);
+      gcNow(`after-scope:${scope}`);
     } catch (e) {
       console.error(`✗ ${scope}: ${(e as Error).message} — retry next run`);
+      logLoad('scope:error', `${src.source}/${scope}: ${(e as Error).message}`);
     }
     await sleep(PACING_MS);
-  }
-
-  // Cinema providers (multikino/cinemacity) show EVERYTHING the API returns —
-  // morning/evening showings, PL/UA language versions, dubbing variants. No
-  // manifest dedupe. Only drop events whose title says cancelled (always removed).
-  if (stagedCands.length > 0) {
-    const cancelledIds = stagedCands.filter((c) => isCancelled(c.title)).map((c) => c.externalId);
-    if (cancelledIds.length > 0) {
-      for (const id of cancelledIds) entries.delete(id);
-      console.log(`[${src.source}] dropped ${cancelledIds.length} cancelled entries`);
-      writeEntries(jsonPath, entries);
-    }
   }
 
   // Do NOT mark the checkpoint complete here — the orchestrator marks it only
   // AFTER a successful upload, so a failed upload is retried on the next kick
   // instead of being skipped forever.
   console.log(`[${src.source}] done target=${target} scopes=${done}/${scopes.length} → ${spec.output}`);
-  return done >= scopes.length;
+  logLoad('run-done', `${src.source} scopes=${done}/${scopes.length} entries=${entries.size} paused=${paused}`);
+  gcNow('run-end');
+  return done >= scopes.length && !paused;
 }
 
 // Drop staged entries whose day already passed — the app only browses the current
@@ -513,14 +555,16 @@ function seedDays(args: CommonArgs): { days: string[]; target: string } {
 // the box to other processes when memory or load is tight.
 let lastCheck = 0;
 let lastOk = true;
-export function resourcesOk(): boolean {
+export function resourcesOk(phase = ''): boolean {
   if (process.platform !== 'linux') return true;
   const now = Date.now();
   if (now - lastCheck < 10_000) return lastOk; // check at most once per 10s
   lastCheck = now;
   lastOk = readResources();
   if (!lastOk) {
-    console.error(`resources gate: MemAvailable=${memAvailableMb()}MB load1=${load1()} — pausing`);
+    const msg = `MemAvailable=${memAvailableMb()}MB load1=${load1()}`;
+    console.error(`resources gate: ${msg} — pausing`);
+    logLoad('gate-pause', `${phase ? `${phase} | ` : ''}${msg}`);
   }
   return lastOk;
 }

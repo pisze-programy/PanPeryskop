@@ -10,4 +10,8 @@
 export PATH="/usr/bin:/bin:/usr/local/bin:$PATH"
 export HTTPS_PROXY="http://127.0.0.1:1057"
 export NODE_USE_ENV_PROXY="1"
-exec node /opt/panperyskop/backend/dist/vps-seed.mjs "$@"
+# Hard heap ceiling (256 MB box, ~80 MB baseline) + --expose-gc for the
+# per-scope / between-provider gcNow() calls. If V8 can't stay under the cap it
+# fails INSIDE the process (checkpointed, next kick resumes) instead of the OS
+# OOM-killer taking everything down.
+exec node --max-old-space-size=170 --expose-gc /opt/panperyskop/backend/dist/vps-seed.mjs "$@"

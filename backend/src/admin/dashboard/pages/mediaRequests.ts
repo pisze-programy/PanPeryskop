@@ -1,10 +1,12 @@
 // Media Requests page: stat cards, Leaflet map with active/expired pins, top
 // cities + users, filters, table with pagination.
+// Client logic in /admin/static/js/pages/media-requests.js; markers bootstrapped
+// inline (window.ppRequests). Leaflet loads from CDN (page assets).
 
 import { Hono } from 'hono';
-import { empty, esc, fmtDate, pill, relAgo, safeJson, pagination, icon } from '../../ui';
+import { empty, esc, fmtDate, icon, initialsAvatar, pageHeader, pagination, pill, relAgo, safeJson, staticFilePath } from '../../ui';
 import { CITIES, cityBbox, nearestCity } from '../../cities';
-import { mediaRequestsSql, mediaRequestsCountSql } from '../../queries';
+import { mediaRequestsSql, mediaRequestsCountSql, MediaRequestFilter } from '../../queries';
 import { requireSession } from '../common';
 import { MEDIA_REQUEST_TTL_MS } from '../../../core/models';
 import { todayWarsaw } from '../../../seed/core/dates';
@@ -13,19 +15,6 @@ import { renderPage } from './shared';
 const pageRoutes = new Hono<{ Bindings: Env }>();
 const PAGE_SIZE = 50;
 const DAYS_OPTIONS = [7, 14, 30, 90];
-
-function initials(name: string): string {
-  const n = (name || '').trim();
-  if (!n) return '?';
-  return n.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-}
-
-function colorFor(s: string): string {
-  const palette = ['bg-primary-lt', 'bg-success-lt', 'bg-warning-lt', 'bg-danger-lt', 'bg-azure-lt', 'bg-purple-lt'];
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return palette[h % palette.length];
-}
 
 pageRoutes.get('/media-requests', async (c) => {
   const db = c.env.DB;
@@ -40,7 +29,13 @@ pageRoutes.get('/media-requests', async (c) => {
   const page = Math.max(1, parseInt(String(q.page || '1'), 10) || 1);
   const since = Date.now() - days * 86_400_000;
 
-  const [c14, cToday, cActive, cUsers, topUsers, rows, cnt] = await Promise.all([
+  const filter: MediaRequestFilter = {
+    days, cityId: city, userId,
+    fromMs: from ? Date.parse(`${from}T00:00:00+02:00`) : null,
+    toMs: to ? Date.parse(`${to}T23:59:59.999+02:00`) : null,
+    activeOnly, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE,
+  };
+  const [c14, cToday, cActive, cUsers, topUsers, list, cnt] = await Promise.all([
     db.prepare('SELECT COUNT(*) n FROM media_requests WHERE created_at>=?').bind(since).first<{ n: number }>(),
     db.prepare(`SELECT COUNT(*) n FROM media_requests WHERE date(created_at/1000,'unixepoch','+2 hours')=?`).bind(todayWarsaw()).first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM media_requests WHERE created_at>=?').bind(Date.now() - MEDIA_REQUEST_TTL_MS).first<{ n: number }>(),
@@ -48,18 +43,17 @@ pageRoutes.get('/media-requests', async (c) => {
     db.prepare(`SELECT COALESCE(NULLIF(u.username,''), u.device_id) AS user, r.user_id, COUNT(*) n, MAX(r.created_at) last_at
                 FROM media_requests r JOIN users u ON r.user_id=u.id
                 WHERE r.created_at>=? GROUP BY r.user_id ORDER BY n DESC, last_at DESC LIMIT 10`).bind(since).all<{ user: string; user_id: string; n: number; last_at: number }>(),
-    Promise.resolve(mediaRequestsSql({ days, cityId: city, userId, fromMs: from ? Date.parse(`${from}T00:00:00+02:00`) : null, toMs: to ? Date.parse(`${to}T23:59:59.999+02:00`) : null, activeOnly, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE })),
-    Promise.resolve(mediaRequestsCountSql({ days, cityId: city, userId, fromMs: from ? Date.parse(`${from}T00:00:00+02:00`) : null, toMs: to ? Date.parse(`${to}T23:59:59.999+02:00`) : null, activeOnly })),
+    Promise.resolve(mediaRequestsSql(filter)),
+    Promise.resolve(mediaRequestsCountSql(filter)),
   ]);
-  const listSql = rows as unknown as { sql: string; binds: unknown[] };
+  const listSql = list as unknown as { sql: string; binds: unknown[] };
   const countSql = cnt as unknown as { sql: string; binds: unknown[] };
-  const listRes = await db.prepare(listSql.sql).bind(...listSql.binds).all<any>();
+  const rows = await db.prepare(listSql.sql).bind(...listSql.binds).all<any>();
   const cntRow = await db.prepare(countSql.sql).bind(...countSql.binds).first<{ n: number }>();
   const total = cntRow?.n ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const results = (listRes.results ?? []) as any[];
+  const results = (rows.results ?? []) as any[];
 
-  // City counts derived from the full window (not just the page) for the map/right column.
   const allForCities = await db.prepare('SELECT lat, lng FROM media_requests WHERE created_at>=?').bind(since).all<{ lat: number; lng: number }>();
   const cityCounts = new Map<string, number>();
   for (const r of allForCities.results ?? []) {
@@ -68,6 +62,11 @@ pageRoutes.get('/media-requests', async (c) => {
   }
   const topCities = [...cityCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
   const maxCity = Math.max(1, ...topCities.map(([, n]) => n));
+
+  const header = `<div class="mb-3">
+    <h2 class="mb-2">Media Requests</h2>
+    <div class="text-secondary fs-5">Piny „poproś o relację” od użytkowników. Aktywne przez 4 h od dodania, cooldown 30 min / user.</div>
+  </div>`;
 
   const statCard = (label: string, value: number, color = '') => `<div class="col-sm-6 col-xl-2">
     <div class="card card-sm"><div class="card-body">
@@ -78,11 +77,10 @@ pageRoutes.get('/media-requests', async (c) => {
     ${statCard('Ostatnie 14 dni', c14?.n ?? 0)}
     ${statCard('Dziś', cToday?.n ?? 0, 'text-primary')}
     ${statCard('Aktywne teraz', cActive?.n ?? 0, (cActive?.n ?? 0) > 0 ? 'text-success' : '')}
-    ${statCard('Miasta (14d)', topCities.length, '')}
+    ${statCard('Miasta (14d)', topCities.length)}
     ${statCard('Użytkownicy (14d)', cUsers?.n ?? 0)}
   </div>`;
 
-  // ---- Markers for the map (bounded by the filters, capped at ~5000) ----
   const markers = results.map((r) => ({
     id: r.id, lat: Number(r.lat), lng: Number(r.lng), user: String(r.user || ''),
     city: nearestCity(r.lat, r.lng), at: r.created_at, active: r.created_at >= Date.now() - MEDIA_REQUEST_TTL_MS,
@@ -115,7 +113,7 @@ pageRoutes.get('/media-requests', async (c) => {
         <div class="card-header"><h3 class="card-title">Użytkownicy</h3></div>
         <ul class="list-group list-group-flush">
           ${(topUsers.results ?? []).map((u) => `<li class="list-group-item d-flex align-items-center gap-2">
-            <span class="avatar avatar-sm ${colorFor(u.user_id)}">${esc(initials(u.user))}</span>
+            ${initialsAvatar(u.user, u.user_id, 'avatar-sm')}
             <span class="text-truncate">${esc(u.user)}</span>
             <span class="text-muted ms-auto">${u.n}</span>
           </li>`).join('') || '<li class="list-group-item text-secondary">Brak danych.</li>'}
@@ -124,7 +122,6 @@ pageRoutes.get('/media-requests', async (c) => {
     </div>
   </div>`;
 
-  // ---- Filters ----
   const cityOpts = `<option value="">Wszystkie miasta</option>` + CITIES.map((ct) =>
     `<option value="${ct.id}" ${city === ct.id ? 'selected' : ''}>${esc(ct.name)}</option>`).join('');
   const userOpts = `<option value="">Wszyscy użytkownicy</option>` + (topUsers.results ?? []).map((u) =>
@@ -159,23 +156,17 @@ pageRoutes.get('/media-requests', async (c) => {
   const rowsHtml = results.map((r) => {
     const active = r.created_at >= Date.now() - MEDIA_REQUEST_TTL_MS;
     const city = nearestCity(r.lat, r.lng);
+    const cityPill = city.startsWith('poza miastami') ? pill(city, 'muted') : pill(city, 'ok');
     return `<tr>
       <td><div class="d-flex align-items-center gap-2">
-        <span class="avatar avatar-sm ${colorFor(r.user_id)}">${esc(initials(r.user))}</span>
+        ${initialsAvatar(r.user, r.user_id, 'avatar-sm')}
         <span>${esc(r.user)}</span></div></td>
-      <td>${pill(city, city === 'poza miastami (0km)' || city.startsWith('poza miastami') ? 'muted' : 'ok')}</td>
+      <td>${cityPill}</td>
       <td class="font-monospace">${Number(r.lat).toFixed(4)}, ${Number(r.lng).toFixed(4)}</td>
       <td>${fmtDate(r.created_at)} <span class="text-muted fs-6">(${new Date(r.created_at).toLocaleTimeString('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' })} PL)</span></td>
       <td>${active ? pill('aktywne', 'ok') : pill('wygasłe', 'muted')}</td>
       <td class="text-secondary">${relAgo(r.created_at)}</td></tr>`;
   }).join('');
-
-  const emptyRow = `<tr><td colspan="6">${empty()}</td></tr>`;
-
-  const header = `<div class="mb-3">
-    <h2 class="mb-2">Media Requests</h2>
-    <div class="text-secondary fs-5">Piny „poproś o relację” od użytkowników. Aktywne przez 4 h od dodania, cooldown 30 min / user.</div>
-  </div>`;
 
   const body = `${header}${statRow}${mapCard}${filterBar}
   <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
@@ -185,30 +176,13 @@ pageRoutes.get('/media-requests', async (c) => {
   <div class="card mb-3">
     <div class="table-responsive"><table class="table table-vcenter card-table">
       <thead><tr><th>Użytkownik</th><th>Miasto</th><th>Pozycja</th><th>Czas</th><th>Status</th><th>Wiek</th></tr></thead>
-      <tbody>${rowsHtml || emptyRow}</tbody></table></div>
+      <tbody>${rowsHtml || `<tr><td colspan="6">${empty()}</td></tr>`}</tbody></table></div>
   </div>
-  <script>window.ppRequests=${safeJson(markers)};window.ppReqTtl=${MEDIA_REQUEST_TTL_MS};</script>
-  <script>
-  window.addEventListener('load', function(){
-    if(!window.L||!window.ppRequests) return;
-    var reqs=window.ppRequests;
-    var map=L.map('ppMap').setView([52.1,19.3],6);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
-    var group=L.featureGroup();
-    reqs.forEach(function(r){
-      var color=r.active?'#206bc4':'#8d99ab';
-      var ic=L.divIcon({className:'',html:'<div style="width:12px;height:12px;background:'+color+';border:2px solid #fff;border-radius:50%;box-shadow:0 0 4px rgba(0,0,0,.4)"></div>',iconSize:[12,12],iconAnchor:[6,6]});
-      var m=L.marker([r.lat,r.lng],{icon:ic}).addTo(group);
-      m.bindPopup('<strong>'+r.user+'</strong><br>'+r.city+'<br>'+new Date(r.at).toLocaleString('pl-PL',{timeZone:'Europe/Warsaw'})+'<br>'+r.lat.toFixed(4)+', '+r.lng.toFixed(4)+'<br>'+(r.active?'<span class="text-success">aktywne</span>':'<span class="text-muted">wygasłe</span>'));
-    });
-    group.addTo(map);
-    try{map.fitBounds(group.getBounds().pad(0.2));}catch(e){map.setView([52.1,19.3],6);}
-  });
-  </script>`;
+  <script>window.ppRequests=${safeJson(markers)};window.ppReqTtl=${MEDIA_REQUEST_TTL_MS};</script>`;
 
   return renderPage(c, 'Media Requests', '/admin/media-requests', body, {
     css: ['https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'],
-    scripts: ['https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'],
+    scripts: ['https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js', staticFilePath('media-requests')],
   });
 });
 

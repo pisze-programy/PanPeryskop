@@ -1,8 +1,10 @@
 // Events / Moderacja page: summary cards, advanced filters, table with badges +
 // kebab actions, Tabler pagination, CSV export, geo override, in-place saves.
+// Client logic lives in /admin/static/js/pages/events.js; page data is bootstrapped
+// inline (window.ppLinkMap / window.ppSel).
 
 import { Hono } from 'hono';
-import { bars, empty, esc, pagination, pill, relAgo, toastContainer, toastScript, icon } from '../../ui';
+import { bars, card, cardHeader, esc, empty, icon, jsStr, mediaModal, alertModal, linkModal, pageHeader, pager, staticFilePath, table, dropdown, dropdownItem, dropdownDivider } from '../../ui';
 import { CITIES, cityBbox } from '../../cities';
 import { eventsSql, eventsCountSql, nearestCity, EventFilter, eventSourceBreakdown, eventStatusBreakdown } from '../../queries';
 import { requireSession } from '../common';
@@ -14,7 +16,6 @@ import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
 
-// ---------- Events / Moderacja ----------
 const EVENT_SOURCES = Object.values(ProviderId);
 
 const SOURCE_BADGE: Record<string, string> = {
@@ -25,19 +26,6 @@ const SOURCE_BADGE: Record<string, string> = {
 
 function norm(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-// Escape a string for embedding inside a single-quoted JS string in an onclick
-// attribute. Backslash first so the \uXXXX escapes we add stay literal.
-function jsStr(s: string): string {
-  return s
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, '\\u0027')
-    .replace(/"/g, '\\u0022')
-    .replace(/</g, '\\u003C')
-    .replace(/>/g, '\\u003E')
-    .replace(/&/g, '\\u0026')
-    .replace(/\n/g, '\\n');
 }
 
 function parseTags(t: string | null | undefined): string[] {
@@ -70,13 +58,12 @@ function tagSelect(e: { id: string; status: string; tag: string; extra: number }
   const missingCls = hasTag ? '' : ' text-warning';
   const opts = `<option value="" ${!hasTag ? 'selected' : ''}>— brak —</option>` + catalog.map((t) =>
     `<option value="${esc(t.id)}" ${e.tag === t.id ? 'selected' : ''}>${esc(t.label)}</option>`).join('');
-  const lockIcon = `<span title="Tag ustawiony ręcznie">🔒</span>`;
   return `<form method="post" action="/admin/events/${esc(e.id)}">
     <select name="tags" class="form-select form-select-sm${missingCls}" onchange="ppUpdate('${esc(e.id)}', this.form)">${opts}</select>
     ${e.extra > 0 ? `<span class="text-muted fs-6">+${e.extra}</span>` : ''}
     <input type="hidden" name="field" value="tag" />
     <input type="hidden" name="status" value="${esc(e.status)}" />
-    <span class="text-muted">${lockIcon}</span></form>`;
+    ${e.extra >= 0 ? '' : ''}</form>`;
 }
 
 function eventThumb(e: { thumb_key?: string | null; media_key?: string | null }): string {
@@ -87,7 +74,6 @@ function eventThumb(e: { thumb_key?: string | null; media_key?: string | null })
     <span class="avatar avatar-sm rounded"><img src="/media/${esc(key)}" alt="" loading="lazy" onerror="this.closest('.avatar').classList.add('bg-secondary-lt')" /></span></a>`;
 }
 
-// Title: opens the event link (resolved per selected showtime).
 function titleHtml(linkUrl: string | null, title: string, id: string, source: string): string {
   const t = esc(title || '—');
   const src = `<span class="text-muted fs-6">(${esc(source)})</span>`;
@@ -125,7 +111,7 @@ function placeLabel(loc: string, lat: number | null, lng: number | null): string
   return [city, venue].filter(Boolean).join(', ');
 }
 
-const PIN_ICON = `<svg xmlns="http://www.w3.org/2000/svg" class="icon align-middle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-map-pin"/></svg>`;
+const PIN_ICON = icon('map-pin', 'icon align-middle');
 
 function placeHtml(lat: number | null, lng: number | null, loc: string): string {
   const label = esc(placeLabel(loc, lat, lng));
@@ -191,18 +177,16 @@ function dateCell(e: { id: string; event_date?: string | null; showtimes?: strin
   </div>`;
 }
 
-// Row actions kebab — replaces the lone "⋯" geo button.
+// Row actions kebab.
 function rowActions(id: string, loc: string, lat: number | null, lng: number | null, url: string | null): string {
-  return `<div class="dropdown text-end">
-    <button class="btn btn-action dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Akcje">${icon('more-horizontal')}</button>
-    <div class="dropdown-menu dropdown-menu-end">
-      <a class="dropdown-item" href="#" onclick="ppGeoOpen('${esc(id)}','${jsStr(loc)}','${lat ?? ''}','${lng ?? ''}');return false;">Zmień GEO</a>
-      <a class="dropdown-item" href="#" onclick="ppMediaOpen('/media/${esc(url ?? '')}');return false;">Podgląd mediów</a>
-      <a class="dropdown-item" href="#" onclick="ppOpenLink(ppLinkFor('${esc(id)}', '${jsStr(url ?? '')}'));return false;">Otwórz link</a>
-      <div class="dropdown-divider"></div>
-      <a class="dropdown-item" href="#" onclick="ppCopyId('${esc(id)}');return false;">Kopiuj ID</a>
-    </div>
-  </div>`;
+  const items = [
+    dropdownItem({ html: 'Zmień GEO', onclick: `ppGeoOpen('${esc(id)}','${jsStr(loc)}','${lat ?? ''}','${lng ?? ''}');return false;` }),
+    dropdownItem({ html: 'Podgląd mediów', onclick: `ppMediaOpen('/media/${esc(url ?? '')}');return false;` }),
+    dropdownItem({ html: 'Otwórz link', onclick: `ppOpenLink(ppLinkFor('${esc(id)}', '${jsStr(url ?? '')}'));return false;` }),
+    dropdownDivider,
+    dropdownItem({ html: 'Kopiuj ID', onclick: `ppCopyId('${esc(id)}');return false;` }),
+  ].join('');
+  return dropdown({ items });
 }
 
 // Build the query-string for pager/segmented links from the current params.
@@ -278,7 +262,7 @@ pageRoutes.get('/events', async (c) => {
     tagCatalog(db),
     eventStatusBreakdown(db),
     eventSourceBreakdown(db),
-    db.prepare('SELECT geo_locked, tags_locked, is_sold_out, COUNT(*) n FROM posts WHERE category=\'events\' GROUP BY geo_locked, tags_locked, is_sold_out').all<{ geo_locked: number; tags_locked: number; is_sold_out: number; n: number }>(),
+    db.prepare("SELECT geo_locked, tags_locked, is_sold_out, COUNT(*) n FROM posts WHERE category='events' GROUP BY geo_locked, tags_locked, is_sold_out").all<{ geo_locked: number; tags_locked: number; is_sold_out: number; n: number }>(),
     db.prepare("SELECT COUNT(*) n FROM posts WHERE category='events' AND (tags IS NULL OR tags='[]')").first<{ n: number }>(),
   ]);
   const { results } = await db.prepare(sql).bind(...binds).all();
@@ -296,35 +280,25 @@ pageRoutes.get('/events', async (c) => {
     return [gl, tl, so];
   })();
   const nUntagged = untagged?.n ?? 0;
+  const nTotal = statusCnt.approved + statusCnt.pending + statusCnt.rejected;
 
   // ---- Page header ----
-  const header = `<div class="page-header d-print-none mb-3">
-    <div class="row align-items-center">
-      <div class="col">
-        <div class="page-pretitle">PanPeryskop Admin</div>
-        <h2 class="page-title">Eventy
-          <span class="badge bg-secondary-lt text-secondary ms-2">${statusCnt.approved + statusCnt.pending + statusCnt.rejected} wydarzeń</span>
-          <a class="badge bg-warning-lt text-warning ms-1 text-decoration-none" href="/admin/events?status=pending">moderacja: ${statusCnt.pending}</a>
-        </h2>
-        <div class="text-secondary">Wydarzenia z ${srcCnt.length} źródeł</div>
-      </div>
-      <div class="col-auto">
-        <div class="btn-list">
-          <a class="btn btn-outline-secondary" href="/admin/events?status=pending">Moderacja</a>
-          <a class="btn btn-primary" href="/admin/events?export=csv&${esc(buildQs(q, {}))}">${icon('download')} Eksport CSV</a>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  const header = pageHeader({
+    pretitle: 'PanPeryskop Admin',
+    title: `Eventy <span class="badge bg-secondary-lt text-secondary ms-2">${nTotal} wydarzeń</span> <a class="badge bg-warning-lt text-warning ms-1 text-decoration-none" href="/admin/events?status=pending">moderacja: ${statusCnt.pending}</a>`,
+    subtitle: `<div class="text-secondary">Wydarzenia z ${srcCnt.length} źródeł</div>`,
+    actions: `<div class="btn-list">
+      <a class="btn btn-outline-secondary" href="/admin/events?status=pending">Moderacja</a>
+      <a class="btn btn-primary" href="/admin/events?export=csv&${esc(buildQs(q, {}))}">${icon('download')} Eksport CSV</a>
+    </div>`,
+  });
 
-  // ---- Stat cards ----
-  const pctApproved = statusCnt.approved + statusCnt.pending + statusCnt.rejected > 0
-    ? Math.round((statusCnt.approved / (statusCnt.approved + statusCnt.pending + statusCnt.rejected)) * 1000) / 10
-    : 0;
+  // ---- Stat cards (queue health) ----
+  const pctApproved = nTotal > 0 ? Math.round((statusCnt.approved / nTotal) * 1000) / 10 : 0;
   const statRowA = `<div class="row row-cards mb-3">
     <div class="col-6 col-md-3"><div class="card card-sm"><div class="card-body">
       <div class="text-secondary text-uppercase fw-bold fs-6">Razem wydarzeń</div>
-      <div class="h2 mb-0" id="ppStat-total">${statusCnt.approved + statusCnt.pending + statusCnt.rejected}</div>
+      <div class="h2 mb-0" id="ppStat-total">${nTotal}</div>
     </div></div></div>
     <div class="col-6 col-md-3"><div class="card card-sm"><div class="card-body">
       <div class="text-secondary text-uppercase fw-bold fs-6">Zaakceptowane</div>
@@ -351,11 +325,11 @@ pageRoutes.get('/events', async (c) => {
     ${qCard('Bez taga', nUntagged, 'text-warning', 'Wydarzenia bez żadnego taga', 'ppStat-untagged')}
   </div>`;
 
-  const srcCard = `<div class="card mb-3">
-    <div class="card-header"><h3 class="card-title">Źródła</h3>
-      <div class="card-actions"><span class="text-secondary fs-5">${srcCnt.length} źródeł</span></div></div>
-    <div class="card-body">${bars(srcCnt.map((s) => ({ label: s.source, value: s.n })))}</div>
-  </div>`;
+  const srcCard = card({
+    header: cardHeader({ title: 'Źródła', actions: `<span class="text-secondary fs-5">${srcCnt.length} źródeł</span>` }),
+    body: bars(srcCnt.map((s) => ({ label: s.source, value: s.n }))),
+    class: 'mb-3',
+  });
 
   // ---- Filter bar ----
   const seg = (label: string, href: string, active: boolean, extra = '') =>
@@ -402,7 +376,7 @@ pageRoutes.get('/events', async (c) => {
         <label class="form-label">Źródła</label>
         <div class="dropdown">
           <button class="btn btn-outline-secondary w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">${esc(srcSelLabel)}</button>
-          <div class="dropdown-menu dropdown-menu-end p-2" style="min-width:230px">
+          <div class="dropdown-menu dropdown-menu-end p-2 pp-drop-min">
             ${srcCheckboxes}
             <div class="dropdown-divider"></div>
             <button class="btn btn-sm btn-primary w-100" type="button" onclick="ppApplySources()">Zastosuj</button>
@@ -433,14 +407,8 @@ pageRoutes.get('/events', async (c) => {
     : '';
 
   // ---- Pagination ----
-  const pageHref = (p: number) => {
-    const qs = buildQs(q, {});
-    return `/admin/events?${qs}${qs ? '&' : ''}page=${p}`;
-  };
-  const pager = (top: boolean) => `<div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-    <span class="text-secondary">${total} wydarzeń · strona ${page} / ${totalPages}</span>
-    ${pagination(page, totalPages, pageHref)}
-  </div>`;
+  const pageHref = (p: number) => `/admin/events?${buildQs(q, {})}${buildQs(q, {}) ? '&' : ''}page=${p}`;
+  const pagerTop = pager(`${total} wydarzeń · strona ${page} / ${totalPages}`, page, totalPages, pageHref);
 
   // ---- Table rows ----
   const ppLinkMap: Record<string, Record<string, string>> = {};
@@ -463,7 +431,6 @@ pageRoutes.get('/events', async (c) => {
     const tagLockBadge = e.tags_locked ? `<span class="badge bg-primary-lt text-primary" title="Tag ustawiony ręcznie">${icon('lock', 'icon icon-tiny me-1')}tag</span>` : '';
     const rejectHint = e.status === 'rejected' && e.rejection_reason ? `<i class="text-danger" title="${esc(String(e.rejection_reason))}">⚠</i>` : '';
     const seedDay = e.created_at ? new Date(e.created_at).toISOString().slice(5, 10) : '';
-    const mediaUrl = e.media_key || e.thumb_key || '';
     return `<tr>
       <td>${eventThumb(e)}</td>
       <td>
@@ -481,51 +448,20 @@ pageRoutes.get('/events', async (c) => {
       <td class="text-end">${rowActions(e.id, loc, e.lat, e.lng, e.link_url)}</td></tr>`;
   }).join('');
 
-  const emptyRow = `<tr><td colspan="7">
-    <div class="empty">
-      <div class="empty-icon">${icon('search')}</div>
-      <p class="empty-title">Brak wydarzeń</p>
-      <p class="empty-subtitle text-secondary">Nic nie pasuje do tych filtrów.</p>
-      <div class="empty-action"><a class="btn btn-outline-secondary" href="/admin/events">Wyczyść filtry</a></div>
-    </div></td></tr>`;
+  const emptyRow = `<tr><td colspan="7">${empty({
+    icon: icon('search'),
+    title: 'Brak wydarzeń',
+    subtitle: 'Nic nie pasuje do tych filtrów.',
+    action: '<a class="btn btn-outline-secondary" href="/admin/events">Wyczyść filtry</a>',
+  })}</td></tr>`;
 
-  const tableHtml = `<div class="card mb-3">
-    <div class="table-responsive"><table class="table table-vcenter card-table">
-      <thead><tr><th>Media</th><th>Wydarzenie</th><th>Data</th><th>Status</th><th>Tag</th><th class="text-end">Akcje</th></tr></thead>
-      <tbody>${rows || emptyRow}</tbody></table></div>
-  </div>`;
+  const tableHtml = table({
+    head: '<thead><tr><th>Media</th><th>Wydarzenie</th><th>Data</th><th>Status</th><th>Tag</th><th class="text-end">Akcje</th></tr></thead>',
+    rows: rows || emptyRow,
+  });
 
-  // ---- Modals (Tabler flavor) ----
-  const modals = `<div class="modal fade" id="ppMediaModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-xl modal-blur">
-      <div class="modal-content bg-transparent border-0 shadow-none">
-        <img id="ppMediaImg" alt="" class="img-fluid mx-auto rounded" onclick="ppMediaClose()" />
-      </div>
-    </div>
-  </div>
-  <div class="modal fade" id="ppLinkModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-blur">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.open(window.ppCurExternal||window.ppCurLink||'', '_blank', 'noopener')">Otwórz w nowej karcie</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="ppLinkClose()">Zamknij (ESC)</button>
-        </div>
-        <div class="modal-body p-0">
-          <iframe id="ppLinkFrame" title="Podgląd" class="w-100 border-0 d-block" height="640" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="modal fade" id="ppAlertModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm modal-blur">
-      <div class="modal-content">
-        <div class="modal-header"><h3 class="modal-title" id="ppAlertTitle">Uwaga</h3></div>
-        <div class="modal-body" id="ppAlertMsg"></div>
-        <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="ppAlertClose()">OK (ESC)</button></div>
-      </div>
-    </div>
-  </div>
-  <div class="modal fade" id="ppGeoModal" tabindex="-1">
+  // ---- Modals ----
+  const geoModal = `<div class="modal fade" id="ppGeoModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-blur">
       <div class="modal-content">
         <div class="modal-status bg-danger" id="ppGeoStatus" style="display:none"></div>
@@ -543,104 +479,10 @@ pageRoutes.get('/events', async (c) => {
     </div>
   </div>`;
 
-  const body = `${header}${statRowA}${statRowB}${srcCard}${modBanner}${filterBar}${pager(true)}${tableHtml}${pager(false)}${modals}
-  ${toastContainer()}
-  <script>window.ppLinkMap=${JSON.stringify(ppLinkMap)};window.ppSel=${JSON.stringify(ppSel)};window.ppLinkFor=function(id,fb){var m=window.ppLinkMap[id],s=window.ppSel[id];if(m&&s&&m[s])return m[s];return fb;};window.ppBlockedHosts=['multikino.pl','ebilet.pl'];window.ppOpenLink=function(u){var h=(u||'').split('/')[2]||'';var blocked=window.ppBlockedHosts.some(function(b){return h.indexOf(b)!==-1;});if(blocked){window.open(u,'_blank','noopener');}else{ppLinkOpen(u);}};</script>
-  <script>
-  (function(){
-    var media=document.getElementById('ppMediaModal'), alertM=document.getElementById('ppAlertModal'), linkM=document.getElementById('ppLinkModal');
-    var modalShow=function(el){var B=window.tabler||window.bootstrap; if(B&&B.Modal&&el) B.Modal.getOrCreateInstance(el).show();};
-    var modalHide=function(el){var B=window.tabler||window.bootstrap; if(B&&B.Modal&&el){var m=B.Modal.getInstance(el); if(m) m.hide();}};
-    window.ppMediaOpen=function(src){var img=document.getElementById('ppMediaImg'); if(img) img.src=src; modalShow(media);};
-    window.ppMediaClose=function(){modalHide(media);};
-    window.ppLinkOpen=function(url,external){
-      window.ppCurLink=url; window.ppCurExternal=external||url;
-      var f=document.getElementById('ppLinkFrame');
-      if(f) f.src=url;
-      modalShow(linkM);
-      setTimeout(function(){linkM.focus();},0);
-    };
-    window.ppLinkClose=function(){var f=document.getElementById('ppLinkFrame'); if(f) f.src='about:blank'; modalHide(linkM);};
-    window.ppAlertOpen=function(title,msg){document.getElementById('ppAlertTitle').textContent=title;document.getElementById('ppAlertMsg').textContent=msg;modalShow(alertM);};
-    window.ppAlertClose=function(){modalHide(alertM);};
-    var geoM=document.getElementById('ppGeoModal');
-    window.ppGeoId=null;
-    window.ppGeoStatusEl=document.getElementById('ppGeoStatus');
-    window.ppGeoShowStatus=function(msg){if(window.ppGeoStatusEl){window.ppGeoStatusEl.textContent=msg;window.ppGeoStatusEl.style.display='block';}};
-    window.ppGeoClearStatus=function(){if(window.ppGeoStatusEl){window.ppGeoStatusEl.style.display='none';}};
-    window.ppGeoOpen=function(id,loc,lat,lng){
-      window.ppGeoId=id; window.ppGeoClearStatus();
-      document.getElementById('ppGeoName').value=loc||'';
-      document.getElementById('ppGeoCoord').value=(lat&&lng)?lat+', '+lng:'';
-      modalShow(geoM);
-      setTimeout(function(){geoM.focus();document.getElementById('ppGeoName').select();},0);
-    };
-    window.ppGeoClose=function(){modalHide(geoM);window.ppGeoId=null;};
-    window.ppGeoSwap=function(id,placeHtml,geoBtn){
-      var cell=document.querySelector('.pp-place-cell[data-id="'+id+'"]');
-      if(cell&&placeHtml) cell.outerHTML=placeHtml;
-      var btn=document.querySelector('.pp-geo-btn[data-id="'+id+'"]');
-      if(btn&&geoBtn) btn.outerHTML=geoBtn;
-    };
-    window.ppGeoSave=function(){
-      var id=window.ppGeoId; if(!id) return;
-      var name=document.getElementById('ppGeoName').value.trim();
-      var coord=(document.getElementById('ppGeoCoord').value||'').replace(/[\\u200B-\\u200F\\uFEFF\\u00A0\\s]+/g,'');
-      var m=/^(-?\\d+(?:\\.\\d+)?)[,;](-?\\d+(?:\\.\\d+)?)$/.exec(coord);
-      if(!name){window.ppGeoShowStatus('Podaj nazwę lokalizacji.');return;}
-      if(!m){window.ppGeoShowStatus('Nieprawidłowe współrzędne. Wklej np. 54.42656865607224, 18.58054868650763');return;}
-      fetch('/admin/events/'+encodeURIComponent(id)+'/geo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,lat:parseFloat(m[1]),lng:parseFloat(m[2])})})
-        .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
-        .then(function(resp){window.ppGeoSwap(id,resp&&resp.placeHtml,resp&&resp.geoBtn);window.ppGeoClose();window.ppToast('GEO zaktualizowane.','success');})
-        .catch(function(){window.ppToast('Nie udało się zapisać GEO.','danger');});
-    };
-    var frame=document.getElementById('ppLinkFrame');
-    if(frame){frame.addEventListener('load',function(){linkM.focus();});}
-    window.ppUpdate=function(id,formEl){
-      var sel=formEl.querySelector('select');
-      var fd=new FormData(formEl);
-      fetch('/admin/events/'+encodeURIComponent(id),{method:'POST',body:fd})
-        .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
-        .then(function(resp){
-          if(sel){
-            sel.classList.remove('text-success','text-warning','text-danger');
-            if(sel.name==='status'){
-              if(sel.value==='approved') sel.classList.add('text-success');
-              else if(sel.value==='pending') sel.classList.add('text-warning');
-              else sel.classList.add('text-danger');
-            }
-            sel.style.outline='2px solid var(--tblr-success)';
-            setTimeout(function(){sel.style.outline='';},700);
-          }
-          if(resp&&resp.counts){
-            var set=function(id,v){var el=document.getElementById(id); if(el) el.textContent=String(v);};
-            set('ppStat-total',resp.counts.total); set('ppStat-approved',resp.counts.approved);
-            set('ppStat-pending',resp.counts.pending); set('ppStat-rejected',resp.counts.rejected);
-            set('ppStat-untagged',resp.counts.untagged);
-          }
-          window.ppToast('Zapisano.','success');
-        })
-        .catch(function(){window.ppToast('Nie udało się zapisać zmiany.','danger');});
-    };
-    window.ppApplySources=function(){
-      var out=[];
-      document.querySelectorAll('.pp-src:checked').forEach(function(cb){out.push(cb.value);});
-      var h=document.getElementById('ppSources');
-      if(h) h.value=out.join(',');
-      var form=h?h.closest('form'):null;
-      if(form) form.submit();
-    };
-    window.ppClearFilters=function(e){
-      if(e) e.preventDefault();
-      location.href='/admin/events';
-    };
-    window.ppCopyId=function(id){
-      if(navigator.clipboard){navigator.clipboard.writeText(id).then(function(){window.ppToast('ID skopiowane.','success');},function(){});}
-      else window.ppToast('Kopiowanie nie działa w tym przeglądarce.','danger');
-    };
-  })();
-  </script>
-  ${toastScript()}`;
+  const body = `${header}${statRowA}${statRowB}${srcCard}${modBanner}${filterBar}${pagerTop}${tableHtml}${pagerTop}
+  ${mediaModal()}${linkModal()}${alertModal()}${geoModal}
+  <script>window.ppLinkMap=${JSON.stringify(ppLinkMap)};window.ppSel=${JSON.stringify(ppSel)};</script>
+  <script src="${staticFilePath('events')}"></script>`;
 
   return renderPage(c, 'Eventy', '/admin/events', body);
 });
@@ -669,12 +511,10 @@ pageRoutes.post('/events/:id', async (c) => {
   if (rawField === 'tag') {
     const row = await db.prepare('SELECT tags FROM posts WHERE id=?').bind(id).first<{ tags: string | null }>();
     const existing = parseTags(row?.tags ?? null);
-    // Merge, never clobber: edit the first (displayed) tag, keep the rest.
     let merged: string[];
     if (tag) merged = [tag, ...existing.filter((t) => t !== tag)];
     else merged = existing.length > 1 ? existing.slice(1) : [];
     const tagsJsonStr = merged.length ? JSON.stringify(merged) : null;
-    // Manual tag edits lock the tag so re-seeds keep the admin's choice.
     await db.prepare('UPDATE posts SET tags = ?, tags_locked = 1 WHERE id = ?').bind(tagsJsonStr, id).run();
   }
 

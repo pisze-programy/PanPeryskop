@@ -1,11 +1,14 @@
 // Seed page: stat cards with progress, ApexCharts trends, provider health,
 // batch timeline with collapse, paginated runs table with error drill-down.
+// Client logic in /admin/static/js/pages/seed.js; chart data bootstrapped inline.
 
 import { Hono } from 'hono';
-import { cards, empty, esc, fmtDate, fmtDur, fmtPct, pill, pagination, safeJson, toastContainer, toastScript, APEXCHARTS_SRC, icon } from '../../ui';
+import {
+  APEXCHARTS_SRC, card, cardHeader, empty, esc, fmtDate, fmtDur, fmtPct, icon, pageHeader,
+  pagination, pill, safeJson, staticFilePath,
+} from '../../ui';
 import { browserBudget, cronInfo } from '../../queries';
-import { requireSession } from '../common';
-import { fmtPctNum } from '../common';
+import { requireSession, fmtPctNum } from '../common';
 import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
@@ -41,12 +44,8 @@ pageRoutes.get('/seed', async (c) => {
   const page = Math.max(1, parseInt(String(q.page || '1'), 10) || 1);
 
   const since = Date.now() - 30 * 86_400_000;
-  const startOfMonth = (() => {
-    const d = new Date();
-    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
-  })();
+  const startOfMonth = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
 
-  // ---- Stat aggregates (30d, excluding legacy provider='total' rows) ----
   const [bAgg, rAgg, providers, budget, cron, stuck] = await Promise.all([
     db.prepare(`SELECT COUNT(*) total, COALESCE(SUM(status='done'),0) done, COALESCE(SUM(status='failed'),0) failed
                 FROM seed_batches WHERE created_at>=?`).bind(since).first<{ total: number; done: number; failed: number }>(),
@@ -60,7 +59,6 @@ pageRoutes.get('/seed', async (c) => {
       .bind(Date.now() - 2 * 3_600_000).all<{ day: string; status: string; updated_at: number; reason: string | null }>(),
   ]);
 
-  // ---- Chart series ----
   const [ingestSeries, batchSeries, budgetSeries] = await Promise.all([
     db.prepare(`SELECT date(created_at/1000,'unixepoch','+2 hours') d,
                 COALESCE(SUM(candidates),0) candidates, COALESCE(SUM(ingested),0) ingested, COALESCE(SUM(errors),0) errors
@@ -73,14 +71,12 @@ pageRoutes.get('/seed', async (c) => {
   ]);
   const active = (batchSeries.results ?? []).map((b) => b.n - b.done - b.failed);
 
-  // ---- Provider health ----
   const providerHealth = await db.prepare(`SELECT provider,
       COUNT(*) runs, COALESCE(SUM(candidates),0) candidates, COALESCE(SUM(ingested),0) ingested,
       COALESCE(SUM(errors),0) errors, COALESCE(AVG(duration_ms),0) avg_ms, COALESCE(SUM(browser_ms),0) browser_ms
     FROM seed_runs WHERE created_at>=? AND provider<>'total' GROUP BY provider ORDER BY ingested DESC`).bind(since).all<{ provider: string; runs: number; candidates: number; ingested: number; errors: number; avg_ms: number; browser_ms: number }>();
   const maxIngest = Math.max(1, ...(providerHealth.results ?? []).map((p) => p.ingested));
 
-  // ---- Batches (filtered) + scopes/runs IN ----
   let bSql = 'SELECT * FROM seed_batches WHERE created_at>=?';
   const bBinds: unknown[] = [since];
   if (dFrom) { bSql += ' AND day>=?'; bBinds.push(dFrom); }
@@ -100,7 +96,6 @@ pageRoutes.get('/seed', async (c) => {
     for (const r of (ru.results ?? [])) { (byBatch.get(r.batch_id) ?? byBatch.set(r.batch_id, []).get(r.batch_id)!).push({ kind: 'run', ...r }); }
   }
 
-  // ---- Runs table (paginated, filtered) ----
   let rWhere = 'r.created_at>=? AND r.provider<>?';
   const rBinds: unknown[] = [since, 'total'];
   if (dFrom) { rWhere += ' AND r.day>=?'; rBinds.push(dFrom); }
@@ -115,20 +110,12 @@ pageRoutes.get('/seed', async (c) => {
   const runRows = (await db.prepare(`SELECT r.*, b.day AS batch_day FROM seed_runs r LEFT JOIN seed_batches b ON b.id=r.batch_id
     WHERE ${rWhere} ORDER BY r.created_at DESC LIMIT ? OFFSET ?`).bind(...rBinds, RUN_PAGE_SIZE, (page - 1) * RUN_PAGE_SIZE).all<any>()).results ?? [];
 
-  // ---- Page header ----
-  const header = `<div class="page-header d-print-none mb-3">
-    <div class="row g-2 align-items-center">
-      <div class="col">
-        <div class="page-pretitle">Dashboard</div>
-        <h2 class="page-title">Seed</h2>
-      </div>
-      <div class="col-auto ms-auto">
-        <a class="btn btn-outline-secondary btn-sm" href="/admin/seed">${icon('refresh')} Odśwież</a>
-      </div>
-    </div>
-  </div>`;
-
-  // ---- Status strip ----
+  // ---- Header + status strip ----
+  const header = pageHeader({
+    pretitle: 'Dashboard',
+    title: 'Seed',
+    actions: `<a class="btn btn-outline-secondary btn-sm" href="/admin/seed">${icon('refresh')} Odśwież</a>`,
+  });
   const statusStrip = `<div class="alert alert-light d-flex align-items-center gap-3 flex-wrap mb-2">
     <span><strong>Cron:</strong> ${esc(cron.schedules.join(', '))} — ${esc(cron.summary)}</span>
     ${cron.nextRunMs ? `<span class="text-secondary">Następny: <strong>${fmtDate(cron.nextRunMs)}</strong></span>` : ''}
@@ -190,42 +177,26 @@ pageRoutes.get('/seed', async (c) => {
   </div>`;
 
   // ---- Charts ----
-  const chartRow1 = `<div class="row row-cards mb-3">
-    <div class="col-12 col-lg-8">
-      <div class="card">
-        <div class="card-header"><h3 class="card-title">Ingested / dzień</h3></div>
-        <div class="card-body"><div id="pp-chart-ingest"></div></div>
-      </div>
-    </div>
-    <div class="col-12 col-lg-4">
-      <div class="card">
-        <div class="card-header"><h3 class="card-title">Batche / dzień</h3></div>
-        <div class="card-body"><div id="pp-chart-batches"></div></div>
-      </div>
-    </div>
+  const chartRow = `<div class="row row-cards mb-3">
+    <div class="col-12 col-lg-8">${card({ header: cardHeader({ title: 'Ingested / dzień' }), body: '<div id="pp-chart-ingest"></div>' })}</div>
+    <div class="col-12 col-lg-4">${card({ header: cardHeader({ title: 'Batche / dzień' }), body: '<div id="pp-chart-batches"></div>' })}</div>
   </div>
   <div class="row row-cards mb-3">
-    <div class="col-12 col-lg-6">
-      <div class="card">
-        <div class="card-header"><h3 class="card-title">Browser budget / dzień</h3>
-          <div class="card-actions"><span class="text-secondary fs-5">limit ${budget ? fmtDur(budget.limitMs) : '—'}</span></div></div>
-        <div class="card-body"><div id="pp-chart-budget"></div></div>
-      </div>
-    </div>
-    <div class="col-12 col-lg-6">
-      <div class="card h-100">
-        <div class="card-header"><h3 class="card-title">Zakleszczone batche</h3></div>
-        <div class="card-body">
-          ${(stuck.results ?? []).length
-            ? `<div class="list-group list-group-flush">${(stuck.results ?? []).map((s) => `
-                <div class="list-group-item d-flex align-items-center justify-content-between">
-                  <span><strong>${esc(s.day)}</strong> ${batchStatusPill(s.status)} ${esc(fmtDate(s.updated_at))}</span>
-                  ${s.reason ? `<span class="text-danger fs-6" title="${esc(s.reason)}">${esc(String(s.reason).slice(0, 40))}</span>` : ''}
-                </div>`).join('')}</div>`
-            : `<div class="alert alert-success mb-0 d-flex align-items-center">${icon('check')} <span class="ms-2">Brak zakleszczonych batchy.</span></div>`}
-        </div>
-      </div>
-    </div>
+    <div class="col-12 col-lg-6">${card({
+      header: cardHeader({ title: 'Browser budget / dzień', actions: `<span class="text-secondary fs-5">limit ${budget ? fmtDur(budget.limitMs) : '—'}</span>` }),
+      body: '<div id="pp-chart-budget"></div>',
+    })}</div>
+    <div class="col-12 col-lg-6">${card({
+      class: 'h-100',
+      header: cardHeader({ title: 'Zakleszczone batche' }),
+      body: (stuck.results ?? []).length
+        ? `<div class="list-group list-group-flush">${(stuck.results ?? []).map((s) => `
+            <div class="list-group-item d-flex align-items-center justify-content-between">
+              <span><strong>${esc(s.day)}</strong> ${batchStatusPill(s.status)} ${esc(fmtDate(s.updated_at))}</span>
+              ${s.reason ? `<span class="text-danger fs-6" title="${esc(s.reason)}">${esc(String(s.reason).slice(0, 40))}</span>` : ''}
+            </div>`).join('')}</div>`
+        : `<div class="alert alert-success mb-0 d-flex align-items-center">${icon('check')} <span class="ms-2">Brak zakleszczonych batchy.</span></div>`,
+    })}</div>
   </div>`;
 
   // ---- Filters ----
@@ -262,12 +233,13 @@ pageRoutes.get('/seed', async (c) => {
         <div class="progress-bar" style="width:${Math.round((p.ingested / maxIngest) * 100)}%"></div></div></td>
     </tr>`;
   }).join('');
-  const providerCard = `<div class="card mb-3">
-    <div class="card-header"><h3 class="card-title">Zdrowie providerów</h3></div>
-    <div class="table-responsive"><table class="table table-vcenter card-table">
+  const providerCard = card({
+    class: 'mb-3',
+    header: cardHeader({ title: 'Zdrowie providerów' }),
+    body: `<div class="table-responsive"><table class="table table-vcenter card-table">
       <thead><tr><th>Provider</th><th>Runs</th><th>Cand</th><th>Ingest</th><th>Err</th><th>Err%</th><th>Śr. czas</th><th>Browser</th><th>Rel. ingest</th></tr></thead>
-      <tbody>${provRows || `<tr><td colspan="9" class="text-secondary">Brak runów w oknie.</td></tr>`}</tbody></table></div>
-  </div>`;
+      <tbody>${provRows || `<tr><td colspan="9" class="text-secondary">Brak runów w oknie.</td></tr>`}</tbody></table></div>`,
+  });
 
   // ---- Batch timeline (collapse) ----
   const batchCards = batches.map((b) => {
@@ -307,10 +279,11 @@ pageRoutes.get('/seed', async (c) => {
       </div>
     </div>`;
   }).join('');
-  const batchCard = `<div class="card mb-3">
-    <div class="card-header"><h3 class="card-title">Batche (kolejki)</h3></div>
-    <div class="list-group list-group-flush list-group-hoverable">${batchCards || `<div class="list-group-item text-secondary">Brak batchy w oknie.</div>`}</div>
-  </div>`;
+  const batchCard = card({
+    class: 'mb-3',
+    header: cardHeader({ title: 'Batche (kolejki)' }),
+    body: `<div class="list-group list-group-flush list-group-hoverable">${batchCards || `<div class="list-group-item text-secondary">Brak batchy w oknie.</div>`}</div>`,
+  });
 
   // ---- Runs table with totals footer ----
   const runHref = (p: number) => {
@@ -336,67 +309,29 @@ pageRoutes.get('/seed', async (c) => {
       <td>${errCell}</td><td>${fmtDur(r.duration_ms)}</td><td>${fmtDur(r.browser_ms)}</td></tr>
     ${(r.errors ?? 0) > 0 && r.error_detail ? `<tr class="collapse" id="err-${esc(r.id)}"><td colspan="11" class="bg-surface-secondary"><pre class="m-0 font-monospace text-break">${esc(String(r.error_detail))}</pre></td></tr>` : ''}`;
   }).join('');
-  const runsCard = `<div class="card mb-3">
-    <div class="card-header"><h3 class="card-title">Rundy (seed_runs)</h3>
-      <div class="card-actions"><span class="badge bg-secondary-lt">${runTotal}</span></div></div>
-    <div class="table-responsive"><table class="table table-vcenter card-table">
+  const runsCard = card({
+    class: 'mb-3',
+    header: cardHeader({ title: 'Rundy (seed_runs)', actions: `<span class="badge bg-secondary-lt">${runTotal}</span>` }),
+    body: `<div class="table-responsive"><table class="table table-vcenter card-table">
       <thead><tr><th>Czas</th><th>Dzień</th><th>Typ</th><th>Provider</th><th>Transport</th><th>Cand</th><th>Ingest</th><th>Skip</th><th>Err</th><th>Czas</th><th>Browser</th></tr></thead>
       <tbody>${runRowsHtml || `<tr><td colspan="11">${empty()}</td></tr>`}
       ${runRows.length ? `<tr class="table-light">
         <td colspan="6" class="fw-bold text-end">Suma (strona)</td>
-        <td class="fw-bold">${sumIngest}</td><td class="fw-bold">${sumSkip}</td><td class="fw-bold ${sumErr ? 'text-danger' : ''}">${sumErr}</td><td colspan="2"></td></tr>` : ''}</tbody></table></div>
-    <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <td class="fw-bold">${sumIngest}</td><td class="fw-bold">${sumSkip}</td><td class="fw-bold ${sumErr ? 'text-danger' : ''}">${sumErr}</td><td colspan="2"></td></tr>` : ''}</tbody></table></div>`,
+    footer: `<div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
       <span class="text-secondary">${runTotal} runów · strona ${page} / ${runPages}</span>
       ${pagination(page, runPages, runHref)}
-    </div>
-  </div>`;
+    </div>`,
+  });
 
-  const body = `${header}${statusStrip}${statsRow}${chartRow1}${filterBar}${providerCard}${batchCard}${runsCard}
-  ${toastContainer()}
+  const body = `${header}${statusStrip}${statsRow}${chartRow}${filterBar}${providerCard}${batchCard}${runsCard}
   <script>window.SEED_CHARTS=${safeJson({
     ingest: ingestSeries.results ?? [],
     batches: { days: (batchSeries.results ?? []).map((b) => b.d), done: (batchSeries.results ?? []).map((b) => b.done), failed: (batchSeries.results ?? []).map((b) => b.failed), active },
     budget: { days: (budgetSeries.results ?? []).map((b) => b.d), ms: (budgetSeries.results ?? []).map((b) => b.ms), limitMs: budget?.limitMs ?? null },
-  })};</script>
-  <script>
-  window.addEventListener('load', function(){
-    if(!window.ApexCharts||!window.SEED_CHARTS) return;
-    var C=window.ApexCharts, d=window.SEED_CHARTS;
-    var ts=function(day){return Date.parse(day+'T12:00:00');};
-    new C(document.getElementById('pp-chart-ingest'),{
-      chart:{type:'area',height:300,fontFamily:'inherit',toolbar:{show:false},zoom:{type:'x'}},
-      series:[
-        {name:'candidates',data:d.ingest.map(function(p){return [ts(p.d),p.candidates];})},
-        {name:'ingested',data:d.ingest.map(function(p){return [ts(p.d),p.ingested];})},
-      ],
-      colors:['#8d99ab','#206bc4'],stroke:{width:2,curve:'smooth'},fill:{opacity:0.08},
-      dataLabels:{enabled:false},grid:{strokeDashArray:4},
-      xaxis:{type:'datetime',labels:{format:'dd.MM'}},
-      tooltip:{theme:'dark'},
-    }).render();
-    new C(document.getElementById('pp-chart-batches'),{
-      chart:{type:'bar',height:300,fontFamily:'inherit',toolbar:{show:false},stacked:true},
-      series:[
-        {name:'done',data:d.batches.done},
-        {name:'failed',data:d.batches.failed},
-        {name:'active',data:d.batches.active},
-      ],
-      colors:['#2fb344','#d63939','#f59f00'],dataLabels:{enabled:false},grid:{strokeDashArray:4},
-      xaxis:{categories:d.batches.days},tooltip:{theme:'dark'},
-    }).render();
-    new C(document.getElementById('pp-chart-budget'),{
-      chart:{type:'bar',height:300,fontFamily:'inherit',toolbar:{show:false}},
-      series:[{name:'browser ms',data:d.budget.ms}],
-      colors:['#206bc4'],dataLabels:{enabled:false},grid:{strokeDashArray:4},
-      xaxis:{categories:d.budget.days,labels:{format:'dd.MM'}},tooltip:{theme:'dark'},
-      yaxis:{labels:{formatter:function(v){return Math.round(v/60000)+'min';}}},
-      annotations:d.budget.limitMs?{yaxis:[{y:d.budget.limitMs,strokeColor:'#d63939',label:{text:'limit'}}]}:{},
-    }).render();
-  });
-  </script>
-  ${toastScript()}`;
+  })};</script>`;
 
-  return renderPage(c, 'Seed', '/admin/seed', body, { scripts: [APEXCHARTS_SRC] });
+  return renderPage(c, 'Seed', '/admin/seed', body, { scripts: [APEXCHARTS_SRC, staticFilePath('seed')] });
 });
 
 export function registerSeed(parent: Hono<{ Bindings: Env }>): void {

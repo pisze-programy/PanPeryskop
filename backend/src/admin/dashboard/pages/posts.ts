@@ -1,43 +1,21 @@
 // Posts page (live): audit + takedown — stat cards, filters, table with dropdown
 // moderation actions (approve/reject/ban), reject-reason modal, toasts.
+// Client logic in /admin/static/js/pages/posts.js.
 
 import { Hono } from 'hono';
-import { cards, empty, esc, fmtDate, pill, relAgo, pagination, toastContainer, toastScript, icon } from '../../ui';
+import { cards, empty, esc, fmtDate, icon, initialsAvatar, mediaModal, pageHeader, pagination, pill, relAgo, staticFilePath, thumbAvatar } from '../../ui';
 import { postsSql, postsCountSql, postStatusCounts, PostsFilter } from '../../queries';
 import { requireSession } from '../common';
-import { STATUS_APPROVED, STATUS_REJECTED } from '../../../core/models';
+import { STATUS_REJECTED } from '../../../core/models';
+import { jsStr } from '../../utils/esc';
+import { truncate } from '../../utils/fmt';
 import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
 const PAGE_SIZE = 50;
 
-function jsStr(s: string): string {
-  return s
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, '\\u0027')
-    .replace(/"/g, '\\u0022')
-    .replace(/</g, '\\u003C')
-    .replace(/>/g, '\\u003E')
-    .replace(/&/g, '\\u0026')
-    .replace(/\n/g, '\\n');
-}
-
-function initials(name: string): string {
-  const n = (name || '').trim();
-  if (!n) return '?';
-  return n.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-}
-
 function statusPill(s: string): string {
   return s === 'approved' ? pill('approved', 'ok') : s === 'pending' ? pill('pending', 'warn') : pill('rejected', 'err');
-}
-
-function mediaCell(media_key: string | null, thumb_key: string | null): string {
-  const thumb = thumb_key || media_key;
-  const full = media_key || thumb_key;
-  if (!thumb) return '—';
-  return `<a href="javascript:void(0)" onclick="ppMediaOpen('/media/${esc(full)}');return false;" title="Podgląd">
-    <span class="avatar avatar-sm rounded"><img src="/media/${esc(thumb)}" alt="" loading="lazy" onerror="this.closest('.avatar').classList.add('bg-secondary-lt')" /></span></a>`;
 }
 
 pageRoutes.get('/posts', async (c) => {
@@ -59,6 +37,12 @@ pageRoutes.get('/posts', async (c) => {
   const cntRow = await db.prepare(cnt.sql).bind(...cnt.binds).first<{ n: number }>();
   const total = cntRow?.n ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const header = pageHeader({
+    title: 'Posty (live)',
+    subtitle: '<div class="page-subtitle text-secondary">Treści użytkowników z feeda na żywo (TTL 24 h)</div>',
+    actions: `<a href="/admin/posts" class="btn btn-outline-secondary" title="Odśwież">${icon('refresh')}</a>`,
+  });
 
   const statRow = cards([
     { label: 'Wszystkie posty', value: counts.total, href: '/admin/posts' },
@@ -123,22 +107,18 @@ pageRoutes.get('/posts', async (c) => {
     ${pagination(page, totalPages, pageHref)}
   </div>`;
 
-  const rowsHtml = results.map((p) => {
+  const rowsHtml = (results as any[]).map((p) => {
     const desc = String(p.description || '');
-    const shortDesc = desc.length > 80 ? desc.slice(0, 80) + '…' : desc;
-    const avatar = p.avatar_key
-      ? `<span class="avatar avatar-sm me-2"><img src="/media/${esc(p.avatar_key)}" alt="" onerror="this.closest('.avatar').classList.add('bg-primary-lt')" /></span>`
-      : `<span class="avatar avatar-sm me-2 bg-primary-lt">${esc(initials(p.author))}</span>`;
+    const mediaUrl = p.media_key || p.thumb_key || '';
     const bannedTag = p.banned ? ` · ${pill('BAN', 'err')}` : '';
     const typeBadge = p.type ? `<span class="badge bg-secondary-lt text-secondary ms-1">${esc(p.type)}</span>` : '';
     const reportBadge = p.open_reports ? `<span class="badge bg-warning-lt text-warning ms-1">raport ×${p.open_reports}</span>` : '';
     const rejectReason = p.status === 'rejected' && p.rejection_reason ? `<div class="text-danger fs-6">${esc(String(p.rejection_reason))}</div>` : '';
-    const mediaUrl = p.media_key || p.thumb_key || '';
     return `<tr data-id="${esc(p.id)}">
-      <td>${mediaCell(p.media_key, p.thumb_key)}</td>
+      <td>${p.thumb_key || p.media_key ? `<a href="javascript:void(0)" onclick="ppMediaOpen('/media/${esc(mediaUrl)}');return false;" title="Podgląd">${thumbAvatar(`/media/${esc(mediaUrl)}`)}</a>` : '—'}</td>
       <td>
         <div class="d-flex align-items-center">
-          ${avatar}
+          ${initialsAvatar(p.author, p.user_id, 'avatar-sm me-2')}
           <div>
             <div class="fw-semibold">${esc(p.author)}</div>
             <div class="text-muted fs-6 font-monospace">${esc(p.device_id || '')}${bannedTag}</div>
@@ -146,7 +126,7 @@ pageRoutes.get('/posts', async (c) => {
         </div>
       </td>
       <td title="${esc(desc)}">
-        ${esc(shortDesc)}${typeBadge}${reportBadge}${rejectReason}
+        ${esc(truncate(desc, 80))}${typeBadge}${reportBadge}${rejectReason}
       </td>
       <td><span title="${fmtDate(p.created_at)}">${relAgo(p.created_at)}</span></td>
       <td><div class="d-flex gap-1">
@@ -169,25 +149,12 @@ pageRoutes.get('/posts', async (c) => {
       </td></tr>`;
   }).join('');
 
-  const emptyRow = `<tr><td colspan="7">
-    <div class="empty">
-      <div class="empty-icon">${icon('photo')}</div>
-      <p class="empty-title">${status || type || search || reported ? 'Brak wyników dla filtrów' : 'Brak postów (live)'}</p>
-      <p class="empty-subtitle text-secondary">${status === 'pending' ? 'Posty live są zatwierdzane automatycznie — kolejka jest zwykle pusta.' : 'Zmniejsz zakres filtrów lub sprawdź później.'}</p>
-      ${status || type || search || reported ? '<div class="empty-action"><a class="btn btn-primary" href="/admin/posts">Wyczyść filtry</a></div>' : ''}
-    </div></td></tr>`;
-
-  const header = `<div class="page-header d-print-none mb-3">
-    <div class="row align-items-center">
-      <div class="col">
-        <h1 class="page-title">Posty (live)</h1>
-        <div class="page-subtitle text-secondary">Treści użytkowników z feeda na żywo (TTL 24 h)</div>
-      </div>
-      <div class="col-auto ms-auto d-print-none">
-        <a href="/admin/posts" class="btn btn-outline-secondary" title="Odśwież">${icon('refresh')}</a>
-      </div>
-    </div>
-  </div>`;
+  const emptyRow = `<tr><td colspan="7">${empty({
+    icon: icon('photo'),
+    title: status || type || search || reported ? 'Brak wyników dla filtrów' : 'Brak postów (live)',
+    subtitle: status === 'pending' ? 'Posty live są zatwierdzane automatycznie — kolejka jest zwykle pusta.' : 'Zmniejsz zakres filtrów lub sprawdź później.',
+    action: status || type || search || reported ? '<a class="btn btn-primary" href="/admin/posts">Wyczyść filtry</a>' : '',
+  })}</td></tr>`;
 
   const body = `${header}${statRow}${filterBar}${pager}
   <div class="card mb-3">
@@ -196,13 +163,7 @@ pageRoutes.get('/posts', async (c) => {
       <tbody>${rowsHtml || emptyRow}</tbody></table></div>
   </div>
   ${pager}
-  <div class="modal fade" id="ppMediaModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-xl modal-blur">
-      <div class="modal-content bg-transparent border-0 shadow-none">
-        <img id="ppMediaImg" alt="" class="img-fluid mx-auto rounded" onclick="ppMediaClose()" />
-      </div>
-    </div>
-  </div>
+  ${mediaModal()}
   <div class="modal fade" id="ppRejectModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-blur">
       <div class="modal-content">
@@ -220,55 +181,9 @@ pageRoutes.get('/posts', async (c) => {
       </div>
     </div>
   </div>
-  ${toastContainer()}
-  <script>
-  (function(){
-    var media=document.getElementById('ppMediaModal'), rejectM=document.getElementById('ppRejectModal');
-    var show=function(el){var B=window.tabler||window.bootstrap; if(B&&B.Modal&&el) B.Modal.getOrCreateInstance(el).show();};
-    var hide=function(el){var B=window.tabler||window.bootstrap; if(B&&B.Modal&&el){var m=B.Modal.getInstance(el); if(m) m.hide();}};
-    window.ppMediaOpen=function(src){var img=document.getElementById('ppMediaImg'); if(img) img.src=src; show(media);};
-    window.ppMediaClose=function(){hide(media);};
-    window.ppRejectId=null;
-    window.ppPostReject=function(id){window.ppRejectId=id; var r=document.getElementById('ppRejectReason'); if(r) r.value=''; var h=document.getElementById('ppRejectHint'); if(h) h.style.display='none'; show(rejectM);};
-    window.ppRejectClose=function(){hide(rejectM); window.ppRejectId=null;};
-    window.ppRejectSave=function(){
-      var id=window.ppRejectId; if(!id) return;
-      var reason=document.getElementById('ppRejectReason')?document.getElementById('ppRejectReason').value.trim():'';
-      if(!reason){var h=document.getElementById('ppRejectHint'); if(h) h.style.display='block'; return;}
-      ppPostSet(id,'rejected',reason);
-      window.ppRejectClose();
-    };
-    window.ppPostSet=function(id,status,reason){
-      var fd=new FormData();
-      fd.append('status',status);
-      if(reason) fd.append('reason',reason);
-      fetch('/admin/posts/'+encodeURIComponent(id)+'/status',{method:'POST',body:fd})
-        .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
-        .then(function(resp){
-          window.ppToast(resp.status==='rejected'?'Post odrzucony.':(resp.status==='approved'?'Post zatwierdzony.':'Zapisano.'),'success');
-          // If the current filter no longer matches the new status, drop the row.
-          var cur=new URLSearchParams(location.search).get('status');
-          if(cur && cur!==resp.status){ var tr=document.querySelector('tr[data-id="'+id+'"]'); if(tr) tr.remove(); return; }
-          var cell=document.querySelector('.pp-status-cell[data-id="'+id+'"]');
-          if(cell){
-            var s=resp.status;
-            cell.innerHTML=s==='approved'?'<span class="badge bg-success-lt text-success">approved</span>':s==='pending'?'<span class="badge bg-warning-lt text-warning">pending</span>':'<span class="badge bg-danger-lt text-danger">rejected</span>';
-          }
-        })
-        .catch(function(){window.ppToast('Nie udało się zapisać zmiany.','danger');});
-    };
-    window.ppPostBan=function(id,device){
-      if(!window.confirm('Zbanować urządzenie '+device+'?')) return;
-      fetch('/admin/posts/'+encodeURIComponent(id)+'/ban',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})})
-        .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
-        .then(function(){window.ppToast('Urządzenie autora zbanowane.','success');})
-        .catch(function(){window.ppToast('Nie udało się zbanować.','danger');});
-    };
-  })();
-  </script>
-  ${toastScript()}`;
+  <script src="${staticFilePath('posts')}"></script>`;
 
-  return renderPage(c, 'Posty', '/admin/posts', body);
+  return renderPage(c, 'Posty', '/admin/posts', body, { scripts: [staticFilePath('posts')] });
 });
 
 // Session-gated moderation (cookie auth, like events). Approve clears the reason.

@@ -1,24 +1,17 @@
 // Tags page: coverage, distribution charts, per-tag grid, add-tag form.
+// Client logic in /admin/static/js/pages/tags.js; data bootstrapped inline.
 
 import { Hono } from 'hono';
-import { cards, empty, esc, pill, safeJson, toastContainer, toastScript, APEXCHARTS_SRC, icon } from '../../ui';
+import {
+  APEXCHARTS_SRC, card, cardHeader, cards, empty, esc, icon, pageHeader,
+  pill, safeJson, staticFilePath,
+} from '../../ui';
 import { requireSession } from '../common';
 import { CANONICAL_TAG_SET, TAG_LABELS } from '../../../seed/core/tags';
 import { tagCatalog } from '../../../core/tagCatalog';
 import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
-
-function tagSlug(label: string): string {
-  return (label || '')
-    .normalize('NFC')
-    .toLowerCase()
-    .replaceAll('ł', 'l')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
 
 const NON_CINEMA = "substr(p.external_id,1,instr(p.external_id,'-')-1) NOT IN ('helios','cinemacity','multikino')";
 
@@ -68,6 +61,7 @@ pageRoutes.get('/tags', async (c) => {
   const nonCinemaCounts = new Map((nonCinema.results ?? []).map((r) => [r.tag, r.n]));
   const nMulti = multiTag?.n ?? 0;
   const customRows = customTags.results ?? [];
+  const pctTagged = nTotal ? Math.round((nTagged / nTotal) * 100) : 0;
 
   // ---- KPI ----
   const kpi = cards([
@@ -80,19 +74,17 @@ pageRoutes.get('/tags', async (c) => {
   ]);
 
   // ---- Coverage bar ----
-  const pctTagged = nTotal ? Math.round((nTagged / nTotal) * 100) : 0;
-  const coverage = `<div class="card mb-3">
-    <div class="card-header"><h3 class="card-title">Zasięg tagowania</h3></div>
-    <div class="card-body">
-      <div class="progress mb-2" style="height:1.5rem">
+  const coverage = card({
+    class: 'mb-3',
+    header: cardHeader({ title: 'Zasięg tagowania' }),
+    body: `<div class="progress mb-2" style="height:1.5rem">
         <div class="progress-bar bg-success" style="width:${pctTagged}%">${pctTagged}%</div>
         <div class="progress-bar bg-warning" style="width:${100 - pctTagged}%"></div>
       </div>
       <div class="d-flex justify-content-between text-secondary fs-5">
         <span>${nTagged} z tagiem</span><span>${nEmpty} bez taga</span>
-      </div>
-    </div>
-  </div>`;
+      </div>`,
+  });
 
   // ---- Chart data ----
   const filmy = counts.get('filmy') ?? 0;
@@ -104,13 +96,9 @@ pageRoutes.get('/tags', async (c) => {
   const nonCinemaLabels = ['Meetup', 'Muzyka', 'Teatr', 'Inne', 'Komedia'];
 
   // ---- Add tag card ----
-  const addTag = `<div class="card mb-3">
-    <div class="card-header">
-      <h3 class="card-title">Dodaj nowy tag</h3>
-      <div class="card-actions"><span class="badge bg-secondary-lt">tylko dodawanie</span></div>
-    </div>
-    <div class="card-body">
-      <form method="post" action="/admin/tags" class="d-flex gap-2 mb-2">
+  const addTag = card({
+    header: cardHeader({ title: 'Dodaj nowy tag', actions: '<span class="badge bg-secondary-lt">tylko dodawanie</span>' }),
+    body: `<form method="post" action="/admin/tags" class="d-flex gap-2 mb-2">
         <div class="input-group w-100">
           <input name="label" class="form-control" placeholder="np. Sport" required maxlength="40" oninput="ppTagSlugPreview(this.value)" aria-label="Nazwa nowego tagu" />
           <button class="btn btn-primary" type="submit">${icon('plus')} Dodaj</button>
@@ -122,9 +110,8 @@ pageRoutes.get('/tags', async (c) => {
         <div class="tags-list" id="ppCustomTags">
           ${customRows.length ? customRows.map((t) => `<span class="tag" title="Utworzony: ${esc(new Date(t.created_at).toISOString().slice(0, 10))}">${esc(t.label)}</span>`).join('') : '<span class="text-muted">— brak —</span>'}
         </div>
-      </div>
-    </div>
-  </div>`;
+      </div>`,
+  });
 
   // ---- Tag card grid ----
   const known = catalog.map((t) => ({ id: t.id, label: t.label, custom: !CANONICAL_TAG_SET.has(t.id) }));
@@ -165,140 +152,77 @@ pageRoutes.get('/tags', async (c) => {
         <td>${n}</td><td>${pctTag}%</td><td>${pctAll}%</td><td class="text-secondary">${statuses || '—'}</td></tr>`;
     }).join('');
 
-  const msgHtml = msg === 'added' ? `<div class="alert alert-success">Tag dodany.</div>`
-    : msg === 'dup' ? `<div class="alert alert-warning">Tag już istnieje.</div>`
-    : msg === 'invalid' ? `<div class="alert alert-warning">Nieprawidłowa nazwa taga.</div>` : '';
+  const msgHtml = msg === 'added' ? '<div class="alert alert-success">Tag dodany.</div>'
+    : msg === 'dup' ? '<div class="alert alert-warning">Tag już istnieje.</div>'
+    : msg === 'invalid' ? '<div class="alert alert-warning">Nieprawidłowa nazwa taga.</div>' : '';
 
-  const header = `<div class="page-header d-print-none mb-3" aria-label="Nagłówek">
-    <div class="row g-2 align-items-center">
-      <div class="col">
-        <div class="page-pretitle">Panel · Taksonomia</div>
-        <h2 class="page-title">Tagi</h2>
-        <div class="text-secondary mt-1">${nTotal} eventów · ${nTagged} z tagiem (${pctTagged}%) · ${customRows.length} tagów własnych</div>
-      </div>
-      <div class="col-auto ms-auto d-print-none">
-        <div class="btn-list">
-          <a class="btn btn-outline-secondary" href="/admin/events">${icon('calendar-event')} Moderacja</a>
-          <a class="btn btn-primary" href="#ppTagAdd" data-bs-toggle="collapse">${icon('plus')} Dodaj tag</a>
-        </div>
-      </div>
+  const header = pageHeader({
+    pretitle: 'Panel · Taksonomia',
+    title: 'Tagi',
+    subtitle: `<div class="text-secondary mt-1">${nTotal} eventów · ${nTagged} z tagiem (${pctTagged}%) · ${customRows.length} tagów własnych</div>`,
+    actions: `<div class="btn-list">
+      <a class="btn btn-outline-secondary" href="/admin/events">${icon('calendar-event')} Moderacja</a>
+      <a class="btn btn-primary" href="#ppTagAdd" data-bs-toggle="collapse">${icon('plus')} Dodaj tag</a>
+    </div>`,
+  });
+
+  const chartsRow = `<div class="row row-cards mb-3">
+    <div class="col-12 col-lg-7">
+      ${card({
+        header: cardHeader({ title: 'Rozkład tagów' }),
+        body: `<div class="row">
+          <div class="col"><div id="pp-chart-tag-dist" class="position-relative"></div></div>
+          <div class="col-md-auto">
+            <div class="divide-y divide-y-fill">
+              <div class="px-3"><div class="text-secondary"><span class="status-dot bg-primary me-1"></span>Filmy</div><div class="h2">${filmy} · ${nTagged ? Math.round((filmy / nTagged) * 100) : 0}%</div></div>
+              <div class="px-3"><div class="text-secondary"><span class="status-dot bg-success me-1"></span>Meetup</div><div class="h2">${meetup}</div></div>
+              <div class="px-3"><div class="text-secondary"><span class="status-dot bg-azure me-1"></span>Muzyka</div><div class="h2">${muzyka}</div></div>
+              <div class="px-3"><div class="text-secondary"><span class="status-dot bg-purple me-1"></span>Pozostałe</div><div class="h2">${rest}</div></div>
+            </div>
+          </div>
+        </div>`,
+      })}
+    </div>
+    <div class="col-12 col-lg-5">
+      ${card({
+        header: cardHeader({ title: 'Tagi poza kinami' }),
+        body: `<div id="pp-chart-tag-noncinema" class="position-relative"></div>
+          <div class="text-secondary fs-5 mt-2">kina (helios/cinemacity/multikino) zawsze trafiają do <strong>filmy</strong> — ten wykres pokazuje resztę.</div>`,
+      })}
     </div>
   </div>`;
 
   const body = `${header}${msgHtml}
-  <div class="collapse mb-3" id="ppTagAdd">${addTag.replace('<div class="card mb-3">', '<div class="card">')}</div>
-  ${kpi}${coverage}
-  <div class="row row-cards mb-3">
-    <div class="col-12 col-lg-7">
-      <div class="card">
-        <div class="card-header"><h3 class="card-title">Rozkład tagów</h3></div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col"><div id="pp-chart-tag-dist" class="position-relative"></div></div>
-            <div class="col-md-auto">
-              <div class="divide-y divide-y-fill">
-                <div class="px-3"><div class="text-secondary"><span class="status-dot bg-primary me-1"></span>Filmy</div><div class="h2">${filmy} · ${nTagged ? Math.round((filmy / nTagged) * 100) : 0}%</div></div>
-                <div class="px-3"><div class="text-secondary"><span class="status-dot bg-success me-1"></span>Meetup</div><div class="h2">${meetup}</div></div>
-                <div class="px-3"><div class="text-secondary"><span class="status-dot bg-azure me-1"></span>Muzyka</div><div class="h2">${muzyka}</div></div>
-                <div class="px-3"><div class="text-secondary"><span class="status-dot bg-purple me-1"></span>Pozostałe</div><div class="h2">${rest}</div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-lg-5">
-      <div class="card">
-        <div class="card-header"><h3 class="card-title">Tagi poza kinami</h3></div>
-        <div class="card-body">
-          <div id="pp-chart-tag-noncinema" class="position-relative"></div>
-          <div class="text-secondary fs-5 mt-2">kina (helios/cinemacity/multikino) zawsze trafiają do <strong>filmy</strong> — ten wykres pokazuje resztę.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="card mb-3" id="ppTagAddCard">
-    ${addTag}
-  </div>
-  <div class="card mb-3">
-    <div class="card-header">
-      <div class="card-title">Rozkład per tag</div>
-      <div class="card-actions d-flex gap-2">
+  <div class="collapse mb-3" id="ppTagAdd">${addTag}</div>
+  ${kpi}${coverage}${chartsRow}
+  ${card({
+    class: 'mb-3',
+    header: cardHeader({
+      title: 'Rozkład per tag',
+      actions: `<div class="d-flex gap-2">
         <select class="form-select form-select-sm w-auto" id="ppTagKind" onchange="ppTagRender()">
           <option value="all">Wszystkie</option><option value="canon">Kanon</option><option value="custom">Własne</option>
         </select>
         <div class="input-icon">
-          <input type="search" class="form-control form-control-sm" id="ppTagSearch" placeholder="Szukaj taga…" oninput="ppTagRender()" />
           <span class="input-icon-addon">${icon('search')}</span>
+          <input type="search" class="form-control form-control-sm" id="ppTagSearch" placeholder="Szukaj taga…" oninput="ppTagRender()" />
         </div>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="row row-cards g-2" id="ppTagGrid">${gridCards}</div>
-      <div class="text-secondary fs-5 mt-2" id="ppTagEmpty" style="display:none">Brak wyników.</div>
-    </div>
-    <div class="card-footer">
+      </div>`,
+    }),
+    body: `<div class="row row-cards g-2" id="ppTagGrid">${gridCards}</div>
+      <div class="text-secondary fs-5 mt-2" id="ppTagEmpty" style="display:none">Brak wyników.</div>`,
+    footer: `<div class="card-footer">
       <a class="btn btn-sm btn-link" data-bs-toggle="collapse" href="#ppFullTable">Pełna tabela ${icon('chevron-down')}</a>
     </div>
     <div class="collapse" id="ppFullTable">
       <div class="table-responsive"><table class="table table-vcenter card-table mb-0">
         <thead><tr><th>Tag</th><th>Eventy</th><th>% z tag</th><th>% ogółem</th><th>Statusy</th></tr></thead>
         <tbody>${fullTableRows || `<tr><td colspan="5">${empty()}</td></tr>`}</tbody></table></div>
-    </div>
-  </div>
-  ${toastContainer()}
-  <script>window.ppTagData=${safeJson({ dist: { series: [filmy, meetup, muzyka, rest], labels: ['Filmy', 'Meetup', 'Muzyka', 'Pozostałe'] }, nonCinema: { series: nonCinemaSeries, labels: nonCinemaLabels } })};window.ppTagIdMap=${safeJson(tagIdMap)};</script>
-  <script>
-  function ppSlug(s){ return String(s||'').normalize('NFC').toLowerCase().replace(/ł/g,'l').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
-  function ppTagSlugPreview(v){
-    var hint=document.getElementById('ppTagSlugHint');
-    if(!hint) return;
-    var slug=ppSlug(v);
-    if(!slug){ hint.textContent=''; return; }
-    hint.textContent='admin_tags.id = "'+slug+'"';
-  }
-  function ppTagRender(){
-    var term=(document.getElementById('ppTagSearch').value||'').toLowerCase();
-    var kind=document.getElementById('ppTagKind').value;
-    var shown=0;
-    document.querySelectorAll('#ppTagGrid [data-tag]').forEach(function(card){
-      var tag=card.getAttribute('data-tag').toLowerCase();
-      var custom=card.getAttribute('data-custom')==='1';
-      var ok=(term===''||tag.indexOf(term)!==-1)&&(kind==='all'||(kind==='canon'&&!custom)||(kind==='custom'&&custom));
-      card.style.display=ok?'':'none';
-      if(ok) shown++;
-    });
-    document.getElementById('ppTagEmpty').style.display=shown?'none':'block';
-  }
-  window.addEventListener('load', function(){
-    if(!window.ApexCharts||!window.ppTagData) return;
-    var C=window.ApexCharts, d=window.ppTagData;
-    var clr=function(c){return 'color-mix(in srgb, transparent, var(--tblr-'+c+') 100%)';};
-    var click=function(map){
-      return function(e,ctx,o){
-        if(!o||!o.w||!o.w.config||!o.w.config.labels) return;
-        var id=map[o.w.config.labels[o.dataPointIndex]];
-        if(id) location.href='/admin/events?tag='+encodeURIComponent(id);
-      };
-    };
-    new C(document.getElementById('pp-chart-tag-dist'),{
-      chart:{type:'donut',fontFamily:'inherit',height:260,animations:{enabled:false},events:{dataPointSelection:click(window.ppTagIdMap)}},
-      series:d.dist.series,labels:d.dist.labels,
-      colors:[clr('primary'),clr('success'),clr('azure'),clr('purple')],
-      legend:{show:true,position:'bottom'},tooltip:{theme:'dark'},
-      plotOptions:{pie:{donut:{labels:{total:{show:true,label:'razem'}}}}},
-    }).render();
-    new C(document.getElementById('pp-chart-tag-noncinema'),{
-      chart:{type:'donut',fontFamily:'inherit',height:240,animations:{enabled:false},events:{dataPointSelection:click(window.ppTagIdMap)}},
-      series:d.nonCinema.series,labels:d.nonCinema.labels,
-      colors:[clr('success'),clr('azure'),clr('purple'),clr('yellow'),clr('gray-400')],
-      legend:{show:true,position:'bottom'},tooltip:{theme:'dark'},
-    }).render();
-  });
-  </script>
-  ${toastScript()}`;
+    </div>`,
+  })}
+  <script>window.ppTagData=${safeJson({ dist: { series: [filmy, meetup, muzyka, rest], labels: ['Filmy', 'Meetup', 'Muzyka', 'Pozostałe'] }, nonCinema: { series: nonCinemaSeries, labels: nonCinemaLabels } })};window.ppTagIdMap=${safeJson(tagIdMap)};</script>`;
 
-  return renderPage(c, 'Tagi', '/admin/tags', body, { scripts: [APEXCHARTS_SRC] });
+  return renderPage(c, 'Tagi', '/admin/tags', body, { scripts: [APEXCHARTS_SRC, staticFilePath('tags')] });
 });
 
 pageRoutes.post('/tags', async (c) => {
@@ -307,7 +231,14 @@ pageRoutes.post('/tags', async (c) => {
   const db = c.env.DB;
   const form = (await c.req.parseBody().catch(() => ({}))) as Record<string, unknown>;
   const label = String(form.label ?? '').trim();
-  const id = tagSlug(label);
+  const id = (label || '')
+    .normalize('NFC')
+    .toLowerCase()
+    .replaceAll('ł', 'l')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
   if (!label || !id) return c.redirect('/admin/tags?msg=invalid');
   if (CANONICAL_TAG_SET.has(id)) return c.redirect('/admin/tags?msg=dup');
   const exists = await db.prepare('SELECT 1 FROM admin_tags WHERE id=?').bind(id).first();

@@ -1,8 +1,9 @@
 // Errors page: client error monitor — stat cards, type facets, per-day bars,
 // filterable table with expandable meta + pagination, rich empty state.
+// No client JS needed (SSR + CSS bars).
 
 import { Hono } from 'hono';
-import { bars, empty, esc, fmtDate, pill, pagination, icon } from '../../ui';
+import { bars, card, cardHeader, empty, esc, fmtDate, icon, pageHeader, pagination, pill } from '../../ui';
 import { requireSession } from '../common';
 import { renderPage } from './shared';
 
@@ -24,7 +25,6 @@ pageRoutes.get('/errors', async (c) => {
   const page = Math.max(1, parseInt(String(q.page || '1'), 10) || 1);
   const since = Date.now() - days * 86_400_000;
 
-  // ---- Stat cards (window-only; not affected by type/search) ----
   const [c24, c7d, c30d, unique] = await Promise.all([
     db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 86_400_000).first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 7 * 86_400_000).first<{ n: number }>(),
@@ -49,7 +49,6 @@ pageRoutes.get('/errors', async (c) => {
     ${statCard('Unikalne urządzenia', unique?.n ?? 0)}
   </div>`;
 
-  // ---- Facets + series ----
   const [facets, series] = await Promise.all([
     db.prepare('SELECT error_type, COUNT(*) n FROM client_errors WHERE created_at>=? GROUP BY error_type ORDER BY n DESC LIMIT 10').bind(since).all<{ error_type: string; n: number }>(),
     db.prepare(`SELECT date(created_at/1000,'unixepoch','+2 hours') d, COUNT(*) n
@@ -62,22 +61,20 @@ pageRoutes.get('/errors', async (c) => {
       <span class="text-secondary">${f.n} ${icon('chevron-right')}</span>
     </a>`;
   }).join('');
-  const typeCard = `<div class="card">
-    <div class="card-header"><h3 class="card-title">Błędy wg typu</h3></div>
-    <div class="list-group list-group-flush">
-      ${facetRows || `<div class="list-group-item text-secondary">Brak danych.</div>`}
+  const typeCard = card({
+    header: cardHeader({ title: 'Błędy wg typu' }),
+    body: `<div class="list-group list-group-flush">
+      ${facetRows || '<div class="list-group-item text-secondary">Brak danych.</div>'}
       <a class="list-group-item d-flex align-items-center" href="/admin/errors?days=${days}">
         <span class="text-secondary">Wszystkie typy</span><span class="ms-auto text-secondary">${(c7d?.n ?? 0) > 0 ? c7d?.n : '—'}</span>
       </a>
-    </div>
-  </div>`;
-  const seriesCard = `<div class="card">
-    <div class="card-header"><h3 class="card-title">Błędy dziennie</h3>
-      <div class="card-actions text-secondary">${days} dni · Warszawa</div></div>
-    <div class="card-body">${bars((series.results ?? []).map((s) => ({ label: s.d.slice(5), value: s.n })))}</div>
-  </div>`;
+    </div>`,
+  });
+  const seriesCard = card({
+    header: cardHeader({ title: 'Błędy dziennie', actions: `<span class="text-secondary fs-5">${days} dni · Warszawa</span>` }),
+    body: bars((series.results ?? []).map((s) => ({ label: s.d.slice(5), value: s.n }))),
+  });
 
-  // ---- List query ----
   let where = 'e.created_at>=?';
   const binds: unknown[] = [since];
   if (type) { where += ' AND e.error_type=?'; binds.push(type); }
@@ -103,7 +100,7 @@ pageRoutes.get('/errors', async (c) => {
       <td>${fmtDate(e.created_at)}</td>
       <td><span class="font-monospace fs-6">${esc(String(e.device_id || '').slice(0, 12))}</span>${userLine}</td>
       <td>${typePill(e.error_type)}</td>
-      <td class="text-truncate" style="max-width:20rem" title="${esc(e.message || '')}">${esc(String(e.message || '').slice(0, 160))}</td>
+      <td class="text-truncate pp-col-limit" title="${esc(e.message || '')}">${esc(String(e.message || '').slice(0, 160))}</td>
       <td><button class="btn btn-sm btn-icon btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#e_${esc(e.id)}" title="Meta">${icon('chevron-down')}</button></td>
     </tr>
     <tr class="collapse" id="e_${esc(e.id)}">
@@ -119,6 +116,12 @@ pageRoutes.get('/errors', async (c) => {
     qs.set('page', String(p));
     return `/admin/errors?${qs}`;
   };
+
+  const header = pageHeader({
+    title: 'Błędy klienta',
+    subtitle: '<div class="text-secondary">Nieudane background-uploady → DLQ. Crashy raportuje Apple (TestFlight → Crash Reports).</div>',
+    actions: '<a class="btn btn-outline-secondary" href="/admin/errors">Odśwież</a>',
+  });
 
   const alertHtml = (c7d?.n ?? 0) > 0
     ? `<div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
@@ -150,25 +153,12 @@ pageRoutes.get('/errors', async (c) => {
     </div>
   </form>`;
 
-  const emptyState = `<tr><td colspan="5">
-    <div class="empty">
-      <div class="empty-icon">${icon('alert-triangle', 'icon icon-2xl')}</div>
-      <p class="empty-title">Brak błędów klienta</p>
-      <p class="empty-subtitle text-secondary">${search || type ? 'Brak wyników dla wybranych filtrów.' : 'Nieudane background-uploady trafiają tu z iOS (DLQ). Crashy raportuje Apple — App Store Connect → TestFlight → Crash Reports.'}</p>
-      ${search || type ? '<div class="empty-action"><a class="btn btn-outline-secondary" href="/admin/errors">Wyczyść filtry</a></div>' : ''}
-    </div></td></tr>`;
-
-  const header = `<div class="page-header d-print-none mb-3">
-    <div class="row align-items-center">
-      <div class="col">
-        <h2 class="page-title">Błędy klienta</h2>
-        <div class="text-secondary">Nieudane background-uploady → DLQ. Crashy raportuje Apple (TestFlight → Crash Reports).</div>
-      </div>
-      <div class="col-auto ms-auto">
-        <a class="btn btn-outline-secondary" href="/admin/errors">Odśwież</a>
-      </div>
-    </div>
-  </div>`;
+  const emptyState = `<tr><td colspan="5">${empty({
+    icon: icon('alert-triangle', 'icon icon-2xl'),
+    title: 'Brak błędów klienta',
+    subtitle: search || type ? 'Brak wyników dla wybranych filtrów.' : 'Nieudane background-uploady trafiają tu z iOS (DLQ). Crashy raportuje Apple — App Store Connect → TestFlight → Crash Reports.',
+    action: search || type ? '<a class="btn btn-outline-secondary" href="/admin/errors">Wyczyść filtry</a>' : '',
+  })}</td></tr>`;
 
   const body = `${header}${alertHtml}${statRow}
   <div class="row row-cards mb-3">
@@ -176,15 +166,16 @@ pageRoutes.get('/errors', async (c) => {
     <div class="col-12 col-lg-8">${seriesCard}</div>
   </div>
   ${filterBar}
-  <div class="card mb-3">
-    <div class="table-responsive"><table class="table table-vcenter card-table">
+  ${card({
+    class: 'mb-3',
+    body: `<div class="table-responsive"><table class="table table-vcenter card-table">
       <thead><tr><th>Czas</th><th>Device</th><th>Typ</th><th>Message</th><th class="w-1"></th></tr></thead>
-      <tbody>${rowsHtml || emptyState}</tbody></table></div>
-    <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <tbody>${rowsHtml || emptyState}</tbody></table></div>`,
+    footer: `<div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
       <p class="m-0 text-secondary">Strona ${page} z ${totalPages} · ${total} błędów</p>
       ${pagination(page, totalPages, pageHref)}
-    </div>
-  </div>`;
+    </div>`,
+  })}`;
 
   return renderPage(c, 'Błędy', '/admin/errors', body);
 });

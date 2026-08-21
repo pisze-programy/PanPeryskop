@@ -1,9 +1,10 @@
 // Overview page: health strip, KPI cards, activity charts, events window, seed + cron.
+// Client logic in /admin/static/js/pages/overview.js; data bootstrapped inline.
 
 import { Hono } from 'hono';
 import {
-  esc, fmtDate, fmtDur, fmtPct, pill, relAgo, safeJson, icon,
-  toastContainer, toastScript, APEXCHARTS_SRC,
+  APEXCHARTS_SRC, card, cardHeader, esc, fmtDate, fmtDur, fmtPct, icon, listGroup,
+  pageHeader, pill, relAgo, safeJson, staticFilePath, timeline, timelineItem,
 } from '../../ui';
 import { overviewData, overviewCharts } from '../../queries';
 import { fmtPctNum } from '../common';
@@ -13,8 +14,6 @@ import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
 
-// Relative day label mirroring the app's story clock: Dziś / Jutro / Pojutrze,
-// otherwise the full weekday name (e.g. "Środa").
 function dayLabel(dateStr: string): string {
   const today = todayWarsaw();
   const diff = Math.round((Date.parse(`${dateStr}T00:00:00+02:00`) - Date.parse(`${today}T00:00:00+02:00`)) / 86400000);
@@ -40,7 +39,7 @@ pageRoutes.get('/', async (c) => {
   const d = await overviewData(c.env, SEED_DAYS_AHEAD);
   const charts = overviewCharts(d);
 
-  // ---- Health alert strip ----
+  // ---- Health strip ----
   const totalBatches = d.batchCounts.reduce((s, b) => s + b.n, 0);
   const seedFailed = d.batchCounts.find((b) => b.status === 'failed')?.n ?? 0;
   const failures: string[] = [];
@@ -128,22 +127,10 @@ pageRoutes.get('/', async (c) => {
   // ---- Activity chart + status doughnut ----
   const chartsRow = `<div class="row row-cards mb-3">
     <div class="col-12 col-lg-8">
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">Aktywność · 14 dni</h3>
-          <div class="card-subtitle text-secondary">Views · Media · Logowania</div>
-        </div>
-        <div class="card-body"><div id="pp-chart-activity"></div></div>
-      </div>
+      ${card({ header: cardHeader({ title: 'Aktywność · 14 dni', actions: '<span class="card-subtitle text-secondary">Views · Media · Logowania</span>' }), body: '<div id="pp-chart-activity"></div>' })}
     </div>
     <div class="col-12 col-lg-4">
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">Statusy eventów</h3>
-          <div class="card-actions"><a class="btn btn-link" href="/admin/events?status=pending">Moderacja</a></div>
-        </div>
-        <div class="card-body"><div id="pp-chart-status"></div></div>
-      </div>
+      ${card({ header: cardHeader({ title: 'Statusy eventów', actions: '<a class="btn btn-link" href="/admin/events?status=pending">Moderacja</a>' }), body: '<div id="pp-chart-status"></div>' })}
     </div>
   </div>`;
 
@@ -159,27 +146,29 @@ pageRoutes.get('/', async (c) => {
       <td class="text-warning">${w.pending}</td>
       <td class="text-danger">${w.rejected}</td></tr>`;
   }).join('');
-  const windowHtml = `<div class="card mb-3">
-    <div class="card-header">
-      <h3 class="card-title">Eventy — okno (${SEED_DAYS_AHEAD + 1} dni)</h3>
-      <div class="card-actions"><a class="btn btn-sm btn-outline-secondary" href="/admin/events?from=${esc(today)}&to=${esc(windowEnd)}">Zobacz wszystkie</a></div>
-    </div>
-    <div class="card-body"><div id="pp-chart-window"></div></div>
-    <div class="table-responsive"><table class="table table-vcenter card-table mb-0">
+  const windowHtml = card({
+    class: 'mb-3',
+    header: cardHeader({
+      title: `Eventy — okno (${SEED_DAYS_AHEAD + 1} dni)`,
+      actions: `<a class="btn btn-sm btn-outline-secondary" href="/admin/events?from=${esc(today)}&to=${esc(windowEnd)}">Zobacz wszystkie</a>`,
+    }),
+    body: '<div id="pp-chart-window"></div>',
+    footer: `<div class="table-responsive"><table class="table table-vcenter card-table mb-0">
       <thead><tr><th>Dzień</th><th>Wszystkie</th><th class="text-success">Approved</th><th class="text-warning">Pending</th><th class="text-danger">Rejected</th></tr></thead>
       <tbody>${windowRowsHtml}<tr class="table-light">
         <td class="fw-bold">Suma</td><td>${sums.approved + sums.pending + sums.rejected}</td>
         <td class="text-success">${sums.approved}</td><td class="text-warning">${sums.pending}</td><td class="text-danger">${sums.rejected}</td></tr>
-      </tbody></table></div></div>`;
+      </tbody></table></div>`,
+  });
 
   // ---- Last seed card + 7-day sparkline ----
   const batch = d.lastSeed.batch as any;
-  let seedBody = `<div class="list-group list-group-hoverable">`;
+  let seedItems = '';
   if (batch) {
     const r = d.lastSeed.runs;
     const ingestPct = r && r.cands > 0 ? Math.round((r.ingested / r.cands) * 100) : 0;
     const scopePct = batch.scopes_total > 0 ? Math.round((batch.scopes_done / batch.scopes_total) * 100) : 0;
-    seedBody += `<div class="list-group-item">
+    seedItems += `<div class="list-group-item">
       <div class="row align-items-center">
         <div class="col"><strong>${esc(batch.day)}</strong> ${batchStatusPill(batch.status)} ${pill(batch.run_type === 'cron' ? 'cron' : 'manual', batch.run_type === 'cron' ? 'ok' : 'muted')}</div>
         <div class="col-auto text-secondary">zakończono ${relAgo(batch.updated_at)}</div>
@@ -202,11 +191,10 @@ pageRoutes.get('/', async (c) => {
           <div class="col-3 text-secondary">Browser</div><div class="col-3">${r ? fmtDur(r.browser) : '—'}</div>
           <div class="col-3 text-secondary">Aktualizacja</div><div class="col-3">${fmtDate(batch.updated_at)}</div>
         </div></div>`;
-    if (batch.reason) seedBody += `<div class="list-group-item"><div class="alert alert-danger mb-0 py-2">Powód: <span class="text-red">${esc(String(batch.reason))}</span></div></div>`;
+    if (batch.reason) seedItems += `<div class="list-group-item"><div class="alert alert-danger mb-0 py-2">Powód: <span class="text-red">${esc(String(batch.reason))}</span></div></div>`;
   } else {
-    seedBody += `<div class="list-group-item"><span class="text-secondary">Brak uruchomień seeda.</span></div>`;
+    seedItems = `<div class="list-group-item"><span class="text-secondary">Brak uruchomień seeda.</span></div>`;
   }
-  seedBody += `</div>`;
   let budgetFooter = '';
   if (d.budget) {
     const pct = fmtPctNum(d.budget.monthMs, d.budget.limitMs);
@@ -217,160 +205,45 @@ pageRoutes.get('/', async (c) => {
         <span class="${d.budget.exceeded ? 'text-danger fw-bold' : ''}">${fmtPct(d.budget.monthMs, d.budget.limitMs)} (${fmtDur(d.budget.monthMs)} / ${fmtDur(d.budget.limitMs)})</span>
       </div></div>`;
   }
-  const batchRows = d.batchCounts.length
-    ? `<div class="card-body pt-0"><div id="pp-chart-seed" class="chart-sm mb-2"></div></div>`
-    : '';
   const seedBadges = `<span class="badge bg-success-lt">${charts.kpis.seedDone} done</span><span class="badge bg-danger-lt">${charts.kpis.seedFailed} failed</span>`;
   const seedRow = `<div class="row row-cards mb-3">
     <div class="col-12 col-xl-8">
-      <div class="card h-100">
-        <div class="card-header"><h3 class="card-title">Ostatni seed</h3>
-          <div class="card-actions"><a class="btn btn-sm btn-outline-secondary" href="/admin/seed">Logi seed</a></div></div>
-        <div class="card-body">${seedBody}</div>
-        ${budgetFooter}
-      </div>
+      ${card({ class: 'h-100', header: cardHeader({ title: 'Ostatni seed', actions: '<a class="btn btn-sm btn-outline-secondary" href="/admin/seed">Logi seed</a>' }), body: listGroup(seedItems, 'list-group-flush'), footer: budgetFooter })}
     </div>
     <div class="col-12 col-xl-4">
-      <div class="card h-100">
-        <div class="card-header"><h3 class="card-title">Seed · ingest dziennie</h3>
-          <div class="card-actions">${seedBadges}</div></div>
-        ${batchRows}
-      </div>
+      ${card({ class: 'h-100', header: cardHeader({ title: 'Seed · ingest dziennie', actions: seedBadges }), body: '<div class="pt-0"><div id="pp-chart-seed" class="chart-sm mb-2"></div></div>' })}
     </div>
   </div>`;
 
   // ---- Cron card ----
-  const cronHtml = `<div class="card mb-3">
-    <div class="card-header">
-      <h3 class="card-title">Cron (planowanie)</h3>
-      <div class="card-actions"><span class="badge bg-green-lt"><span class="status-dot status-dot-animated bg-green me-1"></span>aktywny</span></div>
-    </div>
-    <div class="card-body">
-      <div class="timeline">
-        <div class="timeline-item">
-          <div class="timeline-icon">${icon('clock')}</div>
-          <div class="timeline-content">
-            <div class="text-secondary">Ostatni cron</div>
-            <div class="fw-bold">${d.cron.lastCronRunMs ? fmtDate(d.cron.lastCronRunMs) : '<span class="text-warning">jeszcze nie wystartował</span>'}</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-icon">${icon('refresh')}</div>
-          <div class="timeline-content">
-            <div class="text-secondary">Następny run</div>
-            <div class="fw-bold"><span id="pp-cron-countdown">—</span></div>
-            <div class="text-secondary">Harmonogram: <code>${esc(d.cron.schedules.join(', '))}</code> — ${esc(d.cron.summary)}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  const cronHtml = card({
+    class: 'mb-3',
+    header: cardHeader({
+      title: 'Cron (planowanie)',
+      actions: '<span class="badge bg-green-lt"><span class="status-dot status-dot-animated bg-green me-1"></span>aktywny</span>',
+    }),
+    body: timeline(
+      timelineItem({ icon: icon('clock'), label: 'Ostatni cron', value: d.cron.lastCronRunMs ? fmtDate(d.cron.lastCronRunMs) : '<span class="text-warning">jeszcze nie wystartował</span>' }) +
+      timelineItem({ icon: icon('refresh'), label: 'Następny run', value: '<span id="pp-cron-countdown">—</span>', hint: `<div class="text-secondary">Harmonogram: <code>${esc(d.cron.schedules.join(', '))}</code> — ${esc(d.cron.summary)}</div>` })
+    ),
+  });
 
   // ---- Page header ----
-  const header = `<div class="page-header d-print-none mb-3">
-    <div class="row align-items-center">
-      <div class="col-auto">
-        <div class="page-pretitle">Panel administracyjny</div>
-        <h1 class="page-title">Overview</h1>
-      </div>
-      <div class="col-auto ms-auto d-print-none">
-        <div class="btn-list">
-          <span id="pp-clock" class="text-secondary align-middle"></span>
-          <a href="/admin/events" class="btn btn-outline-secondary">Moderacja eventów</a>
-          <a href="/admin/seed" class="btn btn-outline-secondary">Logi seed</a>
-          <button class="btn btn-primary d-none d-sm-inline-block" id="ppRefreshBtn" onclick="ppRefresh()">Odśwież</button>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  const header = pageHeader({
+    pretitle: 'Panel administracyjny',
+    title: 'Overview',
+    actions: `<div class="btn-list">
+      <span id="pp-clock" class="text-secondary align-middle"></span>
+      <a href="/admin/events" class="btn btn-outline-secondary">Moderacja eventów</a>
+      <a href="/admin/seed" class="btn btn-outline-secondary">Logi seed</a>
+      <button class="btn btn-primary d-none d-sm-inline-block" id="ppRefreshBtn" onclick="ppRefresh()">Odśwież</button>
+    </div>`,
+  });
 
-  const pp = charts.pp;
   const body = `${header}${healthHtml}${kpiHtml}${chartsRow}${windowHtml}${seedRow}${cronHtml}
-  ${toastContainer()}
-  <script>window.PP_DATA=${safeJson(pp)};</script>
-  <script>
-  window.ppCharts = {};
-  function ppDestroyCharts(){ Object.keys(window.ppCharts).forEach(function(k){ try{ window.ppCharts[k].destroy(); }catch(e){} }); window.ppCharts={}; }
-  function ppInitCharts(){
-    if (!window.ApexCharts || !window.PP_DATA) return;
-    ppDestroyCharts();
-    var C = window.ApexCharts, d = window.PP_DATA;
-    var clr = function (c) { return 'var(--tblr-' + c + ')'; };
-    window.ppCharts['pp-chart-activity'] = new C(document.getElementById('pp-chart-activity'), {
-      chart: { type: 'area', height: 280, fontFamily: 'inherit', toolbar: { show: false } },
-      series: [
-        { name: 'Views', data: d.activity.views },
-        { name: 'Media', data: d.activity.media },
-        { name: 'Logowania', data: d.activity.logins },
-      ],
-      colors: [clr('primary'), clr('success'), clr('warning')],
-      stroke: { width: 2, curve: 'smooth' }, fill: { opacity: 0.06 },
-      dataLabels: { enabled: false }, grid: { strokeDashArray: 4 },
-      xaxis: { categories: d.activity.days }, legend: { position: 'bottom' }, tooltip: { theme: 'dark' },
-    }).render();
-    window.ppCharts['pp-chart-status'] = new C(document.getElementById('pp-chart-status'), {
-      chart: { type: 'donut', height: 280, fontFamily: 'inherit', events: { dataPointSelection: function (e, ctx, o) {
-        var ids = ['approved', 'pending', 'rejected'];
-        if (o && o.dataPointIndex != null && ids[o.dataPointIndex]) location.href = '/admin/events?status=' + ids[o.dataPointIndex];
-      } } },
-      series: d.status.series, labels: d.status.labels,
-      colors: [clr('success'), clr('warning'), clr('danger')],
-      legend: { position: 'bottom' }, tooltip: { theme: 'dark' },
-      plotOptions: { pie: { donut: { labels: { total: { show: true, label: 'razem' } } } } },
-    }).render();
-    window.ppCharts['pp-chart-window'] = new C(document.getElementById('pp-chart-window'), {
-      chart: { type: 'bar', height: 220, fontFamily: 'inherit', toolbar: { show: false }, stacked: true },
-      series: [
-        { name: 'Approved', data: d.window.approved },
-        { name: 'Pending', data: d.window.pending },
-        { name: 'Rejected', data: d.window.rejected },
-      ],
-      colors: [clr('success'), clr('warning'), clr('danger')],
-      plotOptions: { bar: { columnWidth: '55%' } }, dataLabels: { enabled: false },
-      grid: { strokeDashArray: 4 }, xaxis: { categories: d.window.days },
-      legend: { position: 'bottom' }, tooltip: { theme: 'dark' },
-    }).render();
-    window.ppCharts['pp-chart-seed'] = new C(document.getElementById('pp-chart-seed'), {
-      chart: { type: 'area', height: 120, fontFamily: 'inherit', toolbar: { show: false }, sparkline: { enabled: true } },
-      series: [{ name: 'Ingest', data: d.seed.ingested }],
-      colors: [clr('success')], stroke: { width: 2, curve: 'smooth' }, fill: { opacity: 0.08 }, tooltip: { theme: 'dark' },
-    }).render();
-  }
-  function ppTick(){
-    var el = document.getElementById('pp-clock');
-    if (el) el.textContent = new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    var cd = document.getElementById('pp-cron-countdown');
-    if (cd && window.PP_DATA && window.PP_DATA.nextCronMs) {
-      var ms = window.PP_DATA.nextCronMs - Date.now();
-      if (ms <= 0) cd.textContent = 'teraz';
-      else cd.textContent = 'za ' + Math.floor(ms / 3600000) + 'h ' + Math.floor((ms % 3600000) / 60000) + 'm';
-    }
-  }
-  function ppRefresh(){
-    var btn = document.getElementById('ppRefreshBtn');
-    if (btn) btn.disabled = true;
-    fetch('/admin/api/overview', { headers: { Accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(function (resp) {
-        if (!resp || !resp.pp) throw new Error('bad payload');
-        window.PP_DATA = resp.pp;
-        var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = String(v); };
-        var k = resp.kpis || {};
-        set('kpi-users', k.users); set('kpi-active', k.active7d); set('kpi-views', k.viewsTotal);
-        set('kpi-wintotal', k.winTotal); set('kpi-winapproved', k.winApproved);
-        set('kpi-winpending', k.winPending); set('kpi-winrejected', k.winRejected);
-        window.ppInitCharts();
-        window.ppToast('Dane odświeżone.', 'success');
-      })
-      .catch(function () { window.ppToast('Nie udało się odświeżyć.', 'danger'); })
-      .then(function () { if (btn) btn.disabled = false; });
-  }
-  window.addEventListener('load', function () { ppInitCharts(); ppTick(); });
-  setInterval(ppTick, 30000);
-  </script>
-  ${toastScript()}`;
+  <script>window.PP_DATA=${safeJson(charts.pp)};</script>`;
 
-  return renderPage(c, 'Overview', '/admin', body, { scripts: [APEXCHARTS_SRC] });
+  return renderPage(c, 'Overview', '/admin', body, { scripts: [APEXCHARTS_SRC, staticFilePath('overview')] });
 });
 
 export function registerOverview(parent: Hono<{ Bindings: Env }>): void {

@@ -1,12 +1,13 @@
 // Reports page: moderation queue — queue-health cards, filters, table with kebab
 // actions, fetch-based moderation + toasts + ban confirm, pagination.
-// Action semantics: reject → 'rejected' (+reason label), ban → 'banned' (+ban +
-// reject the post), resolve → 'resolved'.
+// Client logic in /admin/static/js/pages/reports.js.
 
 import { Hono } from 'hono';
-import { cards, empty, esc, fmtDate, pill, relAgo, pagination, toastContainer, toastScript, icon } from '../../ui';
+import { cards, dropdown, dropdownItem, dropdownDivider, empty, esc, fmtDate, icon, mediaModal, pageHeader, pagination, pill, relAgo, staticFilePath } from '../../ui';
 import { requireSession } from '../common';
 import { STATUS_REJECTED } from '../../../core/models';
+import { jsStr } from '../../utils/esc';
+import { truncate } from '../../utils/fmt';
 import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
@@ -35,6 +36,16 @@ function statusPill(status: string): string {
   }
 }
 
+function buildQs(params: Record<string, string>, overrides: Record<string, string | null>): string {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (k !== 'page') qs.set(k, v);
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === null || v === '') qs.delete(k);
+    else qs.set(k, v);
+  }
+  return qs.toString();
+}
+
 pageRoutes.get('/reports', async (c) => {
   const db = c.env.DB;
   const q = c.req.query();
@@ -43,25 +54,28 @@ pageRoutes.get('/reports', async (c) => {
   const search = q.q ? String(q.q) : null;
   const page = Math.max(1, parseInt(String(q.page || '1'), 10) || 1);
 
-  const [stats, banned, byReason, statuses] = await Promise.all([
+  const [statuses, banned, byReason] = await Promise.all([
     db.prepare('SELECT status, COUNT(*) n FROM reports GROUP BY status').all<{ status: string; n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM banned_devices').first<{ n: number }>(),
     db.prepare('SELECT reason, COUNT(*) n FROM reports GROUP BY reason ORDER BY n DESC').all<{ reason: string; n: number }>(),
-    db.prepare('SELECT status, COUNT(*) n FROM reports GROUP BY status').all<{ status: string; n: number }>(),
   ]);
   const statusCnt: Record<string, number> = {};
   for (const s of statuses.results ?? []) statusCnt[s.status] = s.n;
   const openCount = statusCnt['open'] ?? 0;
-  const resolvedCount = statusCnt['resolved'] ?? 0;
+
+  const header = pageHeader({
+    pretitle: 'PanPeryskop Admin',
+    title: `Raporty treści <span class="badge bg-warning-lt text-warning ms-2" id="ppOpenBadge">${openCount} otwartych</span>`,
+    subtitle: '<div class="text-secondary">Moderacja zgłoszeń użytkowników — przegląd, odrzucanie postów, banowanie urządzeń.</div>',
+  });
 
   const statRow = cards([
     { label: 'Otwarte', value: openCount, color: openCount ? 'warning' : '', href: '/admin/reports?status=open' },
-    { label: 'Rozwiązane', value: resolvedCount, color: 'success', href: '/admin/reports?status=resolved' },
+    { label: 'Rozwiązane', value: statusCnt['resolved'] ?? 0, color: 'success', href: '/admin/reports?status=resolved' },
     { label: 'Odrzucone posty', value: statusCnt['rejected'] ?? 0, color: (statusCnt['rejected'] ?? 0) ? 'danger' : '', href: '/admin/reports?status=rejected' },
     { label: 'Zbanowane urządzenia', value: banned?.n ?? 0, color: (banned?.n ?? 0) ? 'danger' : '', href: '/admin/users' },
   ]);
 
-  // ---- Filters ----
   const seg = (label: string, href: string, active: boolean) =>
     `<a class="btn btn-sm ${active ? 'active' : ''}" href="${esc(href)}">${label}</a>`;
   const segBar = `<div class="btn-group btn-group-segmented" role="group">
@@ -90,7 +104,6 @@ pageRoutes.get('/reports', async (c) => {
     </form>
   </div></div>`;
 
-  // ---- List ----
   let where = '1=1';
   const binds: unknown[] = [];
   if (status) { where += ' AND r.status=?'; binds.push(status); }
@@ -131,27 +144,27 @@ pageRoutes.get('/reports', async (c) => {
       : '—';
     const authorAvatar = r.author_avatar
       ? `<img src="/media/${esc(r.author_avatar)}" class="avatar avatar-xs rounded" alt="" onerror="this.closest('.avatar').classList.add('bg-secondary-lt')" />`
-      : '';
+      : '—';
     const authorBan = r.author_banned ? ` ${pill('BAN', 'err')}` : '';
     const multi = r.open_for_post > 1 ? `<span class="badge bg-warning-lt text-warning ms-1">Zgłoszony ×${r.open_for_post}</span>` : '';
     const postStatus = r.post_status ? pill(r.post_status, r.post_status === 'approved' ? 'ok' : r.post_status === 'pending' ? 'warn' : 'err') : '';
     const rowCls = r.author_banned ? ' table-danger' : '';
     const actions = r.status === 'open'
-      ? `<div class="dropdown text-end">
-          <button class="btn btn-action dropdown-toggle" data-bs-toggle="dropdown" type="button" title="Akcje">${icon('more-horizontal')}</button>
-          <div class="dropdown-menu dropdown-menu-end">
-            <a class="dropdown-item" href="#" onclick="ppModerate('${esc(r.id)}','reject',this)">Odrzuć post</a>
-            <a class="dropdown-item" href="#" onclick="ppModerate('${esc(r.id)}','ban',this)">Zbanuj autora</a>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="#" onclick="ppModerate('${esc(r.id)}','resolve',this)">Rozwiąż (bez zmian)</a>
-          </div></div>`
+      ? dropdown({
+          items: [
+            dropdownItem({ html: 'Odrzuć post', onclick: `ppModerate('${esc(r.id)}','reject',this)` }),
+            dropdownItem({ html: 'Zbanuj autora', onclick: `ppModerate('${esc(r.id)}','ban',this)` }),
+            dropdownDivider,
+            dropdownItem({ html: 'Rozwiąż (bez zmian)', onclick: `ppModerate('${esc(r.id)}','resolve',this)` }),
+          ].join(''),
+        })
       : '—';
     return `<tr class="${rowCls}">
       <td>${thumb}</td>
       <td><span class="font-monospace">${esc(String(r.post_id).slice(0, 12))}</span> ${postStatus}${multi}
-        ${r.description ? `<div class="text-muted fs-6">${esc(String(r.description).slice(0, 60))}</div>` : ''}</td>
+        ${r.description ? `<div class="text-muted fs-6">${esc(truncate(String(r.description), 60))}</div>` : ''}</td>
       <td><div class="d-flex align-items-center gap-2">
-        <span class="avatar avatar-xs rounded ${r.author_avatar ? '' : 'bg-primary-lt'}">${authorAvatar || '—'}</span>
+        <span class="avatar avatar-xs rounded bg-primary-lt">${authorAvatar}</span>
         <div><div class="fw-semibold">${esc(r.author)}${authorBan}</div>
         <div class="text-muted font-monospace fs-6">${esc(r.author_device)}</div></div></div></td>
       <td><div class="fw-semibold">${esc(r.reporter)}</div><div class="text-muted font-monospace fs-6">${esc(r.reporter_device)}</div></td>
@@ -161,27 +174,12 @@ pageRoutes.get('/reports', async (c) => {
       <td>${actions}</td></tr>`;
   }).join('');
 
-  const emptyState = `<tr><td colspan="8">
-    <div class="empty">
-      <div class="empty-icon">${icon('flag')}</div>
-      <p class="empty-title">Brak raportów</p>
-      <p class="empty-subtitle text-secondary">${search || reason || status ? 'Nic nie pasuje do tego filtra. Zmień kryteria lub wyczyść filtry.' : 'Raporty pojawią się, gdy użytkownik zgłosi post w appce („Zgłoś”).'}</p>
-      ${search || reason || status ? '<div class="empty-action"><a class="btn btn-outline-secondary" href="/admin/reports">Wyczyść filtry</a></div>' : ''}
-    </div></td></tr>`;
-
-  const header = `<div class="page-header d-print-none mb-3">
-    <div class="container-xl">
-      <div class="row align-items-center">
-        <div class="col">
-          <div class="page-pretitle">PanPeryskop Admin</div>
-          <h2 class="page-title">Raporty treści
-            <span class="badge bg-warning-lt text-warning ms-2" id="ppOpenBadge">${openCount} otwartych</span>
-          </h2>
-          <div class="text-secondary">Moderacja zgłoszeń użytkowników — przegląd, odrzucanie postów, banowanie urządzeń.</div>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  const emptyState = `<tr><td colspan="8">${empty({
+    icon: icon('flag'),
+    title: 'Brak raportów',
+    subtitle: search || reason || status ? 'Nic nie pasuje do tego filtra. Zmień kryteria lub wyczyść filtry.' : 'Raporty pojawią się, gdy użytkownik zgłosi post w appce („Zgłoś”).',
+    action: search || reason || status ? '<a class="btn btn-outline-secondary" href="/admin/reports">Wyczyść filtry</a>' : '',
+  })}</td></tr>`;
 
   const body = `${header}${statRow}${filterBar}
   <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
@@ -193,13 +191,7 @@ pageRoutes.get('/reports', async (c) => {
       <thead><tr><th>Media</th><th>Post</th><th>Autor</th><th>Zgłaszający</th><th>Powód</th><th>Czas</th><th>Status</th><th class="w-1">Akcje</th></tr></thead>
       <tbody>${rowsHtml || emptyState}</tbody></table></div>
   </div>
-  <div class="modal fade" id="ppMediaModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-xl modal-blur">
-      <div class="modal-content bg-transparent border-0 shadow-none">
-        <img id="ppMediaImg" alt="" class="img-fluid mx-auto rounded" onclick="ppMediaClose()" />
-      </div>
-    </div>
-  </div>
+  ${mediaModal()}
   <div class="modal fade" id="ppBanConfirmModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-blur">
       <div class="modal-content">
@@ -215,68 +207,10 @@ pageRoutes.get('/reports', async (c) => {
       </div>
     </div>
   </div>
-  ${toastContainer()}
-  <script>
-  (function(){
-    var media=document.getElementById('ppMediaModal'), banM=document.getElementById('ppBanConfirmModal');
-    var show=function(el){var B=window.tabler||window.bootstrap; if(B&&B.Modal&&el) B.Modal.getOrCreateInstance(el).show();};
-    var hide=function(el){var B=window.tabler||window.bootstrap; if(B&&B.Modal&&el){var m=B.Modal.getInstance(el); if(m) m.hide();}};
-    window.ppMediaOpen=function(src){var img=document.getElementById('ppMediaImg'); if(img) img.src=src; show(media);};
-    window.ppMediaClose=function(){hide(media);};
-    window.ppBanTarget=null;
-    window.ppModerate=function(id,action,el){
-      if(action==='ban'){
-        window.ppBanTarget={id:id,el:el};
-        var dev=el.closest('tr').querySelector('.font-monospace');
-        document.getElementById('ppBanDevice').textContent=dev?dev.textContent:'—';
-        var err=document.getElementById('ppBanErr'); if(err) err.style.display='none';
-        show(banM);
-        return;
-      }
-      ppSend(id,action,el);
-    };
-    window.ppBanClose=function(){hide(banM);window.ppBanTarget=null;};
-    window.ppBanConfirm=function(){
-      var t=window.ppBanTarget; if(!t) return;
-      hide(banM); window.ppBanTarget=null;
-      ppSend(t.id,'ban',t.el);
-    };
-    function ppSend(id,action,el){
-      fetch('/admin/reports/'+encodeURIComponent(id)+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})})
-        .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
-        .then(function(resp){
-          var msg=action==='reject'?'Post odrzucony.':action==='ban'?'Urządzenie autora zbanowane.':'Raport rozwiązany.';
-          window.ppToast(msg,'success');
-          var tr=el?el.closest('tr'):null;
-          if(tr) tr.remove();
-          var badge=document.getElementById('ppOpenBadge');
-          if(badge){
-            var n=parseInt(badge.textContent,10);
-            if(n>0) badge.textContent=(n-1)+' otwartych';
-          }
-        })
-        .catch(function(){
-          if(action==='ban'){var e=document.getElementById('ppBanErr'); if(e){e.textContent='Nie udało się zbanować.';e.style.display='block';}}
-          else window.ppToast('Nie udało się wykonać akcji.','danger');
-        });
-    }
-  })();
-  </script>
-  ${toastScript()}`;
+  <script src="${staticFilePath('reports')}"></script>`;
 
-  return renderPage(c, 'Raporty', '/admin/reports', body);
+  return renderPage(c, 'Raporty', '/admin/reports', body, { scripts: [staticFilePath('reports')] });
 });
-
-// Helpers to build state-preserving links for the segmented bar.
-function buildQs(params: Record<string, string>, overrides: Record<string, string | null>): string {
-  const qs = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) if (k !== 'page') qs.set(k, v);
-  for (const [k, v] of Object.entries(overrides)) {
-    if (v === null || v === '') qs.delete(k);
-    else qs.set(k, v);
-  }
-  return qs.toString();
-}
 
 // Odrzuć post — writes the real reason label, marks the report 'rejected'.
 pageRoutes.post('/reports/:id/reject', async (c) => {
@@ -293,7 +227,7 @@ pageRoutes.post('/reports/:id/reject', async (c) => {
   return c.json({ ok: true });
 });
 
-// Ban autora — bans the device AND rejects the offending post (moderation that works).
+// Ban autora — bans the device AND rejects the offending post.
 pageRoutes.post('/reports/:id/ban', async (c) => {
   const session = await requireSession(c);
   if (!session) return c.json({ error: 'Unauthorized' }, 401);

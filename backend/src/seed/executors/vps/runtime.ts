@@ -22,7 +22,7 @@ import { execFileSync } from 'node:child_process';
 import { dedupe, buildDescription } from '../../../../src/seed/core/dedupe';
 import { isCancelled } from '../../../../src/seed/core/filters';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs, warsawDateOf, eventDayEndMs } from '../../../../src/seed/core/dates';
-import { GeoStore } from '../../../../src/seed/core/geo';
+import { GeoStore, fallbackSeedGeo } from '../../../../src/seed/core/geo';
 import { SEED_DAYS_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1 } from '../../../../src/seed/core/constants';
 import { UA_HEADERS } from '../../../../src/seed/providers/http';
 import { configOf } from '../../../../src/seed/providers/registry';
@@ -199,6 +199,8 @@ export interface SeedEntry {
   showtimes?: string[] | null;
   showtime_booking?: { time: string; kind: string; params: Record<string, string> }[] | null;
   tags?: string[] | null;
+  /** True when the entry used a default geo pin (city center / 0,0) — upload as PENDING. */
+  no_geo?: boolean;
 }
 export type EntryMap = Map<string, SeedEntry>;
 
@@ -293,6 +295,9 @@ export function entryFor(c: SeedCandidate & { lat: number; lng: number }, mediaR
     showtimes: c.times?.length ? c.times : null,
     showtime_booking: c.showtimeBooking?.length ? c.showtimeBooking : null,
     tags: c.tags?.length ? c.tags : null,
+    // Geo-less events got a default pin — seed-ingest uploads them as PENDING
+    // (skips auto-approve) so they never appear before the admin fixes/approves.
+    no_geo: (c as SeedCandidate & { fallbackGeo?: boolean }).fallbackGeo ? true : undefined,
   };
 }
 
@@ -451,8 +456,14 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
         // which can spike memory WITHOUT the scope-boundary gate ever firing.
         if (i % 10 === 0 && !resourcesOk(`scope:stage:${scope}`)) { paused = true; break; }
         if (!hasCoords(c)) {
-          console.error(`✗ ${c.externalId}: missing coordinates — skipped`);
-          continue;
+          // Collect geo-less events anyway: default pin (city center / 0,0) + a
+          // no_geo marker so seed-ingest uploads them as PENDING (never shown in
+          // the app until the admin fixes geo / approves).
+          const fb = fallbackSeedGeo(c.city);
+          (c as SeedCandidate & { fallbackGeo?: boolean }).lat = fb.lat;
+          (c as SeedCandidate & { fallbackGeo?: boolean }).lng = fb.lng;
+          (c as SeedCandidate & { fallbackGeo?: boolean }).fallbackGeo = true;
+          console.log(`! ${c.externalId}: missing coordinates — default pin (${fb.lat},${fb.lng}), pending`);
         }
         // Cancelled entries are dropped here (not staged) — saves media download.
         if (isCancelled(c.title)) { cancelled++; continue; }
@@ -463,7 +474,7 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
         try {
           if (!c.mediaUrl) throw new Error('no media url');
           if (!args.noMedia && !existsSync(file)) await downloadMedia(c.mediaUrl, file);
-          entries.set(c.externalId, entryFor(c, rel));
+          entries.set(c.externalId, entryFor(c as SeedCandidate & { lat: number; lng: number }, rel));
           staged++;
         } catch (e) {
           console.error(`✗ media ${c.externalId}: ${(e as Error).message}`);

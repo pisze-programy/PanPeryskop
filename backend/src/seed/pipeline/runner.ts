@@ -3,12 +3,12 @@
 import { nanoid } from 'nanoid';
 import { detectMediaType, extForMediaType } from '../../core/mediaFormat';
 import { doSavePost } from '../../api/posts';
-import { TTL_MS } from '../../core/models';
+import { TTL_MS, STATUS_APPROVED, STATUS_PENDING } from '../../core/models';
 import { SeedProvider, SeedProviderResult, SeedResult, SeedContext, RunType, SeedCandidate, ProviderId } from '../core/types';
 import { enabledProviders } from '../providers';
 import { warsawMidnightMs, tomorrowWarsaw, eventCreatedAtMs, eventDayEndMs } from '../core/dates';
 import { buildDescription, dedupe, showtimesJson, showtimeBookingJson, tagsJson } from '../core/dedupe';
-import { finalCandidateTags, loadTagSet } from '../core/autoTag';
+import { fallbackSeedGeo } from '../core/geo';
 import { dropCancelled, rescueRealShows } from '../core/filters';
 import { resolveKupGeo } from '../providers/kupbilecik';
 import { writeSeedRun, browserBudget, BrowserBudget } from '../core/log';
@@ -79,12 +79,12 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
   const merged = rescueRealShows(pre, dedupe(pre));
   let totalIngested = 0, totalSkipped = 0;
   const allErrors: { externalId: string; error: string }[] = [];
-  const tagSet = await loadTagSet(env);
 
   for (const c of merged) {
     const provider = bySource.get(c.source);
     const providerResult = allCandidates.find((r) => r.provider === c.source)!;
     if (!provider || !providerResult) continue;
+    let pendingGeo = false;
     if (typeof c.lat !== 'number' || typeof c.lng !== 'number') {
       // kupbilecik defers geo to after dedupe (venue store → browser fallback).
       if (c.source === ProviderId.KUPBILECIK && c.geoRef) {
@@ -96,7 +96,14 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
         const geo = await resolveKupGeo(ctx, c.venue, c.geoRef, day, c.city);
         if (geo.lat != null && geo.lng != null) { c.lat = geo.lat; c.lng = geo.lng; }
       }
-      if (typeof c.lat !== 'number' || typeof c.lng !== 'number') { providerResult.skipped++; totalSkipped++; continue; }
+      // Still no geo → collect anyway with a default pin (city center / 0,0) and
+      // ingest as PENDING: it never shows in the app until the admin fixes/approves.
+      if (typeof c.lat !== 'number' || typeof c.lng !== 'number') {
+        const fb = fallbackSeedGeo(c.city);
+        c.lat = fb.lat;
+        c.lng = fb.lng;
+        pendingGeo = true;
+      }
     }
     const ctx: SeedContext = {
       env, day, dayStart,
@@ -132,10 +139,10 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
       }
 
       const description = buildDescription(c);
-      const tags = await finalCandidateTags(tagSet, c);
       await doSavePost(
         env, user, postId, 'photo', c.lat, c.lng, description,
-        mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing), Boolean(c.isSoldOut), showtimesJson(c), showtimeBookingJson(c), tagsJson({ ...c, tags })
+        mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing), Boolean(c.isSoldOut), showtimesJson(c), showtimeBookingJson(c), tagsJson(c),
+        pendingGeo ? STATUS_PENDING : STATUS_APPROVED
       );
       providerResult.ingested++; totalIngested++;
     } catch (e) {

@@ -8,7 +8,6 @@ import { CITIES, cityById, cityBbox } from '../../admin/cities';
 import { warsawOffset } from '../core/dates';
 import { resolveGeo } from '../core/geo';
 import { DZIS_API, DZIS_LIMIT, DZIS_WEB } from '../core/constants';
-import { normalizeTags } from '../core/tags';
 
 const DZIS_CITIES = CITIES.map((c) => c.id);
 
@@ -166,7 +165,6 @@ export async function fetchDzisCity(ctx: SeedContext, cityId: string): Promise<S
       link: `${DZIS_WEB}/${e.slug}`,
       mediaUrl: img || '',
       thumbUrl: img || null,
-      tags: normalizeTags({ source: ProviderId.DZISAPP, rawTags: e.categorySlugs, title: e.title }),
     });
   }
   return out;

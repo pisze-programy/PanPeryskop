@@ -146,6 +146,9 @@ async function upload(token, entry, media, createdAt) {
   if (entry.showtimes) form.append('showtimes', JSON.stringify(entry.showtimes));
   if (entry.showtime_booking) form.append('showtime_booking', JSON.stringify(entry.showtime_booking));
   if (entry.tags && entry.tags.length) form.append('tags', JSON.stringify(entry.tags));
+  // Fallback-geo events (no_geo) stay PENDING — never shown until the admin fixes
+  // geo / approves. Normal events are created approved (no status field).
+  if (entry.no_geo) form.append('status', 'pending');
   form.append('file', new Blob([media.file], { type: media.mime }), media.fileName);
   form.append('thumb', new Blob([media.thumb], { type: 'image/jpeg' }), 'thumb.jpg');
 
@@ -235,10 +238,12 @@ async function main() {
       entry.post_id = data.id;
       entry.error = null;
 
-      if (approve) {
+      if (approve && !entry.no_geo) {
         await approvePost(data.id);
         results.done.push({ id: data.id, label, approved: true });
       } else {
+        // no_geo entries were created as 'pending' (see upload()) — skip approve
+        // so they stay out of the app until the admin fixes geo / approves.
         results.done.push({ id: data.id, label, approved: false });
       }
       console.log(`✓ ${label} -> ${data.id} (${media.type}, created_at ${new Date(createdAt).toISOString()})`);

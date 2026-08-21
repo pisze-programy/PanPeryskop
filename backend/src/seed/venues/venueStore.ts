@@ -51,7 +51,7 @@ export async function upsertVenuesBatch(db: D1Database, venues: VenueInput[]): P
           `INSERT INTO venues (id, name, aliases, lat, lng, city, sources, hit_count, first_seen, last_seen, created_at)
            VALUES (?, ?, '[]', ?, ?, ?, ?, 1, ?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET lat=excluded.lat, lng=excluded.lng, city=excluded.city, last_seen=excluded.last_seen`
-        ).bind(venueKey(v.name), v.name, v.lat, v.lng, v.city || null, JSON.stringify(sources), now, now, now)
+        ).bind(venueKey(v.name), v.name, v.lat, v.lng, venueKey(v.city || '') || null, JSON.stringify(sources), now, now, now)
       );
       n++;
     }
@@ -69,12 +69,12 @@ export async function upsertVenue(db: D1Database, v: VenueInput): Promise<string
 
   let best: VenueRow | null = null;
   let bestScore = 0;
-  const cityNorm = v.city ? v.city.toLowerCase() : null;
+  const cityNorm = v.city ? venueKey(v.city) : null;
   for (const r of rows) {
     // Match only within the same city — "Tama" in Warszawa is a different venue
     // than "Tama" in Poznań. Rows without a city are still candidates (provider
     // didn't know the city), but a same-city match is preferred.
-    if (cityNorm && r.city && r.city.toLowerCase() !== cityNorm) continue;
+    if (cityNorm && r.city && venueKey(r.city) !== cityNorm) continue;
     const names = [r.name, ...safeJSON<string[]>(r.aliases, [])];
     for (const n of names) {
       const s = venueSimilarity(v.name, n);
@@ -90,7 +90,7 @@ export async function upsertVenue(db: D1Database, v: VenueInput): Promise<string
       aliases.push(v.name);
     }
     const sources = { ...safeJSON<Record<string, string>>(best.sources, {}), ...(v.provider && v.ref ? { [v.provider]: v.ref } : {}) };
-    const city = best.city || v.city || null;
+    const city = venueKey(best.city || v.city || '') || null;
     await db.prepare(
       `UPDATE venues SET lat=?, lng=?, aliases=?, sources=?, city=?, hit_count=hit_count+1, last_seen=? WHERE id=?`
     ).bind(v.lat, v.lng, JSON.stringify(aliases), JSON.stringify(sources), city, now, best.id).run();
@@ -104,20 +104,29 @@ export async function upsertVenue(db: D1Database, v: VenueInput): Promise<string
     `INSERT INTO venues (id, name, aliases, lat, lng, city, sources, hit_count, first_seen, last_seen, created_at)
      VALUES (?, ?, '[]', ?, ?, ?, ?, 1, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET lat=excluded.lat, lng=excluded.lng, city=excluded.city, last_seen=excluded.last_seen, hit_count=hit_count+1`
-  ).bind(id, v.name, v.lat, v.lng, v.city || null, JSON.stringify(sources), now, now, now).run();
+    ).bind(id, v.name, v.lat, v.lng, venueKey(v.city || '') || null, JSON.stringify(sources), now, now, now).run();
   return id;
 }
 
 // Resolve geo for a venue name by fuzzy match, scoped to the SAME city only
 // ("Tama" in Warszawa is not "Tama" in Poznań). City-less rows are NEVER matched
 // when a city is known — a generic name like "Amfiteatr" must not resolve to a
-// same-named venue in a different city. Returns {lat, lng, id} or null.
+// same-named venue in a different city. EXCEPTION: a city-less row whose flattened
+// name matches the candidate EXACTLY (venueKey equality) is unambiguous
+// (e.g. "Katedra Marii Magdaleny"), so it resolves despite the missing city —
+// otherwise a geo'd venue with an unknown city silently drops every candidate.
+// Returns {lat, lng, id} or null.
 export async function resolveVenueGeo(
   db: D1Database, name: string, city?: string | null
 ): Promise<{ lat: number; lng: number; id: string } | null> {
   if (!name) return null;
   const rows = await loadVenuePool(db, city);
-  const match = bestVenueMatch(name, rows);
+  let match = bestVenueMatch(name, rows);
+  if (!match && city) {
+    const cityless = await db.prepare('SELECT * FROM venues WHERE city IS NULL AND id = ?')
+      .bind(venueKey(name)).first<VenueRow>();
+    if (cityless) match = bestVenueMatch(name, [cityless]);
+  }
   if (!match) return null;
   await db.prepare('UPDATE venues SET hit_count=hit_count+1, last_seen=? WHERE id=?').bind(Date.now(), match.id).run();
   return { lat: match.lat, lng: match.lng, id: match.id };
@@ -128,7 +137,7 @@ export async function resolveVenueGeo(
 async function loadVenuePool(db: D1Database, city?: string | null): Promise<VenueRow[]> {
   if (city) {
     const { results } = await db.prepare('SELECT * FROM venues WHERE city = ?')
-      .bind(city.toLowerCase()).all<VenueRow>();
+      .bind(venueKey(city)).all<VenueRow>();
     return results || [];
   }
   const { results } = await db.prepare('SELECT * FROM venues').all<VenueRow>();
@@ -152,7 +161,7 @@ function bestVenueMatch(name: string, rows: VenueRow[]): VenueRow | null {
 // All venues (optionally filtered by city) for in-memory fuzzy matching (matchVenueGeo).
 export async function listVenues(db: D1Database, city?: string | null): Promise<{ name: string; geo: { lat: number; lng: number }; city: string | null }[]> {
   const { results } = city
-    ? await db.prepare('SELECT name, lat, lng, city FROM venues WHERE city = ?').bind(city).all<{ name: string; lat: number; lng: number; city: string | null }>()
+    ? await db.prepare('SELECT name, lat, lng, city FROM venues WHERE city = ?').bind(venueKey(city)).all<{ name: string; lat: number; lng: number; city: string | null }>()
     : await db.prepare('SELECT name, lat, lng, city FROM venues').all<{ name: string; lat: number; lng: number; city: string | null }>();
   return (results || []).map((r) => ({ name: r.name, geo: { lat: r.lat, lng: r.lng }, city: r.city }));
 }

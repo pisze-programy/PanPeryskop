@@ -10,7 +10,7 @@ import { ProviderId } from '../core/types';
 import { containment, titleTokens, venuesMatch, isUkrainian } from '../core/match';
 import { eventCreatedAtMs, warsawDateOf } from '../core/dates';
 import { buildDescription, showtimesJson, tagsJson } from '../core/dedupe';
-import { resolveGeo } from '../core/geo';
+import { resolveGeo, fallbackSeedGeo } from '../core/geo';
 import { detectMediaType, extForMediaType } from '../../core/mediaFormat';
 import { doSavePost } from '../../api/posts';
 import { STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED } from '../../core/models';
@@ -72,8 +72,19 @@ export interface IngestResult {
   postId?: string;
   lat?: number;
   lng?: number;
+  /** How the coordinates were obtained: real | city_fallback | zero_fallback. */
+  geo?: 'real' | 'city_fallback' | 'zero_fallback';
+  reason?: string;
   winner?: WinnerInfo;
 }
+
+/**
+ * Geo fallback for facebook events whose venue can't be geocoded. Better to have
+ * the event in the right city (or at a clearly-wrong 0,0) than to drop it: the
+ * admin moderates per day and fixes the pin. Known city → its CITIES center
+ * (matches the admin "Fallback bbox" filter); otherwise → 0,0.
+ */
+export const fallbackGeo = fallbackSeedGeo;
 
 export interface PreviewResult {
   externalId: string;
@@ -265,14 +276,21 @@ export async function ingestFacebookEvent(env: Env, input: IngestInput): Promise
     };
   }
 
-  // No city -> refuse to geocode (Nominatim would pick a random city for a bare
-  // street/venue name). Same guard as previewGeo — never pin to the wrong city.
-  if (!(input.city || '').trim()) return { status: 'no_coords' };
-
-  const geo = await resolveGeo({
-    name: input.venue, address: input.address, city: input.city, db: env.DB, provider: FACEBOOK_SOURCE,
-  });
-  if (!geo) return { status: 'no_coords' };
+  // Geo: prefer a real resolution; fall back to the city center when the city is
+  // known, else 0,0. Never guess a random pin for a bare street/venue name — when
+  // the city is unknown we skip Nominatim entirely (0,0 marks "fix in admin").
+  const fb = fallbackGeo(input.city);
+  const geo = (input.city || '').trim()
+    ? await resolveGeo({
+        name: input.venue, address: input.address, city: input.city, db: env.DB, provider: FACEBOOK_SOURCE,
+        fallback: fb,
+      })
+    : { lat: fb.lat, lng: fb.lng, address: '' };
+  if (!geo) return { status: 'error', reason: 'geo-failed' };
+  const geoKind: 'real' | 'city_fallback' | 'zero_fallback' =
+    geo.lat === fb.lat && geo.lng === fb.lng
+      ? fb.lat === 0 && fb.lng === 0 ? 'zero_fallback' : 'city_fallback'
+      : 'real';
 
   if (winner === 'facebook') {
     const matched = existing.filter((e) => matchesExisting(cand, e.m));
@@ -316,5 +334,5 @@ export async function ingestFacebookEvent(env: Env, input: IngestInput): Promise
     durationMs: Date.now() - t0, browserMs: 0,
   });
 
-  return { status: 'pending', postId, lat: geo.lat, lng: geo.lng };
+  return { status: 'pending', postId, lat: geo.lat, lng: geo.lng, geo: geoKind };
 }

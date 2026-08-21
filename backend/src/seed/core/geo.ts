@@ -7,6 +7,8 @@
 //   3. fallback     — the caller-provided point (city-center / bbox middle).
 //                     ALWAYS the last resort, identical for all providers.
 import { resolveVenueGeo, upsertVenue } from '../venues/venueStore';
+import { diacriticFold } from './match';
+import { CITIES } from '../../admin/cities';
 
 export interface GeoPoint {
   lat: number;
@@ -64,6 +66,21 @@ async function nominatim(q: string): Promise<GeoPoint | null> {
 }
 
 const fallbackPoint = (fb: { lat: number; lng: number }): GeoPoint => ({ lat: fb.lat, lng: fb.lng, address: '' });
+
+/**
+ * Default coordinates for a geo-less candidate — SAME for every provider: known
+ * city → its center (CITIES, matches the admin "Fallback bbox" filter), unknown
+ * city → (0,0). Never a random guess. Such events are ingested as PENDING so the
+ * admin fixes geo / approves before anything appears in the app.
+ */
+export function fallbackSeedGeo(city: string | null | undefined): { lat: number; lng: number } {
+  const c = diacriticFold(city || '').toLowerCase();
+  if (!c) return { lat: 0, lng: 0 };
+  const entry =
+    CITIES.find((x) => diacriticFold(x.name).toLowerCase() === c) ||
+    CITIES.find((x) => c.includes(diacriticFold(x.name).toLowerCase()));
+  return entry ? { lat: entry.lat, lng: entry.lng } : { lat: 0, lng: 0 };
+}
 
 /**
  * Build the Nominatim candidate queries for a venue/address/city triple, in

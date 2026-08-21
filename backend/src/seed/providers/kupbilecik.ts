@@ -14,7 +14,6 @@ import { browserContent } from './browser';
 import { getBytes, getText } from './http';
 import { KUP_BASE, KUP_LISTINGS, KUP_MAX_PAGES } from '../core/constants';
 import { resolveVenueGeo, upsertVenue } from '../venues/venueStore';
-import { normalizeTags } from '../core/tags';
 
 const MONTHS = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
 
@@ -181,7 +180,6 @@ function buildFromHtml(
     thumbUrl: thumb,
     isSoldOut,
     geoRef: venueId || null,
-    tags: normalizeTags({ source: ProviderId.KUPBILECIK, rawTags: [listing], title }),
   };
 }
 

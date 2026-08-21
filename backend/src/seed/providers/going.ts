@@ -5,7 +5,6 @@ import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/ty
 import { getJson } from './http';
 import { upsertVenue } from '../venues/venueStore';
 import { GOING_BASE, GOING_ALGOLIA_ORIGIN, GOING_PLACE, GOING_POSTER, GOING_THUMB } from '../core/constants';
-import { normalizeTags } from '../core/tags';
 
 interface GoingHit {
   name_pl?: string;
@@ -71,11 +70,6 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
         : `${GOING_BASE}/${h.path}`,
       mediaUrl: GOING_POSTER(enc, cloudSig),
       thumbUrl: GOING_THUMB(enc, cloudSig),
-      tags: normalizeTags({
-        source: ProviderId.GOING,
-        rawTags: [h.category_name, h.category_slug, ...(h.tags_names || [])],
-        title: h.name_pl,
-      }),
     });
   }
   return out;

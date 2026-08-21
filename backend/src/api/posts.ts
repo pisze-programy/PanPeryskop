@@ -160,9 +160,18 @@ postsRoutes.post('/', async (c) => {
     tagsJson = JSON.stringify([...new Set(tags)].sort());
   }
 
+  // Optional status (seed-only): 'pending' keeps a fallback-geo event out of the
+  // app until the admin fixes geo / approves. Default = approved.
+  let status: string = STATUS_APPROVED;
+  const statusRaw = strField(form, 'status');
+  if (statusRaw) {
+    if (statusRaw !== 'approved' && statusRaw !== 'pending') return c.json({ error: 'Invalid status' }, 400);
+    status = statusRaw;
+  }
+
   const result = await doSavePost(
     c.env, user, postId, type, lat, lng, description,
-    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate, false, showtimesJson, showtimeBookingJson, tagsJson
+    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate, false, showtimesJson, showtimeBookingJson, tagsJson, status
   );
   return c.json(result, isUpdate ? 200 : 201);
 });

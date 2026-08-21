@@ -11,7 +11,7 @@ import { ProviderId } from '../src/seed/core/types';
 import { priorityOf } from '../src/seed/providers/registry';
 import {
   parseDescription, venueFromLoc, sourceFromExternalId, postToMatchable,
-  matchesExisting, findWinner, ingestFacebookEvent, previewFacebookEvents, previewGeo,
+  matchesExisting, findWinner, ingestFacebookEvent, previewFacebookEvents, previewGeo, fallbackGeo,
 } from '../src/seed/manual/facebook';
 import type { Matchable, ExistingEvent } from '../src/seed/manual/facebook';
 
@@ -278,30 +278,47 @@ test('facebook geo preview: resolves with stubbed nominatim, reports unresolved 
   }
 });
 
-test('facebook ingest: missing city -> no_coords (no wrong-city pin)', async () => {
+test('facebook ingest: missing city -> zero_fallback pending (0,0, fix in admin)', async () => {
   const { sqlite, env } = makeFbEnv();
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async () => new Response('[{ "lat": "52.0560", "lon": "20.9997" }]', { status: 200 })) as typeof fetch;
   try {
     const res = await ingestFacebookEvent(env, fbInput({ city: '' }));
-    assert.equal(res.status, 'no_coords', 'no city must never geocode to a random city');
-    const count = sqlite.prepare("SELECT COUNT(*) AS n FROM posts WHERE external_id='facebook-111'").get() as any;
-    assert.equal(count.n, 0);
+    assert.equal(res.status, 'pending');
+    assert.equal(res.geo, 'zero_fallback', 'no city -> 0,0 fallback (never a random city pin)');
+    assert.equal(res.lat, 0);
+    assert.equal(res.lng, 0);
+    const post = sqlite.prepare("SELECT status, lat, lng FROM posts WHERE external_id='facebook-111'").get() as any;
+    assert.equal(post.status, 'pending');
+    assert.equal(post.lat, 0);
+    assert.equal(post.lng, 0);
   } finally {
     globalThis.fetch = realFetch;
   }
 });
 
-test('facebook ingest: no coords -> no_coords (no post created)', async () => {
+test('facebook ingest: geocoding miss -> city_fallback pending (city center)', async () => {
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async () => new Response('[]', { status: 200 })) as typeof fetch; // Nominatim misses
   try {
     const { sqlite, env } = makeFbEnv();
     const res = await ingestFacebookEvent(env, fbInput());
-    assert.equal(res.status, 'no_coords');
+    assert.equal(res.status, 'pending');
+    assert.equal(res.geo, 'city_fallback', 'known city -> CITIES center');
+    assert.equal(res.lat, 52.2297, 'Warszawa center');
+    assert.equal(res.lng, 21.0122);
     const count = sqlite.prepare("SELECT COUNT(*) AS n FROM posts WHERE external_id='facebook-111'").get() as any;
-    assert.equal(count.n, 0);
+    assert.equal(count.n, 1, 'post created with fallback geo');
   } finally {
     globalThis.fetch = realFetch;
   }
+});
+
+test('fallbackGeo: known city -> CITIES center, unknown/empty -> 0,0, diacritics folded', () => {
+  assert.deepEqual(fallbackGeo('Warszawa'), { lat: 52.2297, lng: 21.0122 });
+  assert.deepEqual(fallbackGeo('Poznan'), { lat: 52.4064, lng: 16.9252 }, 'diacritics folded');
+  assert.deepEqual(fallbackGeo('Warszawa, Poland'), { lat: 52.2297, lng: 21.0122 }, 'suffix matched');
+  assert.deepEqual(fallbackGeo('Nieznane Miasto'), { lat: 0, lng: 0 });
+  assert.deepEqual(fallbackGeo(''), { lat: 0, lng: 0 });
+  assert.deepEqual(fallbackGeo('  '), { lat: 0, lng: 0 });
 });

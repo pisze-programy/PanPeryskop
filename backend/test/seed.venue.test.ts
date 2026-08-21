@@ -121,7 +121,12 @@ function mockDb() {
               }
               return {};
             },
-            first: async () => null,
+            first: async () => {
+              if (sql.includes('city IS NULL AND id =')) {
+                return db._venues.find((r) => r.city === null && r.id === String(params[0] ?? '')) || null;
+              }
+              return null;
+            },
             all: async () => ({
               results: sql.includes('WHERE city = ?')
                 ? db._venues.filter((r) => (r.city || '').toLowerCase() === String(params[0] ?? '').toLowerCase())
@@ -189,4 +194,32 @@ test('venueStore: generic name never resolves to a different city venue', async 
 test('venueStore: venueKey normalizes diacritics and spaces', () => {
   assert.equal(venueKey('Sala Koncertowa Fryderyk'), 'salakoncertowafryderyk');
   assert.equal(venueKey('Łódź Klub HAH'), 'lodzklubhah');
+});
+
+test('venueStore: city is stored diacritic-insensitive and resolves from any variant', async () => {
+  const db = mockDb();
+  // Admin geo save passes the city name as the user/lookup would spell it ("Rzeszów").
+  await upsertVenue(db, { name: 'Galeria Rzeszów', lat: 50.042089, lng: 21.998718, city: 'rzeszów', provider: 'admin' });
+  const stored = db._venues.find((r) => r.name === 'Galeria Rzeszów');
+  assert.ok(stored, 'venue stored');
+  assert.equal(stored!.city, 'rzeszow', 'city folded to ascii key at store time');
+  // A lookup with the diacritic variant still hits the row (seed candidates use raw names).
+  const geo = await resolveVenueGeo(db, 'Galeria Rzeszów', 'rzeszów');
+  assert.ok(geo, 'diacritic city variant resolves');
+  assert.ok(Math.abs(geo!.lat - 50.042089) < 0.001);
+  // A different city does NOT match (no cross-city leak — "Katedra" rule).
+  assert.equal(await resolveVenueGeo(db, 'Galeria Rzeszów', 'kraków'), null);
+});
+
+test('venueStore: exact-name city-less venue resolves even when a city is known', async () => {
+  const db = mockDb();
+  // Geo recorded without a city (the "Katedra Marii Magdaleny" production case).
+  await upsertVenue(db, { name: 'Katedra Marii Magdaleny', lat: 51.1094845, lng: 17.0345977, provider: 'kupbilecik' });
+  // Same-city pool excludes the city-less row, but the EXACT flattened-name match
+  // is unambiguous and must resolve (otherwise every candidate at the venue drops).
+  const geo = await resolveVenueGeo(db, 'Katedra Marii Magdaleny', 'wrocław');
+  assert.ok(geo, 'city-less exact-name venue resolves with a known city');
+  assert.ok(Math.abs(geo!.lat - 51.1094845) < 0.001);
+  // A DIFFERENT name must NOT fuzzy-match the city-less row (no cross-city leak).
+  assert.equal(await resolveVenueGeo(db, 'Katedra', 'wrocław'), null);
 });

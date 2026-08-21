@@ -7,9 +7,9 @@ import { SeedContext, ProviderId, CandidateStatus } from '../../core/types';
 import { warsawMidnightMs, eventCreatedAtMs, eventDayEndMs } from '../../core/dates';
 import { detectMediaType, extForMediaType } from '../../../core/mediaFormat';
 import { doSavePost } from '../../../api/posts';
-import { TTL_MS } from '../../../core/models';
+import { TTL_MS, STATUS_APPROVED, STATUS_PENDING } from '../../../core/models';
 import { dedupe, buildDescription, showtimesJson, showtimeBookingJson, tagsJson } from '../../core/dedupe';
-import { finalCandidateTags, loadTagSet } from '../../core/autoTag';
+import { fallbackSeedGeo } from '../../core/geo';
 import { dropCancelled, rescueRealShows, isCancelled } from '../../core/filters';
 import { buildVenueCache } from '../../providers/eventylive';
 import { resolveKupGeo } from '../../providers/kupbilecik';
@@ -95,7 +95,6 @@ export async function handleFetch(env: EnvQ, m: Extract<SeedQueueMessage, { type
 
   const candidates = await provider.fetchScope(ctx, m.scope);
   const t = now();
-  const tagSet = await loadTagSet(env as unknown as Env);
   const stmt = env.DB.prepare(
     `INSERT INTO seed_candidates
       (id, batch_id, provider, scope, external_id, title, start_ms, lat, lng, city, venue, address, link, media_url, thumb_url,
@@ -103,10 +102,9 @@ export async function handleFetch(env: EnvQ, m: Extract<SeedQueueMessage, { type
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '${CandidateStatus.PENDING}', 0, ?, ?)`
   );
   for (const c of candidates) {
-    const tags = await finalCandidateTags(tagSet, c);
     await stmt.bind(nanoid(24), m.batchId, provider.id, m.scope, c.externalId, c.title, c.startMs,
       c.lat, c.lng, c.city, c.venue, c.address, c.link, c.mediaUrl, c.thumbUrl,
-      c.isSoldOut ? 1 : 0, c.geoRef || null, showtimesJson(c), showtimeBookingJson(c), tagsJson({ ...c, tags }), t, t).run();
+      c.isSoldOut ? 1 : 0, c.geoRef || null, showtimesJson(c), showtimeBookingJson(c), tagsJson(c), t, t).run();
   }
 
   // Log per-scope run (duration + browser ms) to seed_runs so the dashboard and
@@ -166,13 +164,8 @@ async function runDedupe(env: EnvQ, batchId: string): Promise<void> {
         .bind(t, row.id).run();
       continue;
     }
-    if ((row.lat == null || row.lng == null) && row.provider !== ProviderId.KUPBILECIK) {
-      // kupbilecik resolves geo after dedupe (see handleIngest) — only surviving
-      // candidates pay for a possible venue-page browser call.
-      await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.NO_COORDS}', reason='missing lat/lng', updated_at=? WHERE id=?`)
-        .bind(t, row.id).run();
-      continue;
-    }
+    // Missing geo is NOT fatal — handleIngest applies a default pin (city center
+    // / 0,0) and ingests as PENDING (never shown until the admin fixes/approves).
     ingestMsgs.push({ body: { type: 'ingest', candidateId: row.id, batchId } });
   }
   if (ingestMsgs.length) {
@@ -198,7 +191,6 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     const createdAt = eventCreatedAtMs(day);
 
     const cand = toCandidate(row);
-    const tagSet = await loadTagSet(env as unknown as Env);
     const user = await getOrCreateSeedUser(env.DB);
     const existing = await env.DB.prepare('SELECT id FROM posts WHERE external_id=?').bind(cand.externalId).first<{ id: string }>();
     const postId = existing?.id || nanoid(24);
@@ -215,18 +207,18 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
 
     // kupbilecik defers geo to after dedupe: resolve it now (shared venues store,
     // falling back to a venue-page browser call for unknowns).
+    let pendingGeo = false;
     if (row.provider === ProviderId.KUPBILECIK && (cand.lat == null || cand.lng == null)) {
       const geo = await resolveKupGeo(ctx, cand.venue, row.geo_ref || '', day, cand.city);
-      if (geo.lat == null || geo.lng == null) {
-        // No geo available (venue not in the store and no venue-page coordinates).
-        // Deterministic — retrying won't help, so mark terminal no_coords.
-        await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.NO_COORDS}', reason=?, updated_at=? WHERE id=?`)
-          .bind(`kupbilecik: no geo for venue "${cand.venue}"`, now(), m.candidateId).run();
-        await maybeComplete(env, row.batch_id);
-        return;
-      }
-      cand.lat = geo.lat;
-      cand.lng = geo.lng;
+      if (geo.lat != null && geo.lng != null) { cand.lat = geo.lat; cand.lng = geo.lng; }
+    }
+    // Still no geo → collect with a default pin (city center / 0,0) and ingest as
+    // PENDING: it never shows in the app until the admin fixes geo / approves.
+    if (typeof cand.lat !== 'number' || typeof cand.lng !== 'number') {
+      const fb = fallbackSeedGeo(cand.city);
+      cand.lat = fb.lat;
+      cand.lng = fb.lng;
+      pendingGeo = true;
     }
 
     // Optional provider hook: resolve the post link to the direct source (dzis.app).
@@ -251,9 +243,9 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     }
 
     const description = buildDescription(cand);
-    const tags = await finalCandidateTags(tagSet, cand);
     await doSavePost(env as unknown as Env, user, postId, 'photo', cand.lat!, cand.lng!, description,
-      mediaKey, thumbKey, createdAt, true, cand.link, cand.externalId, Boolean(existing), Boolean(cand.isSoldOut), showtimesJson(cand), showtimeBookingJson(cand), tagsJson({ ...cand, tags }));
+      mediaKey, thumbKey, createdAt, true, cand.link, cand.externalId, Boolean(existing), Boolean(cand.isSoldOut), showtimesJson(cand), showtimeBookingJson(cand), tagsJson(cand),
+      pendingGeo ? STATUS_PENDING : STATUS_APPROVED);
 
     await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.DONE}', post_id=?, reason=NULL, updated_at=? WHERE id=?`)
       .bind(postId, now(), m.candidateId).run();

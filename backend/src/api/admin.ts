@@ -5,11 +5,10 @@ import { SEED_DAYS_AHEAD } from '../seed/core/constants';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
-function adminAuth(c: { env: Env; req: { header: (n: string) => string | undefined } }): boolean {
+export function adminAuth(c: { env: Env; req: { header: (n: string) => string | undefined } }): boolean {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
   return Boolean(c.env.ADMIN_SECRET) && token === c.env.ADMIN_SECRET;
 }
-
 // Current status of a post by external_id — lets seed-ingest skip entries whose
 // post was manually rejected (never re-approve them).
 adminRoutes.get('/posts/by-external/:ext', async (c) => {

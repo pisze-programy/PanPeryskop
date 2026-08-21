@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PanPeryskop — Facebook events</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css" />
+  <link rel="stylesheet" href="summary.css" />
+</head>
+<body class="bg-surface-secondary">
+  <div class="page">
+    <div class="page-wrapper">
+      <div class="container-xl py-3 py-md-4">
+
+        <div class="page-header d-print-none">
+          <div class="row align-items-center g-2">
+            <div class="col">
+              <h2 class="page-title">PanPeryskop · Facebook events</h2>
+              <div class="page-subtitle text-secondary" id="count">0 captured</div>
+            </div>
+            <div class="col-auto ms-auto">
+              <div class="btn-list">
+                <button id="btn-refresh" type="button" class="btn btn-outline-secondary">Refresh</button>
+                <button id="btn-check-all" type="button" class="btn btn-outline-secondary">Check all</button>
+                <button id="btn-uncheck-all" type="button" class="btn btn-outline-secondary">Uncheck all</button>
+                <button id="btn-clear" type="button" class="btn btn-outline-danger">Clear captures</button>
+                <button id="btn-options" type="button" class="btn btn-outline-secondary">Options</button>
+                <button id="btn-download" type="button" class="btn btn-outline-secondary">Download JSON</button>
+                <button id="btn-submit" type="button" class="btn btn-primary">Submit selected</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="config-banner" class="alert alert-warning d-none" role="alert">
+          API settings are missing. <a href="#" id="link-options">Open options</a> and set BASE_URL + ADMIN_SECRET.
+        </div>
+
+        <div class="card">
+          <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+              <thead>
+                <tr>
+                  <th class="w-1"></th>
+                  <th class="w-1">Media</th>
+                  <th>Title</th>
+                  <th>Date</th>
+                  <th>Location</th>
+                  <th>Geo</th>
+                  <th>Tag</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="list"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="../lib/settings.js"></script>
+  <script src="../lib/store.js"></script>
+  <script src="../lib/events-parser.js"></script>
+  <script src="../lib/api.js"></script>
+  <script src="summary.js"></script>
+</body>
+</html>

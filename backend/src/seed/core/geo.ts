@@ -65,6 +65,34 @@ async function nominatim(q: string): Promise<GeoPoint | null> {
 
 const fallbackPoint = (fb: { lat: number; lng: number }): GeoPoint => ({ lat: fb.lat, lng: fb.lng, address: '' });
 
+/**
+ * Build the Nominatim candidate queries for a venue/address/city triple, in
+ * order of preference. Two quirks of Nominatim's free-form parser are handled:
+ *   - a query STARTING with a street-type prefix ("ul. Ratajczaka 18 …") returns
+ *     nothing, while the bare street ("Ratajczaka 18 …") resolves — so leading
+ *     `ul.`/`ulica`/`al.`/`aleja` are stripped from each part;
+ *   - "|" separators (venue chains) break parsing — replaced with ",".
+ * When a real address is present, the venue name is dropped from the retry query
+ * (venue chains like "Targi | Hala nr 1A | Głogowska 18" pollute the street query).
+ */
+export function geoQueryCandidates(name: string, address: string, city: string): string[] {
+  const normalize = (s: string): string =>
+    (s || '')
+      .trim()
+      .replace(/^(ul\.|ulica|al\.|aleja)\s+/i, '')
+      .replace(/\|/g, ',')
+      .replace(/\s*,\s*/g, ', ')
+      .trim();
+
+  const nameQ = normalize(name);
+  const addrQ = normalize(address);
+  const cityQ = normalize(city);
+
+  const candidates = [[nameQ, addrQ, cityQ]];
+  if (addrQ) candidates.push([addrQ, cityQ]);
+  return [...new Set(candidates.map((p) => [...new Set(p)].filter(Boolean).join(', ')))].filter(Boolean);
+}
+
 export async function resolveGeo(opts: ResolveGeoOptions): Promise<GeoPoint | null> {
   const name = (opts.name || '').trim();
   // Nothing to resolve — straight to the fallback (never hit the store/geocoder).
@@ -79,15 +107,14 @@ export async function resolveGeo(opts: ResolveGeoOptions): Promise<GeoPoint | nu
     if (hit) return hit;
   }
 
-  // 2. Nominatim. Drop duplicate tokens (a venue whose name IS the address, e.g.
-  //    "Wrocławska 17", breaks the query if repeated) and empty parts.
-  const parts = [name, opts.address, opts.city].filter(Boolean);
-  const q = [...new Set(parts)].join(', ');
-  const geo = q ? await nominatim(q) : null;
-  if (geo) {
-    if (opts.db && name) await upsertVenue(opts.db, { name, lat: geo.lat, lng: geo.lng, city: opts.city || null, provider: opts.provider });
-    else if (opts.store) await opts.store.set(name || opts.address!, opts.city || null, geo);
-    return geo;
+  // 2. Nominatim (candidates, each paced at 1 req/s; cache the first hit).
+  for (const q of geoQueryCandidates(name, opts.address || '', opts.city || '')) {
+    const geo = await nominatim(q);
+    if (geo) {
+      if (opts.db && name) await upsertVenue(opts.db, { name, lat: geo.lat, lng: geo.lng, city: opts.city || null, provider: opts.provider });
+      else if (opts.store) await opts.store.set(name || opts.address!, opts.city || null, geo);
+      return geo;
+    }
   }
 
   // 3. Fallback.

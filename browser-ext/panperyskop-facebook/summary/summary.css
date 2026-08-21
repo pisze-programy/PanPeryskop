@@ -1,0 +1,52 @@
+/* PanPeryskop — Facebook ingest summary. Tabler is the base (light theme, like
+   the admin dashboard); only the gaps Tabler doesn't cover live here. */
+
+.pp-title { min-width: 16rem; }
+
+.pp-url {
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  font-size: 0.75rem;
+}
+
+.pp-thumb {
+  width: 64px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.pp-thumb-broken {
+  opacity: 0.35;
+}
+
+#list td .form-control,
+#list td .form-select {
+  min-width: 6rem;
+  width: auto;
+}
+
+#list td [data-field="location"] {
+  min-width: 18rem;
+}
+
+#list [data-role="geo"] {
+  min-width: 10rem;
+  white-space: nowrap;
+}
+
+.pp-geo-refresh {
+  margin-left: 4px;
+  padding: 0 6px;
+}
+
+#list .form-check-input {
+  margin-top: 2px;
+}
+
+@media (max-width: 900px) {
+  .pp-title { min-width: 10rem; }
+}

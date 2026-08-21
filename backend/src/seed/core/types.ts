@@ -2,7 +2,7 @@
 // is a SeedProvider with its own transport ('fetch' | 'browser'). The runner
 // iterates providers, logs per-run stats to D1, and sums Browser Run time.
 
-export type ProviderTransport = 'fetch' | 'browser';
+export type ProviderTransport = 'fetch' | 'browser' | 'manual';
 export type RunType = 'manual' | 'cron';
 
 /** Seed providers — the string values persist to D1 (seed_candidates.provider, posts.external_id prefix). */
@@ -16,6 +16,7 @@ export const ProviderId = {
   HELIOS: 'helios',
   LUMA: 'luma',
   MEETUP: 'meetup',
+  FACEBOOK: 'facebook',
 } as const;
 export type ProviderId = (typeof ProviderId)[keyof typeof ProviderId];
 

@@ -62,3 +62,6 @@ admin/seed/events-meetup-media/
 admin/vps/logs/
 admin/vps/.env
 .playwright-cli/
+
+# facebook scrape test dump
+browser-ext/*.json

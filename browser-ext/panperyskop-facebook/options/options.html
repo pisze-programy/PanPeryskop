@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PanPeryskop — Facebook addon options</title>
+  <style>
+    body {
+      font: 14px/1.5 system-ui, -apple-system, sans-serif;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 24px;
+      background: #0f1115;
+      color: #e6e8ee;
+    }
+    h1 { font-size: 16px; }
+    label { display: block; margin: 14px 0 4px; color: #8b93a5; }
+    input, select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #2a2f3a;
+      background: #171a21;
+      color: #e6e8ee;
+      font-size: 14px;
+    }
+    button {
+      margin-top: 18px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      background: #3b82f6;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #status { margin-top: 12px; color: #22c55e; }
+  </style>
+</head>
+<body>
+  <h1>PanPeryskop — Facebook ingest</h1>
+
+  <label for="baseUrl">API base URL</label>
+  <input id="baseUrl" type="text" placeholder="https://api.panperyskop.app" />
+
+  <label for="adminSecret">ADMIN_SECRET (ingest auth)</label>
+  <input id="adminSecret" type="password" placeholder="••••••••" />
+
+  <button id="save">Save</button>
+  <div id="status"></div>
+
+  <script src="../lib/settings.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

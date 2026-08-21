@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "PanPeryskop — Facebook events ingest",
+  "version": "0.1.0",
+  "description": "Captures Facebook events from the events feed and uploads them to the PanPeryskop API as a manual provider (context menu: PanPeryskop -> Facebook).",
+  "permissions": [
+    "alarms",
+    "contextMenus",
+    "storage",
+    "unlimitedStorage",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "webRequest",
+    "webRequestBlocking",
+    "webRequestFilterResponse"
+  ],
+  "host_permissions": [
+    "https://*.facebook.com/*",
+    "https://*.fbcdn.net/*",
+    "https://api.panperyskop.app/*",
+    "http://localhost:8787/*"
+  ],
+  "background": {
+    "scripts": [
+      "lib/settings.js",
+      "lib/store.js",
+      "lib/events-parser.js",
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.facebook.com/*"],
+      "js": [
+        "lib/settings.js",
+        "lib/store.js",
+        "lib/events-parser.js",
+        "lib/api.js",
+        "lib/image.js",
+        "content/content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "panperyskop-facebook@panperyskop.app"
+    }
+  }
+}

@@ -62,11 +62,18 @@ test('providers: going=kupbilecik=browser, helios in Worker, multikino+cinemacit
 test('registry: executors, priority and vps specs are consistent', () => {
   // Every implementation has a registry config; every config maps to a provider.
   for (const p of SEED_PROVIDERS) assert.ok(configOf(p.id), `${p.id} in registry`);
-  assert.equal(PROVIDER_CONFIGS.length, SEED_PROVIDERS.length);
 
-  // Every provider is assigned to at least one executor.
+  // Manual providers (browser-addon ingest, e.g. facebook) have NO executor —
+  // they are dedupe-rank + ingest targets only, so they live in the registry but
+  // not in SEED_PROVIDERS (nothing runs them; nothing can call fetchCandidates).
+  const manual = PROVIDER_CONFIGS.filter((c) => !c.executors.worker && !c.executors.vps);
+  for (const c of manual) assert.equal(c.transport, 'manual', `${c.id} manual has no executor`);
+  assert.equal(PROVIDER_CONFIGS.length, SEED_PROVIDERS.length + manual.length);
+
+  // Every provider is assigned to at least one executor, or is manual-only.
   for (const c of PROVIDER_CONFIGS) {
-    assert.ok(c.executors.worker === true || c.executors.vps, `${c.id} assigned to an executor`);
+    if (c.executors.worker === true || c.executors.vps) continue;
+    assert.equal(c.transport, 'manual', `${c.id} must be manual when it has no executor`);
   }
 
   // Priority ranks the dedupe winner (lower = canonical). Luma above going,

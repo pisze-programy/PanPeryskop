@@ -99,6 +99,14 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
       },
     },
   },
+  // ---- Manual provider (no executor): Facebook events are ingested by hand from
+  //      the browser addon via POST /admin/seed/facebook. Never runs in cron; the
+  //      priority still feeds cross-provider dedupe (below kupbilecik, above
+  //      dzisapp/eventylive — facebook events are often covered by ticket sellers).
+  {
+    id: ProviderId.FACEBOOK, transport: 'manual', enabled: true, priority: 3.5,
+    executors: {},
+  },
 ];
 
 const byId = new Map(PROVIDER_CONFIGS.map((c) => [c.id, c]));

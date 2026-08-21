@@ -37,12 +37,17 @@ test('providers: going=kupbilecik=browser, helios in Worker, multikino+cinemacit
   // no longer carry an `enabled` flag.
   for (const p of SEED_PROVIDERS) assert.ok(!('enabled' in p), `${p.id} must not define enabled`);
 
-  // Worker executor providers run in the CF queue pipeline.
+  // Worker executor providers run in the CF queue pipeline. dzisapp/eventylive
+  // are retired (enabled=false in the registry) — they must not run anywhere.
   const workerIds = workerExecutor.providerIds(PROVIDER_CONFIGS);
-  for (const id of ['going', 'kupbilecik', 'dzisapp', 'eventylive', 'helios'] as const) {
+  for (const id of ['going', 'kupbilecik', 'helios'] as const) {
     assert.ok(workerIds.includes(id), `${id} enabled on worker`);
   }
-  assert.ok(enabledProviders().length >= 5);
+  for (const id of ['dzisapp', 'eventylive'] as const) {
+    assert.ok(!workerIds.includes(id), `${id} retired (not on worker)`);
+    assert.equal(configOf(id)!.enabled, false, `${id} disabled in the registry`);
+  }
+  assert.equal(enabledProviders().length, 3);
   assert.deepEqual(
     enabledProviders().map((p) => p.id).sort(),
     workerIds.sort(),

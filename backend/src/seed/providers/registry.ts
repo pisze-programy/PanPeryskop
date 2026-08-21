@@ -49,11 +49,11 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     executors: { worker: true },
   },
   {
-    id: ProviderId.DZISAPP, transport: 'fetch', enabled: true, priority: 4,
+    id: ProviderId.DZISAPP, transport: 'fetch', enabled: false, priority: 4,
     executors: { worker: true },
   },
   {
-    id: ProviderId.EVENTYLIVE, transport: 'fetch', enabled: true, priority: 5,
+    id: ProviderId.EVENTYLIVE, transport: 'fetch', enabled: false, priority: 5,
     executors: { worker: true },
   },
   {

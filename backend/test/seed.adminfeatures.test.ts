@@ -124,3 +124,13 @@ test('tagCatalog: no tag_order → default order (canonical then custom by label
   assert.deepEqual(catalog.slice(0, 6).map((t) => t.id), ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'inne']);
   assert.deepEqual(catalog.slice(6).map((t) => t.id), ['sport', 'wystawa'], 'admin tags ordered by label');
 });
+
+test('registry: dzisapp + eventylive are disabled (retired), worker core still enabled', async () => {
+  const { enabledProviders } = await import('../src/seed/providers');
+  const ids = enabledProviders().map((p) => p.id);
+  assert.ok(!ids.includes('dzisapp'), 'dzisapp disabled');
+  assert.ok(!ids.includes('eventylive'), 'eventylive disabled');
+  assert.ok(ids.includes('going'), 'going still runs');
+  assert.ok(ids.includes('kupbilecik'), 'kupbilecik still runs');
+  assert.ok(ids.includes('helios'), 'helios still runs');
+});

@@ -64,13 +64,26 @@ adminRoutes.get('/seed/coverage', async (c) => {
 
 // One-off data cleanup: delete all event posts earlier than today (Europe/Warsaw),
 // their R2 media and dependent rows (reports/likes/dislikes/views/shares).
+// Without ?source it removes events earlier than today; with ?source=a,b it
+// removes ALL events from those sources (source = external_id prefix) regardless
+// of date — used to retire a provider.
 adminRoutes.post('/events/cleanup', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const db = c.env.DB;
-  const today = todayWarsaw();
-  const todayStart = Date.parse(`${today}T00:00:00+02:00`);
-  const scope = `category='events' AND (event_date < ?1 OR (event_date IS NULL AND created_at < ?2))`;
-  const binds = [today, todayStart];
+  const source = String(c.req.query('source') ?? '').trim();
+  const sources = source ? source.split(',').map((s) => s.trim()).filter((s) => /^[a-z0-9_-]+$/.test(s)) : [];
+  let scope: string;
+  let binds: unknown[];
+  if (sources.length) {
+    const ph = sources.map(() => `substr(external_id,1,instr(external_id,'-')-1) = ?`).join(' OR ');
+    scope = `category='events' AND (${ph})`;
+    binds = sources;
+  } else {
+    const today = todayWarsaw();
+    const todayStart = Date.parse(`${today}T00:00:00+02:00`);
+    scope = `category='events' AND (event_date < ?1 OR (event_date IS NULL AND created_at < ?2))`;
+    binds = [today, todayStart];
+  }
 
   const { results } = await db.prepare(
     `SELECT id, media_key, thumb_key FROM posts WHERE ${scope}`

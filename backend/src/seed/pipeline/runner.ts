@@ -8,6 +8,7 @@ import { SeedProvider, SeedProviderResult, SeedResult, SeedContext, RunType, See
 import { enabledProviders } from '../providers';
 import { warsawMidnightMs, tomorrowWarsaw, eventCreatedAtMs, eventDayEndMs } from '../core/dates';
 import { buildDescription, dedupe, showtimesJson, showtimeBookingJson, tagsJson } from '../core/dedupe';
+import { finalCandidateTags, loadTagSet } from '../core/autoTag';
 import { dropCancelled, rescueRealShows } from '../core/filters';
 import { resolveKupGeo } from '../providers/kupbilecik';
 import { writeSeedRun, browserBudget, BrowserBudget } from '../core/log';
@@ -78,6 +79,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
   const merged = rescueRealShows(pre, dedupe(pre));
   let totalIngested = 0, totalSkipped = 0;
   const allErrors: { externalId: string; error: string }[] = [];
+  const tagSet = await loadTagSet(env);
 
   for (const c of merged) {
     const provider = bySource.get(c.source);
@@ -130,9 +132,10 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
       }
 
       const description = buildDescription(c);
+      const tags = await finalCandidateTags(tagSet, c);
       await doSavePost(
         env, user, postId, 'photo', c.lat, c.lng, description,
-        mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing), Boolean(c.isSoldOut), showtimesJson(c), showtimeBookingJson(c), tagsJson(c)
+        mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing), Boolean(c.isSoldOut), showtimesJson(c), showtimeBookingJson(c), tagsJson({ ...c, tags })
       );
       providerResult.ingested++; totalIngested++;
     } catch (e) {

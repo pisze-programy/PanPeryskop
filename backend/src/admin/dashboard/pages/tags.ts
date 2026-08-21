@@ -3,7 +3,7 @@
 
 import { Hono } from 'hono';
 import {
-  APEXCHARTS_SRC, card, cardHeader, cards, empty, esc, icon, pageHeader,
+  APEXCHARTS_SRC, SORTABLE_SRC, card, cardHeader, cards, empty, esc, icon, pageHeader,
   pill, safeJson, staticFilePath,
 } from '../../ui';
 import { requireSession } from '../common';
@@ -192,9 +192,26 @@ pageRoutes.get('/tags', async (c) => {
     </div>
   </div>`;
 
+  const reorder = card({
+    class: 'mb-3',
+    header: cardHeader({
+      title: 'Kolejność tagów',
+      actions: `<button class="btn btn-sm btn-primary" type="button" onclick="ppTagOrderSave()">${icon('check')} Zapisz kolejność</button>`,
+    }),
+    body: `<div class="text-secondary fs-5 mb-3">Przeciągnij tagi, aby ustalić kolejność chipów w aplikacji i w panelu (kolejność = pozycja na liście). Zapisz przyciskiem wyżej.</div>
+      <div id="ppTagOrder" class="list-group list-group-flush">
+        ${catalog.map((t, i) => `<div class="list-group-item d-flex align-items-center gap-2" data-id="${esc(t.id)}">
+          <span class="text-secondary cursor-grab" title="Przeciągnij" style="cursor:grab">${icon('more-horizontal')}</span>
+          <span class="badge bg-primary-lt text-primary">${esc(t.label)}</span>
+          ${CANONICAL_TAG_SET.has(t.id) ? pill('kanon', 'ok') : pill('custom', 'muted')}
+          <span class="text-muted fs-5 ms-auto" data-n>${i + 1}</span>
+        </div>`).join('')}
+      </div>`,
+  });
+
   const body = `${header}${msgHtml}
   <div class="collapse mb-3" id="ppTagAdd">${addTag}</div>
-  ${kpi}${coverage}${chartsRow}
+  ${kpi}${coverage}${chartsRow}${reorder}
   ${card({
     class: 'mb-3',
     header: cardHeader({
@@ -222,7 +239,7 @@ pageRoutes.get('/tags', async (c) => {
   })}
   <script>window.ppTagData=${safeJson({ dist: { series: [filmy, meetup, muzyka, rest], labels: ['Filmy', 'Meetup', 'Muzyka', 'Pozostałe'] }, nonCinema: { series: nonCinemaSeries, labels: nonCinemaLabels } })};window.ppTagIdMap=${safeJson(tagIdMap)};</script>`;
 
-  return renderPage(c, 'Tagi', '/admin/tags', body, { scripts: [APEXCHARTS_SRC, staticFilePath('tags')] });
+  return renderPage(c, 'Tagi', '/admin/tags', body, { scripts: [APEXCHARTS_SRC, SORTABLE_SRC, staticFilePath('tags')] });
 });
 
 pageRoutes.post('/tags', async (c) => {
@@ -245,6 +262,28 @@ pageRoutes.post('/tags', async (c) => {
   if (exists) return c.redirect('/admin/tags?msg=dup');
   await db.prepare('INSERT INTO admin_tags (id, label, created_at) VALUES (?, ?, ?)').bind(id, label, Date.now()).run();
   return c.redirect('/admin/tags?msg=added');
+});
+
+// Persist the drag & drop order: replace tag_order with the given ids. Only ids
+// that still exist in the catalog (canonical ∪ admin_tags) are kept — deleted
+// tags are silently dropped and fall back to their default order.
+pageRoutes.post('/tags/order', async (c) => {
+  const session = await requireSession(c);
+  if (!session) return c.redirect('/admin/login');
+  const db = c.env.DB;
+  const body = (await c.req.json().catch(() => ({}))) as { ids?: unknown };
+  if (!Array.isArray(body.ids)) return c.json({ error: 'ids required' }, 400);
+  const ids = body.ids.filter((x): x is string => typeof x === 'string' && x.length > 0);
+  const catalog = await tagCatalog(db);
+  const valid = new Set(catalog.map((t) => t.id));
+  const ordered = ids.filter((id) => valid.has(id));
+  if (ordered.length === 0) return c.json({ error: 'empty' }, 400);
+  const stmts = [
+    db.prepare('DELETE FROM tag_order'),
+    ...ordered.map((id, i) => db.prepare('INSERT INTO tag_order (tag_id, position) VALUES (?, ?)').bind(id, i)),
+  ];
+  await db.batch(stmts);
+  return c.json({ ok: true, count: ordered.length });
 });
 
 export function registerTags(parent: Hono<{ Bindings: Env }>): void {

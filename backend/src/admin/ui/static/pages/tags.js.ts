@@ -25,6 +25,28 @@ function ppTagRender() {
   document.getElementById('ppTagEmpty').style.display = shown ? 'none' : 'block';
 }
 document.addEventListener('DOMContentLoaded', function () {
+  var list = document.getElementById('ppTagOrder');
+  if (list && window.Sortable) {
+    new window.Sortable(list, {
+      handle: '[title="Przeciągnij"]',
+      animation: 150,
+      onEnd: function () {
+        document.querySelectorAll('#ppTagOrder [data-id]').forEach(function (el, i) {
+          var n = el.querySelector('[data-n]');
+          if (n) n.textContent = i + 1;
+        });
+      }
+    });
+  }
+  window.ppTagOrderSave = function () {
+    var ids = [];
+    document.querySelectorAll('#ppTagOrder [data-id]').forEach(function (el) { ids.push(el.getAttribute('data-id')); });
+    if (!ids.length) return;
+    fetch('/admin/tags/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: ids }) })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function () { window.ppToast('Kolejność zapisana.', 'success'); })
+      .catch(function () { window.ppToast('Nie udało się zapisać kolejności.', 'danger'); });
+  };
   if (!window.ApexCharts || !window.ppTagData) return;
   var d = window.ppTagData;
   var clr = function (c) { return 'color-mix(in srgb, transparent, var(--tblr-' + c + ') 100%)'; };

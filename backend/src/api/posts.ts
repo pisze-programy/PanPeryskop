@@ -185,7 +185,8 @@ export async function doSavePost(
   isSoldOut = false,
   showtimes: string | null = null,
   showtimeBooking: string | null = null,
-  tags: string | null = null
+  tags: string | null = null,
+  status: string = STATUS_APPROVED
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
@@ -201,10 +202,12 @@ export async function doSavePost(
         `UPDATE posts
          SET type = ?, lat = CASE WHEN geo_locked = 1 THEN lat ELSE ? END,
              lng = CASE WHEN geo_locked = 1 THEN lng ELSE ? END,
-             description = CASE WHEN geo_locked = 1 THEN description ELSE ? END,
+             description = CASE WHEN geo_locked = 1 OR time_locked = 1 THEN description ELSE ? END,
              media_key = ?, thumb_key = ?,
              is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?,
-             is_sold_out = ?, event_date = ?, showtimes = ?, showtime_booking = ?,
+             is_sold_out = CASE WHEN sold_out_locked = 1 THEN is_sold_out ELSE ? END,
+             event_date = ?, showtimes = CASE WHEN time_locked = 1 THEN showtimes ELSE ? END,
+             showtime_booking = CASE WHEN time_locked = 1 THEN showtime_booking ELSE ? END,
              tags = CASE WHEN tags_locked = 1 THEN tags ELSE ? END
          WHERE id = ?`
       )
@@ -215,9 +218,9 @@ export async function doSavePost(
     await db
       .prepare(
         `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags)
-         VALUES (?, ?, ?, ?, ?, ?, '${STATUS_APPROVED}', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags)
+      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags)
       .run();
     await db
       .prepare(
@@ -233,7 +236,7 @@ export async function doSavePost(
     lat,
     lng,
     description,
-    status: STATUS_APPROVED,
+    status,
     media_key: mediaKey,
     thumb_key: thumbKey,
     created_at: createdAt,

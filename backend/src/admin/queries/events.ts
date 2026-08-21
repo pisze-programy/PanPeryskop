@@ -13,6 +13,7 @@ export interface EventFilter {
   toMs: number | null;
   q?: string | null;
   sources?: string[] | null;
+  time?: string | null;
   limit: number;
   offset?: number;
 }
@@ -43,6 +44,14 @@ function eventsWhere(f: EventFilter): { where: string; binds: unknown[] } {
   }
   if (f.geo === 'locked') { where += ' AND p.geo_locked = 1'; }
   if (f.geo === 'none') { where += ' AND (p.lat IS NULL OR p.lng IS NULL)'; }
+  // Time filter on the first showtime (or absence of one). "zero" = the seed
+  // default placeholder 00:00 OR no time at all; the rest are lower bounds on
+  // the first showtime string (HH:MM compares lexicographically).
+  if (f.time === 'zero') { where += " AND (p.showtimes IS NULL OR json_extract(p.showtimes,'$[0]')='00:00')"; }
+  else if (f.time === '06') { where += " AND json_extract(p.showtimes,'$[0]')>='06:00'"; }
+  else if (f.time === '12') { where += " AND json_extract(p.showtimes,'$[0]')>='12:00'"; }
+  else if (f.time === '18') { where += " AND json_extract(p.showtimes,'$[0]')>='18:00'"; }
+  else if (f.time === '2359') { where += " AND json_extract(p.showtimes,'$[0]')>='23:59'"; }
   if (f.fromMs) { where += ' AND p.created_at>=?'; binds.push(f.fromMs); }
   if (f.toMs) { where += ' AND p.created_at<=?'; binds.push(f.toMs); }
   return { where, binds };
@@ -56,6 +65,7 @@ export function eventsSql(f: EventFilter): { sql: string; binds: unknown[] } {
     sql: `SELECT p.id, p.external_id, p.description, p.created_at, p.status, p.link_url,
           p.thumb_key, p.media_key, p.tags, p.event_date, p.showtimes, p.showtime_booking,
           p.lat, p.lng, p.is_sold_out, p.geo_locked, p.tags_locked, p.rejection_reason,
+          p.sold_out_locked, p.time_locked,
           substr(p.external_id,1,instr(p.external_id,'-')-1) AS source
           FROM posts p WHERE ${where} ORDER BY p.event_date DESC, p.created_at DESC LIMIT ? OFFSET ?`,
     binds: [...binds, f.limit, offset],

@@ -11,6 +11,8 @@ export interface PageAssets {
 
 // Tabler 1.4 vendors ApexCharts — load it from the same host/version as the CSS.
 export const APEXCHARTS_SRC = 'https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/libs/apexcharts/dist/apexcharts.min.js';
+// Drag & drop ordering for the tags page (Tag reorder list).
+export const SORTABLE_SRC = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js';
 
 export const NAV = [
   { href: '/admin', label: 'Overview', icon: 'layout-dashboard' },

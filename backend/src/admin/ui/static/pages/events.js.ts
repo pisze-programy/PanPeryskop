@@ -63,6 +63,59 @@ export const EVENTS_JS = String.raw`
       .then(function (resp) { window.ppGeoSwap(id, resp && resp.placeHtml, resp && resp.geoBtn); window.ppGeoClose(); window.ppToast('GEO zaktualizowane.', 'success'); })
       .catch(function () { window.ppToast('Nie udało się zapisać GEO.', 'danger'); });
   };
+  window.ppApplyCounts = function (c) {
+    if (!c) return;
+    var set = function (k, v) { var el = document.getElementById(k); if (el) el.textContent = String(v); };
+    set('ppStat-total', c.total); set('ppStat-approved', c.approved); set('ppStat-pending', c.pending);
+    set('ppStat-rejected', c.rejected); set('ppStat-untagged', c.untagged);
+    set('ppStat-sold', c.sold); set('ppStat-geo', c.geoLocked); set('ppStat-taglock', c.tagsLocked);
+  };
+  window.ppSoldToggle = function (id, on) {
+    fetch('/admin/events/' + encodeURIComponent(id) + '/sold', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: !!on }) })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (resp) {
+        var el = document.querySelector('.pp-sold-badge[data-id="' + id + '"]');
+        if (el && resp && resp.soldHtml) el.outerHTML = resp.soldHtml;
+        window.ppApplyCounts(resp && resp.counts);
+        window.ppToast(on ? 'Oznaczono jako wyprzedane.' : 'Oznaczono jako dostępne.', 'success');
+      })
+      .catch(function () { window.ppToast('Nie udało się zapisać stanu wyprzedane.', 'danger'); });
+  };
+  window.ppTimeId = null;
+  window.ppTimeStatusEl = null;
+  window.ppTimeShowStatus = function (msg) { if (window.ppTimeStatusEl) { window.ppTimeStatusEl.textContent = msg; window.ppTimeStatusEl.style.display = 'block'; } };
+  window.ppTimeClearStatus = function () { if (window.ppTimeStatusEl) window.ppTimeStatusEl.style.display = 'none'; };
+  window.ppTimeOpen = function (id, timesJson) {
+    window.ppTimeId = id;
+    window.ppTimeStatusEl = document.getElementById('ppTimeStatus');
+    window.ppTimeClearStatus();
+    var first = '';
+    try { var arr = JSON.parse(timesJson || '[]'); if (Array.isArray(arr) && arr.length) first = arr[0]; } catch (e) {}
+    var inp = document.getElementById('ppTimeInput');
+    if (inp) inp.value = first;
+    var m = document.getElementById('ppTimeModal');
+    window.ppModalShow(m);
+    setTimeout(function () { if (m) m.focus(); if (inp) inp.select(); }, 0);
+  };
+  window.ppTimeClose = function () { window.ppModalHide(document.getElementById('ppTimeModal')); window.ppTimeId = null; };
+  window.ppTimeSwap = function (id, html) {
+    var el = document.querySelector('.pp-date-cell[data-id="' + id + '"]');
+    if (el && html) el.innerHTML = html;
+  };
+  window.ppTimeSave = function () {
+    var id = window.ppTimeId; if (!id) return;
+    var t = (document.getElementById('ppTimeInput').value || '').trim();
+    if (!/^\d{2}:\d{2}$/.test(t) || t < '00:00' || t > '23:59') { window.ppTimeShowStatus('Podaj godzinę w formacie HH:MM (00:00–23:59).'); return; }
+    fetch('/admin/events/' + encodeURIComponent(id) + '/time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ time: t }) })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (resp) {
+        window.ppTimeSwap(id, resp && resp.dateHtml);
+        window.ppApplyCounts(resp && resp.counts);
+        window.ppTimeClose();
+        window.ppToast('Godzina zapisana.', 'success');
+      })
+      .catch(function () { window.ppToast('Nie udało się zapisać godziny.', 'danger'); });
+  };
   window.ppUpdate = function (id, formEl) {
     var sel = formEl.querySelector('select');
     var fd = new FormData(formEl);
@@ -79,12 +132,7 @@ export const EVENTS_JS = String.raw`
           sel.style.outline = '2px solid var(--tblr-success)';
           setTimeout(function () { sel.style.outline = ''; }, 700);
         }
-        if (resp && resp.counts) {
-          var set = function (k, v) { var el = document.getElementById(k); if (el) el.textContent = String(v); };
-          set('ppStat-total', resp.counts.total); set('ppStat-approved', resp.counts.approved);
-          set('ppStat-pending', resp.counts.pending); set('ppStat-rejected', resp.counts.rejected);
-          set('ppStat-untagged', resp.counts.untagged);
-        }
+        window.ppApplyCounts(resp && resp.counts);
         window.ppToast('Zapisano.', 'success');
       })
       .catch(function () { window.ppToast('Nie udało się zapisać zmiany.', 'danger'); });

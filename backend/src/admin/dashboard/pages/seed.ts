@@ -9,6 +9,7 @@ import {
 } from '../../ui';
 import { browserBudget, cronInfo } from '../../queries';
 import { requireSession, fmtPctNum } from '../common';
+import { PROVIDER_CONFIGS } from '../../../seed/providers/registry';
 import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
@@ -46,18 +47,27 @@ pageRoutes.get('/seed', async (c) => {
   const since = Date.now() - 30 * 86_400_000;
   const startOfMonth = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
 
-  const [bAgg, rAgg, providers, budget, cron, stuck] = await Promise.all([
+  const [bAgg, rAgg, budget, cron, stuck] = await Promise.all([
     db.prepare(`SELECT COUNT(*) total, COALESCE(SUM(status='done'),0) done, COALESCE(SUM(status='failed'),0) failed
                 FROM seed_batches WHERE created_at>=?`).bind(since).first<{ total: number; done: number; failed: number }>(),
     db.prepare(`SELECT COALESCE(SUM(ingested),0) ingested, COALESCE(SUM(errors),0) errors, COALESCE(AVG(duration_ms),0) avg_ms
                 FROM seed_runs WHERE created_at>=? AND provider<>'total'`).bind(since).first<{ ingested: number; errors: number; avg_ms: number }>(),
-    db.prepare('SELECT DISTINCT provider FROM seed_runs WHERE created_at>=? AND provider<>? ORDER BY provider').bind(since, 'total').all<{ provider: string }>(),
     c.env.BROWSER ? browserBudget(c.env) : null,
     cronInfo(c.env, db),
     db.prepare(`SELECT day, status, updated_at, reason FROM seed_batches
                 WHERE status NOT IN ('done','failed') AND updated_at < ? ORDER BY updated_at ASC LIMIT 20`)
       .bind(Date.now() - 2 * 3_600_000).all<{ day: string; status: string; updated_at: number; reason: string | null }>(),
   ]);
+
+  // All providers (both executors) with their executor label — the seed page shows
+  // the full picture, not just the Worker queue that writes seed_runs.
+  const ALL_PROVIDERS = PROVIDER_CONFIGS.map((p) => ({
+    id: p.id,
+    executor: p.executors.vps ? 'VPS' : p.executors.worker ? 'Worker' : 'poza',
+    label: `${p.id}${p.executors.vps ? ' (VPS)' : ''}`,
+  }));
+  const WORKER_PROVIDER_LABELS = ALL_PROVIDERS.filter((p) => p.executor === 'Worker').map((p) => p.id).join(', ');
+  const VPS_PROVIDER_LABELS = ALL_PROVIDERS.filter((p) => p.executor === 'VPS').map((p) => p.id).join(', ');
 
   const [ingestSeries, batchSeries, budgetSeries] = await Promise.all([
     db.prepare(`SELECT date(created_at/1000,'unixepoch','+2 hours') d,
@@ -86,12 +96,15 @@ pageRoutes.get('/seed', async (c) => {
   const batches = (await db.prepare(bSql).bind(...bBinds).all<any>()).results ?? [];
   const byBatch = new Map<string, any[]>();
   const ids = batches.map((b) => b.id);
+  const doneProviders = new Map<string, number>();
   if (ids.length) {
     const ph = ids.map(() => '?').join(',');
-    const [sc, ru] = await Promise.all([
+    const [sc, ru, dp] = await Promise.all([
       db.prepare(`SELECT * FROM seed_scopes WHERE batch_id IN (${ph})`).bind(...ids).all<any>(),
       db.prepare(`SELECT * FROM seed_runs WHERE batch_id IN (${ph})`).bind(...ids).all<any>(),
+      db.prepare(`SELECT batch_id, COUNT(DISTINCT provider) n FROM seed_scopes WHERE status='done' AND batch_id IN (${ph}) GROUP BY batch_id`).bind(...ids).all<{ batch_id: string; n: number }>(),
     ]);
+    for (const r of (dp.results ?? [])) doneProviders.set(r.batch_id, r.n);
     for (const s of (sc.results ?? [])) { (byBatch.get(s.batch_id) ?? byBatch.set(s.batch_id, []).get(s.batch_id)!).push({ kind: 'scope', ...s }); }
     for (const r of (ru.results ?? [])) { (byBatch.get(r.batch_id) ?? byBatch.set(r.batch_id, []).get(r.batch_id)!).push({ kind: 'run', ...r }); }
   }
@@ -123,7 +136,7 @@ pageRoutes.get('/seed', async (c) => {
   </div>
   <div class="alert alert-important alert-dismissible mb-3">
     <div class="d-flex">
-      <div>${icon('alert-triangle', 'icon me-2')}<strong>Jak to czytać?</strong> Każde uruchomienie tworzy jeden <strong>batch</strong> = pełny seed dnia; w batchu <strong>scopy</strong> przechodzą przez kolejkę i logują uruchomienia w <strong>seed_runs</strong>.</div>
+      <div>${icon('alert-triangle', 'icon me-2')}<strong>Jak to czytać?</strong> Każde uruchomienie tworzy jeden <strong>batch</strong> = pełny seed dnia; w batchu <strong>scopy</strong> przechodzą przez kolejkę i logują uruchomienia w <strong>seed_runs</strong>. Batche na tej stronie pokazują tylko pipeline <strong>Workera</strong>: ${esc(WORKER_PROVIDER_LABELS)}. Multikino, Cinemacity, Luma i Meetup działają na osobnym <strong>VPS-executorze</strong> (osobny proces, ingest przez seed-ingest) — nie tworzą batchy i nie logują seed_runs, dlatego nie ma ich w tych statystykach.</div>
       <a class="btn-close" data-bs-dismiss="alert" aria-label="Zamknij"></a>
     </div>
   </div>`;
@@ -200,17 +213,17 @@ pageRoutes.get('/seed', async (c) => {
   </div>`;
 
   // ---- Filters ----
-  const sel = (name: string, cur: string | null, opts: string[]) =>
-    `<select name="${name}" class="form-select" onchange="this.form.submit()">${opts.map((o) =>
-      `<option value="${o}" ${cur === o ? 'selected' : ''}>${o || 'Wszystkie'}</option>`).join('')}</select>`;
+  const sel = (name: string, cur: string | null, opts: { value: string; label: string }[]) =>
+    `<select name="${name}" class="form-select" onchange="this.form.submit()"><option value="" ${!cur ? 'selected' : ''}>Wszystkie</option>${opts.map((o) =>
+      `<option value="${esc(o.value)}" ${cur === o.value ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>`;
   const filterBar = `<form method="get" action="/admin/seed" class="card mb-3"><div class="card-body">
     <div class="row g-2 align-items-end">
       <div class="col-6 col-md-2"><label class="form-label">Dzień od</label><input name="dfrom" type="date" class="form-control" value="${esc(dFrom || '')}" onchange="this.form.submit()" /></div>
       <div class="col-6 col-md-2"><label class="form-label">Dzień do</label><input name="dto" type="date" class="form-control" value="${esc(dTo || '')}" onchange="this.form.submit()" /></div>
-      <div class="col-6 col-md-2"><label class="form-label">Status</label>${sel('bstatus', bStatus, ['', ...BATCH_STATUSES])}</div>
-      <div class="col-6 col-md-2"><label class="form-label">Provider</label>${sel('provider', provider, ['', ...(providers.results ?? []).map((p) => p.provider)])}</div>
-      <div class="col-6 col-md-2"><label class="form-label">Transport</label>${sel('transport', transport, ['', ...TRANSPORTS])}</div>
-      <div class="col-6 col-md-2"><label class="form-label">Typ</label>${sel('rtype', runType, ['', ...RUN_TYPES])}</div>
+      <div class="col-6 col-md-2"><label class="form-label">Status</label>${sel('bstatus', bStatus, ['', ...BATCH_STATUSES].map((s) => ({ value: s, label: s || 'Wszystkie' })))}</div>
+      <div class="col-6 col-md-2"><label class="form-label">Provider</label>${sel('provider', provider, ALL_PROVIDERS.map((p) => ({ value: p.id, label: p.label })))}</div>
+      <div class="col-6 col-md-2"><label class="form-label">Transport</label>${sel('transport', transport, TRANSPORTS.map((s) => ({ value: s, label: s })))}</div>
+      <div class="col-6 col-md-2"><label class="form-label">Typ</label>${sel('rtype', runType, RUN_TYPES.map((s) => ({ value: s, label: s })))}</div>
       <div class="col-12 d-flex align-items-center gap-3">
         <label class="form-check"><input class="form-check-input" type="checkbox" name="errsonly" value="1" ${errsOnly ? 'checked' : ''} onchange="this.form.submit()"> Tylko błędy</label>
         <button class="btn btn-primary ms-auto" type="submit">Zastosuj</button>
@@ -220,25 +233,29 @@ pageRoutes.get('/seed', async (c) => {
   </div></form>`;
 
   // ---- Provider health ----
-  const provRows = (providerHealth.results ?? []).map((p) => {
-    const errPct = p.runs ? Math.round((p.errors / p.runs) * 100) : 0;
+  const healthByProvider = new Map((providerHealth.results ?? []).map((p) => [p.provider, p]));
+  const provRows = ALL_PROVIDERS.map((p) => {
+    const h = healthByProvider.get(p.id);
+    const runs = h?.runs ?? 0;
+    const errPct = runs ? Math.round(((h?.errors ?? 0) / runs) * 100) : 0;
+    const vps = p.executor === 'VPS';
     return `<tr>
-      <td class="font-monospace">${esc(p.provider)}</td>
-      <td>${p.runs}</td><td>${p.candidates}</td><td>${p.ingested}</td>
-      <td class="text-danger fw-bold">${p.errors}</td>
-      <td style="min-width:120px"><div class="progress progress-sm">
-        <div class="progress-bar bg-danger" style="width:${Math.max(0.5, errPct)}%"></div></div></td>
-      <td>${fmtDur(p.avg_ms)}</td><td>${fmtDur(p.browser_ms)}</td>
-      <td><div class="progress progress-sm" style="min-width:80px">
-        <div class="progress-bar" style="width:${Math.round((p.ingested / maxIngest) * 100)}%"></div></div></td>
+      <td class="font-monospace">${esc(p.id)}</td>
+      <td>${p.executor === 'Worker' ? pill('worker', 'ok') : p.executor === 'VPS' ? pill('VPS', 'muted') : pill('poza', 'muted')}</td>
+      <td>${runs}</td><td>${h?.candidates ?? 0}</td><td>${h?.ingested ?? 0}</td>
+      <td class="${(h?.errors ?? 0) > 0 ? 'text-danger fw-bold' : ''}">${h?.errors ?? 0}</td>
+      <td style="min-width:120px"><div class="progress progress-sm"><div class="progress-bar bg-danger" style="width:${Math.max(0.5, errPct)}%"></div></div></td>
+      <td>${h ? fmtDur(h.avg_ms) : '—'}</td><td>${h ? fmtDur(h.browser_ms) : '—'}</td>
+      <td>${vps && !runs ? '<span class="text-secondary fs-6">poza Workerem (seed-ingest)</span>' : `<div class="progress progress-sm" style="min-width:80px"><div class="progress-bar" style="width:${Math.round(((h?.ingested ?? 0) / maxIngest) * 100)}%"></div></div>`}</td>
     </tr>`;
   }).join('');
   const providerCard = card({
     class: 'mb-3',
     header: cardHeader({ title: 'Zdrowie providerów' }),
     body: `<div class="table-responsive"><table class="table table-vcenter card-table">
-      <thead><tr><th>Provider</th><th>Runs</th><th>Cand</th><th>Ingest</th><th>Err</th><th>Err%</th><th>Śr. czas</th><th>Browser</th><th>Rel. ingest</th></tr></thead>
-      <tbody>${provRows || `<tr><td colspan="9" class="text-secondary">Brak runów w oknie.</td></tr>`}</tbody></table></div>`,
+      <thead><tr><th>Provider</th><th>Executor</th><th>Runs</th><th>Cand</th><th>Ingest</th><th>Err</th><th>Err%</th><th>Śr. czas</th><th>Browser</th><th>Rel. ingest</th></tr></thead>
+      <tbody>${provRows || `<tr><td colspan="10" class="text-secondary">Brak providerów.</td></tr>`}</tbody></table></div>
+      <div class="text-secondary fs-5 mt-2">Multikino, Cinemacity, Luma i Meetup działają na VPS-executorze (osobny proces, ingest przez seed-ingest) — nie logują do seed_runs, więc tutaj pokazują się z zerami.</div>`,
   });
 
   // ---- Batch timeline (collapse) ----
@@ -256,12 +273,14 @@ pageRoutes.get('/seed', async (c) => {
       <td class="${r.errors ? 'text-danger fw-bold' : 'text-success'}">${r.errors}</td>
       <td>${fmtDur(r.duration_ms)}</td><td>${fmtDur(r.browser_ms)}</td></tr>`).join('');
     const donePct = b.scopes_total > 0 ? Math.round((b.scopes_done / b.scopes_total) * 100) : 0;
+    const provDone = doneProviders.get(b.id) ?? 0;
+    const provTotal = b.providers_total ?? 0;
     return `<div class="list-group-item">
       <div class="row align-items-center">
         <div class="col-auto"><span class="status-dot ${b.status === 'done' ? 'status-green' : b.status === 'failed' ? 'status-red' : 'status-yellow'}"></span></div>
         <div class="col">
           <div class="fw-bold">${esc(b.day)}</div>
-          <div class="text-secondary">${b.scopes_done}/${b.scopes_total} scopów · ${b.providers_done}/${b.providers_total} providerów · aktualizacja ${fmtDate(b.updated_at)}${b.reason ? ` · <span class="text-danger" title="${esc(b.reason)}">${esc(String(b.reason).slice(0, 80))}</span>` : ''}</div>
+          <div class="text-secondary">${b.scopes_done}/${b.scopes_total} scopów · ${provDone}/${provTotal} providerów · aktualizacja ${fmtDate(b.updated_at)}${b.reason ? ` · <span class="text-danger" title="${esc(b.reason)}">${esc(String(b.reason).slice(0, 80))}</span>` : ''}</div>
         </div>
         <div class="col-auto">${batchStatusPill(b.status)}${b.run_type === 'cron' ? pill('cron', 'ok') : pill('manual', 'muted')}</div>
         <div class="col-3"><div class="progress progress-sm"><div class="progress-bar bg-success" style="width:${donePct}%"></div></div></div>

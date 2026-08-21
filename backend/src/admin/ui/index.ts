@@ -4,7 +4,7 @@ export * from '../utils/fmt';
 export * from '../utils/qs';
 export * from '../utils/slug';
 export { icon } from './icons';
-export { NAV, layout, page, type PageAssets, APEXCHARTS_SRC } from './layout';
+export { NAV, layout, page, type PageAssets, APEXCHARTS_SRC, SORTABLE_SRC } from './layout';
 export { tpl } from './templates';
 export { ADMIN_CSS_PATH, ADMIN_JS_PATH, staticFilePath } from './static';
 export {

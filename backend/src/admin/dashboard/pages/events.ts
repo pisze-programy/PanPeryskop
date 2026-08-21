@@ -22,6 +22,7 @@ const SOURCE_BADGE: Record<string, string> = {
   helios: 'bg-red-lt text-red', cinemacity: 'bg-blue-lt text-blue', multikino: 'bg-cyan-lt text-cyan',
   going: 'bg-green-lt text-green', kupbilecik: 'bg-purple-lt text-purple', dzisapp: 'bg-pink-lt text-pink',
   eventylive: 'bg-orange-lt text-orange', luma: 'bg-teal-lt text-teal', meetup: 'bg-indigo-lt text-indigo',
+  facebook: 'bg-blue-lt text-blue',
 };
 
 function norm(s: string): string {
@@ -165,24 +166,40 @@ function bookingURLFor(bookingJson: string | null | undefined, time: string, lin
   return null;
 }
 
-function dateCell(e: { id: string; event_date?: string | null; showtimes?: string | null; time?: string }): string {
+function dateCell(e: { id: string; event_date?: string | null; showtimes?: string | null; time?: string; time_locked?: number | null }): string {
   const d = esc(e.event_date || '');
   const times = parseShowtimes(e.showtimes);
-  if (times.length === 0) return `<div class="text-muted fs-5">${d}</div>`;
-  if (times.length === 1) return `<div class="text-muted fs-5">${d} · ${esc(times[0])}</div>`;
+  if (times.length === 0) return `<div class="text-muted fs-5">${d}${e.time_locked ? ` · ${timeLockBadge}` : ''}</div>`;
+  if (times.length === 1) return `<div class="text-muted fs-5">${d} · ${esc(times[0])}${e.time_locked ? ` · ${timeLockBadge}` : ''}</div>`;
   const opts = times.map((t, i) => `<option value="${esc(t)}" ${i === 0 ? 'selected' : ''}>${esc(t)}</option>`).join('');
   const sel = `<select class="form-select form-select-sm w-25" onchange="window.ppSel['${esc(e.id)}']=this.value">${opts}</select>`;
   return `<div class="d-flex align-items-center gap-2">
-    <span class="text-muted fs-5">${d}</span>${sel}
+    <span class="text-muted fs-5">${d}</span>${sel}${e.time_locked ? ` ${timeLockBadge}` : ''}
   </div>`;
 }
 
+const timeLockBadge = `<span class="badge bg-primary-lt text-primary" title="Godzina ustawiona ręcznie">${icon('lock', 'icon icon-tiny me-1')}godz</span>`;
+
+function soldOutBadge(e: { id: string; is_sold_out?: number | null; sold_out_locked?: number | null }): string {
+  const sold = e.is_sold_out ? `<span class="badge bg-danger-lt text-danger">wyprzedane</span>` : '';
+  const lock = e.sold_out_locked ? `<span class="badge bg-primary-lt text-primary" title="Stan wyprzedane ustawiony ręcznie">${icon('lock', 'icon icon-tiny me-1')}sold</span>` : '';
+  return `<span class="pp-sold-badge" data-id="${esc(e.id)}">${sold}${lock}</span>`;
+}
+
+function rewriteTime(description: string, time: string): string | null {
+  const m = /^(.+?):\s*(\d{2}:\d{2}),\s*(.*)$/.exec(description || '');
+  if (m) return `${m[1]}: ${time}, ${m[3]}`;
+  return null;
+}
+
 // Row actions kebab.
-function rowActions(id: string, loc: string, lat: number | null, lng: number | null, url: string | null): string {
+function rowActions(e: { id: string; loc: string; lat: number | null; lng: number | null; url: string | null; is_sold_out?: number | null; showtimes?: string | null }): string {
+  const id = e.id;
   const items = [
-    dropdownItem({ html: 'Zmień GEO', onclick: `ppGeoOpen('${esc(id)}','${jsStr(loc)}','${lat ?? ''}','${lng ?? ''}');return false;` }),
-    dropdownItem({ html: 'Podgląd mediów', onclick: `ppMediaOpen('/media/${esc(url ?? '')}');return false;` }),
-    dropdownItem({ html: 'Otwórz link', onclick: `ppOpenLink(ppLinkFor('${esc(id)}', '${jsStr(url ?? '')}'));return false;` }),
+    dropdownItem({ html: 'Zmień GEO', onclick: `ppGeoOpen('${esc(id)}','${jsStr(e.loc)}','${e.lat ?? ''}','${e.lng ?? ''}');return false;` }),
+    dropdownItem({ html: 'Zmień godzinę', onclick: `ppTimeOpen('${esc(id)}','${jsStr(e.showtimes ?? '')}');return false;` }),
+    dropdownItem({ html: e.is_sold_out ? 'Oznacz dostępne' : 'Oznacz wyprzedane', onclick: `ppSoldToggle('${esc(id)}', ${e.is_sold_out ? 0 : 1});return false;` }),
+    dropdownItem({ html: 'Otwórz link', onclick: `ppOpenLink(ppLinkFor('${esc(id)}', '${jsStr(e.url ?? '')}'));return false;` }),
     dropdownDivider,
     dropdownItem({ html: 'Kopiuj ID', onclick: `ppCopyId('${esc(id)}');return false;` }),
   ].join('');
@@ -212,13 +229,14 @@ pageRoutes.get('/events', async (c) => {
       cityId: q.city ? String(q.city) : null,
       source: q.source ? String(q.source) : null,
       status: q.status ? String(q.status) : null,
-      from: q.from ? String(q.from) : null,
+      from: q.from ? String(q.from) : todayWarsaw(),
       to: q.to ? String(q.to) : null,
       tag: q.tag ? String(q.tag) : null,
       geo: q.geo ? String(q.geo) : null,
       fromMs: null, toMs: null,
       q: q.q ? String(q.q) : null,
       sources: q.sources ? String(q.sources).split(',').filter(Boolean) : null,
+      time: q.time ? String(q.time) : null,
       limit: 50_000,
     };
     const { sql, binds } = eventsSql(f);
@@ -227,7 +245,7 @@ pageRoutes.get('/events', async (c) => {
       const { title, loc } = descParts(e.description);
       return { id: e.id, external_id: e.external_id, source: e.source, title, venue: loc, event_date: e.event_date, showtimes: e.showtimes, status: e.status, city: e.lat != null ? nearestCity(e.lat, e.lng) : '', lat: e.lat ?? '', lng: e.lng ?? '', link_url: e.link_url, created_at: e.created_at, is_sold_out: e.is_sold_out ?? 0, geo_locked: e.geo_locked ?? 0, tags_locked: e.tags_locked ?? 0 };
     });
-    const head = ['id', 'external_id', 'source', 'title', 'venue', 'event_date', 'showtimes', 'status', 'city', 'lat', 'lng', 'link_url', 'created_at', 'is_sold_out', 'geo_locked', 'tags_locked'];
+    const head = ['id', 'external_id', 'source', 'title', 'venue', 'event_date', 'showtimes', 'status', 'city', 'lat', 'lng', 'link_url', 'created_at', 'is_sold_out', 'sold_out_locked', 'time_locked', 'geo_locked', 'tags_locked'];
     const csv = [head, ...rows.map((r) => head.map((h) => { const v = (r as any)[h]; return v == null ? '' : `"${String(v).replace(/"/g, '""')}"`; }))].map((r) => r.join(',')).join('\n');
     return new Response(csv, {
       headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="events-${todayWarsaw()}.csv"` },
@@ -238,10 +256,11 @@ pageRoutes.get('/events', async (c) => {
   const source = q.source ? String(q.source) : null;
   const sources = q.sources ? String(q.sources).split(',').filter(Boolean) : null;
   const status = q.status ? String(q.status) : null;
-  const from = q.from ? String(q.from) : null;
+  const from = q.from ? String(q.from) : todayWarsaw();
   const to = q.to ? String(q.to) : null;
   const tag = q.tag ? String(q.tag) : null;
   const geo = q.geo ? String(q.geo) : null;
+  const time = q.time ? String(q.time) : null;
   const search = q.q ? String(q.q) : null;
   const cfrom = q.cfrom ? String(q.cfrom) : null;
   const cto = q.cto ? String(q.cto) : null;
@@ -254,7 +273,7 @@ pageRoutes.get('/events', async (c) => {
 
   const filter: EventFilter = {
     cityId, source, sources, status, from, to, tag, geo, fromMs, toMs,
-    q: search, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE,
+    q: search, time, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE,
   };
   const [{ sql, binds }, cnt, catalog, statusCnt, srcCnt, flagsCnt, untagged] = await Promise.all([
     Promise.resolve(eventsSql(filter)),
@@ -353,6 +372,12 @@ pageRoutes.get('/events', async (c) => {
     <option value="locked" ${geo === 'locked' ? 'selected' : ''}>Z ręcznym GEO (${geoLocked})</option>
     <option value="default" ${geo === 'default' ? 'selected' : ''}>Fallback bbox</option>
     <option value="none" ${geo === 'none' ? 'selected' : ''}>Bez współrzędnych</option>`;
+  const timeOpts = `<option value="">Wszystkie</option>
+    <option value="zero" ${time === 'zero' ? 'selected' : ''}>0:00 (brak)</option>
+    <option value="06" ${time === '06' ? 'selected' : ''}>≥ 6:00</option>
+    <option value="12" ${time === '12' ? 'selected' : ''}>≥ 12:00</option>
+    <option value="18" ${time === '18' ? 'selected' : ''}>≥ 18:00</option>
+    <option value="2359" ${time === '2359' ? 'selected' : ''}>≥ 23:59</option>`;
   const srcSelLabel = sources && sources.length ? `${sources[0]}${sources.length > 1 ? ` +${sources.length - 1}` : ''}` : 'Wszystkie';
   const srcCheckboxes = EVENT_SOURCES.map((s) => {
     const checked = sources?.includes(s) ? 'checked' : '';
@@ -387,10 +412,9 @@ pageRoutes.get('/events', async (c) => {
       <div class="col-6 col-md-3"><label class="form-label">Miasto</label><select name="city" class="form-select" onchange="this.form.submit()">${cityOpts}</select></div>
       <div class="col-6 col-md-3"><label class="form-label">Tag</label><select name="tag" class="form-select" onchange="this.form.submit()">${tagOpts}</select></div>
       <div class="col-6 col-md-3"><label class="form-label">GEO</label><select name="geo" class="form-select" onchange="this.form.submit()">${geoOpts}</select></div>
-      <div class="col-6 col-md-2"><label class="form-label">Data od</label><input type="date" name="from" class="form-control" value="${esc(from || '')}" onchange="this.form.submit()"></div>
+      <div class="col-6 col-md-2"><label class="form-label">Godzina</label><select name="time" class="form-select" onchange="this.form.submit()">${timeOpts}</select></div>
+      <div class="col-6 col-md-2"><label class="form-label">Data od <a class="text-muted text-decoration-none" href="/admin/events?${esc(buildQs(q, { from: null, page: null }))}" title="Wyczyść (domyślnie dziś)">×</a></label><input type="date" name="from" class="form-control" value="${esc(from || '')}" onchange="this.form.submit()"></div>
       <div class="col-6 col-md-2"><label class="form-label">Data do</label><input type="date" name="to" class="form-control" value="${esc(to || '')}" onchange="this.form.submit()"></div>
-      <div class="col-6 col-md-2"><label class="form-label">Seed od</label><input type="date" name="cfrom" class="form-control" value="${esc(cfrom || '')}" onchange="this.form.submit()"></div>
-      <div class="col-6 col-md-2"><label class="form-label">Seed do</label><input type="date" name="cto" class="form-control" value="${esc(cto || '')}" onchange="this.form.submit()"></div>
       <div class="col-6 col-md-2">
         <label class="form-label">Na stronę</label>
         <select name="limit" class="form-select" onchange="this.form.submit()">${limitOpts}</select>
@@ -426,7 +450,7 @@ pageRoutes.get('/events', async (c) => {
       if (Object.keys(map).length) ppLinkMap[e.id] = map;
     }
     const srcBadge = SOURCE_BADGE[e.source] ? `<span class="badge ${SOURCE_BADGE[e.source]}">${esc(e.source)}</span>` : '';
-    const soldBadge = e.is_sold_out ? `<span class="badge bg-danger-lt text-danger">wyprzedane</span>` : '';
+    const soldBadge = soldOutBadge(e);
     const geoLockBadge = e.geo_locked ? `<span class="badge bg-primary-lt text-primary" title="GEO ustawione ręcznie">${icon('lock', 'icon icon-tiny me-1')}geo</span>` : '';
     const tagLockBadge = e.tags_locked ? `<span class="badge bg-primary-lt text-primary" title="Tag ustawiony ręcznie">${icon('lock', 'icon icon-tiny me-1')}tag</span>` : '';
     const rejectHint = e.status === 'rejected' && e.rejection_reason ? `<i class="text-danger" title="${esc(String(e.rejection_reason))}">⚠</i>` : '';
@@ -438,14 +462,12 @@ pageRoutes.get('/events', async (c) => {
         ${placeCellHtml(e.id, e.lat, e.lng, loc)}
       </td>
       <td>
-        <div class="d-flex align-items-center gap-2">
-          <span class="text-muted fs-5">${esc(e.event_date || '')}</span>${dateCell({ id: e.id, event_date: e.event_date, showtimes: e.showtimes, time })}
-        </div>
+        <div class="pp-date-cell" data-id="${esc(e.id)}">${dateCell({ id: e.id, event_date: e.event_date, showtimes: e.showtimes, time, time_locked: e.time_locked })}</div>
         <div class="text-muted fs-6" title="Czas seeda">seed ${esc(seedDay)}</div>
       </td>
       <td>${statusSelect({ id: e.id, status: e.status })} ${rejectHint}</td>
       <td>${tagSelect({ id: e.id, status: e.status, tag, extra }, catalog)}</td>
-      <td class="text-end">${rowActions(e.id, loc, e.lat, e.lng, e.link_url)}</td></tr>`;
+      <td class="text-end">${rowActions({ id: e.id, loc, lat: e.lat, lng: e.lng, url: e.link_url, is_sold_out: e.is_sold_out, showtimes: e.showtimes })}</td></tr>`;
   }).join('');
 
   const emptyRow = `<tr><td colspan="7">${empty({
@@ -479,13 +501,52 @@ pageRoutes.get('/events', async (c) => {
     </div>
   </div>`;
 
+  const timeModal = `<div class="modal fade" id="ppTimeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-blur">
+      <div class="modal-content">
+        <div class="modal-status bg-danger" id="ppTimeStatus" style="display:none"></div>
+        <div class="modal-header"><h3 class="modal-title">Zmień godzinę</h3></div>
+        <div class="modal-body">
+          <div class="mb-1"><label class="form-label">Godzina (HH:MM)</label><input id="ppTimeInput" class="form-control" placeholder="np. 19:30" /></div>
+          <div class="text-secondary fs-5">Nadpisuje wszystkie godziny seansów. Zapis jest trwały (time_locked) — seed nie nadpisze przy kolejnym dniu.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" onclick="ppTimeClose()">Anuluj</button>
+          <button type="button" class="btn btn-primary" onclick="ppTimeSave()">Zapisz</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
   const body = `${header}${statRowA}${statRowB}${srcCard}${modBanner}${filterBar}${pagerTop}${tableHtml}${pagerTop}
-  ${mediaModal()}${linkModal()}${alertModal()}${geoModal}
+  ${mediaModal()}${linkModal()}${alertModal()}${geoModal}${timeModal}
   <script>window.ppLinkMap=${JSON.stringify(ppLinkMap)};window.ppSel=${JSON.stringify(ppSel)};</script>
   <script src="${staticFilePath('events')}"></script>`;
 
   return renderPage(c, 'Eventy', '/admin/events', body);
 });
+
+async function moderationCounts(db: D1Database) {
+  const [statusCnt, untagged, flagsCnt] = await Promise.all([
+    eventStatusBreakdown(db),
+    db.prepare("SELECT COUNT(*) n FROM posts WHERE category='events' AND (tags IS NULL OR tags='[]')").first<{ n: number }>(),
+    db.prepare("SELECT geo_locked, tags_locked, is_sold_out, COUNT(*) n FROM posts WHERE category='events' GROUP BY geo_locked, tags_locked, is_sold_out").all<{ geo_locked: number; tags_locked: number; is_sold_out: number; n: number }>(),
+  ]);
+  let geoLocked = 0, tagsLocked = 0, sold = 0;
+  for (const r of flagsCnt.results ?? []) {
+    if (r.geo_locked) geoLocked = r.n;
+    if (r.tags_locked) tagsLocked = r.n;
+    if (r.is_sold_out) sold = r.n;
+  }
+  return {
+    total: statusCnt.approved + statusCnt.pending + statusCnt.rejected,
+    approved: statusCnt.approved,
+    pending: statusCnt.pending,
+    rejected: statusCnt.rejected,
+    untagged: untagged?.n ?? 0,
+    sold, geoLocked, tagsLocked,
+  };
+}
 
 pageRoutes.post('/events/:id', async (c) => {
   const session = await requireSession(c);
@@ -518,17 +579,7 @@ pageRoutes.post('/events/:id', async (c) => {
     await db.prepare('UPDATE posts SET tags = ?, tags_locked = 1 WHERE id = ?').bind(tagsJsonStr, id).run();
   }
 
-  const [statusCnt, untagged] = await Promise.all([
-    eventStatusBreakdown(db),
-    db.prepare("SELECT COUNT(*) n FROM posts WHERE category='events' AND (tags IS NULL OR tags='[]')").first<{ n: number }>(),
-  ]);
-  const counts = {
-    total: statusCnt.approved + statusCnt.pending + statusCnt.rejected,
-    approved: statusCnt.approved,
-    pending: statusCnt.pending,
-    rejected: statusCnt.rejected,
-    untagged: untagged?.n ?? 0,
-  };
+  const counts = await moderationCounts(db);
   return c.json({ ok: true, status, tag, counts });
 });
 
@@ -556,6 +607,44 @@ pageRoutes.post('/events/:id/geo', async (c) => {
   }
   const loc = desc !== null ? name : (descParts(row?.description ?? '').loc || name);
   return c.json({ ok: true, placeHtml: placeCellHtml(id, lat, lng, loc), geoBtn: geoButtonHtml(id, loc, lat, lng) });
+});
+
+// Set a single event's sold-out state. Manual edits are permanent (sold_out_locked)
+// so the seed never overwrites them on the next run (same pattern as geo).
+pageRoutes.post('/events/:id/sold', async (c) => {
+  const session = await requireSession(c);
+  if (!session) return c.redirect('/admin/login');
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const on = body.on ? 1 : 0;
+  await db.prepare('UPDATE posts SET is_sold_out = ?, sold_out_locked = 1 WHERE id = ?').bind(on, id).run();
+  const counts = await moderationCounts(db);
+  return c.json({ ok: true, soldHtml: soldOutBadge({ id, is_sold_out: on, sold_out_locked: 1 }), counts });
+});
+
+// Set a single event's hour. Overrides all showtimes and locks them (time_locked)
+// so the seed keeps the manually set hour on the next run.
+pageRoutes.post('/events/:id/time', async (c) => {
+  const session = await requireSession(c);
+  if (!session) return c.redirect('/admin/login');
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const time = typeof body.time === 'string' ? body.time.trim() : '';
+  if (!/^\d{2}:\d{2}$/.test(time) || time < '00:00' || time > '23:59') {
+    return c.json({ error: 'Podaj godzinę w formacie HH:MM (00:00–23:59).' }, 400);
+  }
+  const row = await db.prepare('SELECT description, event_date FROM posts WHERE id=?').bind(id).first<{ description: string | null; event_date: string | null }>();
+  const showtimes = JSON.stringify([time]);
+  const newDesc = rewriteTime(row?.description ?? '', time);
+  if (newDesc !== null) {
+    await db.prepare('UPDATE posts SET showtimes = ?, time_locked = 1, description = ? WHERE id = ?').bind(showtimes, newDesc, id).run();
+  } else {
+    await db.prepare('UPDATE posts SET showtimes = ?, time_locked = 1 WHERE id = ?').bind(showtimes, id).run();
+  }
+  const counts = await moderationCounts(db);
+  return c.json({ ok: true, dateHtml: dateCell({ id, event_date: row?.event_date ?? null, showtimes, time_locked: 1 }), counts });
 });
 
 export function registerEvents(parent: Hono<{ Bindings: Env }>): void {

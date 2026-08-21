@@ -19,6 +19,13 @@ import { todayWarsaw, addDaysWarsaw } from '../src/seed/core/dates';
 import type { SeedQueueMessage } from '../src/seed/pipeline/queue';
 import type { SeedProvider } from '../src/seed/core/types';
 
+// Pipeline tests seed a WINDOW day. Must stay date-relative: handleSeedDay rejects
+// created_at older than TTL_MS (24h), so a hardcoded past day makes every seed-day
+// throw → infinite DLQ re-drive → "pipeline did not drain". The far edge
+// (today+3) is always inside the window and never in the past.
+const DAY = addDaysWarsaw(todayWarsaw(), 3);
+const DAY_START = Date.parse(`${DAY}T06:00:00+02:00`);
+
 // ---------- D1 adapter over node:sqlite ----------
 function d1(sqlite: DatabaseSync): D1Database {
   const bound = (ps: ReturnType<DatabaseSync['prepare']>, args: unknown[]) => {
@@ -116,7 +123,7 @@ function candidate(over: Partial<import('../src/seed/core/types').SeedCandidate>
     source: 'fakea',
     externalId: `fake-${over.title ?? 'x'}`,
     title: over.title ?? 'Event',
-    startMs: over.startMs ?? 1_782_765_000_000,
+    startMs: over.startMs ?? DAY_START,
     lat: 52.2, lng: 21.0,
     city: 'Warszawa', venue: 'Venue', address: 'ul. X',
     link: `https://x.pl/${over.externalId ?? 'x'}`, mediaUrl: 'https://x.pl/m.webp', thumbUrl: null,
@@ -179,8 +186,8 @@ test('integration: seed pipeline completes end-to-end and catches provider/inges
   globalThis.fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch;
 
   const boomCand = candidate({ externalId: 'fake-boom', title: 'Boom', mediaUrl: 'https://x.pl/boom.jpg' });
-  const okCand = candidate({ externalId: 'fake-ok', title: 'Koncert', startMs: 1_782_765_000_000 });
-  const okCand2 = candidate({ externalId: 'fake-ok2', title: 'Standup', startMs: 1_782_765_000_000 + 3_600_000 });
+  const okCand = candidate({ externalId: 'fake-ok', title: 'Koncert', startMs: DAY_START });
+  const okCand2 = candidate({ externalId: 'fake-ok2', title: 'Standup', startMs: DAY_START + 3_600_000 });
 
   const restore = swapFakes([
     fakeProvider('fakea', ['city1', 'city2'], async (scope) => {
@@ -192,10 +199,10 @@ test('integration: seed pipeline completes end-to-end and catches provider/inges
 
   try {
     const { sqlite, env } = makeEnv();
-    await enqueueSeedDay(env as never, '2026-08-20', 'manual');
+    await enqueueSeedDay(env as never, DAY, 'manual');
     await runPipeline(env);
 
-    const batch = sqlite.prepare("SELECT status, scopes_total, scopes_done FROM seed_batches WHERE day='2026-08-20'").get() as any;
+    const batch = sqlite.prepare(`SELECT status, scopes_total, scopes_done FROM seed_batches WHERE day='${DAY}'`).get() as any;
     assert.equal(batch.status, 'done', 'batch must reach done despite a poison scope + a failing candidate');
 
     const scopes = sqlite.prepare('SELECT provider, scope, status FROM seed_scopes ORDER BY scope').all() as any[];
@@ -232,13 +239,13 @@ test('integration: runQueue catches handler exceptions (retry→DLQ, never uncau
 
   try {
     const { sqlite, env } = makeEnv();
-    await enqueueSeedDay(env as never, '2026-08-20', 'manual');
+    await enqueueSeedDay(env as never, DAY, 'manual');
 
     // Drive the pipeline; it must NOT reject even though every fetch throws —
     // the poison scope is exhausted via bounded DLQ re-drive and the batch fails.
     await runPipeline(env);
 
-    const batch = sqliteRow(sqlite, "SELECT status FROM seed_batches WHERE day='2026-08-20'");
+    const batch = sqliteRow(sqlite, `SELECT status FROM seed_batches WHERE day='${DAY}'`);
     assert.ok(['failed', 'done'].includes(batch.status), `batch terminal (got ${batch.status})`);
     const scope = sqliteRow(sqlite, "SELECT status FROM seed_scopes WHERE scope='only'");
     assert.equal(scope.status, 'failed', 'poison scope marked failed after bounded re-drive');
@@ -251,8 +258,8 @@ test('integration: runQueue catches handler exceptions (retry→DLQ, never uncau
 test('integration: dedupe pipeline drops cancelled, rescues same-source shows, merges cross-provider dups', async () => {
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch;
-  const day = '2026-08-20';
-  const hm = (h: string) => Date.parse(`2026-08-20T${h}:00+02:00`);
+  const day = DAY;
+  const hm = (h: string) => Date.parse(`${DAY}T${h}:00+02:00`);
   const mk = (source: string, externalId: string, title: string, start: number, venue: string) =>
     candidate({ source: source as never, externalId, title, startMs: start, venue });
 

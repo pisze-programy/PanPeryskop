@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { doSavePost } from '../src/api/posts';
 import { eventsSql } from '../src/admin/queries';
-import { venueTagId, finalCandidateTags } from '../src/seed/core/autoTag';
+import { propagationTargets, venueFromDescription } from '../src/admin/propagation';
 
 function recordingDb() {
   const calls: { sql: string; binds: unknown[] }[] = [];
@@ -53,43 +53,6 @@ test('eventsSql: time filter builds the right showtime clause per bucket', () =>
   assert.ok(!none.sql.includes('json_extract(p.showtimes'), 'no time filter → no showtime clause');
 });
 
-// ---- auto-tagger ----------------------------------------------------------
-
-test('auto-tagger: venueTagId maps Kino Luna → filmy, Teatr → teatr', () => {
-  assert.equal(venueTagId('Kino Luna'), 'filmy');
-  assert.equal(venueTagId('Kino Luna Multikino'), 'filmy', 'kino-luna rule wins over later rules');
-  assert.equal(venueTagId('Teatr Wielki im. St. Wyspiańskiego'), 'teatr');
-  assert.equal(venueTagId('TEATR WIELKI'), 'teatr', 'case-insensitive');
-  assert.equal(venueTagId('Klub Studencki'), null);
-  assert.equal(venueTagId(''), null);
-  assert.equal(venueTagId(null), null);
-  assert.equal(venueTagId(undefined), null);
-});
-
-test('auto-tagger: finalCandidateTags keeps existing tags, applies venue rule when empty', async () => {
-  const tagSet = new Set(['filmy', 'teatr']);
-  assert.deepEqual(await finalCandidateTags(tagSet, { venue: 'Kino Luna', tags: ['muzyka'] }), ['muzyka'], 'existing tags win');
-  assert.deepEqual(await finalCandidateTags(tagSet, { venue: 'Kino Luna', tags: [] }), ['filmy'], 'empty tags + venue rule assigns filmy');
-  assert.deepEqual(await finalCandidateTags(tagSet, { venue: 'Teatr im. Słowackiego' }), ['teatr']);
-  assert.deepEqual(await finalCandidateTags(tagSet, { venue: 'Klub' }), [], 'no rule → empty');
-  assert.deepEqual(await finalCandidateTags(tagSet, { venue: null, tags: ['muzyka', 'muzyka'] }), ['muzyka'], 'sorted + deduped');
-});
-
-test('auto-tagger: deleted tag is skipped with a warning', async () => {
-  const warns: string[] = [];
-  const orig = console.warn;
-  console.warn = (m?: unknown) => warns.push(String(m));
-  try {
-    const tagSet = new Set<string>([]); // "teatr" was deleted from the catalog
-    const tags = await finalCandidateTags(tagSet, { venue: 'Teatr Wielki' });
-    assert.deepEqual(tags, [], 'deleted tag never re-applied');
-    assert.equal(warns.length, 1, 'one warning logged');
-    assert.ok(warns[0].includes('teatr'), 'warning names the dropped tag');
-  } finally {
-    console.warn = orig;
-  }
-});
-
 // ---- tag catalog order ----------------------------------------------------
 
 test('tagCatalog: explicit tag_order positions win, deleted tags are dropped', async () => {
@@ -133,4 +96,65 @@ test('registry: dzisapp + eventylive are disabled (retired), worker core still e
   assert.ok(ids.includes('going'), 'going still runs');
   assert.ok(ids.includes('kupbilecik'), 'kupbilecik still runs');
   assert.ok(ids.includes('helios'), 'helios still runs');
+});
+
+// ---- geo propagation (by NAME + CITY, never by geo) ------------------------
+
+const RZESZOW_EDIT = { name: 'Rzeszów Galeria Rzeszów', lat: 50.042089197498946, lng: 21.998718240191135 };
+
+function post(id: string, description: string, lat: number, lng: number) {
+  return { id, description, lat, lng };
+}
+
+test('venueFromDescription: first comma segment of the location = venue', () => {
+  assert.equal(venueFromDescription('Tylko jedna noc: 11:30, Rzeszów Galeria Rzeszów, Al. Piłsudskiego'), 'Rzeszów Galeria Rzeszów');
+  assert.equal(venueFromDescription('Bez czasu, Lokalizacja X'), 'Bez czasu', 'no time → first comma segment of the whole string');
+  assert.equal(venueFromDescription(''), '');
+});
+
+test('propagation: same venue name + same city matches (Rzeszów 65/65)', () => {
+  const posts = [
+    post('a', 'Film A: 11:00, Rzeszów Galeria Rzeszów, Al. Piłsudskiego', 50.041957, 21.998118),   // old bbox pin
+    post('b', 'Film B: 12:00, Rzeszów Galeria Rzeszów, Al. Piłsudskiego', 50.042089, 21.998718),   // already-correct pin
+    post('c', 'Film C: 13:00, Rzeszów Galeria Rzeszów', 50.0425, 21.9990),                        // near-center
+  ];
+  const targets = propagationTargets(posts, RZESZOW_EDIT).map((p) => p.id).sort();
+  assert.deepEqual(targets, ['a', 'b', 'c'], 'all same-name same-city events match');
+});
+
+test('propagation: same name in a DIFFERENT city never matches (Katedra Kraków ≠ Katedra Szczecin)', () => {
+  const posts = [
+    post('krakow', 'Koncert: 20:00, Katedra, Kraków', 50.0647, 19.945),      // Kraków
+    post('szczecin', 'Koncert: 20:00, Katedra, Szczecin', 53.4285, 14.5528), // Szczecin
+  ];
+  const targets = propagationTargets(posts, { name: 'Katedra', lat: 50.0647, lng: 19.945 }).map((p) => p.id);
+  assert.deepEqual(targets, ['krakow'], 'only the Kraków Katedra matches');
+});
+
+test('propagation: different venue name in the same city never matches', () => {
+  const posts = [
+    post('kat', 'Koncert: 20:00, Katedra', 50.0647, 19.945),
+    post('rynek', 'Koncert: 20:00, Rynek Główny', 50.0617, 19.9372),
+  ];
+  const targets = propagationTargets(posts, { name: 'Katedra', lat: 50.0647, lng: 19.945 }).map((p) => p.id);
+  assert.deepEqual(targets, ['kat'], 'different name in the same city is not caught');
+});
+
+test('propagation: 1:1 venueKey is strict — "Galeria Rzeszów" ≠ "Rzeszów Galeria Rzeszów"', () => {
+  const posts = [
+    post('short', 'Film: 20:00, Galeria Rzeszów', 50.042, 21.999),
+    post('long', 'Film: 20:00, Rzeszów Galeria Rzeszów', 50.042, 21.999),
+  ];
+  // Edit the SHORT name → only the short-name event matches, never the prefixed one.
+  const targets = propagationTargets(posts, { name: 'Galeria Rzeszów', lat: 50.042, lng: 21.999 }).map((p) => p.id);
+  assert.deepEqual(targets, ['short'], 'prefix variants do NOT cross-match');
+});
+
+test('propagation: posts without coordinates are excluded', () => {
+  const posts = [
+    post('a', 'Film: 20:00, Rzeszów Galeria Rzeszów', 50.042, 21.999),
+    post('b', 'Film: 21:00, Rzeszów Galeria Rzeszów', 0, 0),
+  ];
+  const targets = propagationTargets(posts, RZESZOW_EDIT).map((p) => p.id);
+  assert.deepEqual(targets, ['a'], '0,0 / missing coords are excluded');
 });

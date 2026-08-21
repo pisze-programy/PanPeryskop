@@ -12,6 +12,8 @@ import { CANONICAL_TAG_SET } from '../../../seed/core/tags';
 import { ProviderId } from '../../../seed/core/types';
 import { tagCatalog, tagIdSet } from '../../../core/tagCatalog';
 import { todayWarsaw } from '../../../seed/core/dates';
+import { propagationTargets, venueFromDescription } from '../../propagation';
+import { upsertVenue } from '../../../seed/venues/venueStore';
 import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
@@ -75,13 +77,12 @@ function eventThumb(e: { thumb_key?: string | null; media_key?: string | null })
     <span class="avatar avatar-sm rounded"><img src="/media/${esc(key)}" alt="" loading="lazy" onerror="this.closest('.avatar').classList.add('bg-secondary-lt')" /></span></a>`;
 }
 
-function titleHtml(linkUrl: string | null, title: string, id: string, source: string): string {
+function titleHtml(linkUrl: string | null, title: string, id: string): string {
   const t = esc(title || '—');
-  const src = `<span class="text-muted fs-6">(${esc(source)})</span>`;
   if (linkUrl) {
-    return `<a href="javascript:void(0)" onclick="ppOpenLink(ppLinkFor('${esc(id)}', '${jsStr(linkUrl)}'));return false;" class="text-reset text-decoration-none">${t}</a> ${src}`;
+    return `<a href="javascript:void(0)" onclick="ppOpenLink(ppLinkFor('${esc(id)}', '${jsStr(linkUrl)}'));return false;" class="text-reset text-decoration-none">${t}</a>`;
   }
-  return `<a href="javascript:void(0)" onclick="ppAlertOpen('Błąd danych','Wydarzenie nie ma linku (${esc(id)}). Eventy zawsze powinny mieć link.');return false;" class="text-danger text-decoration-none">${t} ⚠</a> ${src}`;
+  return `<a href="javascript:void(0)" onclick="ppAlertOpen('Błąd danych','Wydarzenie nie ma linku (${esc(id)}). Eventy zawsze powinny mieć link.');return false;" class="text-danger text-decoration-none">${t} ⚠</a>`;
 }
 
 function cityByLoc(loc: string): string | null {
@@ -371,6 +372,7 @@ pageRoutes.get('/events', async (c) => {
   const geoOpts = `<option value="">Wszystkie</option>
     <option value="locked" ${geo === 'locked' ? 'selected' : ''}>Z ręcznym GEO (${geoLocked})</option>
     <option value="default" ${geo === 'default' ? 'selected' : ''}>Fallback bbox</option>
+    <option value="zero" ${geo === 'zero' ? 'selected' : ''}>Geo 0,0 (do poprawy)</option>
     <option value="none" ${geo === 'none' ? 'selected' : ''}>Bez współrzędnych</option>`;
   const timeOpts = `<option value="">Wszystkie</option>
     <option value="zero" ${time === 'zero' ? 'selected' : ''}>0:00 (brak)</option>
@@ -452,13 +454,14 @@ pageRoutes.get('/events', async (c) => {
     const srcBadge = SOURCE_BADGE[e.source] ? `<span class="badge ${SOURCE_BADGE[e.source]}">${esc(e.source)}</span>` : '';
     const soldBadge = soldOutBadge(e);
     const geoLockBadge = e.geo_locked ? `<span class="badge bg-primary-lt text-primary" title="GEO ustawione ręcznie">${icon('lock', 'icon icon-tiny me-1')}geo</span>` : '';
+    const geoZeroBadge = e.lat === 0 && e.lng === 0 ? `<span class="badge bg-warning-lt text-warning" title="Geo fallback 0,0 — popraw w adminie">geo 0,0</span>` : '';
     const tagLockBadge = e.tags_locked ? `<span class="badge bg-primary-lt text-primary" title="Tag ustawiony ręcznie">${icon('lock', 'icon icon-tiny me-1')}tag</span>` : '';
     const rejectHint = e.status === 'rejected' && e.rejection_reason ? `<i class="text-danger" title="${esc(String(e.rejection_reason))}">⚠</i>` : '';
     const seedDay = e.created_at ? new Date(e.created_at).toISOString().slice(5, 10) : '';
     return `<tr>
       <td>${eventThumb(e)}</td>
       <td>
-        <div class="fw-semibold">${titleHtml(e.link_url, title, e.id, e.source)} ${srcBadge} ${soldBadge} ${geoLockBadge} ${tagLockBadge}</div>
+        <div class="fw-semibold">${titleHtml(e.link_url, title, e.id)} ${srcBadge} ${soldBadge} ${geoLockBadge} ${geoZeroBadge} ${tagLockBadge}</div>
         ${placeCellHtml(e.id, e.lat, e.lng, loc)}
       </td>
       <td>
@@ -491,6 +494,10 @@ pageRoutes.get('/events', async (c) => {
         <div class="modal-body">
           <div class="mb-3"><label class="form-label">Nazwa lokalizacji</label><input id="ppGeoName" class="form-control" placeholder="np. Multikino Złote Tarasy" /></div>
           <div class="mb-1"><label class="form-label">Geo (lat, lng)</label><input id="ppGeoCoord" class="form-control" placeholder="54.42656865607224, 18.58054868650763" /></div>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="ppGeoPropagate" />
+            <label class="form-check-label" for="ppGeoPropagate">Propaguj na inne (ta sama lokalizacja + miasto)</label>
+          </div>
           <div class="text-secondary fs-5">Wklej współrzędne z Google Maps. Zapis jest trwały (geo_locked).</div>
         </div>
         <div class="modal-footer">
@@ -600,13 +607,45 @@ pageRoutes.post('/events/:id/geo', async (c) => {
   }
   const row = await db.prepare('SELECT description FROM posts WHERE id=?').bind(id).first<{ description: string | null }>();
   const desc = rewriteLoc(row?.description ?? '', name);
+  const propagate = body.propagate === true;
+  const dryRun = body.dryRun === true;
+
+  // Propagation matches by venue NAME + CITY (1:1, never by geo proximity) so a
+  // generic name like "Katedra" in one city never touches another city's Katedra.
+  let targets: { id: string; description: string; lat: number | null; lng: number | null }[] = [];
+  if (propagate) {
+    const { results } = await db.prepare("SELECT id, description, lat, lng FROM posts WHERE category='events' AND id <> ?").bind(id).all<{ id: string; description: string; lat: number | null; lng: number | null }>();
+    targets = propagationTargets(results ?? [], { name, lat, lng });
+  }
+
+  // Dry-run: report what WOULD be updated without writing anything.
+  if (dryRun) {
+    return c.json({
+      ok: true,
+      dryRun: true,
+      wouldUpdate: targets.length,
+      sample: targets.slice(0, 10).map((t) => ({ id: t.id, venue: venueFromDescription(t.description), snippet: (t.description || '').slice(0, 60) })),
+    });
+  }
+
   if (desc !== null) {
     await db.prepare('UPDATE posts SET lat = ?, lng = ?, description = ?, geo_locked = 1 WHERE id = ?').bind(lat, lng, desc, id).run();
   } else {
     await db.prepare('UPDATE posts SET lat = ?, lng = ?, geo_locked = 1 WHERE id = ?').bind(lat, lng, id).run();
   }
+
+  // Upsert the corrected venue into the venues store (city folded) so future
+  // seeds for the same place resolve to this geo instead of bbox/Nominatim drift.
+  await upsertVenue(db, { name, lat, lng, city: nearestCity(lat, lng), provider: 'admin' });
+
+  if (targets.length) {
+    for (const t of targets) {
+      await db.prepare('UPDATE posts SET lat = ?, lng = ?, geo_locked = 1 WHERE id = ?').bind(lat, lng, t.id).run();
+    }
+  }
+
   const loc = desc !== null ? name : (descParts(row?.description ?? '').loc || name);
-  return c.json({ ok: true, placeHtml: placeCellHtml(id, lat, lng, loc), geoBtn: geoButtonHtml(id, loc, lat, lng) });
+  return c.json({ ok: true, placeHtml: placeCellHtml(id, lat, lng, loc), geoBtn: geoButtonHtml(id, loc, lat, lng), updated: targets.length });
 });
 
 // Set a single event's sold-out state. Manual edits are permanent (sold_out_locked)

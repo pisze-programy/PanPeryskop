@@ -42,6 +42,7 @@ function eventsWhere(f: EventFilter): { where: string; binds: unknown[] } {
     const ors = CITIES.map((c) => `(ABS(p.lat - ${c.lat}) < ${eps} AND ABS(p.lng - ${c.lng}) < ${eps})`).join(' OR ');
     where += ` AND (${ors})`;
   }
+  if (f.geo === 'zero') { where += ' AND p.lat = 0 AND p.lng = 0'; }
   if (f.geo === 'locked') { where += ' AND p.geo_locked = 1'; }
   if (f.geo === 'none') { where += ' AND (p.lat IS NULL OR p.lng IS NULL)'; }
   // Time filter on the first showtime (or absence of one). "zero" = the seed

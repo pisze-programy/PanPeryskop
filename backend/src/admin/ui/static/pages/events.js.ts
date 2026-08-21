@@ -58,9 +58,15 @@ export const EVENTS_JS = String.raw`
     var m = /^(-?\d+(?:\.\d+)?)[,;](-?\d+(?:\.\d+)?)$/.exec(coord);
     if (!name) { window.ppGeoShowStatus('Podaj nazwę lokalizacji.'); return; }
     if (!m) { window.ppGeoShowStatus('Nieprawidłowe współrzędne. Wklej np. 54.42656865607224, 18.58054868650763'); return; }
-    fetch('/admin/events/' + encodeURIComponent(id) + '/geo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, lat: parseFloat(m[1]), lng: parseFloat(m[2]) }) })
+    var prop = document.getElementById('ppGeoPropagate');
+    var propagate = !!(prop && prop.checked);
+    fetch('/admin/events/' + encodeURIComponent(id) + '/geo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, lat: parseFloat(m[1]), lng: parseFloat(m[2]), propagate: propagate }) })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(function (resp) { window.ppGeoSwap(id, resp && resp.placeHtml, resp && resp.geoBtn); window.ppGeoClose(); window.ppToast('GEO zaktualizowane.', 'success'); })
+      .then(function (resp) {
+        window.ppGeoSwap(id, resp && resp.placeHtml, resp && resp.geoBtn);
+        window.ppGeoClose();
+        window.ppToast(resp && resp.updated ? 'GEO zaktualizowane. Propagowano na ' + resp.updated + ' eventów.' : 'GEO zaktualizowane.', 'success');
+      })
       .catch(function () { window.ppToast('Nie udało się zapisać GEO.', 'danger'); });
   };
   window.ppApplyCounts = function (c) {

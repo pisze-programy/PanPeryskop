@@ -28,7 +28,10 @@ const app = new Hono<{ Bindings: Env }>();
 app.use(
   '*',
   cors({
-    origin: ['*'],
+    // NOTE: a string '*' — hono treats an ARRAY origin as an exact-match list
+    // (`['*'].includes(origin)`), so an array would never emit
+    // Access-Control-Allow-Origin for the addon's moz-extension:// origin.
+    origin: '*',
     allowMethods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
     allowHeaders: ['Authorization', 'Content-Type'],
     maxAge: 86_400,

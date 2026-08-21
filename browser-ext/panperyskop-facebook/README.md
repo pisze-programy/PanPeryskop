@@ -16,68 +16,62 @@ appears in the app with a direct link to the Facebook event.
    - **ADMIN_SECRET** — the admin bearer token used by `seed-ingest`
 4. Reload any already-open Facebook tabs so the content script + capture attach.
 
-## Usage
+## Usage (fully automatic — no clicks needed)
 
-1. Open a Facebook events list (`facebook.com/events/…` or a page/group events
-   tab) and scroll — the addon **passively captures** the GraphQL feed responses
-   (`EventCometHomeDiscoverContentRefetchQuery` and siblings). Watch the console:
-   `[panperyskop] captured N facebook events`.
-   Online-only events are skipped automatically (no geo venue).
-2. Right-click the page → **PanPeryskop → Facebook** → the review page opens.
-   To start a fresh capture for a new City/Day filter: right-click →
-   **PanPeryskop → Clear captures** first, then load/scroll the new filter.
-3. Review each event (title, tag, URL, status). The date, city, venue and
-   address are pre-filled from the GraphQL payload (`start_timestamp` +
-   `event_place.contextual_name`) and remain editable; uncheck anything wrong.
-   **Events from a past day are unchecked by default** (the backend only ingests
-   today+). A **Geo** column shows the resolved point (`✓ lat,lng`) or **no geo**
-   (fix the Location field and press **⟳** to re-check before submitting). A
-   **duplicate** badge appears for events the API already covers with a
-   higher-priority provider.
-4. **Submit selected** — the addon fetches each cover in the logged-in page
-   context, downscales it (≤1080 JPEG + 320 thumb), and posts one multipart
-   request per event. Results (`pending / duplicate / no_coords / error`) show
-   inline on each row. Events are ingested as **`pending`** (moderation queue) —
-   they go live in the app only after approval in the admin dashboard
-   (`/admin/events?status=pending`).
-   **Download JSON** (dry-run) writes ONE file — `{ events: […], raw: […] }` —
-   with the selected events *and* the raw GraphQL payloads they were parsed from,
-   so the result can be validated before anything is sent to the API.
+1. Open a Facebook events list (`facebook.com/events/…`, page/group events tab)
+   and **just scroll**. The addon **passively captures** every event card
+   (`a[href*="/events/"]`) as it renders and **auto-submits** it (one at a time,
+   paced) to the PanPeryskop API. Watch the console — every line starts with
+   `[ppfb]`:
+   `[ppfb] CAPTURED | <title> | <date> | <city> | <link>`
+   `[ppfb] INGEST pending | <title> | <fbId> | geo=real|city_fallback|zero_fallback`
+   `[ppfb] INGEST duplicate | … | winner=<provider>`
+   `[ppfb] INGEST error | … | <reason>` / `[ppfb] SKIP no-date|no-image`
+2. Events are ingested as **`pending`** (moderation queue) — they go live in the
+   app only after you approve them in the admin dashboard
+   (`/admin/events?status=pending`), where you also fix geo if needed
+   (fallback events show a **geo 0,0** badge; filter **GEO → Geo 0,0 (do poprawy)**).
+3. The toolbar icon / context menu **Podsumowanie zbioru** opens a read-only
+   review page (per-event submission status). **Clear captures** resets the store
+   for a new City/Day filter.
 
 ## How capture works
 
-- **Primary — network (raw GraphQL):** the background reads every
-  `POST https://*.facebook.com/api/graphql/*` response body via
-  `webRequest.filterResponseData` (Firefox-native), parses `events.edges[].node`,
-  stores the raw payloads (unbounded) + events, and relays a summary to the FB
-  page console. A keepalive alarm keeps the MV3 event page from suspending so
-  requests are never missed. No `lsd`/`fb_dtsg`/`__dyn` tokens are ever re-issued.
-  If a request yields 0 events or the filter errors, a diagnostic line is shown
-  in the page console.
-- **Fallback — DOM:** on menu click, `content/content.js` scrapes the current
-  page for `a[href*="/events/…"]` cards and extracts the title, date/time
-  (`parseFbDate`: "Today at 4:30 PM", "This Sunday at 12 PM", "Thu, Aug 20",
-  Polish "22 sie, 18:00"…) and venue/address from the card text. DOM-scraped
-  events are marked `dom fallback`, and never overwrite a richer network capture
-  of the same event.
+- **Primary — DOM (invisible, default):** `content/content.js` runs a
+  `MutationObserver` in the **isolated world** — Facebook's page JS runs in a
+  separate world and cannot see the observer. It watches for event cards as you
+  scroll, extracts title/date (`parseFbDate`: "Today at 4:30 PM", "This Sunday at
+  12 PM", "Thu, Aug 20", Polish "22 sie, 18:00"…) and venue/address, then queues
+  the event for submit. No `fetch`/XHR patching, no `postMessage`, no extra
+  network requests to Facebook — the fingerprint is exactly your real browsing.
+- **Optional — network (raw GraphQL, opt-in):** set `graphqlCapture: true` in
+  the addon options for higher-quality structured data. The background then
+  injects `content/page-interceptor.js` into the **page's MAIN world**
+  (`scripting.executeScript world: 'MAIN'` — Firefox content scripts cannot
+  override `window.fetch`; the page world can). It patches `fetch` + XHR and
+  reads every `POST /api/graphql/` response via **`clone()`** — the stream is
+  never delayed or aborted. **Note:** the page-world patch is the larger
+  detection surface, so keep it OFF unless DOM quality is not enough.
 
 ## Console logs
 
-Every API request/response is `console.log`-ed with the `[panperyskop]` prefix
-(capture, preview, upload, results) — see `lib/api.js`.
+All logs carry the `[ppfb]` tag (capture, submit, ingest result + reason) so
+they are trivially filterable in the browser console. Levels: `info` for
+captured/submitted, `warn` for skipped/duplicate/failed.
 
 ## Architecture
 
 ```
 manifest.json            MV3: permissions, background, content scripts
-background.js            context menu, webRequest capture, message router
-lib/settings.js          API settings (storage.local)
-lib/store.js             captured-events persistence (deduped by fbId)
-lib/events-parser.js     GraphQL/DOM event normalization (pure)
+background.js            menu + toolbar action + badge; opt-in page-world inject
+lib/settings.js          API settings (storage.local) + [ppfb] logger
+lib/store.js             captured-events persistence (deduped by fbId) + submit state
+lib/events-parser.js     DOM/GraphQL event normalization (pure)
 lib/api.js               /admin/seed/facebook preview + upload
 lib/image.js             cover fetch (page context) + downscale
-content/content.js       DOM-scrape fallback + submit executor
-summary/                 review/edit UI
+content/content.js       MutationObserver DOM capture + paced auto-submit queue
+content/page-interceptor.js  OPT-IN GraphQL capture (page world, clone())
+summary/                 read-only diagnostics (submission status per event)
 options/                 settings UI
 ```
 

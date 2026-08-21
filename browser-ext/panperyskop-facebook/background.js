@@ -1,27 +1,30 @@
 // Background (MV3 event page — Firefox loads background.js as a classic page,
 // NOT a service worker, so no importScripts; the shared libs are listed in the
 // manifest's background.scripts). Jobs:
-//   1. Passive GraphQL capture via webRequest.filterResponseData — reads every
-//      POST https://*.facebook.com/api/graphql/* response body, parses
-//      events.edges[].node, stores raw + events, and relays a summary to the FB
-//      page console.
-//   2. Context menu: PanPeryskop -> Facebook / Clear captures.
-//   3. Routing between the summary page and the active FB tab's content script.
+//   1. (OPT-IN only) Inject the page-world GraphQL interceptor when
+//      settings.graphqlCapture is on. OFF by default — the DOM MutationObserver
+//      in the content script is invisible to Facebook's page JS and needs no
+//      injection.
+//   2. Context menu: Open summary / Clear captures (diagnostics only — capture
+//      and submit are fully automatic now).
+//   3. Toolbar action -> summary page; badge shows the submission queue.
 'use strict';
 
 const MENU_ROOT = 'pp-menu';
-const MENU_FB = 'pp-menu-facebook';
+const MENU_SUMMARY = 'pp-menu-summary';
 const MENU_CLEAR = 'pp-menu-clear';
+const PAGE_INTERCEPTOR = 'content/page-interceptor.js';
+const SUMMARY_URL = browser.runtime.getURL('summary/summary.html');
 
 function log(...args) {
-  console.log('[panperyskop]', ...args);
+  console.log('[ppfb] bg', ...args);
 }
 
 function createMenus() {
   try {
     browser.contextMenus.removeAll();
     browser.contextMenus.create({ id: MENU_ROOT, title: 'PanPeryskop', contexts: ['page'] });
-    browser.contextMenus.create({ id: MENU_FB, parentId: MENU_ROOT, title: 'Facebook', contexts: ['page'] });
+    browser.contextMenus.create({ id: MENU_SUMMARY, parentId: MENU_ROOT, title: 'Podsumowanie zbioru', contexts: ['page'] });
     browser.contextMenus.create({ id: MENU_CLEAR, parentId: MENU_ROOT, title: 'Clear captures', contexts: ['page'] });
   } catch (e) {
     log('menu create failed', e);
@@ -31,89 +34,60 @@ function createMenus() {
 browser.runtime.onInstalled.addListener(createMenus);
 browser.runtime.onStartup.addListener(createMenus);
 
-// Keep the MV3 event page warm so webRequest.filterResponseData listeners are
-// always live (a suspended event page silently misses requests).
-browser.alarms.create('pp-keepalive', { periodInMinutes: 0.25 });
-browser.alarms.onAlarm.addListener(() => {
-  // no-op wake — the listeners are re-registered on wake and stay warm
-});
-
-// ---------- passive GraphQL capture (response-body stream) ----------
-async function notifyContentScripts(msg) {
-  const tabs = await browser.tabs.query({ url: ['*://*.facebook.com/*'] });
-  for (const t of tabs) {
-    try {
-      await browser.tabs.sendMessage(t.id, msg);
-    } catch {
-      // content script not present on this tab — store still has the data
-    }
-  }
-}
-
-async function relayDebug(line) {
-  await notifyContentScripts({ type: 'pp-capture-debug', line });
-}
-
-async function handleGraphqlBody(url, text) {
+// ---------- page-world interceptor injection (OPT-IN) ----------
+async function injectPageInterceptor(tabId) {
+  if (!tabId) return;
   try {
-    await PP.store.pushRaw(text); // keep every raw payload for validation
-    const events = PP.parser.eventsFromGraphql(text);
-    if (!events.length) {
-      const line = `graphql ${url}: ${text.length} bytes, 0 events parsed`;
-      log(line);
-      await relayDebug(line);
-      return;
-    }
-    const merged = await PP.store.merge(events);
-    const line = `captured ${events.length} facebook events (${text.length} bytes) -> ${merged.length} total`;
-    log(line);
-    await notifyContentScripts({
-      type: 'pp-captured',
-      events: events.map((e) => ({ fbId: e.fbId, title: e.title, startMs: e.startMs, location: e.location, link: e.link })),
+    await browser.scripting.executeScript({
+      target: { tabId },
+      files: [PAGE_INTERCEPTOR],
+      world: 'MAIN',
+      runAt: 'document_start',
     });
   } catch (e) {
-    log('capture failed', e);
-    await relayDebug(`capture failed: ${String((e && e.message) || e)}`);
+    log('page interceptor injection failed', e);
   }
 }
 
-browser.webRequest.onBeforeRequest.addListener(
-  (details) => {
-    log(`graphql request: ${details.url}`);
-    let filter;
-    try {
-      filter = browser.webRequest.filterResponseData(details.requestId);
-    } catch (e) {
-      const line = `filterResponseData unavailable: ${String((e && e.message) || e)}`;
-      log(line);
-      relayDebug(line);
-      return;
-    }
-    const decoder = new TextDecoder('utf-8');
-    let text = '';
+async function graphqlOn() {
+  const s = await PP.settings.get();
+  return Boolean(s.graphqlCapture);
+}
 
-    filter.ondata = (event) => {
-      text += decoder.decode(event.data, { stream: true });
-      filter.write(event.data);
-    };
-    filter.onstop = () => {
-      filter.close();
-      handleGraphqlBody(details.url, text + decoder.decode());
-    };
-    filter.onerror = () => {
-      const line = `filter error on ${details.url}: ${String(filter.error || 'unknown')}`;
-      log(line);
-      relayDebug(line);
-      try {
-        filter.disconnect();
-      } catch (e) {
-        // already closed
-      }
-    };
-  },
-  { urls: ['https://*.facebook.com/api/graphql/*'], types: ['xmlhttprequest', 'other'] },
-  ['blocking'],
-);
+browser.webNavigation.onCommitted.addListener(async (details) => {
+  if (details.frameId !== 0) return;
+  const url = String(details.url || '');
+  if (!/^https:\/\/[a-z0-9.-]*facebook\.com\//i.test(url)) return;
+  if (!(await graphqlOn())) return;
+  injectPageInterceptor(details.tabId);
+});
+
+browser.runtime.onStartup.addListener(async () => {
+  createMenus();
+  if (!(await graphqlOn())) return;
+  const tabs = await browser.tabs.query({ url: ['*://*.facebook.com/*'] });
+  for (const t of tabs) if (t.id) await injectPageInterceptor(t.id);
+});
+
+// ---------- toolbar action -> summary + submission badge ----------
+if (browser.action) {
+  browser.action.onClicked.addListener(() => {
+    browser.tabs.create({ url: SUMMARY_URL });
+  });
+}
+
+async function updateBadge() {
+  try {
+    const states = await PP.store.loadStates();
+    const list = Object.values(states);
+    const pending = list.filter((s) => s.status === 'captured' || (s.status === 'error' && (s.attempts || 0) < 3)).length;
+    const done = list.filter((s) => s.status === 'pending' || s.status === 'duplicate').length;
+    const text = pending ? String(pending) : done ? '✓' : '';
+    if (browser.action) browser.action.setBadgeText({ text });
+  } catch {
+    // ignore
+  }
+}
 
 // ---------- tab helpers ----------
 async function findFbTab() {
@@ -160,7 +134,7 @@ async function sendToFbTab(msg) {
 }
 
 // ---------- context menu ----------
-browser.contextMenus.onClicked.addListener(async (info, tab) => {
+browser.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId === MENU_CLEAR) {
     try {
       await PP.store.clear();
@@ -170,30 +144,22 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
     }
     return;
   }
-  if (info.menuItemId !== MENU_FB) return;
-  try {
-    const fbTab = tab && tab.id ? tab : await findFbTab();
-    if (fbTab && fbTab.id) {
-      await PP.store.setLastFbTab(fbTab.id);
-      try {
-        const scraped = await browser.tabs.sendMessage(fbTab.id, { type: 'pp-scrape-dom' });
-        if (Array.isArray(scraped) && scraped.length) {
-          await PP.store.merge(scraped);
-          log(`dom fallback merged ${scraped.length} events`);
-        }
-      } catch {
-        // no content script on this tab — captures still exist in storage
-      }
-    }
-  } catch (e) {
-    log('menu click handling failed', e);
+  if (info.menuItemId === MENU_SUMMARY) {
+    browser.tabs.create({ url: SUMMARY_URL });
   }
-  await browser.tabs.create({ url: browser.runtime.getURL('summary/summary.html') });
 });
 
-// ---------- message router (summary page <-> FB tab) ----------
-browser.runtime.onMessage.addListener(async (msg) => {
+// ---------- message router ----------
+browser.runtime.onMessage.addListener(async (msg, sender) => {
   switch (msg && msg.type) {
+    case 'pp-state-changed':
+      updateBadge();
+      return undefined;
+    case 'pp-inject': {
+      if (!(await graphqlOn())) return undefined;
+      await injectPageInterceptor(sender && sender.tab && sender.tab.id);
+      return undefined;
+    }
     case 'pp-submit': {
       try {
         const s = await PP.settings.get();

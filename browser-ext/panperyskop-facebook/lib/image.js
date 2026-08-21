@@ -8,7 +8,7 @@
   const THUMB = 320;
 
   async function blobFromUrl(url) {
-    const res = await fetch(url, { credentials: 'include', mode: 'cors' });
+    const res = await fetch(url, { credentials: 'include', mode: 'cors', signal: AbortSignal.timeout(15_000) });
     if (!res.ok) throw new Error(`cover image fetch ${res.status}`);
     return res.blob();
   }

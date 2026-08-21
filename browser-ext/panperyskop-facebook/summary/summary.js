@@ -9,6 +9,7 @@ const $ = (sel) => document.querySelector(sel);
 
 let settings = null;
 let events = [];
+let states = {};
 let duplicateByFbId = new Map();
 let geoByExt = new Map(); // external_id -> { lat, lng, resolved } preview results
 
@@ -27,6 +28,7 @@ async function init() {
 
 async function reload() {
   events = await PP.store.load();
+  states = await PP.store.loadStates();
   events.sort((a, b) => (a.startMs || 0) - (b.startMs || 0));
   duplicateByFbId = new Map();
   geoByExt = new Map();
@@ -53,7 +55,7 @@ function emptyRow() {
   td.className = 'text-center py-5';
   td.innerHTML =
     '<p class="empty-title">No captured events</p>' +
-    '<p class="empty-subtitle text-secondary">Open a Facebook events list and scroll — capture is automatic. Then right-click → PanPeryskop → Facebook.</p>';
+    '<p class="empty-subtitle text-secondary">Open a Facebook events list and scroll — capture and submit are automatic. Watch the console for [ppfb] lines.</p>';
   tr.appendChild(td);
   return tr;
 }
@@ -113,11 +115,18 @@ function rowFor(ev) {
   tagSel.value = Array.isArray(ev.tags) && ev.tags.length ? ev.tags[0] : '';
   const tagTd = td(tagSel);
 
-  // Status: badges (source/needs-review/duplicate) + result (pending / submit outcome)
+  // Status: badges (source/needs-review/duplicate) + submission state
   const meta = document.createElement('div');
   meta.className = 'd-flex gap-1 flex-wrap';
-  if (ev.source === 'dom') meta.appendChild(badge('dom fallback', 'warn'));
+  if (ev.source === 'dom') meta.appendChild(badge('dom', 'muted'));
   if (ev.needsReview || !ev.startMs) meta.appendChild(badge('needs review', 'danger'));
+  const st = states[ev.fbId];
+  if (st) {
+    if (st.status === 'pending') meta.appendChild(badge(`submitted · ${st.reason || 'geo'}`, 'ok'));
+    else if (st.status === 'duplicate') meta.appendChild(badge(`duplicate · ${st.reason}`, 'warn'));
+    else if (st.status === 'captured') meta.appendChild(badge('in queue', 'info'));
+    else if (st.status === 'error') meta.appendChild(badge(`error: ${String(st.reason || '').slice(0, 40)}`, 'danger'));
+  }
   const dup = duplicateByFbId.get(`facebook-${ev.fbId}`);
   if (dup) meta.appendChild(dupBadge(dup));
 
@@ -245,7 +254,7 @@ async function runPreview() {
     duplicateByFbId = new Map(results.map((r) => [r.externalId, r]));
     render();
   } catch (e) {
-    console.error('[panperyskop] preview failed', e);
+    PP.log.error('preview failed', e);
   }
 }
 
@@ -276,7 +285,7 @@ async function runGeo() {
     for (const r of results) geoByExt.set(r.externalId, r);
     applyStoredGeo();
   } catch (e) {
-    console.error('[panperyskop] geo preview failed', e);
+    PP.log.error('geo preview failed', e);
   }
 }
 
@@ -353,6 +362,20 @@ function collectEvents() {
   return out;
 }
 
+function flash(text, cls) {
+  const el = $('#flash');
+  el.className = `alert ${cls || 'alert-info'}`;
+  el.textContent = text;
+  el.classList.remove('d-none');
+}
+
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
 async function submitAll() {
   const selected = collectEvents();
   if (selected.length === 0) {
@@ -366,13 +389,23 @@ async function submitAll() {
   }
 
   $('#btn-submit').disabled = true;
+  flash(`Submitting ${selected.length} event(s)…`, 'alert-info');
   try {
-    const res = await browser.runtime.sendMessage({ type: 'pp-submit', events: selected });
+    const res = await withTimeout(
+      browser.runtime.sendMessage({ type: 'pp-submit', events: selected }),
+      120_000,
+      'Submit timed out — no response from the background/content script',
+    );
     if (!res || !res.ok) throw new Error((res && res.error) || 'submit failed');
     renderResults(res.results);
+    const okCount = (res.results || []).filter((r) => r.ok).length;
+    flash(
+      `Done: ${okCount}/${selected.length} accepted (see per-event status)`,
+      okCount === selected.length ? 'alert-success' : 'alert-warning',
+    );
   } catch (e) {
-    console.error('[panperyskop] submit failed', e);
-    alert(`Submit failed: ${e.message}`);
+    PP.log.error('submit failed', e);
+    flash(`Submit failed: ${e.message}`, 'alert-danger');
   } finally {
     $('#btn-submit').disabled = false;
   }
@@ -437,7 +470,7 @@ function renderResults(results) {
     const d = r.data || {};
     switch (d.status) {
       case 'pending':
-        resultEl.appendChild(badge('pending · moderation', 'warn'));
+        resultEl.appendChild(badge(`pending · moderation · ${d.geo || 'geo'}`, 'warn'));
         break;
       case 'ingested':
         resultEl.appendChild(badge('ingested ✓', 'ok'));

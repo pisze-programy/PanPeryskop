@@ -20,14 +20,15 @@
      */
     async preview(settings, events) {
       const url = `${this.baseUrl(settings)}/admin/seed/facebook/preview`;
-      console.log(`[panperyskop] POST ${url} (${events.length} events)`);
+      PP.log.info("api preview", events.length, "event(s)");
       const res = await fetch(url, {
         method: 'POST',
         headers: this.headers(settings, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ events }),
+        signal: AbortSignal.timeout(30_000),
       });
       const data = await res.json().catch(() => ({}));
-      console.log(`[panperyskop] response ${res.status}`, data);
+      PP.log.info("api preview status", res.status);
       if (!res.ok) throw new Error(`preview ${res.status}: ${JSON.stringify(data)}`);
       return Array.isArray(data.results) ? data.results : [];
     },
@@ -41,7 +42,7 @@
     async geoPreview(settings, events) {
       const url = `${this.baseUrl(settings)}/admin/seed/facebook/geopreview`;
       const timeout = Math.max(20_000, events.length * 1500);
-      console.log(`[panperyskop] POST ${url} (${events.length} locations, timeout ${timeout}ms)`);
+      PP.log.info("api geoPreview", events.length, "location(s)");
       const res = await fetch(url, {
         method: 'POST',
         headers: this.headers(settings, { 'Content-Type': 'application/json' }),
@@ -49,7 +50,7 @@
         signal: AbortSignal.timeout(timeout),
       });
       const data = await res.json().catch(() => ({}));
-      console.log(`[panperyskop] response ${res.status}`, data);
+      PP.log.info("api geoPreview status", res.status);
       if (!res.ok) throw new Error(`geopreview ${res.status}: ${JSON.stringify(data)}`);
       return Array.isArray(data.results) ? data.results : [];
     },
@@ -72,14 +73,15 @@
       form.append('file', media.media, 'media.jpg');
       if (media.thumb) form.append('thumb', media.thumb, 'thumb.jpg');
 
-      console.log(`[panperyskop] POST ${url}`, { external_id: `facebook-${ev.fbId}`, title: ev.title });
+      PP.log.info("api upload", ev.title, `facebook-${ev.fbId}`);
       const res = await fetch(url, {
         method: 'POST',
         headers: this.headers(settings),
         body: form,
+        signal: AbortSignal.timeout(30_000),
       });
       const data = await res.json().catch(() => ({}));
-      console.log(`[panperyskop] response ${res.status}`, data);
+      PP.log.info("api upload status", res.status);
       if (!res.ok) throw new Error(`upload ${res.status}: ${JSON.stringify(data)}`);
       return data;
     },

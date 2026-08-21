@@ -1,21 +1,25 @@
-// JSON API: posts.
-
+// JSON API: posts — reuses the shared query builders (single source of truth).
 import { Hono } from 'hono';
+import { postsSql, postsCountSql, PostsFilter } from '../../queries';
 import { api } from '../common';
 
 const apiRoutes = new Hono<{ Bindings: Env }>();
 
 apiRoutes.get('/posts', (c) => api(c, async (env) => {
   const q = c.req.query();
-  const status = q.status ? String(q.status) : null;
-  let sql = `SELECT p.id, p.description, p.created_at, p.status, p.type, p.thumb_key, p.likes_count, p.views_count,
-             COALESCE(NULLIF(u.username,''), u.device_id) AS author
-             FROM posts p JOIN users u ON p.user_id=u.id WHERE p.category='live'`;
-  const binds: unknown[] = [];
-  if (status) { sql += ' AND p.status=?'; binds.push(status); }
-  sql += ' ORDER BY p.created_at DESC LIMIT 200';
-  const { results } = await env.DB.prepare(sql).bind(...binds).all();
-  return { posts: results };
+  const filter: PostsFilter = {
+    status: q.status ? String(q.status) : null,
+    type: q.type ? String(q.type) : null,
+    q: q.q ? String(q.q) : null,
+    reported: q.reported === '1',
+    limit: Math.min(500, parseInt(String(q.limit || '50'), 10) || 50),
+    offset: Math.max(0, parseInt(String(q.offset || '0'), 10) || 0),
+  };
+  const { sql, binds } = postsSql(filter);
+  const { results } = await env.DB.prepare(sql).bind(...binds).all<any>();
+  const cnt = postsCountSql(filter);
+  const cntRow = await env.DB.prepare(cnt.sql).bind(...cnt.binds).first<{ n: number }>();
+  return { posts: results, total: cntRow?.n ?? 0 };
 }));
 
 export function registerApiPosts(parent: Hono<{ Bindings: Env }>): void {

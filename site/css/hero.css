@@ -1,0 +1,80 @@
+/* Pan Peryskop — HERO: single-color, centered copy + 2×iPhone z wideo (full-size, bez overlay). */
+
+.hero {
+  position: relative;
+  padding: 148px 0 0;
+  overflow: hidden;
+  overflow: clip;
+  contain: paint;
+  background: #0b0b10;
+  color: var(--paper);
+}
+.hero::before {
+  content: ""; position: absolute; top: -24%; right: -12%;
+  width: 680px; height: 680px;
+  background: radial-gradient(circle, rgba(122, 92, 240, 0.2), rgba(122, 92, 240, 0.06) 45%, transparent 68%);
+  pointer-events: none;
+}
+.hero::after {
+  content: ""; position: absolute; bottom: -30%; left: -10%;
+  width: 520px; height: 520px;
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.12), transparent 66%);
+  pointer-events: none;
+}
+
+/* ---------- centered copy ---------- */
+.hero-content {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 24px;
+}
+.hero-content .pill { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.hero-content h1 .grad-text { display: inline-block; }
+.hero-content p.sub { color: rgba(255, 255, 255, 0.72); font-size: 14px; line-height: 1.7; max-width: 54ch; }
+.hero-cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+/* ---------- phone rack (zawsze obok siebie; na mobile delikatnie wychodzi poza ekran) ---------- */
+.phone-rack {
+  position: relative; z-index: 2;
+  display: flex; justify-content: center; align-items: flex-end;
+  gap: 34px;
+  padding: 64px 0 0;
+}
+.phone-item { position: relative; }
+.phone-item.a { z-index: 2; }
+.phone-item.b { z-index: 1; transform: rotate(-7deg) translateY(16px); }
+
+.iphone {
+  position: relative;
+  width: 282px;
+  aspect-ratio: 9 / 19.5;
+  border-radius: 54px;
+  padding: 11px;
+  background: linear-gradient(160deg, #3a3a3c, #171719 30%, #242426 70%, #0a0a0b);
+  box-shadow: 0 60px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.phone-item.b .iphone { box-shadow: 0 40px 90px rgba(0, 0, 0, 0.5), 0 14px 30px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+.iphone::before {
+  content: ""; position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+  width: 92px; height: 26px; border-radius: 999px; background: #000; z-index: 80;
+}
+.iphone .side-btn { position: absolute; right: -3px; top: 132px; width: 3px; height: 54px; border-radius: 3px; background: #3a3a3c; }
+.iphone-screen {
+  position: relative; width: 100%; height: 100%;
+  border-radius: 44px; overflow: hidden; overflow: clip; contain: paint;
+  background: #000;
+}
+.ph-video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+.story-home { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 104px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.6); z-index: 70; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1024px) {
+  .phone-rack { gap: 24px; }
+  .iphone { width: 252px; }
+}
+@media (max-width: 640px) {
+  .hero { padding: 112px 0 0; }
+  .phone-rack { gap: 12px; padding-top: 48px; justify-content: center; }
+  .phone-item.b { transform: rotate(-5deg) translateY(10px); }
+  .iphone { width: 224px; }
+}

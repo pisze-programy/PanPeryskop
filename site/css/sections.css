@@ -1,0 +1,112 @@
+/* Pan Peryskop — sekcje LP */
+
+/* ---------- NAV ---------- */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(5, 5, 5, 0.4);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid transparent;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  color: #fff;
+}
+.nav.is-scrolled { background: rgba(5, 5, 5, 0.82); border-bottom-color: rgba(255, 255, 255, 0.1); }
+.nav-inner { display: flex; align-items: center; gap: 24px; height: 64px; }
+.nav .brand { display: inline-flex; align-items: center; gap: 11px; font-size: 15px; font-weight: 600; font-family: var(--font-display); }
+.nav .brand img { width: 30px; height: 30px; border-radius: 8px; }
+.nav .brand .grad-text { font-weight: 700; }
+.nav-links { display: flex; gap: 26px; margin-left: 8px; }
+.nav-links a { font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.6); transition: color 0.2s ease; }
+.nav-links a:hover, .nav-links a.is-active { color: #fff; }
+.nav-actions { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+.lang { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+.lang a { color: rgba(255, 255, 255, 0.5); padding: 4px 7px; border-radius: 8px; transition: color 0.2s ease, background-color 0.2s ease; }
+.lang a.is-active { color: #fff; background: rgba(255, 255, 255, 0.12); }
+.lang span { color: rgba(255, 255, 255, 0.35); }
+.nav-burger { display: none; flex-direction: column; gap: 5px; padding: 8px; }
+.nav-burger span { width: 20px; height: 2px; background: #fff; border-radius: 2px; transition: transform 0.25s var(--ease), opacity 0.2s; }
+.nav-burger.is-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-burger.is-open span:nth-child(2) { opacity: 0; }
+.nav-burger.is-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ---------- MARQUEE ×3 ---------- */
+.marquee-band { padding: 26px 0; }
+.marquee + .marquee { margin-top: 14px; }
+.marquee-track span {
+  font-family: var(--font-display);
+  font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em;
+  color: rgba(29, 29, 22, 0.6);
+  padding: 0 26px; white-space: nowrap;
+  transition: color 0.2s ease;
+}
+.marquee-track span:hover { color: var(--accent-deep); }
+.marquee-track .hl { color: var(--ink); }
+.marquee-track.reverse { animation-direction: reverse; }
+.marquee-track.slow { animation-duration: 55s; }
+.marquee-track.slower { animation-duration: 72s; }
+
+/* ---------- BRAND (jak onboarding) ---------- */
+.brand { padding-top: 96px; }
+.brand-inner { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 26px; }
+.brand-logo {
+  width: 120px; height: 120px;
+  border-radius: 100%;
+  padding: 5px;
+  background: var(--brand-grad);
+  box-shadow: 0 20px 50px rgba(51, 43, 166, 0.35);
+}
+.brand-logo img { width: 100%; height: 100%; border-radius: 100%; object-fit: cover; background: #fff; }
+.brand-inner .display-md { max-width: 14ch; }
+.brand-inner p.sub { max-width: 46ch; color: var(--muted); font-size: 15px; line-height: 1.7; }
+.brand-badges { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+/* ---------- STEPS ---------- */
+#jak-to-dziala .brand-badges, #how-it-works .brand-badges { margin-bottom: 44px; }
+.steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; }
+.step-item { border-top: 2px solid var(--ink); padding-top: 20px; }
+.step-item .num { font-family: var(--font-display); font-size: 2rem; font-weight: 600; letter-spacing: -0.03em; color: var(--accent-deep); }
+.step-item h4 { margin: 14px 0 8px; font-size: 16px; }
+.step-item p { font-size: 14px; color: var(--muted); line-height: 1.65; max-width: 36ch; }
+
+/* ---------- FAQ ---------- */
+.faq-wrap { max-width: 720px; margin: 0 auto; }
+
+/* ---------- STATEMENT (zamiast CTA) ---------- */
+.statement {
+  padding: 120px 0 110px;
+  overflow: hidden; overflow: clip; contain: paint;
+}
+.statement-inner { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 34px; }
+.statement-inner .display-xl { display: block; }
+
+/* ---------- FOOTER (legal) ---------- */
+.footer { padding: 40px 0; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+.footer-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 22px; }
+.footer-row .brand { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; font-family: var(--font-display); }
+.footer-row .brand img { width: 26px; height: 26px; border-radius: 7px; }
+.footer-row .brand .grad-text { font-weight: 700; }
+.footer-legal { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-legal a { font-size: 12px; color: rgba(255, 255, 255, 0.5); transition: color 0.2s; }
+.footer-legal a:hover { color: #fff; }
+.footer-meta { display: flex; align-items: center; gap: 18px; font-size: 12px; color: rgba(255, 255, 255, 0.5); }
+.footer-meta .lang a { color: rgba(255, 255, 255, 0.5); }
+.footer-meta .lang a.is-active { color: #fff; background: rgba(255, 255, 255, 0.12); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 980px) {
+  .steps-grid { grid-template-columns: 1fr; gap: 32px; }
+  .nav-links { display: none; }
+  .nav-burger { display: flex; }
+  .nav-links.is-open {
+    display: flex; flex-direction: column; gap: 4px;
+    position: absolute; top: 64px; left: 0; right: 0;
+    background: rgba(5, 5, 5, 0.96); padding: 14px 20px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .nav-links.is-open a { padding: 10px 0; font-size: 15px; color: rgba(255, 255, 255, 0.8); }
+}
+@media (max-width: 620px) {
+  .nav-actions .btn { display: none; }
+  .footer-row { flex-direction: column; align-items: flex-start; }
+  .statement { padding: 84px 0 72px; }
+  .brand { padding-top: 72px; }
+}

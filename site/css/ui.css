@@ -1,0 +1,69 @@
+/* Pan Peryskop — podstawowe elementy UI: pigułki, przyciski, accordion */
+
+/* --- eyebrow pill --- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--ink);
+  white-space: nowrap;
+}
+.dark .pill { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+/* --- buttons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+.btn:active { transform: scale(0.97); }
+.btn-lg { height: 48px; padding: 0 24px; font-size: 15px; }
+.btn-sm { height: 34px; padding: 0 14px; font-size: 13px; }
+
+.btn-white { background: #fff; color: var(--ink-soft); }
+.btn-white:hover { background: #e8e8e3; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35); }
+
+/* --- accordion (FAQ) --- */
+.accordion { border-bottom: 1px solid var(--line); }
+.accordion summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 4px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.accordion summary::-webkit-details-marker { display: none; }
+.accordion summary .plus {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 15px;
+  transition: transform 0.25s var(--ease), background-color 0.2s ease;
+}
+.accordion[open] summary .plus { transform: rotate(45deg); background: rgba(0, 0, 0, 0.12); }
+.accordion .a-body { padding: 0 4px 24px; color: var(--muted); font-size: 14px; line-height: 1.7; max-width: 60ch; }

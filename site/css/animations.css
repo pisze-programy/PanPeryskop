@@ -1,0 +1,32 @@
+/* Pan Peryskop — animacje: rotator słów (inline-grid) + marquee */
+
+/* --- rotator: frazy w jednej komórce grid (rezerwują tylko szerokość najdłuższej) --- */
+.rotator {
+  display: inline-grid;
+  place-items: center;
+  vertical-align: bottom;
+}
+.rotator .w {
+  grid-area: 1 / 1;
+  display: inline-block;
+  white-space: nowrap;
+  opacity: 0;
+  filter: blur(6px);
+  transform: translateY(0.4em);
+  transition: opacity 0.5s var(--ease), filter 0.5s var(--ease), transform 0.5s var(--ease);
+}
+.rotator .w.is-in { opacity: 1; filter: blur(0); transform: none; }
+.rotator .w.is-out { opacity: 0; filter: blur(6px); transform: translateY(-0.4em); }
+
+/* --- marquee (EVpin: 60s, mask-fade edges, pause on hover) --- */
+.marquee {
+  position: relative;
+  overflow: hidden;
+  overflow: clip;
+  contain: paint;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%);
+}
+.marquee-track { display: flex; width: max-content; gap: 8px; animation: pp-marquee 60s linear infinite; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes pp-marquee { to { transform: translateX(-50%); } }

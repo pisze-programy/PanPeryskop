@@ -23,15 +23,6 @@ node_modules/
 backend/.wrangler/
 backend/dist/
 
-# Seed media (posters/videos) — never commit these
-admin/seed/media/
-
-# Operational agent playbook — not for the public repo
-admin/seed/SEED-PLAYBOOK.md
-
-# Source-access importer (contains Algolia key / internal goingapp API / Cloudinary sig)
-admin/src/seed-import.mjs
-
 # Env
 .env
 *.env.local
@@ -45,37 +36,15 @@ admin/src/seed-import.mjs
 **/.build/
 ios/vendor/YPImagePicker/Package.resolved
 
-# Local machine-only seed tooling (clean-IP source). Whole dir is gitignored —
-# it contains absolute paths (launchd plist), local env secrets, checkpoint state.
-# Never commit any of admin/local/ — the data flows in via the public worker API.
-admin/local/
+# Local-only files (internal notes, scraped data, machine tooling) —
+# everything lives under one ignored folder so nothing sensitive is named here.
+_internal/
 
 # Staging + media produced by the local/VPS per-source fetches (regenerated on demand).
-admin/seed/multikino.json
-admin/seed/multikino-media/
-admin/seed/cinemacity.json
-admin/seed/cinemacity-media/
-admin/seed/events-luma.json
-admin/seed/events-luma-media/
-admin/seed/events-meetup.json
-admin/seed/events-meetup-media/
+admin/seed/*.json
+admin/seed/*-media/
 admin/vps/logs/
 admin/vps/.env
-.playwright-cli/
 
 # facebook scrape test dump
 browser-ext/*.json
-
-# dzis.app research dump — scraped data + discovery notes, not for the repo
-dzisapp_out_links.csv
-discovery-dzisapp.md
-
-# CJ (Commission Junction) recon — proprietary bundle + source map, local analysis only
-recon/
-
-# Internal working notes — not for the public repo
-PLAN.md
-SEED.md
-docs/APP_STORE.md
-multikino-provider.md
-admin-redesign/

@@ -31,7 +31,7 @@ async function storeCachedToken(db: D1Database, t: string, exp: number): Promise
 }
 
 // Injectable caches so the SAME fetch path serves the Worker (D1-backed) and the
-// LOCAL runner (admin/local/cinemas — module token cache + checkpoint geo store)
+// LOCAL runner (module token cache + checkpoint geo store)
 // without duplicating any fetch/parse logic.
 export interface MkTokenStore {
   load(): Promise<{ token: string | null; exp: number }>;

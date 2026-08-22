@@ -45,7 +45,7 @@
 .marquee-track.slower { animation-duration: 72s; }
 
 /* ---------- BRAND (jak onboarding) ---------- */
-.brand { padding-top: 96px; }
+.brand { padding: 0 0 96px; }
 .brand-inner { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 26px; }
 .brand-logo {
   width: 120px; height: 120px;
@@ -108,5 +108,5 @@
   .nav-actions .btn { display: none; }
   .footer-row { flex-direction: column; align-items: flex-start; }
   .statement { padding: 84px 0 72px; }
-  .brand { padding-top: 72px; }
+  .brand { padding: 0 0 72px; }
 }

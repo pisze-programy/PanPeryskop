@@ -65,3 +65,17 @@ admin/vps/.env
 
 # facebook scrape test dump
 browser-ext/*.json
+
+# dzis.app research dump — scraped data + discovery notes, not for the repo
+dzisapp_out_links.csv
+discovery-dzisapp.md
+
+# CJ (Commission Junction) recon — proprietary bundle + source map, local analysis only
+recon/
+
+# Internal working notes — not for the public repo
+PLAN.md
+SEED.md
+docs/APP_STORE.md
+multikino-provider.md
+admin-redesign/

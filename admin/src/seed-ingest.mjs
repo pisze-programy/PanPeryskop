@@ -134,7 +134,7 @@ async function login() {
   return (await res.json()).session_token;
 }
 
-async function upload(token, entry, media, createdAt) {
+async function upload(session, entry, media, createdAt) {
   const form = new FormData();
   form.append('type', media.type);
   form.append('lat', String(entry.lat));
@@ -153,12 +153,20 @@ async function upload(token, entry, media, createdAt) {
   form.append('file', new Blob([media.file], { type: media.mime }), media.fileName);
   form.append('thumb', new Blob([media.thumb], { type: 'image/jpeg' }), 'thumb.jpg');
 
-  const res = await fetch(`${BASE_URL}/posts`, {
+  const doPost = (tok) => fetch(`${BASE_URL}/posts`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${tok}` },
     body: form,
     signal: AbortSignal.timeout(90_000),
   });
+  // auth/device keeps a SINGLE session per device — a concurrent seed run (e.g.
+  // the 5-min cron) re-logins and invalidates our token mid-upload. On 401,
+  // re-login once and retry.
+  let res = await doPost(session.token);
+  if (res.status === 401) {
+    session.token = await login();
+    res = await doPost(session.token);
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`POST /posts -> ${res.status}: ${JSON.stringify(data)}`);
   return data;
@@ -189,7 +197,7 @@ async function fetchSeedIds(path) {
 }
 
 async function main() {
-  const token = await login();
+  const session = { token: await login() };
   const rejectedIds = await fetchSeedIds('/admin/seed/rejected');
   const existingIds = force ? new Set() : await fetchSeedIds('/admin/seed/existing');
   const tmp = mkdtempSync(join(tmpdir(), 'pp-seed-'));
@@ -235,7 +243,7 @@ async function main() {
       if (typeof entry.lat !== 'number' || typeof entry.lng !== 'number') throw new Error('invalid lat/lng');
 
       const media = optimize(src, tmp);
-      const data = await upload(token, entry, media, createdAt);
+      const data = await upload(session, entry, media, createdAt);
 
       entry.status = 'done';
       entry.post_id = data.id;

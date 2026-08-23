@@ -8,7 +8,7 @@
 # box, designed for a wipe: wipe → (re-add your SSH key / the `frog` alias) →
 # run THIS → box is back up.
 #
-# Env: HOST=frog (ssh alias), IPHONE_HOST=iphone-14-pro-max
+# Env: HOST=frog (ssh alias)
 set -eu
 
 HOST="${HOST:-frog}"

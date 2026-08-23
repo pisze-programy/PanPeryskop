@@ -12,15 +12,15 @@ export PATH="/usr/bin:/bin:/usr/local/bin:$PATH"
 ENV_FILE=/opt/panperyskop/admin/vps/.env
 [ -f "$ENV_FILE" ] && . "$ENV_FILE" 2>/dev/null || true
 
-# Egress: Webshare rotating residential proxy when WEBSHARE_URL is set;
-# otherwise fall back to the local tailscale IPv4 proxy (phone/Mac exit node).
-if [ -n "${WEBSHARE_URL:-}" ]; then
-  export HTTPS_PROXY="$WEBSHARE_URL"
-  export NO_PROXY="api.panperyskop.app"
-  export VPS_NO_EXIT_NODE="1"
-else
-  export HTTPS_PROXY="http://127.0.0.1:1057"
+# Egress is the Webshare rotating residential proxy (WEBSHARE_URL) — the tailscale
+# exit node + ipv4-proxy were removed, so this is now REQUIRED.
+if [ -z "${WEBSHARE_URL:-}" ]; then
+  echo "WEBSHARE_URL not set in $ENV_FILE — no residential egress configured" >&2
+  exit 1
 fi
+export HTTPS_PROXY="$WEBSHARE_URL"
+export NO_PROXY="api.panperyskop.app"
+export VPS_NO_EXIT_NODE="1"
 export NODE_USE_ENV_PROXY="1"
 # Hard heap ceiling (256 MB box, ~80 MB baseline) + --expose-gc for the
 # per-scope / between-provider gcNow() calls. If V8 can't stay under the cap it

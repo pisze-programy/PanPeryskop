@@ -98,7 +98,6 @@ after a wipe — this is the only manual step in the rebuild.
 | Var | Default | Purpose |
 |---|---|---|
 | `HOST` | `frog` | SSH alias to the VPS (deploy.sh) |
-| `IPHONE_HOST` | `iphone-14-pro-max` | Primary Tailscale exit node (deploy.sh / setup-vps.sh) |
 
 ### Orchestrator (runtime)
 

@@ -61,15 +61,15 @@ test('tagCatalog: explicit tag_order positions win, deleted tags are dropped', a
     prepare: (sql: string) => ({
       all: async () =>
         sql.includes('admin_tags')
-          ? { results: [{ id: 'sport', label: 'Sport' }, { id: 'wystawa', label: 'Wystawa' }] }
-          : { results: [{ tag_id: 'wystawa', position: 0 }, { tag_id: 'sport', position: 1 }, { tag_id: 'usuniety', position: 2 }] },
+          ? { results: [{ id: 'sztuka', label: 'Sztuka' }, { id: 'wystawa', label: 'Wystawa' }] }
+          : { results: [{ tag_id: 'wystawa', position: 0 }, { tag_id: 'sztuka', position: 1 }, { tag_id: 'usuniety', position: 2 }] },
     }),
   } as unknown as D1Database;
   const { tagCatalog } = await import('../src/core/tagCatalog');
   const catalog = await tagCatalog(db);
   const ids = catalog.map((t) => t.id);
-  assert.deepEqual(ids.slice(0, 2), ['wystawa', 'sport'], 'positioned tags first, in order');
-  assert.deepEqual(ids.slice(2), ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'inne'], 'canonical follows in default order');
+  assert.deepEqual(ids.slice(0, 2), ['wystawa', 'sztuka'], 'positioned tags first, in order');
+  assert.deepEqual(ids.slice(2), ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'sport', 'inne'], 'canonical follows in default order');
   assert.ok(!ids.includes('usuniety'), 'ghost tag_order entry never surfaces');
 });
 
@@ -78,14 +78,14 @@ test('tagCatalog: no tag_order → default order (canonical then custom by label
     prepare: (sql: string) => ({
       all: async () =>
         sql.includes('admin_tags')
-          ? { results: [{ id: 'wystawa', label: 'Wystawa' }, { id: 'sport', label: 'Sport' }] }
+          ? { results: [{ id: 'sztuka', label: 'Sztuka' }, { id: 'wystawa', label: 'Wystawa' }] }
           : { results: [] },
     }),
   } as unknown as D1Database;
   const { tagCatalog } = await import('../src/core/tagCatalog');
   const catalog = await tagCatalog(db);
-  assert.deepEqual(catalog.slice(0, 6).map((t) => t.id), ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'inne']);
-  assert.deepEqual(catalog.slice(6).map((t) => t.id), ['sport', 'wystawa'], 'admin tags ordered by label');
+  assert.deepEqual(catalog.slice(0, 7).map((t) => t.id), ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'sport', 'inne']);
+  assert.deepEqual(catalog.slice(7).map((t) => t.id), ['sztuka', 'wystawa'], 'admin tags ordered by label');
 });
 
 test('registry: dzisapp + eventylive are disabled (retired), kupbilecik is the only worker provider', async () => {

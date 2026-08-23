@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { STATUS_APPROVED, STATUS_REJECTED } from '../core/models';
 import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
 import { SEED_DAYS_AHEAD } from '../seed/core/constants';
+import { CANONICAL_TAG_SET } from '../seed/core/tags';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -136,6 +137,21 @@ adminRoutes.post('/posts/:id/reject', async (c) => {
     .bind(STATUS_REJECTED, reason, postId)
     .run();
   return c.json({ ok: true, rejection_reason: reason });
+});
+
+// Set a post's tags directly (Bearer/CLI) — mirrors the admin dashboard tag edit:
+// only canonical ids pass, and the post is LOCKED so the seed never overwrites it.
+adminRoutes.post('/posts/:id/tags', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ tags?: unknown }>().catch(() => ({}) as { tags?: unknown });
+  const raw = Array.isArray(body.tags) ? body.tags : null;
+  const tags = raw ? [...new Set(raw.filter((t): t is string => typeof t === 'string' && CANONICAL_TAG_SET.has(t)))].sort() : null;
+  if (!raw || !tags) return c.json({ error: 'Invalid tags' }, 400);
+  await c.env.DB
+    .prepare('UPDATE posts SET tags = ?, tags_locked = 1 WHERE id = ?')
+    .bind(JSON.stringify(tags), c.req.param('id'))
+    .run();
+  return c.json({ ok: true, tags });
 });
 
 adminRoutes.post('/ban', async (c) => {

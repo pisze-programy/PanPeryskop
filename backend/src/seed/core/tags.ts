@@ -6,7 +6,7 @@
 // candidate builders. Everything else is left UNTAGGED on purpose: better no tag
 // than a wrong one (the admin or the facebook ingest assigns tags manually).
 // This file intentionally has NO tag-normalization heuristics anymore.
-export const CANONICAL_TAGS = ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'inne'] as const;
+export const CANONICAL_TAGS = ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'sport', 'inne'] as const;
 export type CanonicalTag = (typeof CANONICAL_TAGS)[number];
 export const CANONICAL_TAG_SET: ReadonlySet<string> = new Set(CANONICAL_TAGS);
 
@@ -17,6 +17,7 @@ export const TAG_LABELS: Record<string, string> = {
   meetup: 'Meetup',
   komedia: 'Komedia',
   teatr: 'Teatr',
+  sport: 'Sport',
   inne: 'Inne',
 };
 

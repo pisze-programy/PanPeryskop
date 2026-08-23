@@ -29,6 +29,24 @@ interface PlaceInfo {
   city?: { name?: string };
 }
 
+// Deterministic going tags from the API's own category_slug + title. Canonical
+// ids only; the category is explicit on going's site (as certain as kupbilecik's
+// listing category). `kultura` needs a strong title signal (a film — reż./film/
+// pokaz/…); everything else (rozrywka, unknown slugs) stays untagged on purpose
+// — better no tag than a wrong one.
+const GOING_FILM_KW = /(reż|film|pokaz|kino|dokument|seans|festiwal filmowy|premiera|dyrygent|serial)/i;
+export function goingTags(categorySlug: string | undefined, title: string | undefined): string[] | null {
+  if (categorySlug === 'koncert') return ['muzyka'];
+  if (categorySlug === 'teatr') return ['teatr'];
+  if (categorySlug === 'inne') return ['inne'];
+  if (categorySlug === 'sport') return ['sport'];
+  if (categorySlug === 'kultura') {
+    if (GOING_FILM_KW.test(title || '')) return ['filmy'];
+    return null;
+  }
+  return null;
+}
+
 async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
   const appId = ctx.env.ALGOLIA_APP_ID;
   const apiKey = ctx.env.ALGOLIA_API_KEY;
@@ -73,6 +91,7 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
         : `${GOING_BASE}/${h.path}`,
       mediaUrl: GOING_POSTER(enc, cloudSig),
       thumbUrl: GOING_THUMB(enc, cloudSig),
+      tags: goingTags(h.category_slug, h.name_pl) ?? undefined,
     });
   }
   return out;

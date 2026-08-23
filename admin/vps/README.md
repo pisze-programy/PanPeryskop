@@ -65,9 +65,10 @@ window [today, today+3] is covered by rolling. `--full` backfills the whole wind
 | multikino | 18 cinemas | 1/cinema (whole programme in one call) | `admin/seed/multikino.json` |
 | cinemacity | 36 cinemas | 1/cinema (quickbook is per-day, no bulk) | `admin/seed/cinemacity.json` |
 
-Exit-node logic (ONE rule): **iPhone → unavailable → Mac → unavailable → retry at the next 5-min
-kick** (all day within the window). Per provider: compute the far edge → skip if the checkpoint
-already has `{target, completed}` → select+validate exit node (probed through the IPv4 proxy) →
+Egress logic: **Webshare residential proxy** (rotate) when `WEBSHARE_URL` is set in `.env`
+(preferred — no phone/Mac needed; `VPS_NO_EXIT_NODE=1` skips tailscale exit-node selection).
+Fallback when `WEBSHARE_URL` is absent: **iPhone → Mac** tailscale exit node. Per provider:
+compute the far edge → skip if the checkpoint already has `{target, completed}` → egress →
 run in-process → verify completion → upload via `seed-ingest --approve`.
 
 All checkpoints share one contract: `{ target: "<far-edge day>", completed, completedAt, scopes }`.

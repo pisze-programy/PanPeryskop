@@ -8,6 +8,7 @@ import { parseMkFilms, extractToken, resolveMkGeo } from '../src/seed/providers/
 import { parseHeliosPayload } from '../src/seed/providers/helios';
 import { parseCcScope } from '../src/seed/providers/cinemacity';
 import { stripOutsideCityText, kupTags } from '../src/seed/providers/kupbilecik';
+import { goingTags } from '../src/seed/providers/going';
 import { mkScopes, MK_CINEMAS, MK_ALL_CINEMAS } from '../src/seed/core/constants';
 import { PROVIDER_CONFIGS, enabledForExecutor, configOf, priorityOf, EXECUTOR } from '../src/seed/providers/registry';
 import { workerExecutor } from '../src/seed/executors/worker';
@@ -650,4 +651,48 @@ test('kupbilecik: buildFromHtml wires kupTags onto the candidate', async () => {
   // From the /festiwal/ listing with a music title → muzyka; without → null tags.
   const fest = buildFromHtml(ctx, 'https://www.kupbilecik.pl/imprezy/123/Gdynia/Test+Event/', html, '123', null, '/festiwal/?q=');
   assert.equal(fest!.tags, undefined, 'generic festival title → no tags on the candidate');
+});
+
+test('goingTags: category_slug maps to canonical tags (koncert/teatr/sport/inne)', () => {
+  assert.deepEqual(goingTags('koncert', 'Anything'), ['muzyka'], 'koncert → muzyka');
+  assert.deepEqual(goingTags('teatr', 'Anything'), ['teatr'], 'teatr → teatr');
+  assert.deepEqual(goingTags('sport', 'Wyścigi konne na Torze Służewiec'), ['sport'], 'sport → sport');
+  assert.deepEqual(goingTags('inne', 'Targi dla Zwierzaków | Gdańsk'), ['inne'], 'inne → inne');
+  // Category wins even if the title would suggest something else.
+  assert.deepEqual(goingTags('koncert', 'Kabaret w operze'), ['muzyka'], 'koncert wins over "kabaret" in title');
+});
+
+test('goingTags: kultura tags filmy only with a strong title signal (real film titles)', () => {
+  for (const [slug, title, tag] of [
+    ['kultura', 'BRAT, reż. Maciej Sobieszczański', 'filmy'],
+    ['kultura', 'HISTORIE RÓWNOLEGŁE, reż. Asghar Farhadi', 'filmy'],
+    ['kultura', 'KARNETY - 15. MIĘDZYNARODOWY FESTIWAL FILMOWY HOMMAG', 'filmy'],
+    ['kultura', 'URZĄD PEŁEN DOKUMENTÓW, pokaz filmów dokumentalnych', 'filmy'],
+    ['kultura', 'DYRYGENT, reż. Ondrej Provaznik', 'filmy'],
+  ] as const) {
+    assert.deepEqual(goingTags(slug, title), [tag], `"${title}" → ${tag}`);
+  }
+  // kultura WITHOUT a film signal stays untagged (safer).
+  assert.equal(goingTags('kultura', 'Wernisaż wystawy malarstwa'), null, 'art exhibition → null');
+  assert.equal(goingTags('kultura', 'Spotkanie autorskie'), null, 'no film keyword → null');
+});
+
+test('goingTags: empty/ambiguous leaves untagged (null) — never guesses', () => {
+  // rozrywka has no canonical tag → null.
+  assert.equal(goingTags('rozrywka', 'Pub Quiz w The Beer Spot'), null, 'rozrywka → null');
+  assert.equal(goingTags('rozrywka', 'Silent Disco na dachu'), null, 'rozrywka → null');
+  assert.deepEqual(goingTags('sport', 'TURNIEJ O PUCHAR PREZYDENTA STAROGARDU GDAŃSKIEGO'), ['sport'], 'sport tagged (canonical now)');
+  // Unknown / missing inputs.
+  assert.equal(goingTags(undefined, 'X'), null, 'no slug → null');
+  assert.equal(goingTags('', 'X'), null, 'empty slug → null');
+  assert.deepEqual(goingTags('koncert', ''), ['muzyka'], 'koncert with empty title still tagged');
+  assert.equal(goingTags('nieznany-slug', 'Rock Festival'), null, 'unknown slug → null');
+  // Case-insensitivity in the film keyword.
+  assert.deepEqual(goingTags('kultura', 'SEANS FILMOWY NA DACHU'), ['filmy'], 'uppercase film keywords');
+});
+
+test('goingTags: real concert titles from the live feed', () => {
+  for (const t of ['Koncert Chopinowski W Najpiękniejszej Sali Koncertowej', 'Koncert Przy Świecach', 'JAZZ PO POLSKU: Sylwester Ostrowski', 'Junior Jazz', 'Gromee', 'Kaśka Sochacka - Lato w Amfiteatrach | USTROŃ']) {
+    assert.deepEqual(goingTags('koncert', t), ['muzyka'], `"${t}" → muzyka`);
+  }
 });

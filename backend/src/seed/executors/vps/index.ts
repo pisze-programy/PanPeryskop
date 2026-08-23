@@ -378,8 +378,12 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const exitNode = await selectExitNode();
-    if (exitNode === 'none') {
+    // Egress via the HTTPS proxy (Webshare residential) replaces the tailscale
+    // exit node — set VPS_NO_EXIT_NODE=1 in the orchestrator when WEBSHARE_URL is
+    // configured. Otherwise select+validate a tailscale exit node (phone/Mac).
+    const proxyEgress = process.env.VPS_NO_EXIT_NODE === '1';
+    const exitNode = proxyEgress ? 'proxy' : await selectExitNode();
+    if (!proxyEgress && exitNode === 'none') {
       log(`no usable exit node for ${cfg.id} — retry next kick`);
       status('exit-none', cfg.id);
       continue;

@@ -128,6 +128,7 @@ async function login() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ device_id: SEED_DEVICE_ID }),
+    signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) throw new Error(`auth/device -> ${res.status}`);
   return (await res.json()).session_token;
@@ -156,6 +157,7 @@ async function upload(token, entry, media, createdAt) {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: form,
+    signal: AbortSignal.timeout(90_000),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`POST /posts -> ${res.status}: ${JSON.stringify(data)}`);
@@ -166,6 +168,7 @@ async function approvePost(id) {
   const res = await fetch(`${BASE_URL}/admin/posts/${id}/approve`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
+    signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) throw new Error(`approve ${id} -> ${res.status}`);
 }

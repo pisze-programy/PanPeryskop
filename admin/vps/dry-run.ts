@@ -1,9 +1,13 @@
 // Local dry-run harness — runs ONE VPS provider source in-process through the
-// env proxy (Webshare) WITHOUT touching the VPS. New file; existing VPS scripts
-// and the orchestrator are untouched.
+// env proxy WITHOUT touching the VPS. New file; existing VPS scripts and the
+// orchestrator are untouched.
+//
+// PROXY POLICY: local tests/analysis use the STATIC test Webshare account
+// (mdtduclo-PL-1) so they never touch the PRODUCTION rotate account
+// (qibaikpg-pl-rotate) that the VPS uses. Set HTTPS_PROXY accordingly.
 //
 // Usage (from the repo root, with proxy env exported BEFORE node starts):
-//   HTTPS_PROXY=http://user:pass@p.webshare.io:80 NODE_USE_ENV_PROXY=1 \
+//   HTTPS_PROXY=http://mdtduclo-PL-1:<pass>@p.webshare.io:80 NODE_USE_ENV_PROXY=1 \
 //     npx tsx admin/vps/dry-run.ts <provider> [args...]
 //
 //   provider: multikino | cinemacity | luma | meetup

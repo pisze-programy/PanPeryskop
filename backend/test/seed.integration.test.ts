@@ -16,14 +16,15 @@ import { enqueueSeedDay, runQueue, QUEUE_NAMES } from '../src/seed/pipeline/queu
 import { storiesRoutes } from '../src/api/stories';
 import { parseStoriesLimit } from '../src/api/stories';
 import { todayWarsaw, addDaysWarsaw } from '../src/seed/core/dates';
+import { SEED_DAYS_AHEAD } from '../src/seed/core/constants';
 import type { SeedQueueMessage } from '../src/seed/pipeline/queue';
 import type { SeedProvider } from '../src/seed/core/types';
 
 // Pipeline tests seed a WINDOW day. Must stay date-relative: handleSeedDay rejects
 // created_at older than TTL_MS (24h), so a hardcoded past day makes every seed-day
 // throw → infinite DLQ re-drive → "pipeline did not drain". The far edge
-// (today+3) is always inside the window and never in the past.
-const DAY = addDaysWarsaw(todayWarsaw(), 3);
+// (today+SEED_DAYS_AHEAD) is always inside the window and never in the past.
+const DAY = addDaysWarsaw(todayWarsaw(), SEED_DAYS_AHEAD);
 const DAY_START = Date.parse(`${DAY}T06:00:00+02:00`);
 
 // ---------- D1 adapter over node:sqlite ----------

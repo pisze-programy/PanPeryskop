@@ -3,6 +3,9 @@
 // HTTP proxy and counts the payload bytes that actually flow through Webshare.
 // Used to measure the real daily MB cost of a full seed run. New tool file.
 //
+// PROXY POLICY: measurement runs use the STATIC test account (mdtduclo-PL-1),
+// never the PRODUCTION rotate account (qibaikpg-pl-rotate) that the VPS uses.
+//
 // Usage:
 //   WEBSHARE_UPSTREAM=host:port WEBSHARE_USER=u WEBSHARE_PASS=p \
 //     STATS_FILE=/tmp/proxy-stats.json node count-proxy.mjs

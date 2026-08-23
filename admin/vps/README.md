@@ -223,3 +223,16 @@ npx wrangler d1 execute panperyskop-db --remote \
 | `multikino auth -> 403` after a long run | multikino rate-limits bursts per IP | transient; next kick retries; resetting the phone IP helps |
 | stale `orchestrator.lock` | a killed process left the pidfile | next kick detects the dead pid and takes over; or `sudo rm -f .../orchestrator.lock` |
 | proxy down | service crashed | `sudo rc-service panperyskop-proxy restart` |
+
+## Webshare usage policy
+
+Two Webshare accounts are kept separate so test/analysis traffic never eats the
+production budget:
+
+- **Production (VPS)**: `qibaikpg-pl-rotate` (rotating residential) via
+  `WEBSHARE_URL` in `.env`. Measured at ~0.5–1 MB/day for the far-edge seed and
+  ~4 MB for a full 7-day backfill (fetch only; media downloads go direct).
+- **Local tests/analysis (Mac)**: the STATIC account `mdtduclo-PL-1`
+  (`https://ipv4.webshare.io` confirms the fixed IP). Never point a test tool
+  at the production rotate account — a single kupbilecik listing pass is ~28 MB
+  through the proxy.

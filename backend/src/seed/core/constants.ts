@@ -10,7 +10,7 @@ export const EVENT_VISIBLE_OFFSET_MS = 6 * HOUR_MS;
 // The app browses [today, today+SEED_DAYS_AHEAD]. EVERY provider (Worker and VPS)
 // re-seeds this window daily — idempotent by external_id, so late-published
 // events for today/+1/+2 still land. Single source of truth for the window.
-export const SEED_DAYS_AHEAD = 3;
+export const SEED_DAYS_AHEAD = 6;
 
 // ---------- provider fetch timeouts ----------
 // Generous on purpose: the VPS fetches through the phone's cellular exit node,

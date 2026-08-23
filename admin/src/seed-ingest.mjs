@@ -241,12 +241,13 @@ async function main() {
       entry.post_id = data.id;
       entry.error = null;
 
-      if (approve && !entry.no_geo) {
-        await approvePost(data.id);
+      // POST /posts already creates non-no_geo entries as APPROVED (api/posts.ts
+      // defaults status to approved; upload() only sends 'pending' for no_geo), so
+      // the separate approvePost call was REDUNDANT — removing it halves the API
+      // calls during large backfills. no_geo entries stay pending for the admin.
+      if (!entry.no_geo) {
         results.done.push({ id: data.id, label, approved: true });
       } else {
-        // no_geo entries were created as 'pending' (see upload()) — skip approve
-        // so they stay out of the app until the admin fixes geo / approves.
         results.done.push({ id: data.id, label, approved: false });
       }
       console.log(`✓ ${label} -> ${data.id} (${media.type}, created_at ${new Date(createdAt).toISOString()})`);

@@ -48,10 +48,12 @@ cd site && npx wrangler pages deploy . --project-name panperyskop-site
 
 ## Event seeding
 
-- **VPS orchestrator** (`admin/vps/`): residential-egress seed of cinema/event
-  providers, kicked every 5 min from cron on the VPS (`BASE_URL`, `ADMIN_SECRET` in
-  `admin/vps/.env`).
-- **Worker crons:** daily window roll (02:00), audit cleanup (04:00), watchdog (hourly).
+- **VPS orchestrator** (`admin/vps/`): residential-egress seed of going, helios,
+  multikino, cinemacity, luma and meetup, kicked every 5 min from cron on the VPS
+  (`BASE_URL`, `ADMIN_SECRET`, `WEBSHARE_*`, `ALGOLIA_*` in `admin/vps/.env`).
+  Fetches egress via the Webshare rotating residential proxy.
+- **Worker crons:** daily window roll (02:00, seeds kupbilecik through the queue
+  pipeline via CF Browser Run), audit cleanup (04:00), watchdog (hourly).
 - Scripts: `admin/src/seed-ingest.mjs` (upload → approved).
 
 ## API (Worker) — production

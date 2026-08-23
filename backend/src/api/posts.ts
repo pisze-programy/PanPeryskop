@@ -214,13 +214,14 @@ export async function doSavePost(
              description = CASE WHEN geo_locked = 1 OR time_locked = 1 THEN description ELSE ? END,
              media_key = ?, thumb_key = ?,
              is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?,
+             status = CASE WHEN status = 'rejected' THEN status ELSE ? END,
              is_sold_out = CASE WHEN sold_out_locked = 1 THEN is_sold_out ELSE ? END,
              event_date = ?, showtimes = CASE WHEN time_locked = 1 THEN showtimes ELSE ? END,
              showtime_booking = CASE WHEN time_locked = 1 THEN showtime_booking ELSE ? END,
              tags = CASE WHEN tags_locked = 1 THEN tags ELSE ? END
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);

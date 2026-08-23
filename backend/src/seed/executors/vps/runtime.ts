@@ -23,7 +23,7 @@ import { dedupe, buildDescription } from '../../../../src/seed/core/dedupe';
 import { isCancelled } from '../../../../src/seed/core/filters';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs, warsawDateOf, eventDayEndMs } from '../../../../src/seed/core/dates';
 import { GeoStore, fallbackSeedGeo } from '../../../../src/seed/core/geo';
-import { SEED_DAYS_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1 } from '../../../../src/seed/core/constants';
+import { SEED_DAYS_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1, VPS_CONCURRENCY } from '../../../../src/seed/core/constants';
 import { UA_HEADERS } from '../../../../src/seed/providers/http';
 import { configOf } from '../../../../src/seed/providers/registry';
 import type { SeedCandidate, ProviderId } from '../../../../src/seed/core/types';
@@ -52,6 +52,38 @@ export const PACING_MS = 500;
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export { SEED_DAYS_AHEAD };
+
+// ---------- per-scope fetch retry ----------
+// A scope fetch can fail transiently when the rotating residential proxy hands us
+// a slow/bad IP (meetup showed ~57s stalls near the 60s fetch timeout). Retrying
+// gets a FRESH IP from the rotate pool, which almost always succeeds. Bounded so
+// a genuinely dead scope still surfaces as an error (retried on the next kick).
+const VPS_FETCH_RETRIES = 3;
+const VPS_FETCH_RETRY_DELAY_MS = 5_000;
+
+export async function fetchWithRetry(
+  src: ScopeSource,
+  scope: string,
+  ctx: ScopeCtx,
+  opts?: { retries?: number; retryDelayMs?: number },
+): Promise<SeedCandidate[]> {
+  const retries = opts?.retries ?? VPS_FETCH_RETRIES;
+  const delay = opts?.retryDelayMs ?? VPS_FETCH_RETRY_DELAY_MS;
+  let lastErr: Error | null = null;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await src.fetchScope(scope, ctx);
+    } catch (e) {
+      lastErr = e as Error;
+      if (attempt < retries) {
+        console.error(`[${src.source}/${scope}] attempt ${attempt} failed (${(e as Error).message}) — retrying with a fresh IP in ${delay / 1000}s`);
+        logLoad('scope:retry', `${src.source}/${scope} attempt=${attempt} ${(e as Error).message}`);
+        await sleep(delay);
+      }
+    }
+  }
+  throw lastErr ?? new Error('fetch failed');
+}
 
 // ---------- load instrumentation (admin/vps/logs/load.log) ----------
 // Always-on sampler correlating phases with process RSS/heap and box memory/load,
@@ -221,9 +253,27 @@ export async function downloadMedia(url: string, file: string): Promise<void> {
   if (mediaExt(url) === 'webp') convertToJpeg(buf, file);
   else writeFileSync(file, buf);
 }
+// Direct (datacenter) download via curl with the proxy env stripped — poster CDNs
+// (Cloudinary, img.helios.pl, xmedia-cw) are NOT Cloudflare-protected, so media
+// never eats the residential proxy budget. Used as the FIRST attempt.
+function fetchMediaDirect(url: string): Buffer {
+  const env: Record<string, string | undefined> = { ...process.env };
+  for (const k of ['HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy', 'NODE_USE_ENV_PROXY']) delete env[k];
+  const out = execFileSync('curl', [
+    '-sS', '-L', '--compressed', '--max-time', String(Math.floor(MEDIA_TIMEOUT_MS / 1000)),
+    '-H', `User-Agent: ${UA_HEADERS['User-Agent']}`, url,
+  ], { env, encoding: null as unknown as BufferEncoding, timeout: MEDIA_TIMEOUT_MS });
+  return Buffer.isBuffer(out) ? out : Buffer.from(out);
+}
 async function fetchMedia(url: string): Promise<Buffer> {
   let lastErr: Error | null = null;
   for (let attempt = 0; attempt <= MEDIA_RETRIES; attempt++) {
+    try {
+      return await fetchMediaDirect(url);
+    } catch (e) {
+      lastErr = e as Error;
+      console.error(`media direct ${url.split('?')[0].slice(-48)}: ${(e as Error).message} — fallback to proxy`);
+    }
     try {
       const res = await fetch(url, { headers: UA_HEADERS, signal: AbortSignal.timeout(MEDIA_TIMEOUT_MS) });
       if (!res.ok) throw new Error(`media ${res.status}`);
@@ -421,25 +471,26 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
   const ctx: ScopeCtx = { days, windowStart, windowEnd, cp };
 
   const scopes = src.scopes();
+  const doneScopes = scopes.filter((s) => cp.scopes?.[s] === 'done');
   let processed = 0;
-  let done = 0;
+  let done = doneScopes.length;
   let paused = false;
-  logLoad('run-start', `${src.source} target=${target} scopes=${scopes.length} full=${full} entries=${entries.size}`);
-  for (const scope of scopes) {
-    if (cp.scopes?.[scope] === 'done') { done++; continue; }
-    if (args.limit && processed >= args.limit) break;
+  logLoad('run-start', `${src.source} target=${target} scopes=${scopes.length} done=${done} full=${full} entries=${entries.size}`);
+
+  // Per-scope work — kept as one function so parallel scopes share the same
+  // fetch → gate → dedupe → stage → checkpoint path as the sequential version.
+  const processScope = async (scope: string): Promise<'done' | 'paused' | 'error'> => {
+    if (cp.scopes?.[scope] === 'done') return 'done';
     // Resource gate: the VPS is a small shared box. When memory/load is tight we
     // PAUSE (progress is checkpointed) so other processes are never starved — the
     // next cron kick (30 min) resumes from here.
     if (!resourcesOk(`scope-start:${scope}`)) {
       console.log(`[${src.source}] resources tight — pausing (${done}/${scopes.length} scopes done, resume next kick)`);
-      paused = true;
-      break;
+      return 'paused';
     }
-    processed++;
     const t0 = Date.now();
     try {
-      const cands = (await src.fetchScope(scope, ctx))
+      const cands = (await fetchWithRetry(src, scope, ctx))
         .filter((c) => c.startMs >= windowStart && c.startMs <= windowEnd);
       console.log(`[${src.source}] ✓ ${scope}: ${cands.length} candidates`);
       logLoad('scope:fetch', `${src.source}/${scope} cands=${cands.length} ${Date.now() - t0}ms`);
@@ -449,12 +500,13 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
 
       let staged = 0;
       let cancelled = 0;
+      let scopePaused = false;
       let i = 0;
       for (const c of cands) {
         i++;
         // Mid-scope gate: a whole cinema/day is staged here (JSON parse + media),
         // which can spike memory WITHOUT the scope-boundary gate ever firing.
-        if (i % 10 === 0 && !resourcesOk(`scope:stage:${scope}`)) { paused = true; break; }
+        if (i % 10 === 0 && !resourcesOk(`scope:stage:${scope}`)) { scopePaused = true; break; }
         if (!hasCoords(c)) {
           // Collect geo-less events anyway: default pin (city center / 0,0) + a
           // no_geo marker so seed-ingest uploads them as PENDING (never shown in
@@ -480,7 +532,7 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
           console.error(`✗ media ${c.externalId}: ${(e as Error).message}`);
         }
       }
-      if (paused) { logLoad('gate-pause', `mid-scope:${scope} staged=${staged}/${cands.length}`); break; }
+      if (scopePaused) { logLoad('gate-pause', `mid-scope:${scope} staged=${staged}/${cands.length}`); return 'paused'; }
 
       cp.scopes![scope] = 'done';
       done++;
@@ -489,11 +541,35 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
       console.log(`  staged ${staged}/${cands.length} (cancelled ${cancelled})`);
       logLoad('scope:done', `${src.source}/${scope} staged=${staged}/${cands.length} cancelled=${cancelled} entries=${entries.size} ${Date.now() - t0}ms`);
       gcNow(`after-scope:${scope}`);
+      return 'done';
     } catch (e) {
       console.error(`✗ ${scope}: ${(e as Error).message} — retry next run`);
       logLoad('scope:error', `${src.source}/${scope}: ${(e as Error).message}`);
+      return 'error';
     }
-    await sleep(PACING_MS);
+  };
+
+  // Bounded concurrency — the rotating residential proxy gives each request a
+  // FRESH IP, so parallel scopes no longer trip per-IP rate limits (the reason
+  // the old pass had to run sequentially and take ~30 min). Batches of
+  // VPS_CONCURRENCY; the resource gate still pauses the run when the box is busy.
+  const queue = scopes.filter((s) => cp.scopes?.[s] !== 'done');
+  while (queue.length > 0) {
+    if (args.limit && processed >= args.limit) break;
+    if (!resourcesOk(`batch-start`)) {
+      console.log(`[${src.source}] resources tight — pausing (${done}/${scopes.length} scopes done, resume next kick)`);
+      paused = true;
+      break;
+    }
+    const batch = queue.splice(0, args.limit ? Math.min(VPS_CONCURRENCY, args.limit - processed) : VPS_CONCURRENCY);
+    processed += batch.length;
+    const results = await Promise.allSettled(batch.map(processScope));
+    if (results.some((r) => r.status === 'fulfilled' && r.value === 'paused')) {
+      paused = true;
+      break;
+    }
+    // 'error' scopes aren't marked done → retried on the next run (same as the
+    // sequential pass).
   }
 
   // Do NOT mark the checkpoint complete here — the orchestrator marks it only

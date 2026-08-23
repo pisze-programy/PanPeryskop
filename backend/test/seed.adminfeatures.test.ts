@@ -88,14 +88,15 @@ test('tagCatalog: no tag_order → default order (canonical then custom by label
   assert.deepEqual(catalog.slice(6).map((t) => t.id), ['sport', 'wystawa'], 'admin tags ordered by label');
 });
 
-test('registry: dzisapp + eventylive are disabled (retired), worker core still enabled', async () => {
+test('registry: dzisapp + eventylive are disabled (retired), kupbilecik is the only worker provider', async () => {
   const { enabledProviders } = await import('../src/seed/providers');
   const ids = enabledProviders().map((p) => p.id);
   assert.ok(!ids.includes('dzisapp'), 'dzisapp disabled');
   assert.ok(!ids.includes('eventylive'), 'eventylive disabled');
-  assert.ok(ids.includes('going'), 'going still runs');
-  assert.ok(ids.includes('kupbilecik'), 'kupbilecik still runs');
-  assert.ok(ids.includes('helios'), 'helios still runs');
+  assert.ok(!ids.includes('going'), 'going moved to the VPS executor');
+  assert.ok(!ids.includes('helios'), 'helios moved to the VPS executor');
+  assert.ok(ids.includes('kupbilecik'), 'kupbilecik still runs on the worker');
+  assert.deepEqual(ids, ['kupbilecik']);
 });
 
 // ---- geo propagation (by NAME + CITY, never by geo) ------------------------

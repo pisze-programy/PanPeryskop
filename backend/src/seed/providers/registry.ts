@@ -40,10 +40,8 @@ export interface ProviderConfig {
 
 export const PROVIDER_CONFIGS: ProviderConfig[] = [
   // ---- Worker executor (CF Workers edge) ---------------------------------
-  {
-    id: ProviderId.GOING, transport: 'fetch', enabled: true, priority: 2,
-    executors: { worker: true },
-  },
+  // Only kupbilecik stays on the Worker: it needs the BROWSER binding (Bot Fight
+  // Mode blocks plain fetch, and Browser Run is free within the 10h/month budget).
   {
     id: ProviderId.KUPBILECIK, transport: 'browser', enabled: true, priority: 3,
     executors: { worker: true },
@@ -56,13 +54,27 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: ProviderId.EVENTYLIVE, transport: 'fetch', enabled: false, priority: 5,
     executors: { worker: true },
   },
-  {
-    id: ProviderId.HELIOS, transport: 'fetch', enabled: true, priority: 0,
-    executors: { worker: true },
-  },
   // ---- VPS executor (residential egress — Cloudflare bot management 403s the
   //      Worker's datacenter IPs; fetched by the VPS runners, uploaded via
   //      seed-ingest). Every provider covers the SAME seed window. --------
+  {
+    id: ProviderId.HELIOS, transport: 'fetch', enabled: true, priority: 0,
+    executors: {
+      vps: {
+        output: 'helios.json', mediaDir: 'helios-media',
+        checkpoint: 'helios-checkpoint.json',
+      },
+    },
+  },
+  {
+    id: ProviderId.GOING, transport: 'fetch', enabled: true, priority: 2,
+    executors: {
+      vps: {
+        output: 'events-going.json', mediaDir: 'events-going-media',
+        checkpoint: 'events-going-checkpoint.json',
+      },
+    },
+  },
   {
     id: ProviderId.MULTIKINO, transport: 'fetch', enabled: true, priority: 0,
     executors: {

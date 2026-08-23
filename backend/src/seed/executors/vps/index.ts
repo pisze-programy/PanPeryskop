@@ -45,6 +45,8 @@ import { lumaSource } from './runners/luma';
 import { meetupSource } from './runners/meetup';
 import { multikinoSource } from './runners/multikino';
 import { cinemacitySource } from './runners/cinemacity';
+import { goingSource } from './runners/going';
+import { heliosSource } from './runners/helios';
 import { todayWarsaw, addDaysWarsaw } from '../../../../src/seed/core/dates';
 import {
   SEED_DAYS_AHEAD,
@@ -67,7 +69,7 @@ const PROXY_URL = `http://${VPS_IPV4_PROXY_HOST}:${VPS_IPV4_PROXY_PORT}`;
 // Light providers first, heaviest LAST: an OOM mid-cinemacity must never take
 // luma/meetup/multikino down with it (they already ran + uploaded).
 const VPS_RUN_ORDER: Record<string, number> = {
-  luma: 0, meetup: 1, multikino: 2, cinemacity: 3,
+  going: 0, luma: 1, meetup: 2, helios: 3, multikino: 4, cinemacity: 5,
 };
 
 // Log process state before dying — uncaught errors give us the last known good
@@ -82,6 +84,8 @@ process.on('unhandledRejection', (e) => {
 });
 
 const SOURCES: Partial<Record<ProviderId, ScopeSource>> = {
+  [goingSource.source]: goingSource,
+  [heliosSource.source]: heliosSource,
   [lumaSource.source]: lumaSource,
   [meetupSource.source]: meetupSource,
   [multikinoSource.source]: multikinoSource,
@@ -343,6 +347,10 @@ async function main(): Promise<void> {
   }
 
   const env = loadEnv();
+  // In-process providers read env vars (ALGOLIA_APP_ID/API_KEY/CLOUDINARY_SIG
+  // for going) from process.env — make .env visible to the bundle, not just to
+  // the spawned seed-ingest uploads.
+  for (const [k, v] of Object.entries(env)) process.env[k] = v;
   await ensureProxy();
 
   // Route every in-process fetch (providers + media) through the IPv4-forcing

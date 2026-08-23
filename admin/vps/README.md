@@ -1,6 +1,6 @@
 # VPS — residential egress seed host (PanPeryskop)
 
-Multikino/CinemaCity/Luma/Meetup (anything Cloudflare-challenged) 403s from **any datacenter
+Multikino/CinemaCity/Luma/Meetup/Going/Helios (anything Cloudflare-challenged) 403s from **any datacenter
 egress** (Workers, VPS) but passes from a clean residential/cellular IP. This box is the
 **execution host** for the app's **VPS executor** — it only provides:
 
@@ -37,14 +37,16 @@ backend/src/seed/
 A provider is assigned to an executor in the registry — switching execution is **config, not code**:
 
 ```ts
-{ id: LUMA, enabled: true, priority: 1,
-  executors: { vps: { output: 'events-luma.json', checkpoint: 'events-luma-checkpoint.json' } } },
-{ id: GOING, enabled: true, priority: 2, executors: { worker: true } },
+{ id: GOING, enabled: true, priority: 2,
+  executors: { vps: { output: 'events-going.json', checkpoint: 'events-going-checkpoint.json' } } },
+{ id: HELIOS, enabled: true, priority: 0,
+  executors: { vps: { output: 'helios.json', checkpoint: 'helios-checkpoint.json' } } },
+{ id: KUPBILECIK, enabled: true, priority: 3, executors: { worker: true } },
 ```
 
-Moving Luma to CF (even though Cloudflare blocks the Worker egress) = `executors: { worker: true }`.
-Adding a new executor (e.g. `lambda`) = a new `executors/<name>/` + a key in `executors` — providers
-never change.
+Moving a provider between executors (even though Cloudflare blocks the Worker egress) = a registry
+change. Adding a new executor (e.g. `lambda`) = a new `executors/<name>/` + a key in `executors` —
+providers never change.
 
 ---
 
@@ -56,10 +58,12 @@ window [today, today+3] is covered by rolling. `--full` backfills the whole wind
 
 | Provider | Scopes | HTTP per day (far edge) | Output |
 |---|---|---|---|
-| multikino | 18 cinemas | 1/cinema (whole programme in one call) | `admin/seed/multikino.json` |
-| cinemacity | 36 cinemas | 1/cinema (quickbook is per-day, no bulk) | `admin/seed/cinemacity.json` |
+| going | 1 (all cities) | 1 (single Algolia query) | `admin/seed/events-going.json` |
 | luma | 21 cities | 1/city | `admin/seed/events-luma.json` |
 | meetup | 21 cities | 1/city | `admin/seed/events-meetup.json` |
+| helios | 45 cinemas | 1/cinema (repertoire covers the whole window) | `admin/seed/helios.json` |
+| multikino | 18 cinemas | 1/cinema (whole programme in one call) | `admin/seed/multikino.json` |
+| cinemacity | 36 cinemas | 1/cinema (quickbook is per-day, no bulk) | `admin/seed/cinemacity.json` |
 
 Exit-node logic (ONE rule): **iPhone → unavailable → Mac → unavailable → retry at the next 5-min
 kick** (all day within the window). Per provider: compute the far edge → skip if the checkpoint

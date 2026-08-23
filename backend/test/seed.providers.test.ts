@@ -12,7 +12,7 @@ import { mkScopes, MK_CINEMAS, MK_ALL_CINEMAS } from '../src/seed/core/constants
 import { PROVIDER_CONFIGS, enabledForExecutor, configOf, priorityOf, EXECUTOR } from '../src/seed/providers/registry';
 import { workerExecutor } from '../src/seed/executors/worker';
 
-test('providers: going=kupbilecik=browser, helios in Worker, multikino+cinemacity local-only', () => {
+test('providers: kupbilecik on Worker (browser), going/helios + cinemas on VPS', () => {
   const byId = new Map(SEED_PROVIDERS.map((p) => [p.id, p]));
   assert.ok(byId.has('going'));
   assert.ok(byId.has('kupbilecik'));
@@ -38,17 +38,16 @@ test('providers: going=kupbilecik=browser, helios in Worker, multikino+cinemacit
   // no longer carry an `enabled` flag.
   for (const p of SEED_PROVIDERS) assert.ok(!('enabled' in p), `${p.id} must not define enabled`);
 
-  // Worker executor providers run in the CF queue pipeline. dzisapp/eventylive
-  // are retired (enabled=false in the registry) — they must not run anywhere.
+  // Worker executor: ONLY kupbilecik runs in the CF queue pipeline (it needs the
+  // BROWSER binding). dzisapp/eventylive are retired (enabled=false) — they must
+  // not run anywhere.
   const workerIds = workerExecutor.providerIds(PROVIDER_CONFIGS);
-  for (const id of ['going', 'kupbilecik', 'helios'] as const) {
-    assert.ok(workerIds.includes(id), `${id} enabled on worker`);
-  }
+  assert.deepEqual(workerIds, ['kupbilecik'], 'only kupbilecik enabled on worker');
   for (const id of ['dzisapp', 'eventylive'] as const) {
     assert.ok(!workerIds.includes(id), `${id} retired (not on worker)`);
     assert.equal(configOf(id)!.enabled, false, `${id} disabled in the registry`);
   }
-  assert.equal(enabledProviders().length, 3);
+  assert.equal(enabledProviders().length, 1);
   assert.deepEqual(
     enabledProviders().map((p) => p.id).sort(),
     workerIds.sort(),
@@ -58,7 +57,7 @@ test('providers: going=kupbilecik=browser, helios in Worker, multikino+cinemacit
   // VPS-executor providers (Cloudflare bot management blocks Worker egress) are
   // driven by the VPS executor from the registry, not from the Worker.
   const vpsIds = enabledForExecutor(EXECUTOR.VPS).map((c) => c.id);
-  for (const id of ['multikino', 'cinemacity', 'luma', 'meetup'] as const) {
+  for (const id of ['multikino', 'cinemacity', 'luma', 'meetup', 'going', 'helios'] as const) {
     assert.ok(vpsIds.includes(id), `${id} enabled on vps`);
     assert.ok(!workerIds.includes(id), `${id} not on worker`);
     assert.ok(configOf(id)!.executors.vps, `${id} has a vps executor spec`);
@@ -511,4 +510,57 @@ test('kupbilecik: stripOutsideCityText removes the "(poza miastem … km)" paren
   assert.equal(stripOutsideCityText('Normalne Miejsce, ul. Testowa'), 'Normalne Miejsce, ul. Testowa', 'normal text untouched');
   assert.equal(stripOutsideCityText('(poza miastem 5829 km)'), '', 'garbage-only becomes empty (event still collected, geo falls back)');
   assert.equal(stripOutsideCityText(''), '');
+  // Prefix form (browser-rendered venue text): "poza miastami (5829 km), X".
+  assert.equal(stripOutsideCityText('poza miastami (5829 km), Mediateka'), 'Mediateka');
+  assert.equal(stripOutsideCityText('poza miastami (5829km), Mediateka'), 'Mediateka');
+  assert.equal(stripOutsideCityText('poza miastem (5829 km), Amfiteatr'), 'Amfiteatr');
+  assert.equal(stripOutsideCityText('poza miastami (5829 km), Amfiteatr, ul. Fredry 1'), 'Amfiteatr, ul. Fredry 1');
+  // Mixed prefix + trailing address is kept after the venue name.
+  assert.equal(stripOutsideCityText('poza miastami(5829km), Mediateka'), 'Mediateka');
+});
+
+test('kupbilecik: kupVenueUrl/kupVenueId build the full slug URL (bare id 404s, so the path is required)', async () => {
+  const { kupVenueUrl, kupVenueId } = await import('../src/seed/providers/kupbilecik');
+  assert.equal(kupVenueUrl('/obiekty/3084/Mediateka/'), 'https://www.kupbilecik.pl/obiekty/3084/Mediateka/');
+  assert.equal(kupVenueUrl('/obiekty/3084/Mediateka'), 'https://www.kupbilecik.pl/obiekty/3084/Mediateka/', 'trailing slash normalized');
+  assert.equal(kupVenueUrl('3084'), 'https://www.kupbilecik.pl/obiekty/3084/', 'legacy numeric id kept for backward compat');
+  assert.equal(kupVenueUrl(''), null);
+  assert.equal(kupVenueId('/obiekty/3084/Mediateka/'), '3084');
+  assert.equal(kupVenueId('3084'), '3084');
+});
+
+test('vps runtime: fetchWithRetry retries a flaky scope fetch, succeeds on retry', async () => {
+  const { fetchWithRetry } = await import('../src/seed/executors/vps/runtime');
+  let calls = 0;
+  const src = {
+    source: 'meetup',
+    scopes: () => ['warszawa'],
+    scopeGeo: () => null,
+    fetchScope: async () => { calls++; if (calls < 3) throw new Error('fetch failed'); return []; },
+  } as never;
+  const result = await fetchWithRetry(src, 'warszawa', {} as never, { retryDelayMs: 0 });
+  assert.equal(calls, 3, 'two failed attempts then a success');
+  assert.deepEqual(result, []);
+});
+
+test('vps runtime: fetchWithRetry throws when every attempt fails', async () => {
+  const { fetchWithRetry } = await import('../src/seed/executors/vps/runtime');
+  const src = {
+    source: 'meetup',
+    scopes: () => ['warszawa'],
+    scopeGeo: () => null,
+    fetchScope: async () => { throw new Error('boom'); },
+  } as never;
+  await assert.rejects(fetchWithRetry(src, 'warszawa', {} as never, { retryDelayMs: 0 }), /boom/);
+});
+
+test('vps runners: going = single "all" scope, helios = full cinema catalog with geo anchors', async () => {
+  const { goingSource } = await import('../src/seed/executors/vps/runners/going');
+  const { heliosSource } = await import('../src/seed/executors/vps/runners/helios');
+  assert.deepEqual(goingSource.scopes(), ['all']);
+  assert.equal(goingSource.scopeGeo('all'), null);
+  const scopes = heliosSource.scopes();
+  assert.ok(scopes.length >= 40, `helios covers the full catalog (${scopes.length})`);
+  const geo = heliosSource.scopeGeo(scopes[0]);
+  assert.ok(geo && typeof geo.lat === 'number' && typeof geo.lng === 'number', 'helios scopeGeo anchors a cinema');
 });

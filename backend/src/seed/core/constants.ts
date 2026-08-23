@@ -204,6 +204,11 @@ export const VPS_EXIT_SWITCH_WAIT_MS = 2_000;
 // the next 30-min kick resumes. Good citizen: small chunks in free moments.
 export const VPS_MIN_MEMAVAILABLE_MB = 80;
 export const VPS_MAX_LOAD1 = 2.0;
+// Scope concurrency — with a ROTATING residential proxy each scope fetch egresses
+// from a FRESH IP, so parallel scopes don't trip per-IP rate limits (which forced
+// the old sequential 30-min pass). Bounded so the 256 MB box never stacks many
+// in-flight media buffers. Override via env on the box (VPS_CONCURRENCY).
+export const VPS_CONCURRENCY = Number(process.env.VPS_CONCURRENCY || 8);
 
 // ---------- luma.com ----------
 export const LUMA_API = 'https://api.luma.com/discover';

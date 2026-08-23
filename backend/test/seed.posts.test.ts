@@ -64,3 +64,21 @@ test('doSavePost: live posts (no external_id) get event_date NULL', async () => 
   assert.ok(ins, 'INSERT executed');
   assert.equal(ins!.binds[ins!.binds.length - 4], null, 'live post event_date is NULL');
 });
+
+test('doSavePost: update promotes pending→approved (status bound) but preserves admin rejections', async () => {
+  const calls: { sql: string; binds: unknown[] }[] = [];
+  const db = {
+    prepare: (sql: string) => ({
+      bind: (...binds: unknown[]) => ({ run: async () => { calls.push({ sql, binds }); } }),
+    }),
+  } as unknown as D1Database;
+  const env = { DB: db } as unknown as Env;
+  const user = { id: 'u1' };
+  const now = Date.parse('2026-08-17T04:00:00Z');
+
+  await doSavePost(env, user, 'p1', 'photo', 52.4, 16.9, 'Koncert: 20:00', 'm1', 't1', now, true, 'https://x.pl', 'ext-1', true, false, null, null, null, 'approved');
+  const upd = calls.find((c) => /UPDATE posts/i.test(c.sql));
+  assert.ok(upd, 'UPDATE executed');
+  assert.equal(upd!.binds[11], 'approved', 'status column bound to the new status (pending→approved promotion)');
+  assert.ok(/status = CASE WHEN status = 'rejected' THEN status ELSE \?/i.test(upd!.sql), 'UPDATE keeps status but preserves admin rejection');
+});

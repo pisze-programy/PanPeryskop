@@ -48,7 +48,10 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
   for (const h of hits) {
     let place: PlaceInfo = {};
     try { place = await getJson(GOING_PLACE(h.place_slug!)); } catch { /* keep place-less */ }
-    if (typeof place.lat === 'number' && typeof place.lon === 'number' && place.name) {
+    // Venue upsert is an optimization for future geo reuse — on the VPS executor
+    // there is no D1 binding, and the candidate already carries lat/lng from the
+    // place API, so this is skipped (worker keeps it).
+    if (ctx.env.DB && typeof place.lat === 'number' && typeof place.lon === 'number' && place.name) {
       await upsertVenue(ctx.env.DB, { name: place.name, lat: place.lat, lng: place.lon, city: place.city?.name || '', provider: ProviderId.GOING });
     }
     const id = String(h.objectID || h.path || '').replace(/^rundates\//, '');

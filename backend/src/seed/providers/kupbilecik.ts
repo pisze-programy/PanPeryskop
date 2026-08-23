@@ -14,6 +14,7 @@ import { browserContent } from './browser';
 import { getBytes, getText } from './http';
 import { KUP_BASE, KUP_LISTINGS, KUP_MAX_PAGES } from '../core/constants';
 import { resolveVenueGeo, upsertVenue } from '../venues/venueStore';
+import { resolveGeo } from '../core/geo';
 
 const MONTHS = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
 
@@ -105,21 +106,38 @@ async function expandFestival(ctx: SeedContext, href: string, seen: Set<string>,
   return out;
 }
 
+// Build the venue page URL from a geoRef. New candidates carry the FULL path
+// (/obiekty/<id>/<slug>/) — the only form kupbilecik serves; legacy candidates
+// carry a bare numeric id (that URL 404s, kept for backward compat).
+export function kupVenueUrl(ref: string): string | null {
+  if (!ref) return null;
+  return ref.startsWith('/obiekty/')
+    ? `${KUP_BASE}${ref.endsWith('/') ? ref : `${ref}/`}`
+    : `${KUP_BASE}/obiekty/${ref}/`;
+}
+
+// Numeric venue id from a geoRef (path or legacy id) — used as the venue store ref.
+export function kupVenueId(ref: string): string {
+  return ref.match(/\/(\d+)\//)?.[1] ?? ref;
+}
+
 // Resolve geo for a surviving kupbilecik candidate. Tries the shared venues store
 // first; on miss fetches the kupbilecik venue page via browser and upserts into
 // the store (so future days reuse it without a browser call).
 export async function resolveKupGeo(
-  ctx: SeedContext, venueName: string, venueId: string, day: string, city?: string | null
+  ctx: SeedContext, venueName: string, venueRef: string, day: string, city?: string | null
 ): Promise<{ lat: number | null; lng: number | null }> {
   const db = ctx.env.DB;
   if (venueName) {
     const hit = await resolveVenueGeo(db, venueName, city);
     if (hit) return { lat: hit.lat, lng: hit.lng };
   }
-  if (!venueId) return { lat: null, lng: null };
+  if (!venueRef) return { lat: null, lng: null };
+  const url = kupVenueUrl(venueRef);
+  if (!url) return { lat: null, lng: null };
+  const venueId = kupVenueId(venueRef);
   const t0 = Date.now();
   try {
-    const url = `${KUP_BASE}/obiekty/${venueId}/`;
     let html: string;
     try { html = await getText(url); } catch {
       const { html: bh, browserMs } = await browserContent(ctx.env, url);
@@ -137,7 +155,12 @@ export async function resolveKupGeo(
   } catch (e) {
     console.error(`kupbilecik venue ${venueId} failed: ${(e as Error).message}`);
   }
-  return { lat: null, lng: null };
+
+  // Nominatim fallback — the venue page may be unreachable from the Worker's
+  // datacenter egress (kupbilecik Bot Fight). OSM geocodes the venue by
+  // name+city; also upserts into the shared store for future days.
+  const osm = await resolveGeo({ name: venueName || '', address: '', city: city ?? undefined, db, provider: ProviderId.KUPBILECIK, fallback: undefined });
+  return osm ? { lat: osm.lat, lng: osm.lng } : { lat: null, lng: null };
 }
 
 // Parse a kupbilecik event from raw HTML (listing block or festival page).
@@ -148,6 +171,10 @@ export async function resolveKupGeo(
 // it is STRIPPED from the venue/city/address (the event itself is kept).
 export function stripOutsideCityText(s: string): string {
   return (s || '')
+    // Prefix form: "poza miastami (5829 km), Mediateka" → "Mediateka" (the
+    // browser-rendered venue text puts "poza miastami (N km)" BEFORE the name).
+    .replace(/^poza\s*miast\w*\s*\(\s*\d[\d\s]*\s*km\s*\)\s*,\s*/i, '')
+    // Parenthetical form: "Mediateka (poza miastem 5829 km)" → "Mediateka".
     .replace(/\(\s*[^)]*(?:poza\s*miast|[0-9]{2,}\s*km)[^)]*\)/gi, '')
     .replace(/\s+,/g, ',') // "Festiwal , Warszawa" → "Festiwal, Warszawa"
     .replace(/,{2,}/g, ',')
@@ -168,9 +195,13 @@ function buildFromHtml(
 
   const cityM = html.match(/href="\/miasta\/\d+\/[^"]+"[^>]*>\s*<b>([^<]+)<\/b>/);
   const city = stripOutsideCityText(cityM ? decode(cityM[1]) : '');
-  const venueM = html.match(/href="\/obiekty\/(\d+)\/[^"]+"[^>]*>\s*([^<]+?)<\/a>/);
-  const venueName = stripOutsideCityText(venueM ? decode(venueM[2]) : '');
-  const venueId = venueM ? venueM[1] : '';
+  // Capture the FULL venue path (/obiekty/<id>/<slug>/) — kupbilecik only serves
+  // venue pages WITH the slug (the bare /obiekty/<id>/ 404s), so geo resolution
+  // needs it. Kept in geoRef; numeric id extracted from the path when needed.
+  const venueM = html.match(/href="(\/obiekty\/(\d+)\/[^"]+\/?)"[^>]*>\s*([^<]+?)<\/a>/);
+  const venueName = stripOutsideCityText(venueM ? decode(venueM[3]) : '');
+  const venueId = venueM ? venueM[2] : '';
+  const venuePath = venueM ? venueM[1] : '';
 
   const posterM = html.match(/data-src="(https:\/\/www\.kupbilecik\.pl\/img\/(?:gal_plakaty|gal_baza)\/[^"'?\s]+)/);
   const thumb = posterM ? posterM[1] : '';
@@ -193,7 +224,7 @@ function buildFromHtml(
     mediaUrl: poster,
     thumbUrl: thumb,
     isSoldOut,
-    geoRef: venueId || null,
+    geoRef: venuePath || venueId || null,
   };
 }
 

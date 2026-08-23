@@ -7,7 +7,7 @@ import { parseEvlEvent, getOfferUrl } from '../src/seed/providers/eventylive';
 import { parseMkFilms, extractToken, resolveMkGeo } from '../src/seed/providers/multikino';
 import { parseHeliosPayload } from '../src/seed/providers/helios';
 import { parseCcScope } from '../src/seed/providers/cinemacity';
-import { stripOutsideCityText } from '../src/seed/providers/kupbilecik';
+import { stripOutsideCityText, kupTags } from '../src/seed/providers/kupbilecik';
 import { mkScopes, MK_CINEMAS, MK_ALL_CINEMAS } from '../src/seed/core/constants';
 import { PROVIDER_CONFIGS, enabledForExecutor, configOf, priorityOf, EXECUTOR } from '../src/seed/providers/registry';
 import { workerExecutor } from '../src/seed/executors/worker';
@@ -563,4 +563,91 @@ test('vps runners: going = single "all" scope, helios = full cinema catalog with
   assert.ok(scopes.length >= 40, `helios covers the full catalog (${scopes.length})`);
   const geo = heliosSource.scopeGeo(scopes[0]);
   assert.ok(geo && typeof geo.lat === 'number' && typeof geo.lng === 'number', 'helios scopeGeo anchors a cinema');
+});
+
+test('kupbilecik: kupTags category is authoritative — title never overrides the listing category', () => {
+  assert.deepEqual(kupTags('/koncerty/?q=', 'Anything at all'), ['muzyka'], 'koncerty → muzyka (site categorizes it)');
+  assert.deepEqual(kupTags('/kabarety/?q=', 'Anything at all'), ['komedia'], 'kabarety → komedia');
+  assert.deepEqual(kupTags('/standup/?q=', 'Anything at all'), ['komedia'], 'standup → komedia');
+  // Even a title with a conflicting keyword stays in the category (deterministic).
+  assert.deepEqual(kupTags('/koncerty/?q=', 'Kabaret Nocny'), ['muzyka'], 'koncerty wins over "kabaret" in title');
+  assert.deepEqual(kupTags('/standup/?q=', 'Koncert Improwizacji'), ['komedia'], 'standup wins over "koncert" in title');
+  // Trailing query forms and the festival-expansion pass keep the same category.
+  assert.deepEqual(kupTags('/koncerty/?q=&qt=&qw=', 'X'), ['muzyka'], 'koncerty with extra query params');
+});
+
+test('kupbilecik: kupTags festival keyword fallback → muzyka (real examples from live listings)', () => {
+  for (const [title, note] of [
+    ['Tarnobrzeg Folk Festival - Górale na Podkarpaciu', 'folk festival'],
+    ['Ethno Jazz Festival', 'jazz festival'],
+    ['PGS Rock Festival IV Edycja', 'rock festival'],
+    ['Miedzynarodowy Festiwal Drum Fest', 'percussion festival'],
+    ['Adam Bałdych European Quartet', 'jazz quartet'],
+    ['XXV Krokus Jazz Festiwal - Piotr Wojtasik Quintet feat. Anna Maria Jopek', 'jazz festival'],
+    ['III Piknik Country na Wild West Ranch', 'country music'],
+    ['Colours of Tango & Ensemble', 'tango'],
+    ['Tango Show "The Contrasts"', 'tango show'],
+  ] as const) {
+    assert.deepEqual(kupTags('/festiwal/?q=', title), ['muzyka'], `${note} → muzyka: "${title}"`);
+  }
+});
+
+test('kupbilecik: kupTags festival keyword fallback → komedia (real examples)', () => {
+  for (const title of ['Stand Up Open Mic na kempingu', 'Festiwal Komedii Stand-up', 'Stand-up: Zalewski', 'Standup Night', 'Kabaret na Fali', 'Comedy Festival Poznań']) {
+    assert.deepEqual(kupTags('/festiwal/?q=', title), ['komedia'], `"${title}" → komedia`);
+  }
+});
+
+test('kupbilecik: kupTags festival keyword fallback → teatr / filmy', () => {
+  assert.deepEqual(kupTags('/festiwal/?q=', 'Festiwal Teatralny 2026'), ['teatr'], 'teatr → teatr');
+  assert.deepEqual(kupTags('/festiwal/?q=', 'Spektakl plenerowy'), ['teatr'], 'spektakl → teatr');
+  assert.deepEqual(kupTags('/festiwal/?q=', 'Festiwal Filmów Krótkometrażowych'), ['filmy'], 'film → filmy');
+  assert.deepEqual(kupTags('/festiwal/?q=', 'Kino Letnie'), ['filmy'], 'kino → filmy');
+});
+
+test('kupbilecik: kupTags leaves empty/ambiguous untagged (null) — never guesses', () => {
+  const untagged = [
+    'Ekspedycja Smaku',                                   // food festival
+    'MusicalON!',                                          // musical — ambiguous
+    'Summer Fall Festival 2026 - KARNETY',                 // generic festival
+    'Isaiah Collier',                                      // jazz artist, no keyword in title
+    'Rajd Rowerowy',                                       // sport
+    'Spotkanie autorskie z pisarzem',                      // book event
+  ];
+  for (const title of untagged) {
+    assert.equal(kupTags('/festiwal/?q=', title), null, `"${title}" → null (untagged)`);
+  }
+  // Unknown category + no title signal → null too.
+  assert.equal(kupTags('/inne/?q=', 'Coś tam'), null, 'unknown category → null');
+});
+
+test('kupbilecik: kupTags edge cases — empty inputs, case-insensitivity, diacritics, boundaries', () => {
+  assert.equal(kupTags('', ''), null, 'both empty → null (no throw)');
+  assert.equal(kupTags('/festiwal/?q=', ''), null, 'empty title → null');
+  assert.deepEqual(kupTags('', 'Rock Festival'), ['muzyka'], 'empty listing but title keyword → muzyka');
+  // Case-insensitivity.
+  assert.deepEqual(kupTags('/festiwal/?q=', 'STAND UP OPEN MIC'), ['komedia'], 'uppercase STAND UP');
+  assert.deepEqual(kupTags('/festiwal/?q=', 'pgs rock festival'), ['muzyka'], 'lowercase rock');
+  // Diacritics — both native and folded forms.
+  assert.deepEqual(kupTags('/festiwal/?q=', 'Festiwal Chórów'), ['muzyka'], 'chór (diacritic)');
+  assert.deepEqual(kupTags('/festiwal/?q=', 'Festiwal Bębnów'), ['muzyka'], 'bębn (diacritic)');
+  // Word-boundary hygiene: these should NOT false-positive.
+  assert.equal(kupTags('/festiwal/?q=', 'Rajd na orientację'), null, '"or" in orientację is not a music word');
+  assert.equal(kupTags('/festiwal/?q=', 'Piknik Rodzinny'), null, 'no keyword → null');
+});
+
+test('kupbilecik: buildFromHtml wires kupTags onto the candidate', async () => {
+  const { buildFromHtml } = await import('../src/seed/providers/kupbilecik');
+  const html = `
+    <div class="linia-1"><h2 class="blackLine"><a href="https://www.kupbilecik.pl/imprezy/123/Gdynia/Test+Event/" ><b>Test Event</b></a></h2></div>
+    <div class="linia-3">26 sierpnia 2026 o godz. 17:00</div>
+    <div class="linia-4 blackLine"><a href="/miasta/224/Gdynia/"><b>Gdynia</b></a> w <a href="/obiekty/42/Teatr/" title="Teatr">Teatr</a></div>
+    <img data-src="https://www.kupbilecik.pl/img/gal_baza/abc123_m.webp?t=1" />`;
+  const ctx = { dayStart: Date.parse('2026-08-26T00:00:00+02:00'), day: '2026-08-26' } as never;
+  // From the /koncerty/ listing → muzyka.
+  const koncert = buildFromHtml(ctx, 'https://www.kupbilecik.pl/imprezy/123/Gdynia/Test+Event/', html, '123', null, '/koncerty/?q=');
+  assert.deepEqual(koncert!.tags, ['muzyka'], 'candidate from /koncerty/ carries muzyka');
+  // From the /festiwal/ listing with a music title → muzyka; without → null tags.
+  const fest = buildFromHtml(ctx, 'https://www.kupbilecik.pl/imprezy/123/Gdynia/Test+Event/', html, '123', null, '/festiwal/?q=');
+  assert.equal(fest!.tags, undefined, 'generic festival title → no tags on the candidate');
 });

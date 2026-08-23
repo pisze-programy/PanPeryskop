@@ -183,7 +183,31 @@ export function stripOutsideCityText(s: string): string {
     .trim();
 }
 
-function buildFromHtml(
+// Deterministic kupbilecik tags — canonical ids only.
+//
+// Tier 1 (CERTAIN — the site's own categorization, as reliable as "cinema → filmy"):
+//   /koncerty/   → muzyka   ("Koncerty muzyczne")
+//   /kabarety/   → komedia  ("Występy kabaretowe")
+//   /standup/    → komedia  ("Występy stand-up")
+// Tier 2 (CONSERVATIVE keyword fallback — ONLY for ambiguous categories like
+//   /festiwal/, where a strong, unambiguous title signal decides):
+//   stand-up/kabaret/comedy → komedia; music words → muzyka; teatr words → teatr;
+//   film/kino → filmy. No match → null (leave untagged — never guess).
+const KUP_KOMEDIA = /(stand[\s-]?up|kabaret|comedy)/i;
+const KUP_MUZYKA = /(koncert|folk|rock|jazz|disco|rap|hip.?hop|metal|opera|piosenk|symfoni|live|chór|chor|band|country|drum|perkusj|bębn|kwartet|quartet|ethno|blues|reggae|soul|muzyczn|tango|chopin)/i;
+const KUP_TEATR = /(teatr|spektakl|sztuka|monodram)/i;
+const KUP_FILMY = /(film|kino|seans)/i;
+export function kupTags(listing: string, title: string): string[] | null {
+  if (listing.includes('/koncerty')) return ['muzyka'];
+  if (listing.includes('/kabarety') || listing.includes('/standup')) return ['komedia'];
+  if (KUP_KOMEDIA.test(title)) return ['komedia'];
+  if (KUP_MUZYKA.test(title)) return ['muzyka'];
+  if (KUP_TEATR.test(title)) return ['teatr'];
+  if (KUP_FILMY.test(title)) return ['filmy'];
+  return null;
+}
+
+export function buildFromHtml(
   ctx: SeedContext, href: string, html: string, id: string, fallbackTime: string | null = null, listing = ''
 ): SeedCandidate | null {
   const titleM = html.match(/<h2 class="blackLine">[^<]*<a href="https:\/\/www\.kupbilecik\.pl\/imprezy\/\d+\/[^"]+"[^>]*>\s*<b>([^<]+)<\/b>/);
@@ -219,6 +243,7 @@ function buildFromHtml(
     lat: null, lng: null, // geo resolved after dedupe
     city,
     venue: venueName,
+    tags: kupTags(listing, title) ?? undefined,
     address: '',
     link: href,
     mediaUrl: poster,

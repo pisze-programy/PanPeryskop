@@ -228,10 +228,10 @@ npx wrangler d1 execute panperyskop-db --remote \
 Two Webshare accounts are kept separate so test/analysis traffic never eats the
 production budget:
 
-- **Production (VPS)**: `qibaikpg-pl-rotate` (rotating residential) via
+- **Production (VPS)**: `ROTATE_ACCOUNT` (rotating residential) via
   `WEBSHARE_URL` in `.env`. Measured at ~0.5–1 MB/day for the far-edge seed and
   ~4 MB for a full 7-day backfill (fetch only; media downloads go direct).
-- **Local tests/analysis (Mac)**: the STATIC account `mdtduclo-PL-1`
+- **Local tests/analysis (Mac)**: the STATIC account `STATIC_ACCOUNT`
   (`https://ipv4.webshare.io` confirms the fixed IP). Never point a test tool
   at the production rotate account — a single kupbilecik listing pass is ~28 MB
   through the proxy.

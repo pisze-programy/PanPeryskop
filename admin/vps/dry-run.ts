@@ -3,11 +3,11 @@
 // orchestrator are untouched.
 //
 // PROXY POLICY: local tests/analysis use the STATIC test Webshare account
-// (mdtduclo-PL-1) so they never touch the PRODUCTION rotate account
-// (qibaikpg-pl-rotate) that the VPS uses. Set HTTPS_PROXY accordingly.
+// (STATIC_ACCOUNT) so they never touch the PRODUCTION rotate account
+// (ROTATE_ACCOUNT) that the VPS uses. Set HTTPS_PROXY accordingly.
 //
 // Usage (from the repo root, with proxy env exported BEFORE node starts):
-//   HTTPS_PROXY=http://mdtduclo-PL-1:<pass>@p.webshare.io:80 NODE_USE_ENV_PROXY=1 \
+//   HTTPS_PROXY=http://STATIC_ACCOUNT:<pass>@p.webshare.io:80 NODE_USE_ENV_PROXY=1 \
 //     npx tsx admin/vps/dry-run.ts <provider> [args...]
 //
 //   provider: multikino | cinemacity | luma | meetup

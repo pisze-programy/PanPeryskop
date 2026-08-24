@@ -36,7 +36,7 @@ export interface ResolveGeoOptions {
   provider?: string;
 }
 
-const NOMINATIM_UA = 'PanPeryskop-seed/1.0 (PanPeryskop event seeder; contact: seed@panperyskop.local)';
+const NOMINATIM_UA = 'PanPeryskop-seed/1.0 (PanPeryskop event seeder)';
 // OSM usage policy: absolute max 1 req/s, but "scripts run at regular intervals"
 // (our daily cron) are capped at 4 req/min. The VPS egresses through the Webshare
 // ROTATING proxy (a fresh residential IP per request) so it can stay at 1/s; the

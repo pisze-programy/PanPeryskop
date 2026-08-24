@@ -90,10 +90,12 @@ max_concurrency = 1
 binding = "BROWSER"
 remote = true
 
+[-- D1 database id is account-specific and gitignored (see wrangler.toml.example).
+-- Copy this file to wrangler.toml and fill in your real database_id.
 [[d1_databases]]
 binding = "DB"
 database_name = "panperyskop-db"
-database_id = "c9fed854-29bc-4ea7-9242-d0a7bc6abee0"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 
 [[r2_buckets]]
 binding = "MEDIA"

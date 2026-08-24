@@ -21,8 +21,9 @@ GetYourGuide, nazwa, showtimes, lokalizacja, URL z affiliation (partner_id).
   format obrazka.
 - `backend/src/env.d.ts` — `GETYOURGUIDE_TOKEN` (wrangler secret).
 - `backend/src/seed/providers/registry.ts` — wpis **`enabled: false`** (parked).
-- `backend/.dev.vars` (gitignored) — token aplikacyjny affiliate
-  `4f78f8fca7efe3ba75885946ae3c9258dc802c7a507a0410`, partner_id `9URTOAW`.
+- `backend/.dev.vars` (gitignored) — pole `GETYOURGUIDE_TOKEN` **pozostawione puste**
+  (integracja nieaktywna; żadnych tokenów/identyfikatorów w repo — sekrety tylko
+  przez `wrangler secret put`).
 
 Provider celował w Partner API v2 (spec OpenAPI z
 `github.com/getyourguide/partner-api-spec`): `GET /v2/tours` z

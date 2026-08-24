@@ -16,6 +16,8 @@ struct SettingsView: View {
 
                 PermissionCardsView(showsHeader: true)
 
+                policySection
+
                 accountSection
             }
             .padding(.vertical, 20)
@@ -30,6 +32,38 @@ struct SettingsView: View {
         } message: {
             Text("To usunie na zawsze Twoje konto i całą zawartość — posty, zdjęcia i filmy. Tej operacji nie można cofnąć.")
         }
+    }
+
+    /// Second-to-last Settings item: app data policy / sources (OSM attribution).
+    private var policySection: some View {
+        NavigationLink {
+            AppPolicyView()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "doc.text.fill")
+                    .font(.title3)
+                    .foregroundColor(.accentColor)
+                    .frame(width: 32)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Polityka Aplikacji")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Text("Źródła danych i atrybucja.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(12)
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal)
     }
 
     private var accountSection: some View {

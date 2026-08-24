@@ -37,14 +37,22 @@ export interface ResolveGeoOptions {
 }
 
 const NOMINATIM_UA = 'PanPeryskop-seed/1.0 (PanPeryskop event seeder; contact: seed@panperyskop.local)';
-const NOMINATIM_PACE_MS = 1000; // OSM usage policy: max 1 req/s.
+// OSM usage policy: absolute max 1 req/s, but "scripts run at regular intervals"
+// (our daily cron) are capped at 4 req/min. The VPS egresses through the Webshare
+// ROTATING proxy (a fresh residential IP per request) so it can stay at 1/s; the
+// Worker egresses from Cloudflare's shared datacenter IPs and must use 4/min.
+// Each executor sets its pace at boot via configureNominatimPace().
+let nominatimPaceMs = 1000;
+export function configureNominatimPace(ms: number): void {
+  nominatimPaceMs = ms;
+}
 
 // Module-level pacing so concurrent scopes (Worker queue) and sequential city
-// loops (VPS runner) share one global 1 req/s throttle.
+// loops (VPS runner) share one global throttle.
 let lastNominatimMs = 0;
 
 async function nominatim(q: string): Promise<GeoPoint | null> {
-  const wait = NOMINATIM_PACE_MS - (Date.now() - lastNominatimMs);
+  const wait = nominatimPaceMs - (Date.now() - lastNominatimMs);
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   lastNominatimMs = Date.now();
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;

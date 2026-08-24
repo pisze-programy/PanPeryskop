@@ -12,6 +12,18 @@ storiesRoutes.get('/tags', async (c) => c.json({
   tags: (await tagCatalog(c.env.DB)).map((t) => ({ id: t.id, label: t.label })),
 }));
 
+// Seed sources actually present in the events feed (distinct external_id prefixes,
+// e.g. 'kupbilecik', 'going'). Single source of truth for client "sources" lists
+// (policy view) — never hardcoded on the client.
+storiesRoutes.get('/sources', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    "SELECT DISTINCT substr(external_id, 1, instr(external_id, '-') - 1) AS source " +
+    "FROM posts WHERE category = 'events' AND external_id IS NOT NULL AND external_id != '' " +
+    "ORDER BY source"
+  ).all<{ source: string }>();
+  return c.json({ sources: (results || []).map((r) => r.source).filter(Boolean) });
+});
+
 // Mirrors models.popularityScore so ORDER BY matches the ranking algorithm.
 function popularityExpr(): string {
   const { views: WV, likes: WL, shares: WS, dislikes: WD } = POPULARITY_WEIGHTS;

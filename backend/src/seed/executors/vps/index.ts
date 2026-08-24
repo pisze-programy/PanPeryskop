@@ -41,6 +41,10 @@ import { EXECUTOR } from '../types';
 import type { ProviderConfig, VpsSpec } from '../../../../src/seed/providers/registry';
 import { runScopeSource, findRepoDir, loadCp, saveCp, logLoad, gcNow, resourcesOk, resetResourceCheck } from './runtime';
 import type { ScopeSource } from './runtime';
+import { configureNominatimPace } from '../../../../src/seed/core/geo';
+// VPS geocoding egresses through the Webshare ROTATING proxy — a fresh
+// residential IP per request, so the per-IP rate limit doesn't bind (1 req/s).
+configureNominatimPace(1000);
 import { lumaSource } from './runners/luma';
 import { meetupSource } from './runners/meetup';
 import { multikinoSource } from './runners/multikino';

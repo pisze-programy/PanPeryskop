@@ -16,6 +16,11 @@ import {runSeed, tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
 import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/pipeline/queue';
 import {pruneSeedData, watchdogSeedBatches} from './seed/pipeline/cleanup';
 import {SEED_DAYS_AHEAD} from './seed/core/constants';
+// Nominatim pace per executor: the Worker egresses from Cloudflare's shared
+// datacenter IPs — the OSM policy caps regular (daily cron) bulk geocoding at
+// 4 req/min (the VPS rotates residential IPs via Webshare and keeps 1/s).
+import {configureNominatimPace} from './seed/core/geo';
+configureNominatimPace(15_000);
 
 const SEED_CRON = '0 2 * * *';        // 02:00 UTC daily — roll the seed window one day forward
 const CLEANUP_CRON = '0 4 * * *';     // 04:00 UTC daily — audit cleanup (4-day retention)

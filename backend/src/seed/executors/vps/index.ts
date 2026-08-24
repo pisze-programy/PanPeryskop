@@ -272,6 +272,29 @@ function upload(cfg: ProviderConfig, env: Record<string, string>): void {
   if (r.status !== 0) throw new Error(`seed-ingest ${cfg.id} exit ${r.status}`);
 }
 
+/** Per-provider daily digest report → the Worker coordinator (cf-snitch email).
+ *  Fire-and-forget: a failure here never breaks the seed. Counts come from the
+ *  staged JSON after seed-ingest stamped each entry's terminal status. */
+function reportDigest(cfg: ProviderConfig, day: string, status: string, env: Record<string, string>, message?: string): void {
+  const out = join(SEED_DIR, cfg.executors.vps!.output);
+  let candidates = 0, ingested = 0, errors = 0;
+  try {
+    if (existsSync(out)) {
+      const entries = JSON.parse(readFileSync(out, 'utf8')) as Array<{ status?: string }>;
+      candidates = entries.length;
+      ingested = entries.filter((e) => e.status === 'done').length;
+      errors = entries.filter((e) => e.status === 'error').length;
+    }
+  } catch { /* keep zeros */ }
+  const base = env.BASE_URL || 'https://api.panperyskop.app';
+  fetch(`${base}/admin/seed/digest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.ADMIN_SECRET}` },
+    body: JSON.stringify({ day, provider: String(cfg.id), status, candidates, ingested, errors, message }),
+    signal: AbortSignal.timeout(15_000),
+  }).catch(() => log(`${cfg.id}: digest report failed (fire-and-forget)`));
+}
+
 // Mark the provider complete ONLY after a successful upload — a failed upload
 // must be retried on the next kick, not skipped forever.
 function markComplete(spec: VpsSpec, target: string): void {
@@ -434,9 +457,12 @@ async function main(): Promise<void> {
           saveCp(checkpointPath(spec), cp);
         }
         status('ok', `${cfg.id} ${target}`);
+        reportDigest(cfg, target, 'ok', env);
       } catch (e) {
-        log(`${cfg.id}: upload failed — will retry next kick (${(e as Error).message})`);
+        const msg = (e as Error).message;
+        log(`${cfg.id}: upload failed — will retry next kick (${msg})`);
         status('upload-failed', `${cfg.id} ${target}`);
+        reportDigest(cfg, target, 'failed', env, msg);
       }
     } else {
       status('paused', cfg.id);

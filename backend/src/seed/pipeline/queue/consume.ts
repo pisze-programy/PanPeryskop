@@ -7,6 +7,7 @@ import { QUEUE_CONSUMER_CONCURRENCY, QUEUE_RETRY_DELAY_SECONDS } from '../../cor
 import { EnvQ, QUEUE_NAMES, REDRIVE_MAX, SeedQueueMessage } from './types';
 import { bumpScopeAttempts, getBatch, getScope, now, setScopeStatus } from './state';
 import { handleFinalize, handleFetch, handleIngest, handleSeedDay } from './handlers';
+import { reportProviderFailed } from '../../digest';
 
 // Process a batch's messages concurrently (cap ~6 to respect the per-invocation
 // 6-connection limit and D1's single-threaded write queue). Each message still
@@ -56,7 +57,9 @@ async function handleDlq(env: EnvQ, msg: Message<SeedQueueMessage>): Promise<voi
         return;
       }
       if (scope.attempts >= REDRIVE_MAX) {
-        await setScopeStatus(env, m.batchId, m.provider, m.scope, 'failed', `failed after ${scope.attempts} DLQ re-drives`);
+        const reason = `failed after ${scope.attempts} DLQ re-drives`;
+        await setScopeStatus(env, m.batchId, m.provider, m.scope, 'failed', reason);
+        try { await reportProviderFailed(env, m.batchId, m.provider, reason); } catch (e) { console.error(`seed digest failed: ${(e as Error).message}`); }
         await env.SEED_FINALIZE_QUEUE.send({ type: 'finalize', batchId: m.batchId });
         return;
       }

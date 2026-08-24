@@ -69,7 +69,7 @@ test('tagCatalog: explicit tag_order positions win, deleted tags are dropped', a
   const catalog = await tagCatalog(db);
   const ids = catalog.map((t) => t.id);
   assert.deepEqual(ids.slice(0, 2), ['wystawa', 'sztuka'], 'positioned tags first, in order');
-  assert.deepEqual(ids.slice(2), ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'sport', 'inne'], 'canonical follows in default order');
+  assert.deepEqual(ids.slice(2), ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'sport', 'atrakcje', 'inne'], 'canonical follows in default order');
   assert.ok(!ids.includes('usuniety'), 'ghost tag_order entry never surfaces');
 });
 
@@ -84,8 +84,8 @@ test('tagCatalog: no tag_order → default order (canonical then custom by label
   } as unknown as D1Database;
   const { tagCatalog } = await import('../src/core/tagCatalog');
   const catalog = await tagCatalog(db);
-  assert.deepEqual(catalog.slice(0, 7).map((t) => t.id), ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'sport', 'inne']);
-  assert.deepEqual(catalog.slice(7).map((t) => t.id), ['sztuka', 'wystawa'], 'admin tags ordered by label');
+  assert.deepEqual(catalog.slice(0, 8).map((t) => t.id), ['filmy', 'muzyka', 'meetup', 'komedia', 'teatr', 'sport', 'atrakcje', 'inne']);
+  assert.deepEqual(catalog.slice(8).map((t) => t.id), ['sztuka', 'wystawa'], 'admin tags ordered by label');
 });
 
 test('registry: dzisapp + eventylive are disabled (retired), kupbilecik is the only worker provider', async () => {

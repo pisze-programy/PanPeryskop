@@ -15,6 +15,7 @@ import {reportsRoutes} from './api/reports';
 import {runSeed, tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
 import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/pipeline/queue';
 import {pruneSeedData, watchdogSeedBatches} from './seed/pipeline/cleanup';
+import {checkDigestIncomplete} from './seed/digest';
 import {SEED_DAYS_AHEAD} from './seed/core/constants';
 // Nominatim pace per executor: the Worker egresses from Cloudflare's shared
 // datacenter IPs — the OSM policy caps regular (daily cron) bulk geocoding at
@@ -138,11 +139,13 @@ export default {
       return;
     }
     if (controller.cron === WATCHDOG_CRON) {
-      // Hourly liveness: mark batches stuck in created/fetching/ingesting failed.
+      // Hourly liveness: mark batches stuck in created/fetching/ingesting failed,
+      // and email which seed providers did not report their daily job by 14:00.
       ctx.waitUntil(
-        watchdogSeedBatches(env, 'cron')
-          .then(() => console.log('seed watchdog cron done'))
-          .catch((e) => console.error(`seed watchdog cron failed: ${(e as Error).message}`))
+        (async () => {
+          await watchdogSeedBatches(env, 'cron');
+          await checkDigestIncomplete(env);
+        })().catch((e) => console.error(`seed watchdog cron failed: ${(e as Error).message}`))
       );
       return;
     }

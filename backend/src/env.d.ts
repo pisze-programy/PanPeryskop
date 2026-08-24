@@ -18,6 +18,9 @@ interface Env {
   CLOUDINARY_SIG?: string;
   // getyourguide Partner API access token (X-ACCESS-TOKEN header).
   GETYOURGUIDE_TOKEN?: string;
+  // cf-snitch email service (seed digest) — see docs/seed-digest.md.
+  SNITCH_URL?: string;
+  SNITCH_TOKEN?: string;
   ENVIRONMENT?: string;
   CORS_ORIGIN?: string;
   MEDIA_R2_DEV?: string;

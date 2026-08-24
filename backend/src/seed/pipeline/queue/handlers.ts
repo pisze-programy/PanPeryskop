@@ -14,6 +14,7 @@ import { dropCancelled, rescueRealShows, isCancelled } from '../../core/filters'
 import { buildVenueCache } from '../../providers/eventylive';
 import { resolveKupGeo } from '../../providers/kupbilecik';
 import { writeSeedRun } from '../../core/log';
+import { reportBatchDigest } from '../../digest';
 import { EnvQ, SeedQueueMessage } from './types';
 import {
   CandRow, countNonTerminalCandidates, getBatch, getOrCreateSeedUser,
@@ -173,6 +174,7 @@ async function runDedupe(env: EnvQ, batchId: string): Promise<void> {
     await sendChunked(env, env.SEED_INGEST_QUEUE, ingestMsgs);
   } else {
     await setBatchStatus(env, batchId, 'done');
+    try { await reportBatchDigest(env, batchId); } catch (e) { console.error(`seed digest failed: ${(e as Error).message}`); }
   }
 }
 
@@ -275,5 +277,8 @@ async function maybeComplete(env: EnvQ, batchId: string): Promise<void> {
   if (!batch || batch.status === 'done' || batch.status === 'failed') return;
   if (batch.status !== 'ingesting') return;
   const remaining = await countNonTerminalCandidates(env, batchId);
-  if (remaining === 0) await setBatchStatus(env, batchId, 'done');
+  if (remaining === 0) {
+    await setBatchStatus(env, batchId, 'done');
+    try { await reportBatchDigest(env, batchId); } catch (e) { console.error(`seed digest failed: ${(e as Error).message}`); }
+  }
 }

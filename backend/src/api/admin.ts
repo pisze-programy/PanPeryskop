@@ -3,6 +3,7 @@ import { STATUS_APPROVED, STATUS_REJECTED } from '../core/models';
 import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
 import { SEED_DAYS_AHEAD } from '../seed/core/constants';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
+import { recordSeedDigest } from '../seed/digest';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -40,6 +41,25 @@ adminRoutes.get('/seed/existing', async (c) => {
     .prepare(`SELECT external_id FROM posts WHERE status = '${STATUS_APPROVED}' AND external_id IS NOT NULL`)
     .all<{ external_id: string }>();
   return c.json({ ids: (results || []).map((r) => r.external_id) });
+});
+
+// Per-source per-day approved-event counts over the seed window — the VPS
+adminRoutes.post('/seed/digest', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req
+    .json<{ day?: unknown; provider?: unknown; status?: unknown; candidates?: unknown; ingested?: unknown; errors?: unknown; message?: unknown }>()
+    .catch(() => ({}) as Record<string, unknown>);
+  const day = typeof body.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day) ? body.day : null;
+  const provider = typeof body.provider === 'string' && body.provider ? body.provider : null;
+  const status = body.status === 'ok' || body.status === 'partial' || body.status === 'failed' ? body.status : null;
+  if (!day || !provider || !status) return c.json({ error: 'Invalid day/provider/status' }, 400);
+  const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+  const message = typeof body.message === 'string' && body.message.trim() ? body.message : undefined;
+  await recordSeedDigest(c.env, {
+    day, provider, status,
+    candidates: num(body.candidates), ingested: num(body.ingested), errors: num(body.errors), message,
+  });
+  return c.json({ ok: true });
 });
 
 // Per-source per-day approved-event counts over the seed window — the VPS

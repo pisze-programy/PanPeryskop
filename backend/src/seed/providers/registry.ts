@@ -60,6 +60,16 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: ProviderId.MARATONYPOLSKIE, transport: 'fetch', enabled: false, priority: 7,
     executors: { worker: true },
   },
+  // getyourguide.com — PARKED (disabled). Affiliate application token does NOT
+  // unlock any current API: the v1 affiliate API is retired (404), the Partner
+  // API v2 requires a real partner/supplier token (our token is rejected), and
+  // the site/widget data is bot-protected (403 even from the Webshare residential
+  // proxy with curl). Re-enable only once a working data source exists — see
+  // docs/getyourguide.md. Code kept in the repo to avoid rebuilding from scratch.
+  {
+    id: ProviderId.GETYOURGUIDE, transport: 'fetch', enabled: false, priority: 8,
+    executors: { worker: true },
+  },
   // ---- VPS executor (residential egress — Cloudflare bot management 403s the
   //      Worker's datacenter IPs; fetched by the VPS runners, uploaded via
   //      seed-ingest). Every provider covers the SAME seed window. --------

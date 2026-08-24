@@ -17,6 +17,7 @@ export const ProviderId = {
   LUMA: 'luma',
   MEETUP: 'meetup',
   MARATONYPOLSKIE: 'maratonypolskie',
+  GETYOURGUIDE: 'getyourguide',
   FACEBOOK: 'facebook',
 } as const;
 export type ProviderId = (typeof ProviderId)[keyof typeof ProviderId];

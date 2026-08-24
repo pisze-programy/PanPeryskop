@@ -16,6 +16,8 @@ interface Env {
   ALGOLIA_APP_ID?: string;
   ALGOLIA_API_KEY?: string;
   CLOUDINARY_SIG?: string;
+  // getyourguide Partner API access token (X-ACCESS-TOKEN header).
+  GETYOURGUIDE_TOKEN?: string;
   ENVIRONMENT?: string;
   CORS_ORIGIN?: string;
   MEDIA_R2_DEV?: string;

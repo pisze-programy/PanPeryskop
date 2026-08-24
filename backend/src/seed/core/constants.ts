@@ -52,6 +52,14 @@ export const GOING_THUMB = (path: string, sig: string) =>
 export const MP_BASE = 'https://www.maratonypolskie.pl';
 export const MP_LIST = `${MP_BASE}/mp_index.php`;
 
+export const GYG_BASE = 'https://api.getyourguide.com';
+export const GYG_WEB = 'https://www.getyourguide.com';
+export const GYG_RADIUS_KM = 15;
+export const GYG_LIMIT = 30;
+// Picture url from the API contains a [format_id] placeholder — replace with a
+// real size id (see the partner-api-spec wiki for the full list).
+export const GYG_IMG_FORMAT = '-410-270';
+
 export const MK_BASE = 'https://www.multikino.pl';
 export const MK_API = `${MK_BASE}/api/microservice`;
 export const MK_AUTH = `${MK_API}/auth/token`;

@@ -245,7 +245,7 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     const description = buildDescription(cand);
     await doSavePost(env as unknown as Env, user, postId, 'photo', cand.lat!, cand.lng!, description,
       mediaKey, thumbKey, createdAt, true, cand.link, cand.externalId, Boolean(existing), Boolean(cand.isSoldOut), showtimesJson(cand), showtimeBookingJson(cand), tagsJson(cand),
-      pendingGeo ? STATUS_PENDING : STATUS_APPROVED);
+      (pendingGeo || provider.pendingByDefault) ? STATUS_PENDING : STATUS_APPROVED);
 
     await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.DONE}', post_id=?, reason=NULL, updated_at=? WHERE id=?`)
       .bind(postId, now(), m.candidateId).run();

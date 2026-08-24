@@ -122,11 +122,11 @@ function status(state: string, detail: string): void {
 }
 
 interface RunResult { status: number; output: string }
-function runSync(cmd: string, args: string[], opts?: { cwd?: string; env?: Record<string, string> }): RunResult {
+function runSync(cmd: string, args: string[], opts?: { cwd?: string; env?: Record<string, string>; stdio?: 'pipe' | 'inherit' }): RunResult {
   const r = spawnSync(cmd, args, {
     cwd: opts?.cwd,
     env: { ...process.env, ...opts?.env },
-    encoding: 'utf8',
+    stdio: opts?.stdio ?? 'pipe',
     timeout: 3_600_000,
   });
   return { status: r.status ?? 1, output: `${r.stdout ?? ''}${r.stderr ?? ''}` };
@@ -257,13 +257,14 @@ function upload(cfg: ProviderConfig, env: Record<string, string>): void {
   log(`upload ${cfg.id}: ${out}`);
   logLoad('upload:start', cfg.id);
   // Own heap cap — seed-ingest runs in PARALLEL with the orchestrator, so both
-  // processes must fit the 256 MB box together.
+  // processes must fit the 256 MB box together. stdio inherit STREAMS the
+  // per-entry progress live (buffered output looked stuck on large backfills).
   const r = runSync('node', ['--max-old-space-size=64', join(REPO_DIR, 'admin', 'src', 'seed-ingest.mjs'), out, '--approve'], {
     cwd: REPO_DIR,
     env,
+    stdio: 'inherit',
   });
   logLoad('upload:end', `${cfg.id} exit=${r.status}`);
-  if (r.output.trim()) log(`${cfg.id} upload: ${r.output.trim().slice(0, 2000)}`);
   if (r.status !== 0) throw new Error(`seed-ingest ${cfg.id} exit ${r.status}`);
 }
 

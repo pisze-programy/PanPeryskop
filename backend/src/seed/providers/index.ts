@@ -10,6 +10,7 @@ import { cinemacityProvider } from './cinemacity';
 import { heliosProvider } from './helios';
 import { lumaProvider } from './luma';
 import { meetupProvider } from './meetup';
+import { maratonypolskieProvider } from './maratonypolskie';
 
 // All implementations, in run order. Which of them actually run on the Worker
 // edge is decided by the worker executor (registry: enabled + executors.worker) —
@@ -24,6 +25,7 @@ export const SEED_PROVIDERS: SeedProvider[] = [
   heliosProvider,
   lumaProvider,
   meetupProvider,
+  maratonypolskieProvider,
 ];
 
 export function enabledProviders(): SeedProvider[] {

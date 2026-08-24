@@ -49,6 +49,9 @@ export const GOING_POSTER = (path: string, sig: string) =>
 export const GOING_THUMB = (path: string, sig: string) =>
   `https://res.cloudinary.com/dr89d8ldb/image/upload/c_fill,w_320,h_320/f_jpg/q_auto:eco/v1/${path}?_a=${sig}`;
 
+export const MP_BASE = 'https://www.maratonypolskie.pl';
+export const MP_LIST = `${MP_BASE}/mp_index.php`;
+
 export const MK_BASE = 'https://www.multikino.pl';
 export const MK_API = `${MK_BASE}/api/microservice`;
 export const MK_AUTH = `${MK_API}/auth/token`;

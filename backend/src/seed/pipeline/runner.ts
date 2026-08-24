@@ -142,7 +142,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
       await doSavePost(
         env, user, postId, 'photo', c.lat, c.lng, description,
         mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing), Boolean(c.isSoldOut), showtimesJson(c), showtimeBookingJson(c), tagsJson(c),
-        pendingGeo ? STATUS_PENDING : STATUS_APPROVED
+        (pendingGeo || provider.pendingByDefault) ? STATUS_PENDING : STATUS_APPROVED
       );
       providerResult.ingested++; totalIngested++;
     } catch (e) {

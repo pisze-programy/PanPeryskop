@@ -265,11 +265,25 @@ function fetchMediaDirect(url: string): Buffer {
   ], { env, encoding: null as unknown as BufferEncoding, timeout: MEDIA_TIMEOUT_MS });
   return Buffer.isBuffer(out) ? out : Buffer.from(out);
 }
+// Image magic-byte check — a datacenter direct download can return a 200 HTML
+// block page from a CDN; that must NOT be saved as a poster. JPEG/PNG/WEBP/GIF.
+function isImageBuffer(buf: Buffer): boolean {
+  if (!buf || buf.length < 12) return false;
+  return (
+    (buf[0] === 0xff && buf[1] === 0xd8) ||                       // JPEG
+    (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) || // PNG
+    (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46) || // WEBP/RIFF
+    (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46)      // GIF
+  );
+}
+
 async function fetchMedia(url: string): Promise<Buffer> {
   let lastErr: Error | null = null;
   for (let attempt = 0; attempt <= MEDIA_RETRIES; attempt++) {
     try {
-      return await fetchMediaDirect(url);
+      const buf = await fetchMediaDirect(url);
+      if (!isImageBuffer(buf)) throw new Error('direct response is not an image (CDN block page?)');
+      return buf;
     } catch (e) {
       lastErr = e as Error;
       console.error(`media direct ${url.split('?')[0].slice(-48)}: ${(e as Error).message} — fallback to proxy`);
@@ -277,7 +291,9 @@ async function fetchMedia(url: string): Promise<Buffer> {
     try {
       const res = await fetch(url, { headers: UA_HEADERS, signal: AbortSignal.timeout(MEDIA_TIMEOUT_MS) });
       if (!res.ok) throw new Error(`media ${res.status}`);
-      return Buffer.from(await res.arrayBuffer());
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (!isImageBuffer(buf)) throw new Error('proxied response is not an image');
+      return buf;
     } catch (e) {
       lastErr = e as Error;
       if (attempt < MEDIA_RETRIES) await sleep(2_000);

@@ -16,6 +16,7 @@ export const ProviderId = {
   HELIOS: 'helios',
   LUMA: 'luma',
   MEETUP: 'meetup',
+  MARATONYPOLSKIE: 'maratonypolskie',
   FACEBOOK: 'facebook',
 } as const;
 export type ProviderId = (typeof ProviderId)[keyof typeof ProviderId];
@@ -120,4 +121,7 @@ export interface SeedProvider {
   fetchScope(ctx: SeedContext, scope: string): Promise<SeedCandidate[]>;
   /** Optional: resolve the post's link_url to a direct source (called at ingest, only for survivors). */
   resolveLink?(ctx: SeedContext, cand: SeedCandidate): Promise<string>;
+  /** Ingest every post from this provider as PENDING (moderation review) even
+   *  with valid geo. Flip to false for auto-approve after review. */
+  pendingByDefault?: boolean;
 }

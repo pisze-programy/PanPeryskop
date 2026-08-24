@@ -54,6 +54,12 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: ProviderId.EVENTYLIVE, transport: 'fetch', enabled: false, priority: 5,
     executors: { worker: true },
   },
+  // maratonypolskie.pl — ready but NOT yet enabled in production (pending the
+  // user's go: logo fix + autoapprove decision). Flip `enabled` + deploy when approved.
+  {
+    id: ProviderId.MARATONYPOLSKIE, transport: 'fetch', enabled: false, priority: 7,
+    executors: { worker: true },
+  },
   // ---- VPS executor (residential egress — Cloudflare bot management 403s the
   //      Worker's datacenter IPs; fetched by the VPS runners, uploaded via
   //      seed-ingest). Every provider covers the SAME seed window. --------

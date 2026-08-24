@@ -30,6 +30,11 @@ struct Post: Codable, Identifiable, Equatable {
     let showtimes: [String]?
     var showtime_booking: [ShowtimeBooking]? = nil
 
+    /// Canonical event tags (ids from the /stories/tags catalog) — empty for untagged posts.
+    let tags: [String]?
+    /// Seed source (external_id prefix: 'kupbilecik', 'going', …). Nil for user posts.
+    let source: String?
+
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }

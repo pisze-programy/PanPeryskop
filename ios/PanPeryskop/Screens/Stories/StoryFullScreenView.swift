@@ -436,19 +436,63 @@ struct StoryFullScreenView: View {
         .zIndex(1000)
     }
 
-    private var badgesRow: some View {
-        HStack(spacing: 6) {
-            if currentPost.is_sponsored == true {
-                Label("Sponsorowane", systemImage: "megaphone.fill")
-                    .font(.caption2)
-                    .foregroundColor(.orange)
-            }
-            if currentPost.is_sold_out == true {
-                Label("Wyprzedane", systemImage: "xmark.circle.fill")
-                    .font(.caption2)
-                    .foregroundColor(.red)
+    private struct EventBadge: Identifiable {
+        let id: String
+        let text: String
+        let icon: String
+        let color: Color
+    }
+
+    private var badgeItems: [EventBadge] {
+        var items: [EventBadge] = []
+        if currentPost.is_sponsored == true {
+            items.append(EventBadge(id: "sponsored", text: "SPONSOROWANE", icon: "megaphone.fill", color: .orange))
+        }
+        if currentPost.is_sold_out == true {
+            items.append(EventBadge(id: "soldout", text: "WYPRZEDANE", icon: "xmark.circle.fill", color: .red))
+        }
+        for tagId in currentPost.tags ?? [] {
+            if let label = tagBadgeLabel(tagId) {
+                items.append(EventBadge(id: "tag-\(tagId)", text: label.uppercased(), icon: "tag.fill", color: .blue))
             }
         }
+        if let source = currentPost.source, !source.isEmpty {
+            items.append(EventBadge(id: "source-\(source)", text: source.uppercased(), icon: "network", color: .green))
+        }
+        return items
+    }
+
+    private var badgesRow: some View {
+        let row = badgesHStack
+        return ViewThatFits(in: .horizontal) {
+            row
+            ScrollView(.horizontal, showsIndicators: false) {
+                row
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var badgesHStack: some View {
+        HStack(spacing: 8) {
+            ForEach(Array(badgeItems.enumerated()), id: \.element.id) { index, badge in
+                if index > 0 {
+                    Text("•")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Label(badge.text, systemImage: badge.icon)
+                    .font(.caption2)
+                    .foregroundColor(badge.color)
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    /// Event tag label from the LIVE /stories/tags catalog (backend = single source
+    /// of truth — tags can change there). Unknown tag → nil → badge hidden.
+    private func tagBadgeLabel(_ id: String) -> String? {
+        viewModel.tags.first(where: { $0.id == id })?.label
     }
 
     /// Like / Dislike / Share capsule — kept in the hierarchy but hidden until the

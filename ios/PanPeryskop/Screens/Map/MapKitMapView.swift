@@ -62,6 +62,19 @@ struct MapKitMapView: View {
         return max(degreesPerPixel * Self.clusterPixels, 0.00005)
     }
 
+    /// Pins within the visible region (+ cluster-radius padding) — supercluster-style
+    /// "getClusters(bbox, zoom)": only visible pins are clustered/rendered. Pins cached
+    /// in the ViewModel for other bboxes stay out of the render set, so a stale pin can
+    /// never skew a cluster's count near the screen edge.
+    private var visiblePosts: [Post] {
+        let pad = clusterRadiusDegrees
+        let lat0 = visibleRegion.center.latitude - visibleRegion.span.latitudeDelta / 2 - pad
+        let lat1 = visibleRegion.center.latitude + visibleRegion.span.latitudeDelta / 2 + pad
+        let lng0 = visibleRegion.center.longitude - visibleRegion.span.longitudeDelta / 2 - pad
+        let lng1 = visibleRegion.center.longitude + visibleRegion.span.longitudeDelta / 2 + pad
+        return posts.filter { $0.lat >= lat0 && $0.lat <= lat1 && $0.lng >= lng0 && $0.lng <= lng1 }
+    }
+
     private static func cameraDistance(for region: MKCoordinateRegion) -> CLLocationDistance {
         let meters = region.span.latitudeDelta * 111_320
         return meters / sin(pitchDegrees * .pi / 180)
@@ -95,7 +108,7 @@ struct MapKitMapView: View {
             ) {
                 UserAnnotation()
 
-                ForEach(makeClusters(posts, radiusDegrees: clusterRadiusDegrees)) { cluster in
+                ForEach(makeClusters(visiblePosts, radiusDegrees: clusterRadiusDegrees)) { cluster in
                     Annotation(coordinate: cluster.coord, anchor: .center) {
                         ClusterBadge(
                             cluster: cluster,
@@ -476,7 +489,10 @@ private func makeClusters(_ posts: [Post], radiusDegrees: Double) -> [PostCluste
         let avgLat = nearby.map(\.lat).reduce(0, +) / Double(nearby.count)
         let avgLng = nearby.map(\.lng).reduce(0, +) / Double(nearby.count)
         clusters.append(PostCluster(
-            id: post.id,
+            // Deterministic id (min post id) — iteration order changes as pins are
+            // cached, but the id must stay stable so SwiftUI doesn't recreate the
+            // annotation on every pan/zoom (that caused pin flicker).
+            id: nearby.map(\.id).min() ?? post.id,
             coord: CLLocationCoordinate2D(latitude: avgLat, longitude: avgLng),
             count: nearby.count,
             singlePost: nearby.count == 1 ? nearby.first : nil,

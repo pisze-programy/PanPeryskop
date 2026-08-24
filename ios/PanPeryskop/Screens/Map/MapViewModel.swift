@@ -232,6 +232,12 @@ class MapViewModel: ObservableObject {
         guard !isFetchingStories else { return nil }
         isFetchingStories = true
         defer { isFetchingStories = false }
+        // Freeze the (category, day, tag) the request was issued for. The user may
+        // switch day/category/tag while the fetch is in flight — a stale response
+        // must NOT land in the current cache bucket (that leaked tomorrow/+2 pins
+        // into "today"). Compare after the await and drop if the state changed.
+        let key = postsCacheKey
+        let feedCategoryForRequest = feedCategory
         var params = [
             "sw_lat": String(swLat),
             "sw_lng": String(swLng),
@@ -250,13 +256,14 @@ class MapViewModel: ObservableObject {
         }
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)
+            guard key == postsCacheKey else { return nil } // stale — day/category/tag changed mid-flight
             var bucket = postsCache[postsCacheKey] ?? [:]
             for p in resp.stories { bucket[p.id] = p }
             postsCache[postsCacheKey] = bucket
             serverPosts = Array(bucket.values)
             posts = allPosts
             // Request pins ("?") are a Live-category feature — not shown in Wydarzenia.
-            if feedCategory == .live,
+            if feedCategoryForRequest == .live,
                let requestsResp = try? await APIClient.getMediaRequests(
                    swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng
                ) {

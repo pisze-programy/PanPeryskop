@@ -12,7 +12,11 @@
 
 ---
 
-<video src="demo.mp4" width="600" controls></video>
+<p align="center">
+  <a href="demo.mp4">
+    <img src="demo-poster.jpg" width="600" alt="Pan Peryskop — demo (wideo)" />
+  </a>
+</p>
 
 
 ## Stack
@@ -20,21 +24,5 @@
 - **iOS:** SwiftUI, iOS 18+ (XcodeGen project)
 - **Map:** MapLibre Native + OSM
 - **Backend:** Cloudflare Workers (Hono) + D1 + R2 + Queues
-- **Auth:** Sign in with Apple (real id_token verification), per-device bans
-- **Website:** Cloudflare Pages landing + legal docs (`site/`)
-
-
-## Content moderation (UGC)
-
-- Users report content in-app (`···` → **Raportuj**) — reports never auto-block.
-- Admins moderate in the dashboard (`/admin/reports`): reject the post and/or ban
-  the author's **device** (not the Apple account).
-- Banned devices cannot log in (`isBanned` check on every auth + request).
-
-## Apple App Store notes
-
-- **Sign in with Apple** is the only login; the App ID is registered with the
-  `com.apple.developer.applesignin` entitlement.
-- `POST /apple/notifications` handles `consentRevoked` (session invalidation) and
-  `accountDelete` (hard-delete of linked accounts).
-- Account deletion is available in-app (Settings → Usuń konto).
+- **Auth:** Sign in with Apple, per-device bans
+- **Website:** Cloudflare Pages landing

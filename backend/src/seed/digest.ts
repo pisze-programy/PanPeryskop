@@ -25,6 +25,32 @@ export interface DigestEnv {
   DB: D1Database;
   SNITCH_URL?: string;
   SNITCH_TOKEN?: string;
+  /** For the queue path: self-POST to our own admin digest endpoint (the cf-snitch
+   *  fetch 404s from a queue consumer — Cloudflare platform), so the report is
+   *  processed in the fetch-handler context where the email send works. */
+  ADMIN_SECRET?: string;
+  BASE_URL?: string;
+}
+
+const DEFAULT_BASE = 'https://api.panperyskop.app';
+
+/** Post a digest report to our own `/admin/seed/digest` endpoint. Queue consumers
+ *  cannot fetch cf-snitch directly (404), so they self-POST and let the fetch
+ *  handler record + email. Fire-and-forget — never throws. */
+async function postDigestSelf(env: DigestEnv, input: DigestInput): Promise<void> {
+  const secret = env.ADMIN_SECRET;
+  if (!secret) return;
+  try {
+    await fetch(`${env.BASE_URL || DEFAULT_BASE}/admin/seed/digest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },
+      body: JSON.stringify(input),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (e) {
+    // Fire-and-forget — but log it so a silent failure is visible.
+    console.error(`digest self-post failed (${input.provider}): ${(e as Error).message}`);
+  }
 }
 
 /** The automated seed providers (Worker cron + VPS runners). facebook is manual
@@ -53,8 +79,9 @@ export async function snitchReport(
       body: JSON.stringify({ source, status, notify: 'always', data: opts?.data, message: opts?.message }),
       signal: AbortSignal.timeout(10_000),
     });
-  } catch {
-    /* email must never break the seed */
+  } catch (e) {
+    // Email must never break the seed — but log it so a silent failure is visible.
+    console.error(`snitch report failed (${source}): ${(e as Error).message}`);
   }
 }
 
@@ -100,12 +127,12 @@ export async function reportBatchDigest(env: DigestEnv, batchId: string): Promis
   const batch = await env.DB.prepare('SELECT day FROM seed_batches WHERE id = ?').bind(batchId).first<{ day: string }>();
   if (!batch) return;
   const scopes = await env.DB.prepare(
-    'SELECT provider, status, reason FROM seed_scopes WHERE batch_id = ?'
-  ).bind(batchId).all<{ provider: string; status: string; reason: string | null }>();
+    'SELECT provider, status, error FROM seed_scopes WHERE batch_id = ?'
+  ).bind(batchId).all<{ provider: string; status: string; error: string | null }>();
   const byProvider = new Map<string, { failed: boolean; reason: string | null }>();
   for (const s of scopes?.results ?? []) {
     const cur = byProvider.get(s.provider) ?? { failed: false, reason: null };
-    if (s.status === 'failed') { cur.failed = true; cur.reason = cur.reason || s.reason; }
+    if (s.status === 'failed') { cur.failed = true; cur.reason = cur.reason || s.error; }
     byProvider.set(s.provider, cur);
   }
   const runs = await env.DB.prepare(
@@ -113,7 +140,7 @@ export async function reportBatchDigest(env: DigestEnv, batchId: string): Promis
   ).bind(batchId).all<{ provider: string; candidates: number; ingested: number; errors: number }>();
   for (const r of runs?.results ?? []) {
     const scopeState = byProvider.get(r.provider);
-    await recordSeedDigest(env, {
+    await postDigestSelf(env, {
       day: batch.day,
       provider: r.provider,
       status: scopeState?.failed ? 'failed' : (r.errors > 0 ? 'partial' : 'ok'),
@@ -128,7 +155,7 @@ export async function reportBatchDigest(env: DigestEnv, batchId: string): Promis
     if (!state.failed) continue;
     const already = await env.DB.prepare('SELECT 1 AS x FROM seed_digest WHERE day = ? AND provider = ?').bind(batch.day, provider).first<{ x: number }>();
     if (!already) {
-      await recordSeedDigest(env, {
+      await postDigestSelf(env, {
         day: batch.day, provider, status: 'failed', candidates: 0, ingested: 0, errors: 0,
         message: state.reason || 'scope failed',
       });
@@ -140,7 +167,7 @@ export async function reportBatchDigest(env: DigestEnv, batchId: string): Promis
 export async function reportProviderFailed(env: DigestEnv, batchId: string, provider: string, message: string): Promise<void> {
   const batch = await env.DB.prepare('SELECT day FROM seed_batches WHERE id = ?').bind(batchId).first<{ day: string }>();
   if (!batch) return;
-  await recordSeedDigest(env, { day: batch.day, provider, status: 'failed', candidates: 0, ingested: 0, errors: 0, message });
+  await postDigestSelf(env, { day: batch.day, provider, status: 'failed', candidates: 0, ingested: 0, errors: 0, message });
 }
 
 /** When every active provider reported for the day, email the daily summary once. */

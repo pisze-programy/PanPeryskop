@@ -280,10 +280,16 @@ function reportDigest(cfg: ProviderConfig, day: string, status: string, env: Rec
   let candidates = 0, ingested = 0, errors = 0;
   try {
     if (existsSync(out)) {
-      const entries = JSON.parse(readFileSync(out, 'utf8')) as Array<{ status?: string }>;
-      candidates = entries.length;
-      ingested = entries.filter((e) => e.status === 'done').length;
-      errors = entries.filter((e) => e.status === 'error').length;
+      const entries = JSON.parse(readFileSync(out, 'utf8')) as Array<{ external_id?: string; status?: string }>;
+      // The staged output accumulates the WHOLE window — count only the target day
+      // (the day is embedded in external_id, e.g. cinemacity-<film>-<cinema>-<day>).
+      const dayEntries = entries.filter((e) => {
+        const m = /(20\d\d-\d\d-\d\d)/.exec(e.external_id || '');
+        return m && m[1] === day;
+      });
+      candidates = dayEntries.length;
+      ingested = dayEntries.filter((e) => e.status === 'done').length;
+      errors = dayEntries.filter((e) => e.status === 'error').length;
     }
   } catch { /* keep zeros */ }
   const base = env.BASE_URL || 'https://api.panperyskop.app';

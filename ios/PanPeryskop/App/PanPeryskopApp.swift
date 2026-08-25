@@ -11,8 +11,11 @@ struct PanPeryskopApp: App {
 
     init() {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+        // BGTaskScheduler invokes the handler on a BACKGROUND queue — the closure
+        // must not be @MainActor-isolated (Swift 6 traps with
+        // _swift_task_checkIsolatedSwift → EXC_BREAKPOINT). Hop to the main actor.
         BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.mediaRefreshTaskID, using: nil) { task in
-            Self.handleMediaRefresh(task: task)
+            Task { @MainActor in Self.handleMediaRefresh(task: task) }
         }
         Self.scheduleMediaRefresh()
         ProximityMonitor.shared.rehydrate()

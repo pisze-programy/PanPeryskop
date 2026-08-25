@@ -25,54 +25,69 @@ enum Haptics {
     /// realistic build-up; falls back to a UIKit tick loop when unsupported.
     static func drumRoll() {
         Task { @MainActor in
-            if CHHapticEngine.capabilitiesForHardware().supportsHaptics {
-                do {
-                    let engine = try CHHapticEngine()
-                    engine.playsHapticsOnly = true
-                    try await engine.start()
+            guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
+                await tickRollFallback()
+                return
+            }
+            do {
+                let engine = try sharedHapticEngine()
+                try await engine.start()
 
-                    let taps = 10
-                    let interval: TimeInterval = 0.05
-                    var events: [CHHapticEvent] = []
+                let taps = 10
+                let interval: TimeInterval = 0.05
+                var events: [CHHapticEvent] = []
 
-                    for i in 0..<taps {
-                        let t = TimeInterval(i) * interval
-                        let progress = Double(i) / Double(taps - 1)
-                        events.append(CHHapticEvent(
-                            eventType: .hapticTransient,
-                            parameters: [
-                                CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(0.35 + 0.55 * progress)),
-                                CHHapticEventParameter(parameterID: .hapticSharpness, value: Float(0.2 + 0.65 * progress)),
-                            ],
-                            relativeTime: t
-                        ))
-                    }
-
+                for i in 0..<taps {
+                    let t = TimeInterval(i) * interval
+                    let progress = Double(i) / Double(taps - 1)
                     events.append(CHHapticEvent(
                         eventType: .hapticTransient,
                         parameters: [
-                            CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
-                            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.9),
+                            CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(0.35 + 0.55 * progress)),
+                            CHHapticEventParameter(parameterID: .hapticSharpness, value: Float(0.2 + 0.65 * progress)),
                         ],
-                        relativeTime: TimeInterval(taps) * interval + 0.04
+                        relativeTime: t
                     ))
-
-                    let pattern = try CHHapticPattern(events: events, parameters: [])
-                    try engine.makePlayer(with: pattern).start(atTime: 0)
-                    return
-                } catch {
-                    // fall through to the tick-loop fallback
                 }
-            }
 
-            let generator = UIImpactFeedbackGenerator(style: .medium)
-            generator.prepare()
-            for i in 0..<9 {
-                generator.impactOccurred(intensity: 0.4 + CGFloat(i) * 0.05)
-                try? await Task.sleep(nanoseconds: 50_000_000)
+                events.append(CHHapticEvent(
+                    eventType: .hapticTransient,
+                    parameters: [
+                        CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
+                        CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.9),
+                    ],
+                    relativeTime: TimeInterval(taps) * interval + 0.04
+                ))
+
+                let pattern = try CHHapticPattern(events: events, parameters: [])
+                try engine.makePlayer(with: pattern).start(atTime: 0)
+            } catch {
+                await tickRollFallback()
             }
-            UIImpactFeedbackGenerator(style: .heavy).impactOccurred(intensity: 1.0)
         }
+    }
+
+    /// The CoreHaptics engine must stay alive while a pattern plays. A local
+    /// engine is deallocated the moment the Task ends — which cut the roll short.
+    /// Keep one shared engine for the whole app.
+    private static var hapticEngine: CHHapticEngine?
+
+    private static func sharedHapticEngine() throws -> CHHapticEngine {
+        if let engine = hapticEngine { return engine }
+        let engine = try CHHapticEngine()
+        engine.playsHapticsOnly = true
+        hapticEngine = engine
+        return engine
+    }
+
+    private static func tickRollFallback() async {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.prepare()
+        for i in 0..<9 {
+            generator.impactOccurred(intensity: 0.4 + CGFloat(i) * 0.05)
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        UIImpactFeedbackGenerator(style: .heavy).impactOccurred(intensity: 1.0)
     }
 
     static func explosion() {

@@ -1,4 +1,4 @@
-/* Pan Peryskop — HERO: single-color, centered copy + 2×iPhone z wideo (full-size, bez overlay). */
+/* Hero: centered copy + two iPhones with video. No overlay. */
 
 .hero {
   position: relative;
@@ -33,16 +33,41 @@
 .hero-content p.sub { color: rgba(255, 255, 255, 0.72); font-size: 14px; line-height: 1.7; max-width: 54ch; }
 .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
-/* ---------- phone rack (zawsze obok siebie; na mobile delikatnie wychodzi poza ekran) ---------- */
+/* ---------- phone rack: cards fan, centered ---------- */
 .phone-rack {
+  --p-shift: 150px;
+  --p-rot-a: -16deg;
+  --p-rot-b: 16deg;
   position: relative; z-index: 2;
   display: flex; justify-content: center; align-items: flex-end;
-  gap: 34px;
+  gap: 0;
   padding: 64px 0 0;
 }
-.phone-item { position: relative; }
-.phone-item.a { z-index: 2; }
-.phone-item.b { z-index: 1; transform: rotate(-7deg) translateY(16px); }
+.phone-item { position: relative; transform-origin: 50% 130%; }
+.phone-item.a {
+  z-index: 1;
+  transform: translateX(var(--p-shift)) rotate(var(--p-rot-a));
+  animation: pp-fan-a 1.1s var(--ease) both;
+}
+.phone-item.b {
+  z-index: 2;
+  transform: translateX(calc(var(--p-shift) * -1)) rotate(var(--p-rot-b));
+  animation: pp-fan-b 1.1s var(--ease) 0.1s both;
+}
+
+/* Fan opens: phones start overlapped (small angle, tops almost touching),
+   then A swings left, B swings right — more space between the tops. */
+@keyframes pp-fan-a {
+  from { transform: translateX(var(--p-shift)) rotate(-6deg); }
+  to   { transform: translateX(var(--p-shift)) rotate(var(--p-rot-a)); }
+}
+@keyframes pp-fan-b {
+  from { transform: translateX(calc(var(--p-shift) * -1)) rotate(6deg); }
+  to   { transform: translateX(calc(var(--p-shift) * -1)) rotate(var(--p-rot-b)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phone-item.a, .phone-item.b { animation: none; }
+}
 
 .iphone {
   position: relative;
@@ -53,7 +78,7 @@
   background: linear-gradient(160deg, #3a3a3c, #171719 30%, #242426 70%, #0a0a0b);
   box-shadow: 0 60px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
-.phone-item.b .iphone { box-shadow: 0 40px 90px rgba(0, 0, 0, 0.5), 0 14px 30px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+.phone-item.a .iphone { box-shadow: 0 40px 90px rgba(0, 0, 0, 0.5), 0 14px 30px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
 .iphone::before {
   content: ""; position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
   width: 92px; height: 26px; border-radius: 999px; background: #000; z-index: 80;
@@ -69,12 +94,11 @@
 
 /* ---------- responsive ---------- */
 @media (max-width: 1024px) {
-  .phone-rack { gap: 24px; }
+  .phone-rack { --p-shift: 125px; --p-rot-a: -15deg; --p-rot-b: 15deg; }
   .iphone { width: 252px; }
 }
 @media (max-width: 640px) {
   .hero { padding: 112px 0 0; }
-  .phone-rack { gap: 12px; padding-top: 48px; justify-content: center; }
-  .phone-item.b { transform: rotate(-5deg) translateY(10px); }
-  .iphone { width: 224px; }
+  .phone-rack { --p-shift: 100px; --p-rot-a: -12deg; --p-rot-b: 12deg; padding-top: 48px; }
+  .iphone { width: 210px; }
 }

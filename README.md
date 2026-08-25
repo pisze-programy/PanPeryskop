@@ -4,17 +4,21 @@
 
 <h1 align="center">Pan Peryskop</h1>
 
+
 <p align="center">
   <strong>Mobile APP · Events · LIVE</strong><br>
   See what's happening in your city<br>
   geo-anchored stories (photo, video) and events
+  </br>
+  </br>
+  - <a href="[mailto:EMAIL](https://panperyskop.app)">Website</a> 
 </p>
 
 ---
 
 <p align="center">
   <a href="demo.mp4">
-    <img src="demo-poster.jpg" width="600" alt="Pan Peryskop — demo (wideo)" />
+    <img src="demo-preview.png" width="600" alt="Pan Peryskop Preview" />
   </a>
 </p>
 

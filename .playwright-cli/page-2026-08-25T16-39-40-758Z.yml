@@ -1,0 +1,324 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - link "Skip to content" [ref=e4] [cursor=pointer]:
+        - /url: "#start-of-content"
+      - banner [ref=e9]:
+        - heading "Navigation Menu" [level=2] [ref=e10]
+        - generic [ref=e11]:
+          - link "Homepage" [ref=e13] [cursor=pointer]:
+            - /url: /
+          - generic [ref=e16]:
+            - navigation "Global" [ref=e17]:
+              - list [ref=e18]:
+                - listitem [ref=e19]:
+                  - button "Platform" [ref=e21] [cursor=pointer]
+                - listitem [ref=e24]:
+                  - button "Solutions" [ref=e26] [cursor=pointer]
+                - listitem [ref=e29]:
+                  - button "Resources" [ref=e31] [cursor=pointer]
+                - listitem [ref=e34]:
+                  - button "Open Source" [ref=e36] [cursor=pointer]
+                - listitem [ref=e39]:
+                  - button "Enterprise" [ref=e41] [cursor=pointer]
+                - listitem [ref=e44]:
+                  - link "Pricing" [ref=e45] [cursor=pointer]:
+                    - /url: https://github.com/pricing
+            - generic [ref=e46]:
+              - button "Search or jump to, type / to search" [ref=e48] [cursor=pointer]
+              - link "Sign in" [ref=e55] [cursor=pointer]:
+                - /url: /login?return_to=https%3A%2F%2Fgithub.com%2Fpisze-programy%2FPanPeryskop
+              - link "Sign up" [ref=e58] [cursor=pointer]:
+                - /url: /signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E%2F%3Crepo-name%3E&source=header-repo&source_repo=pisze-programy%2FPanPeryskop
+              - button "Appearance settings" [ref=e61] [cursor=pointer]
+    - main [ref=e68]:
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - generic [ref=e72]:
+            - link "pisze-programy" [ref=e76] [cursor=pointer]:
+              - /url: /pisze-programy
+            - generic [ref=e77]: /
+            - strong [ref=e78]:
+              - link "PanPeryskop" [ref=e79] [cursor=pointer]:
+                - /url: /pisze-programy/PanPeryskop
+            - generic [ref=e80]: Public
+          - generic [ref=e81]:
+            - list:
+              - listitem [ref=e82]:
+                - link "You must be signed in to change notification settings" [ref=e83] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fpisze-programy%2FPanPeryskop
+                  - text: Notifications
+              - listitem [ref=e86]:
+                - link "Fork 0" [ref=e87] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fpisze-programy%2FPanPeryskop
+                  - text: Fork
+                  - generic "0" [ref=e90]
+              - listitem [ref=e91]:
+                - link "You must be signed in to star a repository" [ref=e93] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fpisze-programy%2FPanPeryskop
+                  - text: Star
+                  - generic "1 user starred this repository" [ref=e96]: "1"
+        - navigation "Repository" [ref=e97]:
+          - list [ref=e98]:
+            - listitem [ref=e99]:
+              - link "Code" [ref=e100] [cursor=pointer]:
+                - /url: /pisze-programy/PanPeryskop
+            - listitem [ref=e104]:
+              - link "Issues" [ref=e105] [cursor=pointer]:
+                - /url: /pisze-programy/PanPeryskop/issues
+            - listitem [ref=e110]:
+              - link "Pull requests" [ref=e111] [cursor=pointer]:
+                - /url: /pisze-programy/PanPeryskop/pulls
+            - listitem [ref=e115]:
+              - link "Actions" [ref=e116] [cursor=pointer]:
+                - /url: /pisze-programy/PanPeryskop/actions
+            - listitem [ref=e120]:
+              - link "Projects" [ref=e121] [cursor=pointer]:
+                - /url: /pisze-programy/PanPeryskop/projects
+            - listitem [ref=e125]:
+              - link "Security and quality" [ref=e126] [cursor=pointer]:
+                - /url: /pisze-programy/PanPeryskop/security
+            - listitem [ref=e130]:
+              - link "Insights" [ref=e131] [cursor=pointer]:
+                - /url: /pisze-programy/PanPeryskop/pulse
+      - generic [ref=e148]:
+        - generic [ref=e151]:
+          - generic [ref=e152]:
+            - generic [ref=e153]:
+              - button "main branch" [ref=e155] [cursor=pointer]:
+                - generic [ref=e156]: main
+              - generic [ref=e160]:
+                - link "Branches" [ref=e161] [cursor=pointer]:
+                  - /url: /pisze-programy/PanPeryskop/branches
+                - link "Tags" [ref=e164] [cursor=pointer]:
+                  - /url: /pisze-programy/PanPeryskop/tags
+            - generic [ref=e167]:
+              - combobox "Go to file" [ref=e175]
+              - button "Code" [ref=e176] [cursor=pointer]
+          - generic [ref=e179]:
+            - generic [ref=e180]:
+              - generic [ref=e182]:
+                - heading "Latest commit" [level=2] [ref=e183]
+                - generic [ref=e186]:
+                  - heading "History" [level=2] [ref=e187]
+                  - link "119 Commits" [ref=e188] [cursor=pointer]:
+                    - /url: /pisze-programy/PanPeryskop/commits/main/
+              - heading "Folders and files" [level=2] [ref=e191]
+              - table "Folders and files" [ref=e192]:
+                - rowgroup:
+                  - row "Name Last commit message Last commit date":
+                    - columnheader "Name"
+                    - columnheader "Last commit message"
+                    - columnheader "Last commit date"
+                - rowgroup [ref=e193]:
+                  - row "admin, (Directory)" [ref=e194]:
+                    - cell [ref=e195]:
+                      - link "admin, (Directory)" [ref=e202] [cursor=pointer]:
+                        - /url: /pisze-programy/PanPeryskop/tree/main/admin
+                        - text: admin
+                    - cell [ref=e203]
+                    - cell [ref=e205]
+                  - row "backend, (Directory)" [ref=e208]:
+                    - cell [ref=e209]:
+                      - link "backend, (Directory)" [ref=e216] [cursor=pointer]:
+                        - /url: /pisze-programy/PanPeryskop/tree/main/backend
+                        - text: backend
+                    - cell [ref=e217]
+                    - cell [ref=e219]
+                  - row "browser-ext/panperyskop-facebook, (Directory)" [ref=e222]:
+                    - cell [ref=e223]:
+                      - link "browser-ext/panperyskop-facebook, (Directory)" [ref=e230] [cursor=pointer]:
+                        - /url: /pisze-programy/PanPeryskop/tree/main/browser-ext/panperyskop-facebook
+                        - text: browser-ext/panperyskop-facebook
+                    - cell [ref=e231]
+                    - cell [ref=e233]
+                  - row "docs, (Directory)" [ref=e236]:
+                    - cell [ref=e237]:
+                      - link "docs, (Directory)" [ref=e244] [cursor=pointer]:
+                        - /url: /pisze-programy/PanPeryskop/tree/main/docs
+                        - text: docs
+                    - cell [ref=e245]
+                    - cell [ref=e247]
+                  - row "ios, (Directory)" [ref=e250]:
+                    - cell [ref=e251]:
+                      - link "ios, (Directory)" [ref=e258] [cursor=pointer]:
+                        - /url: /pisze-programy/PanPeryskop/tree/main/ios
+                        - text: ios
+                    - cell [ref=e259]
+                    - cell [ref=e261]
+                  - row "site, (Directory)" [ref=e264]:
+                    - cell [ref=e265]:
+                      - link "site, (Directory)" [ref=e272] [cursor=pointer]:
+                        - /url: /pisze-programy/PanPeryskop/tree/main/site
+                        - text: site
+                    - cell [ref=e273]
+                    - cell [ref=e275]
+                  - row ".gitignore, (File)" [ref=e278]:
+                    - cell [ref=e279]:
+                      - link ".gitignore, (File)" [ref=e286] [cursor=pointer]:
+                        - /url: /pisze-programy/PanPeryskop/blob/main/.gitignore
+                        - text: .gitignore
+                    - cell [ref=e287]
+                    - cell [ref=e289]
+                  - row "README.md, (File)" [ref=e292]:
+                    - cell [ref=e293]:
+                      - link "README.md, (File)" [ref=e300] [cursor=pointer]:
+                        - /url: /pisze-programy/PanPeryskop/blob/main/README.md
+                        - text: README.md
+                    - cell [ref=e301]
+                    - cell [ref=e303]
+                  - row "demo.mp4, (File)" [ref=e306]:
+                    - cell [ref=e307]:
+                      - link "demo.mp4, (File)" [ref=e314] [cursor=pointer]:
+                        - /url: /pisze-programy/PanPeryskop/blob/main/demo.mp4
+                        - text: demo.mp4
+                    - cell [ref=e315]
+                    - cell [ref=e317]
+            - generic [ref=e321]:
+              - generic [ref=e322]:
+                - heading "Repository files navigation" [level=2] [ref=e323]
+                - navigation "Repository files" [ref=e324]:
+                  - list [ref=e325]:
+                    - listitem [ref=e326]:
+                      - link "README" [ref=e327] [cursor=pointer]:
+                        - /url: "#"
+                - button "Outline" [ref=e332] [cursor=pointer]
+              - article [ref=e336]:
+                - paragraph [ref=e337]:
+                  - link [ref=e338] [cursor=pointer]:
+                    - /url: /pisze-programy/PanPeryskop/blob/main/ios/PanPeryskop/Assets.xcassets/AppIcon.appiconset/icon_120.png
+                    - img "logo" [ref=e339]
+                - generic [ref=e340]:
+                  - heading "Pan Peryskop" [level=1] [ref=e341]
+                  - 'link "Permalink: Pan Peryskop" [ref=e342] [cursor=pointer]':
+                    - /url: "#pan-peryskop"
+                - paragraph [ref=e345]:
+                  - strong [ref=e346]: Mobile APP · Events · LIVE
+                  - text: See what's happening in your city geo-anchored stories (photo, video) and events
+                - separator [ref=e347]
+                - paragraph
+                - generic [ref=e348]:
+                  - heading "Stack" [level=2] [ref=e349]
+                  - 'link "Permalink: Stack" [ref=e350] [cursor=pointer]':
+                    - /url: "#stack"
+                - list [ref=e353]:
+                  - listitem [ref=e354]:
+                    - strong [ref=e355]: "iOS:"
+                    - text: SwiftUI, iOS 18+ (XcodeGen project)
+                  - listitem [ref=e356]:
+                    - strong [ref=e357]: "Map:"
+                    - text: MapLibre Native + OSM
+                  - listitem [ref=e358]:
+                    - strong [ref=e359]: "Backend:"
+                    - text: Cloudflare Workers (Hono) + D1 + R2 + Queues
+                  - listitem [ref=e360]:
+                    - strong [ref=e361]: "Auth:"
+                    - text: Sign in with Apple (real id_token verification), per-device bans
+                  - listitem [ref=e362]:
+                    - strong [ref=e363]: "Website:"
+                    - text: Cloudflare Pages landing + legal docs (
+                    - code [ref=e364]: site/
+                    - text: )
+                - generic [ref=e365]:
+                  - heading "Content moderation (UGC)" [level=2] [ref=e366]
+                  - 'link "Permalink: Content moderation (UGC)" [ref=e367] [cursor=pointer]':
+                    - /url: "#content-moderation-ugc"
+                - list [ref=e370]:
+                  - listitem [ref=e371]:
+                    - text: Users report content in-app (
+                    - code [ref=e372]: ···
+                    - text: →
+                    - strong [ref=e373]: Raportuj
+                    - text: ) — reports never auto-block.
+                  - listitem [ref=e374]:
+                    - text: Admins moderate in the dashboard (
+                    - code [ref=e375]: /admin/reports
+                    - text: "): reject the post and/or ban the author's"
+                    - strong [ref=e376]: device
+                    - text: (not the Apple account).
+                  - listitem [ref=e377]:
+                    - text: Banned devices cannot log in (
+                    - code [ref=e378]: isBanned
+                    - text: check on every auth + request).
+                - generic [ref=e379]:
+                  - heading "Apple App Store notes" [level=2] [ref=e380]
+                  - 'link "Permalink: Apple App Store notes" [ref=e381] [cursor=pointer]':
+                    - /url: "#apple-app-store-notes"
+                - list [ref=e384]:
+                  - listitem [ref=e385]:
+                    - strong [ref=e386]: Sign in with Apple
+                    - text: is the only login; the App ID is registered with the
+                    - code [ref=e387]: com.apple.developer.applesignin
+                    - text: entitlement.
+                  - listitem [ref=e388]:
+                    - code [ref=e389]: POST /apple/notifications
+                    - text: handles
+                    - code [ref=e390]: consentRevoked
+                    - text: (session invalidation) and
+                    - code [ref=e391]: accountDelete
+                    - text: (hard-delete of linked accounts).
+                  - listitem [ref=e392]: Account deletion is available in-app (Settings → Usuń konto).
+        - generic [ref=e395]:
+          - generic [ref=e396]:
+            - heading "About" [level=2] [ref=e397]
+            - paragraph [ref=e398]: See what's happening in your city - mobile app for the Polish market
+            - heading "Resources" [level=3] [ref=e399]
+            - link "Readme" [ref=e401] [cursor=pointer]:
+              - /url: "#readme-ov-file"
+            - link "Activity" [ref=e405] [cursor=pointer]:
+              - /url: /pisze-programy/PanPeryskop/activity
+            - heading "Stars" [level=3] [ref=e408]
+            - generic [ref=e410]:
+              - strong [ref=e413]: "1"
+              - text: star
+            - heading "Watchers" [level=3] [ref=e414]
+            - generic [ref=e416]:
+              - strong [ref=e419]: "0"
+              - text: watching
+            - heading "Forks" [level=3] [ref=e420]
+            - link [ref=e422] [cursor=pointer]:
+              - /url: /pisze-programy/PanPeryskop/forks
+              - strong [ref=e426]: "0"
+              - text: forks
+            - link "Report repository" [ref=e428] [cursor=pointer]:
+              - /url: /contact/report-content?content_url=https%3A%2F%2Fgithub.com%2Fpisze-programy%2FPanPeryskop&report=pisze-programy+%28user%29
+          - heading "Releases" [level=2] [ref=e430]
+          - heading "Packages" [level=2] [ref=e434]
+          - heading "Contributors" [level=2] [ref=e437]
+          - heading "Languages" [level=2] [ref=e440]
+    - contentinfo [ref=e443]:
+      - heading "Footer" [level=2] [ref=e444]
+      - generic [ref=e445]:
+        - generic [ref=e446]:
+          - link "GitHub Homepage" [ref=e447] [cursor=pointer]:
+            - /url: https://github.com
+          - generic [ref=e450]: © 2026 GitHub, Inc.
+        - navigation "Footer" [ref=e451]:
+          - heading "Footer navigation" [level=3] [ref=e452]
+          - list "Footer navigation" [ref=e453]:
+            - listitem [ref=e454]:
+              - link "Terms" [ref=e455] [cursor=pointer]:
+                - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+            - listitem [ref=e456]:
+              - link "Privacy" [ref=e457] [cursor=pointer]:
+                - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+            - listitem [ref=e458]:
+              - link "Security" [ref=e459] [cursor=pointer]:
+                - /url: https://github.com/security
+            - listitem [ref=e460]:
+              - link "Status" [ref=e461] [cursor=pointer]:
+                - /url: https://www.githubstatus.com/
+            - listitem [ref=e462]:
+              - link "Community" [ref=e463] [cursor=pointer]:
+                - /url: https://github.community/
+            - listitem [ref=e464]:
+              - link "Docs" [ref=e465] [cursor=pointer]:
+                - /url: https://docs.github.com/
+            - listitem [ref=e466]:
+              - link "Contact" [ref=e467] [cursor=pointer]:
+                - /url: https://support.github.com?tags=dotcom-footer
+            - listitem [ref=e468]:
+              - button "Manage cookies" [ref=e470] [cursor=pointer]
+            - listitem [ref=e471]:
+              - button "Do not share my personal information" [ref=e473] [cursor=pointer]
+  - alert [ref=e476]

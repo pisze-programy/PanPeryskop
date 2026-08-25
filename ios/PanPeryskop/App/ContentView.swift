@@ -94,6 +94,9 @@ struct ContentView: View {
             guard let payload = note.object as? PushPostPayload else { return }
             Task { await openPushPost(payload) }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .didCaptureMedia)) { _ in
+            mapViewModel.selectFeedCategory(.live)
+        }
         .onChange(of: pendingStoryId) { _, newId in
             guard let newId else { return }
             pendingStoryId = nil

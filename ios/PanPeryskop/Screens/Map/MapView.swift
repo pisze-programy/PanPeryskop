@@ -309,4 +309,5 @@ struct MapScreen: View {
 extension Notification.Name {
     static let flyToCity = Notification.Name("flyToCity")
     static let scrollToPost = Notification.Name("scrollToPost")
+    static let didCaptureMedia = Notification.Name("didCaptureMedia")
 }

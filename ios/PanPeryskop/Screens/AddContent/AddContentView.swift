@@ -25,6 +25,7 @@ struct AddContentView: View {
                         case .photo, .video:
                             captureResult = result
                             ToastManager.shared.show("Gotowe!")
+                            NotificationCenter.default.post(name: .didCaptureMedia, object: nil)
                         }
                     }
                     .ignoresSafeArea()

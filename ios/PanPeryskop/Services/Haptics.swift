@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import CoreHaptics
 
 @MainActor
 enum Haptics {
@@ -17,6 +18,61 @@ enum Haptics {
 
     static func error() {
         UINotificationFeedbackGenerator().notificationOccurred(.error)
+    }
+
+    /// Drum roll: rapid taps that get faster, stronger and crisper, then one
+    /// final strong hit. Played via the CoreHaptics pattern player for a smooth,
+    /// realistic build-up; falls back to a UIKit tick loop when unsupported.
+    static func drumRoll() {
+        Task { @MainActor in
+            if CHHapticEngine.capabilitiesForHardware().supportsHaptics {
+                do {
+                    let engine = try CHHapticEngine()
+                    engine.playsHapticsOnly = true
+                    try await engine.start()
+
+                    let taps = 10
+                    let interval: TimeInterval = 0.05
+                    var events: [CHHapticEvent] = []
+
+                    for i in 0..<taps {
+                        let t = TimeInterval(i) * interval
+                        let progress = Double(i) / Double(taps - 1)
+                        events.append(CHHapticEvent(
+                            eventType: .hapticTransient,
+                            parameters: [
+                                CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(0.35 + 0.55 * progress)),
+                                CHHapticEventParameter(parameterID: .hapticSharpness, value: Float(0.2 + 0.65 * progress)),
+                            ],
+                            relativeTime: t
+                        ))
+                    }
+
+                    events.append(CHHapticEvent(
+                        eventType: .hapticTransient,
+                        parameters: [
+                            CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
+                            CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.9),
+                        ],
+                        relativeTime: TimeInterval(taps) * interval + 0.04
+                    ))
+
+                    let pattern = try CHHapticPattern(events: events, parameters: [])
+                    try engine.makePlayer(with: pattern).start(atTime: 0)
+                    return
+                } catch {
+                    // fall through to the tick-loop fallback
+                }
+            }
+
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.prepare()
+            for i in 0..<9 {
+                generator.impactOccurred(intensity: 0.4 + CGFloat(i) * 0.05)
+                try? await Task.sleep(nanoseconds: 50_000_000)
+            }
+            UIImpactFeedbackGenerator(style: .heavy).impactOccurred(intensity: 1.0)
+        }
     }
 
     static func explosion() {

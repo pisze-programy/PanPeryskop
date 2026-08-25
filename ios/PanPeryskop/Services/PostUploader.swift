@@ -101,6 +101,14 @@ final class PostUploader: @unchecked Sendable {
             thumbData: thumb,
             fields: ["type": post.type, "lat": String(post.lat), "lng": String(post.lng), "description": post.description]
         )
+
+        // The post is now SAVED (media uploaded, post created — video compression
+        // already done). Fly the map camera to the new pin.
+        let lat = post.lat
+        let lng = post.lng
+        await MainActor.run {
+            NotificationCenter.default.post(name: .centerMapOnRequest, object: MapCenterPayload(lat: lat, lng: lng))
+        }
     }
 
     private func report(_ post: PendingPost, type: String, message: String, retries: Int? = nil) async {

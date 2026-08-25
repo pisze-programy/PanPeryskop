@@ -114,7 +114,7 @@ struct DescriptionStepView: View {
             PendingPostsStore.shared.enqueue(videoURL: url, thumbData: mediaData, lat: lat, lng: lng, description: "")
         }
 
-        Haptics.success()
+        Haptics.drumRoll()
         PostUploader.shared.start()
         ToastManager.shared.show("Publikuję!")
         dismiss()

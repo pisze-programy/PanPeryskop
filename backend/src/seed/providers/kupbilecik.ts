@@ -18,6 +18,12 @@ import { resolveGeo } from '../core/geo';
 
 const MONTHS = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
 
+// Listing day-label header, e.g. `<b>1 września 2026</b>`. Built from MONTHS on
+// purpose: `\w+` would NOT match Polish diacritics (września, października), so
+// every September/October listing silently produced 0 candidates. `\d{4}` also
+// keeps the parser working past the hardcoded 2026 year.
+export const KUP_DAY_LABEL_RE = new RegExp(`<b>(\\d{1,2} (?:${MONTHS.join('|')}) \\d{4})</b>`);
+
 // Try a plain Workers fetch first — sitemap.xml passes from the edge (200), so
 // listing pages may too. Falls back to Browser Run when Bot Fight 403s the
 // request (same strategy as kupbilecikFetchBytes).
@@ -45,6 +51,13 @@ export async function fetchKupbilecik(ctx: SeedContext): Promise<SeedCandidate[]
   return out;
 }
 
+// A kupbilecik event href can be absolute or relative — the listing server renders
+// a mix of both (absolute in most day-blocks, relative in some). Normalize to an
+// absolute URL so parsing never depends on the rendering flavor of the page.
+export function normalizeKupHref(href: string): string {
+  return /^https?:\/\//.test(href) ? href : `${KUP_BASE}${href}`;
+}
+
 // Parse one listing page into lightweight candidates (no event/venue browser).
 
 async function fetchKupCategory(ctx: SeedContext, listing: string, seen: Set<string>): Promise<SeedCandidate[]> {
@@ -58,25 +71,24 @@ async function fetchKupCategory(ctx: SeedContext, listing: string, seen: Set<str
     const url = `${KUP_BASE}${listing}&qt=&qw=&qs=&qo=ASC&qn=${qn}`;
     let page: string;
     try { page = await kupGetText(ctx, url); } catch (e) { console.error(`kupbilecik listing ${url} failed: ${(e as Error).message}`); break; }
-    const parts = page.split(/<b>(\d{1,2} \w+ 2026)<\/b>/);
+    const parts = page.split(KUP_DAY_LABEL_RE);
     let dayHits = 0;
     for (let k = 1; k < parts.length - 1; k += 2) {
       if (parts[k].trim() !== label) continue;
       dayHits++;
       const content = parts[k + 1];
       const timeM = content.match(/godz\.\s*(\d{2}:\d{2})/);
-      for (const m2 of content.matchAll(/href="(https:\/\/www\.kupbilecik\.pl\/(?:imprezy|wydarzenia)\/[^"]+)"/g)) {
-        const href = m2[1];
-        if (href.includes('/imprezy/')) {
-          const id = (href.match(/\/(?:imprezy|wydarzenia)\/(\d+)\//) || [])[1];
-          if (!id || seen.has(id)) continue;
-          seen.add(id);
-          const c = buildFromHtml(ctx, href, content, id, timeM && timeM[1], listing);
-          if (c) list.push(c);
-        } else {
-          const sub = await expandFestival(ctx, href, seen, listing);
-          list.push(...sub);
-        }
+      for (const m2 of content.matchAll(/href="((?:https:\/\/www\.kupbilecik\.pl)?\/(?:imprezy|wydarzenia)\/[^"]+)"/g)) {
+        const href = normalizeKupHref(m2[1]);
+        const id = (href.match(/\/(?:imprezy|wydarzenia)\/(\d+)\//) || [])[1];
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        // Every listing row (both /imprezy/ and /wydarzenia/) is a single event
+        // with its own day header — the row HTML carries title/time/venue/poster,
+        // so build the candidate straight from the block. No per-event browser
+        // call; rows without a poster are skipped (media is required).
+        const c = buildFromHtml(ctx, href, content, id, timeM && timeM[1], listing);
+        if (c) list.push(c);
       }
     }
     if (dayHits === 0) { emptyStreak++; if (emptyStreak >= 2) break; }
@@ -84,26 +96,6 @@ async function fetchKupCategory(ctx: SeedContext, listing: string, seen: Set<str
   }
   console.log(`kupbilecik category ${listing} -> ${list.length} candidates in ${((Date.now() - t0) / 1000).toFixed(2)}s`);
   return list;
-}
-
-// Build a candidate from a listing/festival HTML fragment — zero browser calls.
-async function expandFestival(ctx: SeedContext, href: string, seen: Set<string>, listing: string): Promise<SeedCandidate[]> {
-  const out: SeedCandidate[] = [];
-  try {
-    const page = await kupGetText(ctx, href);
-    const links = [...new Set([...page.matchAll(/href="(\/imprezy\/\d+[^"]*)"/g)].map((m) => m[1]))];
-    for (const link of links) {
-      const id = (link.match(/\/imprezy\/(\d+)\//) || [])[1];
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      // Festival page: reuse listing extraction from the festival HTML block.
-      const c = buildFromHtml(ctx, `${KUP_BASE}${link}`, page, id, null, listing);
-      if (c) out.push(c);
-    }
-  } catch (e) {
-    console.error(`kupbilecik festival ${href} failed: ${(e as Error).message}`);
-  }
-  return out;
 }
 
 // Build the venue page URL from a geoRef. New candidates carry the FULL path
@@ -210,7 +202,9 @@ export function kupTags(listing: string, title: string): string[] | null {
 export function buildFromHtml(
   ctx: SeedContext, href: string, html: string, id: string, fallbackTime: string | null = null, listing = ''
 ): SeedCandidate | null {
-  const titleM = html.match(/<h2 class="blackLine">[^<]*<a href="https:\/\/www\.kupbilecik\.pl\/imprezy\/\d+\/[^"]+"[^>]*>\s*<b>([^<]+)<\/b>/);
+  // Title href may be absolute or relative and /imprezy/ or /wydarzenia/ — the
+  // listing server renders a mix; accept both.
+  const titleM = html.match(/<h2 class="blackLine">[^<]*<a href="(?:https:\/\/www\.kupbilecik\.pl)?\/(?:imprezy|wydarzenia)\/\d+\/[^"]+"[^>]*>\s*<b>([^<]+)<\/b>/);
   const title = titleM ? decode(titleM[1]) : '';
   const timeM = html.match(/godz\.\s*(\d{2}:\d{2})/);
   const time = (timeM && timeM[1]) || fallbackTime;

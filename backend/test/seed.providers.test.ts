@@ -530,6 +530,52 @@ test('kupbilecik: kupVenueUrl/kupVenueId build the full slug URL (bare id 404s, 
   assert.equal(kupVenueId('3084'), '3084');
 });
 
+test('kupbilecik: normalizeKupHref absolutizes relative (imprezy|wydarzenia) hrefs', async () => {
+  const { normalizeKupHref } = await import('../src/seed/providers/kupbilecik');
+  assert.equal(
+    normalizeKupHref('/imprezy/208298/Krak%C3%B3w/Stand-up%3A+Tomek+Ko%C5%82ecki/'),
+    'https://www.kupbilecik.pl/imprezy/208298/Krak%C3%B3w/Stand-up%3A+Tomek+Ko%C5%82ecki/',
+    'relative /imprezy/ prefixed with KUP_BASE'
+  );
+  assert.equal(
+    normalizeKupHref('/wydarzenia/10409/Warszawa/Nothing/'),
+    'https://www.kupbilecik.pl/wydarzenia/10409/Warszawa/Nothing/',
+    'relative /wydarzenia/ prefixed with KUP_BASE'
+  );
+  assert.equal(
+    normalizeKupHref('https://www.kupbilecik.pl/imprezy/123/Gdynia/Test/'),
+    'https://www.kupbilecik.pl/imprezy/123/Gdynia/Test/',
+    'absolute href left untouched'
+  );
+});
+
+test('kupbilecik: day-label regex splits Polish months with diacritics (września/października)', async () => {
+  const { KUP_DAY_LABEL_RE } = await import('../src/seed/providers/kupbilecik');
+  // Regression: the old `\w+` (ASCII) silently matched nothing for these months,
+  // so every September/October listing produced 0 candidates.
+  for (const label of ['1 września 2026', '31 października 2026', '15 sierpnia 2026', '3 stycznia 2027']) {
+    const parts = `<b>${label}</b>event row`.split(KUP_DAY_LABEL_RE);
+    assert.equal(parts[1], label, `${label} split as a day header`);
+  }
+  const sep = `<b>1 września 2026</b><b>2 września 2026</b>`.split(KUP_DAY_LABEL_RE);
+  assert.equal(sep[1], '1 września 2026');
+  assert.equal(sep[3], '2 września 2026', 'consecutive day headers both split');
+});
+
+test('kupbilecik: buildFromHtml extracts the title from a relative /wydarzenia/ row link', async () => {
+  const { buildFromHtml } = await import('../src/seed/providers/kupbilecik');
+  const html = `
+    <div class="linia-1"><h2 class="blackLine"><a href="/wydarzenia/10409/Warszawa/Nothing/" title="Bilety na Nothing / Warszawa / 1 września 2026 o godz. 20:00"><b>Nothing</b></a></h2></div>
+    <div class="linia-3">1 września 2026 o godz. 20:00</div>
+    <div class="linia-4 blackLine"><a href="/miasta/3/Warszawa/"><b>Warszawa</b></a> w <a href="/obiekty/1564/Klub+Hydrozagadka/" title="Klub Hydrozagadka">Klub Hydrozagadka</a></div>
+    <img data-src="https://www.kupbilecik.pl/img/gal_baza/abc123_m.webp?t=1" />`;
+  const ctx = { dayStart: Date.parse('2026-09-01T00:00:00+02:00'), day: '2026-09-01' } as never;
+  const c = buildFromHtml(ctx, 'https://www.kupbilecik.pl/wydarzenia/10409/Warszawa/Nothing/', html, '10409', '20:00', '/koncerty/?q=');
+  assert.equal(c!.title, 'Nothing', 'title read from a relative /wydarzenia/ href');
+  assert.equal(c!.externalId, 'kupbilecik-10409-2026-09-01');
+  assert.equal(c!.link, 'https://www.kupbilecik.pl/wydarzenia/10409/Warszawa/Nothing/');
+});
+
 test('vps runtime: fetchWithRetry retries a flaky scope fetch, succeeds on retry', async () => {
   const { fetchWithRetry } = await import('../src/seed/executors/vps/runtime');
   let calls = 0;

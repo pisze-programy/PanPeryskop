@@ -280,13 +280,12 @@ function reportDigest(cfg: ProviderConfig, day: string, status: string, env: Rec
   let candidates = 0, ingested = 0, errors = 0;
   try {
     if (existsSync(out)) {
-      const entries = JSON.parse(readFileSync(out, 'utf8')) as Array<{ external_id?: string; status?: string }>;
-      // The staged output accumulates the WHOLE window — count only the target day
-      // (the day is embedded in external_id, e.g. cinemacity-<film>-<cinema>-<day>).
-      const dayEntries = entries.filter((e) => {
-        const m = /(20\d\d-\d\d-\d\d)/.exec(e.external_id || '');
-        return m && m[1] === day;
-      });
+      const entries = JSON.parse(readFileSync(out, 'utf8')) as Array<{ external_id?: string; status?: string; created_at?: string }>;
+      // The staged output accumulates the WHOLE window — count only the target day.
+      // Filter by created_at (the event's own day, set in entryFor) — NOT by a date
+      // embedded in external_id, which going/luma/meetup do not carry (going-<id>,
+      // luma-evt-<id>, meetup-<id>) and would always report 0 ingested for.
+      const dayEntries = entries.filter((e) => (e.created_at || '').slice(0, 10) === day);
       candidates = dayEntries.length;
       ingested = dayEntries.filter((e) => e.status === 'done').length;
       errors = dayEntries.filter((e) => e.status === 'error').length;

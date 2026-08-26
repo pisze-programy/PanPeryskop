@@ -20,9 +20,9 @@ enum Haptics {
         UINotificationFeedbackGenerator().notificationOccurred(.error)
     }
 
-    /// Drum roll: rapid taps that get faster, stronger and crisper, then one
-    /// final strong hit. Played via the CoreHaptics pattern player for a smooth,
-    /// realistic build-up; falls back to a UIKit tick loop when unsupported.
+    /// Drum roll: taps that start slow and weak, then speed up and get stronger
+    /// and crisper, ending with a double final accent. Played via the CoreHaptics
+    /// pattern player; falls back to a UIKit tick loop when unsupported.
     static func drumRoll() {
         Task { @MainActor in
             guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
@@ -33,30 +33,45 @@ enum Haptics {
                 let engine = try sharedHapticEngine()
                 try await engine.start()
 
-                let taps = 10
-                let interval: TimeInterval = 0.05
+                let taps = 12
+                let startInterval: TimeInterval = 0.12
+                let endInterval: TimeInterval = 0.045
                 var events: [CHHapticEvent] = []
+                var t: TimeInterval = 0
 
                 for i in 0..<taps {
-                    let t = TimeInterval(i) * interval
                     let progress = Double(i) / Double(taps - 1)
+                    let intensity = 0.6 + 0.4 * progress
+                    let sharpness = 0.45 + 0.55 * progress
                     events.append(CHHapticEvent(
                         eventType: .hapticTransient,
                         parameters: [
-                            CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(0.35 + 0.55 * progress)),
-                            CHHapticEventParameter(parameterID: .hapticSharpness, value: Float(0.2 + 0.65 * progress)),
+                            CHHapticEventParameter(parameterID: .hapticIntensity, value: Float(intensity)),
+                            CHHapticEventParameter(parameterID: .hapticSharpness, value: Float(sharpness)),
                         ],
                         relativeTime: t
                     ))
+                    // Quadratic speed-up: slow at the start, fast at the end.
+                    let interval = startInterval - (startInterval - endInterval) * (progress * progress)
+                    t += interval
                 }
 
+                // Double final accent — the "ba-dum" ending.
                 events.append(CHHapticEvent(
                     eventType: .hapticTransient,
                     parameters: [
                         CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
                         CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.9),
                     ],
-                    relativeTime: TimeInterval(taps) * interval + 0.04
+                    relativeTime: t + 0.05
+                ))
+                events.append(CHHapticEvent(
+                    eventType: .hapticTransient,
+                    parameters: [
+                        CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.95),
+                        CHHapticEventParameter(parameterID: .hapticSharpness, value: 1.0),
+                    ],
+                    relativeTime: t + 0.14
                 ))
 
                 let pattern = try CHHapticPattern(events: events, parameters: [])
@@ -83,10 +98,17 @@ enum Haptics {
     private static func tickRollFallback() async {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.prepare()
-        for i in 0..<9 {
-            generator.impactOccurred(intensity: 0.4 + CGFloat(i) * 0.05)
-            try? await Task.sleep(nanoseconds: 50_000_000)
+        let taps = 12
+        let startInterval: TimeInterval = 0.12
+        let endInterval: TimeInterval = 0.045
+        for i in 0..<taps {
+            let progress = Double(i) / Double(taps - 1)
+            let interval = startInterval - (startInterval - endInterval) * (progress * progress)
+            generator.impactOccurred(intensity: 0.6 + CGFloat(progress) * 0.4)
+            try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
         }
+        generator.impactOccurred(intensity: 1.0)
+        try? await Task.sleep(nanoseconds: 90_000_000)
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred(intensity: 1.0)
     }
 

@@ -17,6 +17,7 @@ export const SORTABLE_SRC = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sort
 export const NAV = [
   { href: '/admin', label: 'Overview', icon: 'layout-dashboard' },
   { href: '/admin/events', label: 'Eventy', icon: 'calendar-event' },
+  { href: '/admin/blacklist', label: 'Blacklista', icon: 'ban' },
   { href: '/admin/tags', label: 'Tagi', icon: 'tags' },
   { href: '/admin/users', label: 'Użytkownicy', icon: 'users' },
   { href: '/admin/posts', label: 'Posty', icon: 'photo' },

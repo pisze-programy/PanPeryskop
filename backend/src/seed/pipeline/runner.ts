@@ -10,6 +10,7 @@ import { warsawMidnightMs, tomorrowWarsaw, eventCreatedAtMs, eventDayEndMs } fro
 import { buildDescription, dedupe, showtimesJson, showtimeBookingJson, tagsJson } from '../core/dedupe';
 import { fallbackSeedGeo } from '../core/geo';
 import { dropCancelled, rescueRealShows } from '../core/filters';
+import { loadBlacklistRules, findBlacklist, blacklistReason } from '../core/blacklist';
 import { resolveKupGeo } from '../providers/kupbilecik';
 import { writeSeedRun, browserBudget, BrowserBudget } from '../core/log';
 import { SEED_DEVICE_ID } from '../core/constants';
@@ -77,6 +78,9 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
   const collectedCands = collected.map((x) => x.candidate);
   const pre = dropCancelled(collectedCands);
   const merged = rescueRealShows(pre, dedupe(pre));
+  // Blacklist rules load once per run; matched survivors are skipped before any
+  // media download (counted as skipped, not errors).
+  const blacklistRules = await loadBlacklistRules(env.DB);
   let totalIngested = 0, totalSkipped = 0;
   const allErrors: { externalId: string; error: string }[] = [];
 
@@ -84,6 +88,12 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
     const provider = bySource.get(c.source);
     const providerResult = allCandidates.find((r) => r.provider === c.source)!;
     if (!provider || !providerResult) continue;
+    const bl = findBlacklist(blacklistRules, { title: c.title, venue: c.venue, partnerId: c.partnerId });
+    if (bl) {
+      providerResult.skipped++; totalSkipped++;
+      console.log(`seed ${runType} day=${day} skip blacklist ${c.externalId} (${blacklistReason(bl)})`);
+      continue;
+    }
     let pendingGeo = false;
     if (typeof c.lat !== 'number' || typeof c.lng !== 'number') {
       // kupbilecik defers geo to after dedupe (venue store → browser fallback).
@@ -142,7 +152,8 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
       await doSavePost(
         env, user, postId, 'photo', c.lat, c.lng, description,
         mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing), Boolean(c.isSoldOut), showtimesJson(c), showtimeBookingJson(c), tagsJson(c),
-        (pendingGeo || provider.pendingByDefault) ? STATUS_PENDING : STATUS_APPROVED
+        (pendingGeo || provider.pendingByDefault) ? STATUS_PENDING : STATUS_APPROVED,
+        c.partnerId || null, c.partnerName || null
       );
       providerResult.ingested++; totalIngested++;
     } catch (e) {

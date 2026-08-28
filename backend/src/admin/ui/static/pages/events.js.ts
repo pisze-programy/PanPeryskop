@@ -155,5 +155,22 @@ export const EVENTS_JS = String.raw`
     if (e) e.preventDefault();
     location.href = '/admin/events';
   };
+  window.ppBlacklistOpen = function (title, loc, partnerId, partnerName) {
+    var clean = String(title || '').replace(/\s*[-–—]\s*kopia.*$/i, '').trim();
+    var venue = String(loc || '').split(',')[0].trim();
+    var payload = { pattern: clean, venue: venue, partner_id: partnerId || '', partner_name: partnerName || '' };
+    fetch('/admin/api/blacklist/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (resp) {
+        var n = resp && resp.matchCount ? resp.matchCount : 0;
+        var msg = 'Doda\u0107 do blacklisty?\n\nTytu\u0142: ' + clean + '\nVenue: ' + (venue || '(brak)') + '\nOrganizator: ' + (partnerName || '(brak)') + '\n\nZablokuje ' + n + ' aktualnych wydarze\u0144' + (n ? '' : ' (obecnie 0 \u2014 z\u0142apie przysz\u0142e)') + '.';
+        if (!window.confirm(msg)) return;
+        fetch('/admin/api/blacklist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+          .then(function () { window.ppToast('Dodano do blacklisty.', 'success'); })
+          .catch(function () { window.ppToast('Nie uda\u0142o si\u0119 doda\u0107 do blacklisty.', 'danger'); });
+      })
+      .catch(function () { window.ppToast('Nie uda\u0142o si\u0119 sprawdzi\u0107 dopasowa\u0144.', 'danger'); });
+  };
 })();
 `;

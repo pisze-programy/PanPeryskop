@@ -19,6 +19,8 @@ interface GoingHit {
   category_name?: string;
   category_slug?: string;
   tags_names?: string[];
+  partner_id?: number;
+  partner_name?: string;
 }
 
 interface PlaceInfo {
@@ -53,15 +55,34 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
   const cloudSig = ctx.env.CLOUDINARY_SIG || '';
   if (!appId || !apiKey) throw new Error('going: ALGOLIA_APP_ID/ALGOLIA_API_KEY not configured');
   const algoliaUrl = `https://${appId}-dsn.algolia.net/1/indexes/*/queries?x-algolia-api-key=${encodeURIComponent(apiKey)}&x-algolia-application-id=${encodeURIComponent(appId)}`;
-  const params = `query=&filters=type%3Arundate&numericFilters=start_date_timestamp%3E%3D${ctx.dayStart}%2Cstart_date_timestamp%3C%3D${ctx.dayEnd}&hitsPerPage=100`;
-  const res = await fetch(algoliaUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: GOING_ALGOLIA_ORIGIN },
-    body: JSON.stringify({ requests: [{ indexName: 'search-main', params }] }),
-  });
-  if (!res.ok) throw new Error(`going algolia -> ${res.status}`);
-  const data = (await res.json()) as { results?: { hits?: GoingHit[] }[] };
-  const hits: GoingHit[] = data.results?.[0]?.hits || [];
+
+  // Page over the whole day — Algolia caps hitsPerPage at 100 and busy days
+  // (fests, weekend concerts) routinely exceed it. Dedupe by objectID across
+  // pages so a pagination overlap never double-ingests a rundate.
+  const base = `query=&filters=type%3Arundate&numericFilters=start_date_timestamp%3E%3D${ctx.dayStart}%2Cstart_date_timestamp%3C%3D${ctx.dayEnd}&hitsPerPage=100`;
+  const hits: GoingHit[] = [];
+  const seen = new Set<string>();
+  let page = 0;
+  for (;;) {
+    const res = await fetch(algoliaUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: GOING_ALGOLIA_ORIGIN },
+      body: JSON.stringify({ requests: [{ indexName: 'search-main', params: `${base}&page=${page}` }] }),
+    });
+    if (!res.ok) throw new Error(`going algolia -> ${res.status}`);
+    const data = (await res.json()) as { results?: { hits?: GoingHit[]; nbPages?: number }[] };
+    const r = data.results?.[0];
+    const pageHits = r?.hits || [];
+    for (const h of pageHits) {
+      const key = String(h.objectID || h.path || '');
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      hits.push(h);
+    }
+    if (pageHits.length === 0 || pageHits.length < 100 || page >= (r?.nbPages ?? 1) - 1) break;
+    page++;
+  }
+
   const out: SeedCandidate[] = [];
   for (const h of hits) {
     let place: PlaceInfo = {};
@@ -92,6 +113,8 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
       mediaUrl: GOING_POSTER(enc, cloudSig),
       thumbUrl: GOING_THUMB(enc, cloudSig),
       tags: goingTags(h.category_slug, h.name_pl) ?? undefined,
+      partnerId: h.partner_id != null ? String(h.partner_id) : undefined,
+      partnerName: h.partner_name || undefined,
     });
   }
   return out;

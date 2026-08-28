@@ -20,7 +20,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { dedupe, buildDescription } from '../../../../src/seed/core/dedupe';
-import { isCancelled } from '../../../../src/seed/core/filters';
+import { isCancelled, dropCancelled, rescueRealShows } from '../../../../src/seed/core/filters';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs, warsawDateOf, eventDayEndMs } from '../../../../src/seed/core/dates';
 import { GeoStore, fallbackSeedGeo } from '../../../../src/seed/core/geo';
 import { SEED_DAYS_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1, VPS_CONCURRENCY } from '../../../../src/seed/core/constants';
@@ -231,6 +231,9 @@ export interface SeedEntry {
   showtimes?: string[] | null;
   showtime_booking?: { time: string; kind: string; params: Record<string, string> }[] | null;
   tags?: string[] | null;
+  /** Organizer (goingapp partner) — blacklist matching + admin display. */
+  partner_id?: string | null;
+  partner_name?: string | null;
   /** True when the entry used a default geo pin (city center / 0,0) — upload as PENDING. */
   no_geo?: boolean;
 }
@@ -361,6 +364,8 @@ export function entryFor(c: SeedCandidate & { lat: number; lng: number }, mediaR
     showtimes: c.times?.length ? c.times : null,
     showtime_booking: c.showtimeBooking?.length ? c.showtimeBooking : null,
     tags: c.tags?.length ? c.tags : null,
+    partner_id: c.partnerId || null,
+    partner_name: c.partnerName || null,
     // Geo-less events got a default pin — seed-ingest uploads them as PENDING
     // (skips auto-approve) so they never appear before the admin fixes/approves.
     no_geo: (c as SeedCandidate & { fallbackGeo?: boolean }).fallbackGeo ? true : undefined,
@@ -506,10 +511,18 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
     }
     const t0 = Date.now();
     try {
-      const cands = (await fetchWithRetry(src, scope, ctx))
+      const fetched = (await fetchWithRetry(src, scope, ctx))
         .filter((c) => c.startMs >= windowStart && c.startMs <= windowEnd);
-      console.log(`[${src.source}] ✓ ${scope}: ${cands.length} candidates`);
-      logLoad('scope:fetch', `${src.source}/${scope} cands=${cands.length} ${Date.now() - t0}ms`);
+      // Intra-provider dedupe — the SAME chain as the Worker (dropCancelled →
+      // dedupe → rescueRealShows). goingapp emits "kopia" rundates of the same
+      // event (same title/venue/time, distinct rundate links); without this every
+      // copy is staged and uploaded as its own post. Cinema sources stay exempt
+      // (dedupe() skips them internally). Later the blacklist (applied by
+      // seed-ingest at upload) drops matched spam entirely.
+      const pre = dropCancelled(fetched);
+      const cands = rescueRealShows(pre, dedupe(pre));
+      console.log(`[${src.source}] ✓ ${scope}: ${fetched.length} candidates → ${cands.length} after dedupe`);
+      logLoad('scope:fetch', `${src.source}/${scope} fetched=${fetched.length} deduped=${cands.length} ${Date.now() - t0}ms`);
 
       const rejectGeo = src.scopeGeo(scope) ?? firstCoords(cands);
       if (rejectGeo && !args.noReject) await rejectDisplaced(scope, rejectGeo, cands);

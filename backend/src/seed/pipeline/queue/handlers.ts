@@ -11,6 +11,7 @@ import { TTL_MS, STATUS_APPROVED, STATUS_PENDING } from '../../../core/models';
 import { dedupe, buildDescription, showtimesJson, showtimeBookingJson, tagsJson } from '../../core/dedupe';
 import { fallbackSeedGeo } from '../../core/geo';
 import { dropCancelled, rescueRealShows, isCancelled } from '../../core/filters';
+import { loadBlacklistRules, findBlacklist, blacklistReason } from '../../core/blacklist';
 import { buildVenueCache } from '../../providers/eventylive';
 import { resolveKupGeo } from '../../providers/kupbilecik';
 import { writeSeedRun } from '../../core/log';
@@ -99,13 +100,14 @@ export async function handleFetch(env: EnvQ, m: Extract<SeedQueueMessage, { type
   const stmt = env.DB.prepare(
     `INSERT INTO seed_candidates
       (id, batch_id, provider, scope, external_id, title, start_ms, lat, lng, city, venue, address, link, media_url, thumb_url,
-       is_sold_out, geo_ref, showtimes, showtime_booking, tags, status, attempts, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '${CandidateStatus.PENDING}', 0, ?, ?)`
+       is_sold_out, geo_ref, showtimes, showtime_booking, tags, partner_id, partner_name, status, attempts, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '${CandidateStatus.PENDING}', 0, ?, ?)`
   );
   for (const c of candidates) {
     await stmt.bind(nanoid(24), m.batchId, provider.id, m.scope, c.externalId, c.title, c.startMs,
       c.lat, c.lng, c.city, c.venue, c.address, c.link, c.mediaUrl, c.thumbUrl,
-      c.isSoldOut ? 1 : 0, c.geoRef || null, showtimesJson(c), showtimeBookingJson(c), tagsJson(c), t, t).run();
+      c.isSoldOut ? 1 : 0, c.geoRef || null, showtimesJson(c), showtimeBookingJson(c), tagsJson(c),
+      c.partnerId || null, c.partnerName || null, t, t).run();
   }
 
   // Log per-scope run (duration + browser ms) to seed_runs so the dashboard and
@@ -197,6 +199,17 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     const existing = await env.DB.prepare('SELECT id FROM posts WHERE external_id=?').bind(cand.externalId).first<{ id: string }>();
     const postId = existing?.id || nanoid(24);
 
+    // Blacklist gate: a rule matched on title/venue/organizer drops the candidate
+    // BEFORE any media download. Terminal (duplicate) — the batch still completes.
+    const blacklistRules = await loadBlacklistRules(env.DB as D1Database);
+    const bl = findBlacklist(blacklistRules, { title: cand.title, venue: cand.venue, partnerId: cand.partnerId });
+    if (bl) {
+      await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.DUPLICATE}', reason=?, updated_at=? WHERE id=?`)
+        .bind(blacklistReason(bl), now(), m.candidateId).run();
+      await maybeComplete(env, row.batch_id);
+      return;
+    }
+
     const provider = enabledProviders().find((p) => p.id === row.provider);
     if (!provider) throw new Error(`unknown provider ${row.provider}`);
     const ingestStart = now();
@@ -247,7 +260,8 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     const description = buildDescription(cand);
     await doSavePost(env as unknown as Env, user, postId, 'photo', cand.lat!, cand.lng!, description,
       mediaKey, thumbKey, createdAt, true, cand.link, cand.externalId, Boolean(existing), Boolean(cand.isSoldOut), showtimesJson(cand), showtimeBookingJson(cand), tagsJson(cand),
-      (pendingGeo || provider.pendingByDefault) ? STATUS_PENDING : STATUS_APPROVED);
+      (pendingGeo || provider.pendingByDefault) ? STATUS_PENDING : STATUS_APPROVED,
+      cand.partnerId || null, cand.partnerName || null);
 
     await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.DONE}', post_id=?, reason=NULL, updated_at=? WHERE id=?`)
       .bind(postId, now(), m.candidateId).run();

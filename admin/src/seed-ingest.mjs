@@ -49,6 +49,66 @@ const run = (cmd) => {
   throw lastErr;
 };
 
+// ---- event blacklist (mirror of backend seed/core/blacklist.ts) ----
+const TOKEN_RE = /[a-z0-9\u0430-\u044f\u0456\u0454\u0491]+/g;
+const BL_STOP = new Set(['w','i','na','z','do','o','a','the','and','or','vs','2026','2025','2024','poznan','warszawa','poland','polska','bilety','bilet','jest','tak','nie','sala','hala','pozn','kino','nad','seans','seansy','premiera','dnia','czesc']);
+function blFold(s) {
+  return String(s || '').normalize('NFC').toLowerCase().replaceAll('ł', 'l').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function blTokens(s) {
+  const w = (blFold(s).match(TOKEN_RE) || []);
+  return [...new Set(w.filter((x) => x.length >= 3 && !BL_STOP.has(x)))];
+}
+function blContain(a, b) {
+  if (!a.length || !b.length) return false;
+  const bs = new Set(b);
+  let shared = 0;
+  for (const w of a) if (bs.has(w)) shared++;
+  return shared >= 1 && shared / Math.min(a.length, b.length) >= 0.8;
+}
+function blLcs(A, B) {
+  const dp = new Array(B.length + 1).fill(0);
+  for (let i = 1; i <= A.length; i++) {
+    let prevDiag = 0;
+    for (let j = 1; j <= B.length; j++) {
+      const save = dp[j];
+      dp[j] = A[i - 1] === B[j - 1] ? prevDiag + 1 : Math.max(dp[j], dp[j - 1]);
+      prevDiag = save;
+    }
+  }
+  return dp[B.length];
+}
+function blSeqRatio(a, b) {
+  const A = blFold(a).replace(/[^a-z0-9\u0430-\u044f\u0456\u0454\u0491]+/g, ' ');
+  const B = blFold(b).replace(/[^a-z0-9\u0430-\u044f\u0456\u0454\u0491]+/g, ' ');
+  const n = 2 * blLcs(A, B);
+  return A.length + B.length ? n / (A.length + B.length) : 1;
+}
+function blMatch(rule, entry) {
+  const hasPattern = !!(rule.pattern && rule.pattern.trim());
+  const hasVenue = !!(rule.venue && rule.venue.trim());
+  const hasPartner = !!(rule.partner_id && String(rule.partner_id).trim());
+  if (!hasPattern && !hasPartner) return false;
+  if (hasPattern && !blContain(blTokens(rule.pattern), blTokens(entry.title || entry.description || ''))) return false;
+  if (hasVenue && !(entry.venue && blSeqRatio(rule.venue, entry.venue) >= 0.8)) return false;
+  if (hasPartner && String(entry.partner_id || '') !== String(rule.partner_id).trim()) return false;
+  return true;
+}
+async function fetchBlacklist() {
+  if (!ADMIN_SECRET) return [];
+  try {
+    const res = await fetch(`${BASE_URL}/admin/seed/blacklist`, {
+      headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.rules) ? data.rules : [];
+  } catch {
+    return []; // fail-open: a blacklist outage never blocks the seed
+  }
+}
+
 const [,, fileArg] = process.argv;
 if (!fileArg) {
   console.error('Usage: node admin/src/seed-ingest.mjs <events.json> [--force] [--approve]');
@@ -147,6 +207,8 @@ async function upload(session, entry, media, createdAt) {
   if (entry.showtimes) form.append('showtimes', JSON.stringify(entry.showtimes));
   if (entry.showtime_booking) form.append('showtime_booking', JSON.stringify(entry.showtime_booking));
   if (entry.tags && entry.tags.length) form.append('tags', JSON.stringify(entry.tags));
+  if (entry.partner_id) form.append('partner_id', String(entry.partner_id));
+  if (entry.partner_name) form.append('partner_name', String(entry.partner_name));
   // Fallback-geo events (no_geo) stay PENDING — never shown until the admin fixes
   // geo / approves. Normal events are created approved (no status field).
   if (entry.no_geo) form.append('status', 'pending');
@@ -200,6 +262,8 @@ async function main() {
   const session = { token: await login() };
   const rejectedIds = await fetchSeedIds('/admin/seed/rejected');
   const existingIds = force ? new Set() : await fetchSeedIds('/admin/seed/existing');
+  const blacklist = await fetchBlacklist();
+  if (blacklist.length) console.log(`blacklist: ${blacklist.length} aktywnych reguł (${BASE_URL})`);
   const tmp = mkdtempSync(join(tmpdir(), 'pp-seed-'));
   const results = { done: [], errors: [], skipped: 0 };
 
@@ -209,6 +273,17 @@ async function main() {
 
     if (entry.status === 'done' && !force) {
       results.skipped += 1;
+      continue;
+    }
+
+    // Blacklist: skip BEFORE downloading any media (the backend POST /posts is
+    // the backstop; this saves the media bytes on the 256 MB box).
+    const bl = blacklist.find((r) => blMatch(r, entry));
+    if (bl) {
+      entry.status = 'done'; // terminal — do not retry
+      entry.error = null;
+      results.skipped += 1;
+      console.log(`⊘ ${label}: blacklisted${bl.pattern ? ` "${bl.pattern}"` : ''}${bl.partner_name ? ` / ${bl.partner_name}` : ''} — skip`);
       continue;
     }
 
@@ -260,10 +335,14 @@ async function main() {
       }
       console.log(`✓ ${label} -> ${data.id} (${media.type}, created_at ${new Date(createdAt).toISOString()})`);
     } catch (e) {
-      entry.status = 'error';
-      entry.error = e.message;
-      results.errors.push({ label, error: e.message });
-      console.error(`✗ ${label}: ${e.message}`);
+      const msg = e.message || String(e);
+      // The backend POST /posts blacklist backstop (400 "blacklisted: …") means
+      // the rule list changed between our fetch and the POST — terminal, not a
+      // transient error (never retry in a loop).
+      entry.status = /blacklisted/i.test(msg) ? 'done' : 'error';
+      entry.error = msg;
+      results.errors.push({ label, error: msg });
+      console.error(`✗ ${label}: ${msg}`);
     }
   }
 

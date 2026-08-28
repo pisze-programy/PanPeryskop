@@ -67,6 +67,10 @@ export interface SeedCandidate {
   showtimeBooking?: ShowtimeBooking[];
   /** Canonical tags (subset of the closed tag set) — empty/absent = none. */
   tags?: string[];
+  /** Organizer id (goingapp Algolia partner_id) — feeds the event blacklist. */
+  partnerId?: string;
+  /** Organizer name (goingapp Algolia partner_name) — display only. */
+  partnerName?: string;
 }
 
 export interface SeedProviderResult {

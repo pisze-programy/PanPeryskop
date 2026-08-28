@@ -7,6 +7,7 @@ import { strField, fileField, ParsedForm } from '../core/form';
 import { mediaUrl, originFromRequest } from '../core/media';
 import { detectMediaType, extForMediaType } from '../core/mediaFormat';
 import { warsawDateOf } from '../seed/core/dates';
+import { loadBlacklistRules, findBlacklist, blacklistReason } from '../seed/core/blacklist';
 
 export const postsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -169,9 +170,43 @@ postsRoutes.post('/', async (c) => {
     status = statusRaw;
   }
 
+  // Optional organizer identity (goingapp partner_id/partner_name) — seed-only.
+  // Stored for the blacklist matcher and the admin "add to blacklist" action.
+  let partnerId: string | null = null;
+  let partnerName: string | null = null;
+  const partnerIdRaw = strField(form, 'partner_id');
+  if (partnerIdRaw) {
+    const pv = partnerIdRaw.trim();
+    if (!pv || pv.length > 50) return c.json({ error: 'Invalid partner_id' }, 400);
+    partnerId = pv;
+  }
+  const partnerNameRaw = strField(form, 'partner_name');
+  if (partnerNameRaw) {
+    const pn = partnerNameRaw.trim();
+    if (pn.length > 200) return c.json({ error: 'Invalid partner_name' }, 400);
+    partnerName = pn;
+  }
+
+  // Blacklist backstop: a seed event whose title/venue/organizer matches an
+  // active rule is rejected before the DB write. Primary enforcement happens
+  // earlier (seed-ingest / queue ingest); this guards any future ingest path.
+  if (externalId && description) {
+    const rules = await loadBlacklistRules(c.env.DB);
+    const m = /^(.+?):\s*\d{2}:\d{2},\s*(.*)$/.exec(description);
+    const bl = findBlacklist(rules, {
+      title: m ? m[1] : description,
+      venue: m ? (m[2].split(',')[0] || '').trim() : '',
+      partnerId,
+    });
+    if (bl) {
+      return c.json({ error: `blacklisted: ${blacklistReason(bl)}` }, 400);
+    }
+  }
+
   const result = await doSavePost(
     c.env, user, postId, type, lat, lng, description,
-    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate, false, showtimesJson, showtimeBookingJson, tagsJson, status
+    mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate, false, showtimesJson, showtimeBookingJson, tagsJson, status,
+    partnerId, partnerName
   );
   return c.json(result, isUpdate ? 200 : 201);
 });
@@ -195,7 +230,9 @@ export async function doSavePost(
   showtimes: string | null = null,
   showtimeBooking: string | null = null,
   tags: string | null = null,
-  status: string = STATUS_APPROVED
+  status: string = STATUS_APPROVED,
+  partnerId: string | null = null,
+  partnerName: string | null = null
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
@@ -218,19 +255,20 @@ export async function doSavePost(
              is_sold_out = CASE WHEN sold_out_locked = 1 THEN is_sold_out ELSE ? END,
              event_date = ?, showtimes = CASE WHEN time_locked = 1 THEN showtimes ELSE ? END,
              showtime_booking = CASE WHEN time_locked = 1 THEN showtime_booking ELSE ? END,
-             tags = CASE WHEN tags_locked = 1 THEN tags ELSE ? END
+             tags = CASE WHEN tags_locked = 1 THEN tags ELSE ? END,
+             partner_id = ?, partner_name = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags)
+      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName)
       .run();
     await db
       .prepare(

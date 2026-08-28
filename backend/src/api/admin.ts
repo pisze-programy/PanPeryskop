@@ -43,6 +43,34 @@ adminRoutes.get('/seed/existing', async (c) => {
   return c.json({ ids: (results || []).map((r) => r.external_id) });
 });
 
+// Active event-blacklist rules — seed-ingest fetches this ONCE (not per entry)
+// so it can skip blacklisted events BEFORE downloading their media.
+adminRoutes.get('/seed/blacklist', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const { results } = await c.env.DB
+    .prepare('SELECT id, pattern, venue, partner_id, partner_name FROM event_blacklist WHERE active = 1')
+    .all<{ id: string; pattern: string; venue: string | null; partner_id: string | null; partner_name: string | null }>();
+  return c.json({ rules: results ?? [] });
+});
+
+// Reject posts by external_id (a batch) — used by one-off duplicate cleanups.
+adminRoutes.post('/seed/reject', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ ids?: unknown; reason?: unknown }>().catch(() => ({})) as { ids?: unknown; reason?: unknown };
+  const ids = Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === 'string' && /^[a-z0-9_-]{1,200}$/i.test(x)) : [];
+  if (ids.length === 0) return c.json({ error: 'ids required' }, 400);
+  const reason = typeof body.reason === 'string' && body.reason.trim().length > 0 ? body.reason.trim() : null;
+  const ph = ids.map(() => '?').join(',');
+  const db = c.env.DB;
+  const { results } = await db.prepare(`SELECT external_id FROM posts WHERE external_id IN (${ph}) AND status <> '${STATUS_REJECTED}'`).bind(...ids).all<{ external_id: string }>();
+  const matched = (results || []).map((r) => r.external_id);
+  if (matched.length) {
+    const mh = matched.map(() => '?').join(',');
+    await db.prepare(`UPDATE posts SET status = '${STATUS_REJECTED}', rejection_reason = ? WHERE external_id IN (${mh})`).bind(reason, ...matched).run();
+  }
+  return c.json({ rejected: matched.length, requested: ids.length });
+});
+
 // Per-source per-day approved-event counts over the seed window — the VPS
 adminRoutes.post('/seed/digest', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);

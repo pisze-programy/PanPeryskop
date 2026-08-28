@@ -194,7 +194,7 @@ function rewriteTime(description: string, time: string): string | null {
 }
 
 // Row actions kebab.
-function rowActions(e: { id: string; loc: string; lat: number | null; lng: number | null; url: string | null; is_sold_out?: number | null; showtimes?: string | null }): string {
+function rowActions(e: { id: string; loc: string; lat: number | null; lng: number | null; url: string | null; is_sold_out?: number | null; showtimes?: string | null; title?: string; partner_id?: string | null; partner_name?: string | null }): string {
   const id = e.id;
   const items = [
     dropdownItem({ html: 'Zmień GEO', onclick: `ppGeoOpen('${esc(id)}','${jsStr(e.loc)}','${e.lat ?? ''}','${e.lng ?? ''}');return false;` }),
@@ -202,6 +202,7 @@ function rowActions(e: { id: string; loc: string; lat: number | null; lng: numbe
     dropdownItem({ html: e.is_sold_out ? 'Oznacz dostępne' : 'Oznacz wyprzedane', onclick: `ppSoldToggle('${esc(id)}', ${e.is_sold_out ? 0 : 1});return false;` }),
     dropdownItem({ html: 'Otwórz link', onclick: `ppOpenLink(ppLinkFor('${esc(id)}', '${jsStr(e.url ?? '')}'));return false;` }),
     dropdownDivider,
+    dropdownItem({ html: 'Dodaj do blacklisty', onclick: `ppBlacklistOpen('${jsStr(e.title ?? '')}','${jsStr(e.loc)}','${jsStr(e.partner_id ?? '')}','${jsStr(e.partner_name ?? '')}');return false;` }),
     dropdownItem({ html: 'Kopiuj ID', onclick: `ppCopyId('${esc(id)}');return false;` }),
   ].join('');
   return dropdown({ items });
@@ -452,6 +453,8 @@ pageRoutes.get('/events', async (c) => {
       if (Object.keys(map).length) ppLinkMap[e.id] = map;
     }
     const srcBadge = SOURCE_BADGE[e.source] ? `<span class="badge ${SOURCE_BADGE[e.source]}">${esc(e.source)}</span>` : '';
+    const partnerBadge = e.partner_name
+      ? `<span class="badge bg-secondary-lt text-secondary" title="Organizator${e.partner_id ? ` #${esc(e.partner_id)}` : ''}">${esc(e.partner_name)}</span>` : '';
     const soldBadge = soldOutBadge(e);
     const geoLockBadge = e.geo_locked ? `<span class="badge bg-primary-lt text-primary" title="GEO ustawione ręcznie">${icon('lock', 'icon icon-tiny me-1')}geo</span>` : '';
     const geoZeroBadge = e.lat === 0 && e.lng === 0 ? `<span class="badge bg-warning-lt text-warning" title="Geo fallback 0,0 — popraw w adminie">geo 0,0</span>` : '';
@@ -461,7 +464,7 @@ pageRoutes.get('/events', async (c) => {
     return `<tr>
       <td>${eventThumb(e)}</td>
       <td>
-        <div class="fw-semibold">${titleHtml(e.link_url, title, e.id)} ${srcBadge} ${soldBadge} ${geoLockBadge} ${geoZeroBadge} ${tagLockBadge}</div>
+        <div class="fw-semibold">${titleHtml(e.link_url, title, e.id)} ${srcBadge} ${partnerBadge} ${soldBadge} ${geoLockBadge} ${geoZeroBadge} ${tagLockBadge}</div>
         ${placeCellHtml(e.id, e.lat, e.lng, loc)}
       </td>
       <td>
@@ -470,7 +473,7 @@ pageRoutes.get('/events', async (c) => {
       </td>
       <td>${statusSelect({ id: e.id, status: e.status })} ${rejectHint}</td>
       <td>${tagSelect({ id: e.id, status: e.status, tag, extra }, catalog)}</td>
-      <td class="text-end">${rowActions({ id: e.id, loc, lat: e.lat, lng: e.lng, url: e.link_url, is_sold_out: e.is_sold_out, showtimes: e.showtimes })}</td></tr>`;
+      <td class="text-end">${rowActions({ id: e.id, loc, lat: e.lat, lng: e.lng, url: e.link_url, is_sold_out: e.is_sold_out, showtimes: e.showtimes, title, partner_id: e.partner_id, partner_name: e.partner_name })}</td></tr>`;
   }).join('');
 
   const emptyRow = `<tr><td colspan="7">${empty({

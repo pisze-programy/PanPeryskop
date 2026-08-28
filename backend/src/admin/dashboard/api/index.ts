@@ -6,6 +6,7 @@ import { registerApiPosts } from './posts';
 import { registerApiSeed } from './seed';
 import { registerApiStats } from './stats';
 import { registerApiMediaRequests } from './mediaRequests';
+import { registerApiBlacklist } from './blacklist';
 
 export const apiRoutes = new Hono<{ Bindings: Env }>();
 registerApiOverview(apiRoutes);
@@ -14,3 +15,4 @@ registerApiPosts(apiRoutes);
 registerApiSeed(apiRoutes);
 registerApiStats(apiRoutes);
 registerApiMediaRequests(apiRoutes);
+registerApiBlacklist(apiRoutes);

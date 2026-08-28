@@ -11,6 +11,7 @@ import { registerStats } from './stats';
 import { registerErrors } from './errors';
 import { registerMediaRequests } from './mediaRequests';
 import { registerReports } from './reports';
+import { registerBlacklist } from './blacklist';
 
 export const pageRoutes = new Hono<{ Bindings: Env }>();
 registerAuth(pageRoutes);
@@ -24,3 +25,4 @@ registerStats(pageRoutes);
 registerErrors(pageRoutes);
 registerMediaRequests(pageRoutes);
 registerReports(pageRoutes);
+registerBlacklist(pageRoutes);

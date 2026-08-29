@@ -60,14 +60,14 @@ class MockDigestDB {
 }
 
 const DAY = '2026-08-30';
-type Report = { source: string; status: string; data?: Record<string, unknown> };
+type Report = { source: string; status: string; notify: string; data?: Record<string, unknown> };
 
 function capturedReports(): { reports: Report[]; fetch: typeof fetch } {
   const reports: Report[] = [];
   const original = global.fetch;
   global.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body ?? '{}'));
-    reports.push({ source: body.source, status: body.status, data: body.data });
+    reports.push({ source: body.source, status: body.status, notify: body.notify ?? 'always', data: body.data });
     return new Response('{"ok":true}', { status: 200 });
   }) as typeof fetch;
   return { reports, fetch: original };
@@ -80,7 +80,7 @@ test('activeSeedProviders: returns the 7 automated providers, excludes facebook 
   assert.ok(!p.includes('maratonypolskie') && !p.includes('getyourguide'), 'disabled providers are excluded');
 });
 
-test('recordSeedDigest: dedupes a same-status retry (one email)', async () => {
+test('recordSeedDigest: dedupes a same-status retry (one report)', async () => {
   const { reports, fetch } = capturedReports();
   try {
     const db = new MockDigestDB();
@@ -88,15 +88,16 @@ test('recordSeedDigest: dedupes a same-status retry (one email)', async () => {
     await recordSeedDigest(env, { day: DAY, provider: 'kupbilecik', status: 'ok', candidates: 10, ingested: 9 });
     await recordSeedDigest(env, { day: DAY, provider: 'kupbilecik', status: 'ok', candidates: 10, ingested: 9 });
     const mine = reports.filter((r) => r.source === 'panperyskop/seed/kupbilecik');
-    assert.equal(mine.length, 1, 'same status must not re-email');
+    assert.equal(mine.length, 1, 'same status must not re-report');
     assert.equal(mine[0].status, 'ok');
+    assert.equal(mine[0].notify, 'on-error', 'per-provider ok must not email (on-error)');
     assert.equal(mine[0].data?.job, '1/7');
   } finally {
     global.fetch = fetch;
   }
 });
 
-test('recordSeedDigest: status change (failed → ok) emails again', async () => {
+test('recordSeedDigest: status change (failed → ok) reports both states', async () => {
   const { reports, fetch } = capturedReports();
   try {
     const db = new MockDigestDB();
@@ -104,8 +105,10 @@ test('recordSeedDigest: status change (failed → ok) emails again', async () =>
     await recordSeedDigest(env, { day: DAY, provider: 'going', status: 'failed', message: 'boom' });
     await recordSeedDigest(env, { day: DAY, provider: 'going', status: 'ok', candidates: 5, ingested: 5 });
     const mine = reports.filter((r) => r.source === 'panperyskop/seed/going');
-    assert.equal(mine.length, 2, 'failed then ok must email both states');
+    assert.equal(mine.length, 2, 'failed then ok must report both states');
     assert.deepEqual(mine.map((r) => r.status), ['failed', 'ok']);
+    assert.equal(mine[0].notify, 'on-error', 'failed per-provider emails');
+    assert.equal(mine[1].notify, 'on-error', 'ok per-provider is silent (report still sent)');
   } finally {
     global.fetch = fetch;
   }
@@ -124,6 +127,7 @@ test('recordSeedDigest: day-done email fires once when all 7 providers report', 
     const dayDone = reports.filter((r) => r.source === 'panperyskop/seed/day-done');
     assert.equal(dayDone.length, 1, 'day-done must fire exactly once');
     assert.equal(dayDone[0].status, 'ok');
+    assert.equal(dayDone[0].notify, 'always', 'day-done emails on ok');
     assert.equal(dayDone[0].data?.providers, 7);
   } finally {
     global.fetch = fetch;

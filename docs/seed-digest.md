@@ -5,7 +5,9 @@ We use cf-snitch (a headless email service on Cloudflare).
 
 ## What you get
 
-Every day you receive an email for each seed provider. The email tells you:
+Every day you receive an email for each seed provider **only when it had errors**
+(status `partial` or `failed`). A clean provider run (`ok`) is silent — the single
+`ok` email of the day is the day-done summary. A per-provider email tells you:
 
 - which provider ran,
 - its progress today (job 1/7, 2/7, ... 7/7),
@@ -46,8 +48,11 @@ Email is fire-and-forget. A failure in cf-snitch never breaks the seed.
 
 - A retry or a DLQ re-drive does not send a second email
   when the status did not change.
-- If a failed provider retries and succeeds, you get a second email (failed, then ok).
-- The day-done email is sent once per day.
+- A provider with status `ok` does not email (per-provider reports use
+  cf-snitch `notify: on-error`).
+- If a failed provider retries and succeeds, you get the failure email and the
+  recovery is shown in the day-done summary.
+- The day-done email is sent once per day, for both `ok` and `partial` days.
 - The day-incomplete email is sent once per day.
 - Disabled providers (maratonypolskie, getyourguide) are ignored.
 

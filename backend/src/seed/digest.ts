@@ -62,12 +62,14 @@ export function activeSeedProviders(): string[] {
     .sort();
 }
 
-/** Fire-and-forget cf-snitch report. A failure here never throws to the caller. */
+/** Fire-and-forget cf-snitch report. A failure here never throws to the caller.
+ *  `notify` controls when cf-snitch emails: 'always' (default) after every report,
+ *  'on-error' only when the status is not ok. */
 export async function snitchReport(
   env: DigestEnv,
   source: string,
   status: DigestStatus,
-  opts?: { data?: Record<string, unknown>; message?: string }
+  opts?: { data?: Record<string, unknown>; message?: string; notify?: 'always' | 'on-error' }
 ): Promise<void> {
   const url = env.SNITCH_URL;
   const token = env.SNITCH_TOKEN;
@@ -76,7 +78,7 @@ export async function snitchReport(
     await fetch(`${url}/v1/report`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source, status, notify: 'always', data: opts?.data, message: opts?.message }),
+      body: JSON.stringify({ source, status, notify: opts?.notify ?? 'always', data: opts?.data, message: opts?.message }),
       signal: AbortSignal.timeout(10_000),
     });
   } catch (e) {
@@ -106,6 +108,9 @@ export async function recordSeedDigest(env: DigestEnv, input: DigestInput): Prom
   const done = await env.DB.prepare('SELECT COUNT(DISTINCT provider) AS n FROM seed_digest WHERE day = ?').bind(input.day).first<{ n: number }>();
   const index = Math.min(done?.n ?? 1, providers.length);
 
+  // Per-provider OK is silent (email only on partial/failed) — the day-done
+  // summary is the single OK email. The report still reaches cf-snitch so its
+  // history stays complete.
   await snitchReport(env, `panperyskop/seed/${input.provider}`, input.status, {
     data: {
       day: input.day,
@@ -115,6 +120,7 @@ export async function recordSeedDigest(env: DigestEnv, input: DigestInput): Prom
       errors: input.errors ?? 0,
     },
     message: input.message,
+    notify: 'on-error',
   });
 
   await maybeDayDone(env, input.day, providers.length);

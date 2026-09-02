@@ -27,7 +27,12 @@ We use two endpoints.
 Both need the token in the query: `?token={EBILET_TD_TOKEN}`.
 
 We use the plain JSON endpoint. We do not use the `compress=gz` variant. Plain
-JSON is ~3.5 MB. We download it once per feed version.
+JSON is ~3.5 MB.
+
+IMPORTANT: the Cloudflare Worker cannot download the feed. TradeDoubler returns
+HTTP 400 (empty body) to Cloudflare egress. Only a residential/office network
+can download it. An external job does the download and pushes the feed into R2.
+The Worker provider reads that R2 cache only.
 
 Do NOT use the paginated endpoint `products.json`. It returns at most 1000
 products. Our feed has ~1292 products.
@@ -45,25 +50,27 @@ does not apply.
 
 ### 3.1 Our method
 
-We check the feed version before we download:
+The download limit applies to the external job only. The external job runs
+where a normal download works (VPS or local machine). It follows this method:
 
 1. Call the `lastUpdated` endpoint. This call is small.
-2. Read the cached feed from R2. The cache key is `seed/ebilet-feed.json`.
-3. If the cached feed has the same version, use it. Do not download.
-4. If the version changed, download the new feed. Store it in R2.
-5. If the download fails (for example HTTP 429), use the cached copy.
+2. If the feed version did not change, do nothing.
+3. If the feed version changed, download the new feed.
+4. Push the feed to R2: `POST {BASE_URL}/admin/seed/ebilet/feed`. The body is
+   the raw JSON response. The endpoint requires the admin bearer token.
 
-This method downloads the feed only when the feed changes. We do not waste the
-download limit.
+The Worker provider does not download the feed. It reads the R2 cache object.
+If the cache is missing, the provider fails loudly until the external job warms
+it.
 
 ### 3.2 R2 cache
 
 - Storage: R2 bucket `MEDIA`.
 - Key: `seed/ebilet-feed.json`.
-- Metadata: `feedUpdated` = the feed version at download time.
+- Metadata: `feedUpdated` = the feed version at push time.
 
-The daily cron refreshes the feed once per day. All seed batches for the same
-day reuse the same cached copy.
+The external job refreshes the feed when it changes. All seed batches for the
+same day reuse the same cached copy.
 
 ## 4. Data model
 
@@ -165,11 +172,15 @@ Unknown categories get no tag.
 Deploy steps:
 
 1. Apply the migration: `npm run db:migrate -- --remote`.
-2. Set the secret: `wrangler secret put EBILET_TD_TOKEN`.
+2. Set the secrets: `wrangler secret put ADMIN_SECRET`, `wrangler secret put EBILET_TD_TOKEN`.
 3. Deploy: `wrangler deploy`.
-4. Backfill the window (first run only). Enqueue each day:
+4. Warm the feed (first run and after feed changes). Download it on a machine
+   where TradeDoubler is reachable, then push it:
+   `curl -sL ".../productsUnlimited.json;fid=94944?token={token}" -o feed.json`
+   `curl -X POST {BASE_URL}/admin/seed/ebilet/feed -H "Authorization: Bearer {ADMIN_SECRET}" --data-binary @feed.json`
+5. Backfill the window (first run only). Enqueue each day:
    `POST {BASE_URL}/admin/seed` with body `{"day":"YYYY-MM-DD","via":"queue"}`.
-5. Verify: `GET {BASE_URL}/admin/seed/coverage`. Check the `ebilet` count.
+6. Verify: `GET {BASE_URL}/admin/seed/coverage`. Check the `ebilet` count.
 
 Data changes (migration 0038):
 

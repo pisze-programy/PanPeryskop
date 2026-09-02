@@ -89,6 +89,10 @@ into one post:
 - The post carries the union of the times in `showtimes`.
 - The post keeps the cheapest price.
 - The post keeps the earliest performance as its start time and its id.
+- Every showtime keeps its OWN performance link as a booking identity
+  (`kind: "link"`, the affiliate `/imprezy/<Id>/` URL). Selecting a showtime in
+  the app opens that exact performance. See docs/seed-showtimes-links.md for
+  the shared standard.
 
 ## 5. Tag map
 

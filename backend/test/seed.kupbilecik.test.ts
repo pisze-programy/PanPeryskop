@@ -39,6 +39,8 @@ test('parseKupEvent: maps the direct-API row onto a candidate (price, coords, af
   assert.match(c.link, /utm_source=pp&utm_medium=631/, 'affiliate params stamped into the link');
   assert.deepEqual(c.tags, ['teatr']);
   assert.equal(c.isSoldOut, false, 'API exposes no availability');
+  assert.deepEqual(c.times, ['16:00']);
+  assert.deepEqual(c.showtimeBooking, [{ time: '16:00', kind: 'link', params: { url: c.link } }], 'per-showtime link = this performance page');
   assert.deepEqual(parseKupEvent(ev({ Date: '2026-09-20 19:00:00' }), DAY, DAY_MS), [], 'other-day rows are dropped');
 });
 
@@ -70,12 +72,23 @@ test('kupTagsFor: safe types + reviewed ambiguous map', () => {
 
 test('aggregateDayCandidates: two performances of the same event-day-venue → one post with showtimes[]', () => {
   const a = parseKupEvent(ev({ Id: 185922, Date: '2026-09-08 16:00:00' }), DAY, DAY_MS);
-  const b = parseKupEvent(ev({ Id: 185927, Date: '2026-09-08 19:00:00', TicketsInfo: { Price: 120 } }), DAY, DAY_MS);
+  const b = parseKupEvent(ev({
+    Id: 185927,
+    Date: '2026-09-08 19:00:00',
+    TicketsInfo: { Price: 120 },
+    Link: 'https://www.kupbilecik.pl/imprezy/185927/Koszalin/x/?utm_source=pp&utm_medium=631',
+  }), DAY, DAY_MS);
   const merged = aggregateDayCandidates([...a, ...b]);
   assert.equal(merged.length, 1, 'no duplicate posts for one event-day-venue');
   assert.equal(merged[0].externalId, 'kupbilecik-185922-20260908', 'earliest performance stays canonical');
   assert.deepEqual(merged[0].times, ['16:00', '19:00'], 'showtimes are the union');
   assert.equal(merged[0].price, 120, 'cheapest known price survives');
+  // Each showtime keeps its OWN page link (like cinema per-session bookings).
+  assert.equal(merged[0].showtimeBooking?.length, 2, 'booking identities are unioned per time');
+  const byTime = new Map(merged[0].showtimeBooking!.map((b) => [b.time, b]));
+  assert.equal(byTime.get('16:00')?.kind, 'link');
+  assert.match(byTime.get('16:00')!.params.url, /\/imprezy\/185922\//, '16:00 → 16:00 page');
+  assert.match(byTime.get('19:00')!.params.url, /\/imprezy\/185927\//, '19:00 → 19:00 page');
 });
 
 test('decodeHtmlEntities: API leaves &quot; in some names', () => {

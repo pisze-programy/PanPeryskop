@@ -135,6 +135,9 @@ One event-day-venue is ONE post. Do not create duplicate posts.
 - The post start time is the earliest available segment.
 - If the same event-day-venue appears as several products, we merge them into one
   post. We keep the union of times and the cheapest price.
+- Every showtime carries a booking identity (`kind: "link"`, the TradeDoubler
+  affiliate URL), so selecting a showtime in the app opens that product's ticket
+  page. See docs/seed-showtimes-links.md for the shared standard.
 
 ### 5.1 Link rules
 

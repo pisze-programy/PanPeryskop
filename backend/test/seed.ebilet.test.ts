@@ -42,6 +42,11 @@ test('parseEbiletProduct: earliest in-day slot, externalId, price, distinct dedu
   assert.equal(c.externalId, 'ebilet-111-20260908');
   assert.equal(c.startMs - DAY_MS, (16 * 60 + 30) * 60_000, 'earliest in-day slot wins');
   assert.deepEqual(c.times, ['16:30', '19:00'], 'all in-day showtimes are kept (showtimes[], no duplicates)');
+  assert.ok(c.showtimeBooking && c.showtimeBooking.length === 2, 'every showtime carries a booking identity');
+  for (const b of c.showtimeBooking!) {
+    assert.equal(b.kind, 'link');
+    assert.match(b.params.url, /^https:\/\/pdt\.tradedoubler\.com\/click/, 'per-time link is the affiliate tracker');
+  }
   assert.equal(c.venue, 'Teatr Studio');
   assert.equal(c.city, 'Warszawa');
   assert.equal(c.price, 120.9);
@@ -209,4 +214,5 @@ test('aggregateEbiletDayCandidates: same title+venue+day across products → one
   assert.equal(merged[0].externalId, c.externalId, 'earliest-start member is canonical');
   assert.deepEqual(merged[0].times, ['16:30', '19:00'], 'showtimes are the union');
   assert.equal(merged[0].price, 80.0, 'cheapest known price survives');
+  assert.equal(merged[0].showtimeBooking?.length, 2, 'per-time links survive the merge');
 });

@@ -36,10 +36,14 @@ export const CandidateStatus = {
 export type CandidateStatus = (typeof CandidateStatus)[keyof typeof CandidateStatus];
 
 /** Per-showtime booking identity for a cinema event. The provider kind lets the
- *  client compose the deep booking URL on the fly (no links are stored). */
+ *  client compose the deep booking URL on the fly (no links are stored).
+ *  'link' is the generic kind: params.url is a FINAL per-showtime page URL
+ *  (affiliate/event pages, e.g. kupbilecik performance or ebilet product) that the
+ *  client opens as-is — used by ticket providers whose showtimes live on separate
+ *  pages. New providers emit 'link' (or a cinema kind) instead of scraping hacks. */
 export interface ShowtimeBooking {
   time: string;
-  kind: 'helios' | 'cinemacity' | 'multikino';
+  kind: 'helios' | 'cinemacity' | 'multikino' | 'link';
   params: Record<string, string>;
 }
 

@@ -85,6 +85,11 @@ export function parseKupEvent(e: KupEvent, day: string, dayStartMs: number): See
   const img = (e.Images?.Image || '').trim();
   const price = typeof e.TicketsInfo?.Price === 'number' ? e.TicketsInfo.Price : null;
   const tag = kupTagsFor(e.Category);
+  const rowLink = (e.Link || '').trim();
+  // Every performance is its OWN page (/imprezy/<Id>/), so the post must carry a
+  // per-showtime link (kind 'link') — mirroring how cinema carries per-session
+  // booking identities. Selecting this time in the app opens THIS performance.
+  const showtimeBooking = [{ time, kind: 'link' as const, params: { url: rowLink } }];
 
   return [{
     source: ProviderId.KUPBILECIK,
@@ -96,12 +101,14 @@ export function parseKupEvent(e: KupEvent, day: string, dayStartMs: number): See
     city: (e.City || '').trim(),
     venue: (obj.Name || '').trim(),
     address: (obj.Address || '').trim(),
-    link: (e.Link || '').trim(),
+    link: rowLink,
     mediaUrl: img,
     thumbUrl: (e.Images?.Mini || '').trim() || img || null,
     isSoldOut: false, // the API does not expose availability
     price,
     tags: tag ?? undefined,
+    times: [time],
+    showtimeBooking,
   }];
 }
 

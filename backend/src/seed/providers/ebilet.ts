@@ -218,6 +218,13 @@ export function parseEbiletProduct(p: EbiletProduct, day: string, dayStartMs: nu
   const { venue, city } = parseEbiletLocation(winner.location);
   const img = isUsableImage(p.productImage?.url);
   const tag = ebiletTags(firstEbiletCategory(p));
+  const pageUrl = ebiletPageUrl(p);
+  const affiliate = offers[0]?.productUrl || pageUrl;
+  const showtimeBooking = times.map((time) => ({
+    time,
+    kind: 'link' as const,
+    params: { url: affiliate },
+  }));
   return [{
     source: ProviderId.EBILET,
     externalId: `ebilet-${sid}-${day.replace(/-/g, '')}`,
@@ -228,7 +235,7 @@ export function parseEbiletProduct(p: EbiletProduct, day: string, dayStartMs: nu
     city,
     venue,
     address: '',
-    link: ebiletPageUrl(p),
+    link: pageUrl,
     affiliateLink: offers[0]?.productUrl || undefined,
     mediaUrl: img,
     thumbUrl: img || null,
@@ -236,6 +243,7 @@ export function parseEbiletProduct(p: EbiletProduct, day: string, dayStartMs: nu
     price: ebiletPrice(p),
     tags: tag ? [tag] : undefined,
     times,
+    showtimeBooking,
   }];
 }
 

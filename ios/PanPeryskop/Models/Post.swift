@@ -108,7 +108,7 @@ struct Post: Codable, Identifiable, Equatable {
         resolvedThumbURL != nil
     }
 
-    /// Deep booking link for a chosen showtime, composed on the fly from the
+    /// Deep booking/link for a chosen showtime, composed on the fly from the
     /// provider-specific booking identity. `nil` when the post has no bookable
     /// sessions (callers fall back to `link_url`).
     func bookingURL(for time: String) -> URL? {
@@ -140,6 +140,12 @@ struct Post: Codable, Identifiable, Equatable {
                 let sessionId = booking.params["sessionId"]
             else { return nil }
             return URL(string: "https://www.multikino.pl/rezerwacja-biletow/podsumowanie/\(cinemaId)/\(filmId)/\(sessionId)")
+        case "link":
+            // Generic per-showtime page URL (ticket providers such as ebilet /
+            // kupbilecik whose showtimes live on separate pages). Opened as-is —
+            // the same allow-list rules as link_url apply.
+            guard let url = booking.params["url"] else { return nil }
+            return URL(string: url)
         default:
             return nil
         }
@@ -152,8 +158,9 @@ struct Post: Codable, Identifiable, Equatable {
     }
 }
 
-/// Per-showtime booking identity for cinema events. The app composes the deep
-/// booking URL on the fly — the backend never stores links.
+/// Per-showtime booking identity. Cinema kinds let the app compose a deep booking
+/// URL; kind "link" carries a FINAL per-showtime page URL that is opened as-is.
+/// The backend never stores final links except via the "link" kind's params.url.
 struct ShowtimeBooking: Codable, Equatable {
     let time: String
     let kind: String

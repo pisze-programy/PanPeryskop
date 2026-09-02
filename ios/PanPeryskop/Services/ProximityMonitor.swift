@@ -4,10 +4,9 @@ import UserNotifications
 import UIKit
 
 /// Client-side geofencing for media-request pins + user location tracking for the
-/// "new media nearby" push. Delivers:
+/// "new media nearby" banner. Delivers:
 ///   - media-request ("?") pin: local notification / in-app banner when entering a 20 m region,
-///   - new-media-nearby: banner when the app is foregrounded (live, no throttle), local
-///     notification from background runs (throttled to 1 push / 30 min).
+///   - new-media-nearby: banner when the app is foregrounded (live, no throttle).
 /// Note: region accuracy below iOS's reliable ~100 m is best-effort.
 @MainActor
 final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegate {
@@ -25,7 +24,6 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
     private static let suppressOwnFreshPin: TimeInterval = 120
     private static let backgroundPushCooldown: TimeInterval = 30 * 60
     private static let backgroundPushKey = "notifications.lastBackgroundPush"
-    private static let activeRequestsKey = "proximity.active_requests"
 
     private override init() {
         super.init()
@@ -72,41 +70,6 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
         }
 
         monitoredRequests = target
-        persistActiveRequests()
-    }
-
-    /// Rehydrates monitored regions from the last persisted snapshot. Called at launch so
-    /// `didEnterRegion` still resolves request pins after the app was terminated and iOS
-    /// relaunched it in the background for a region event.
-    func rehydrate() {
-        guard let data = UserDefaults.standard.data(forKey: Self.activeRequestsKey),
-              let stored = try? JSONDecoder().decode([MediaRequest].self, from: data) else { return }
-        let active = stored
-            .filter { $0.isStillValid }
-            .sorted { $0.created_at > $1.created_at }
-
-        for request in active.prefix(Self.maxRegions) where monitoredRequests[request.id] == nil {
-            let circular = CLCircularRegion(
-                center: request.coordinate,
-                radius: Self.regionRadius,
-                identifier: request.id
-            )
-            circular.notifyOnEntry = true
-            circular.notifyOnExit = false
-            do {
-                try locationManager.startMonitoring(for: circular)
-            } catch {
-                print("ProximityMonitor: rehydrate failed to monitor \(request.id):", error)
-            }
-        }
-        monitoredRequests = Dictionary(uniqueKeysWithValues: active.prefix(Self.maxRegions).map { ($0.id, $0) })
-    }
-
-    private func persistActiveRequests() {
-        let valid = monitoredRequests.values.filter { $0.isStillValid }
-        if let data = try? JSONEncoder().encode(valid) {
-            UserDefaults.standard.set(data, forKey: Self.activeRequestsKey)
-        }
     }
 
     /// Starts/stops GPS tracking based on the notification range setting (needed only for 100/300 m).
@@ -139,8 +102,7 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
     // MARK: - "New media nearby" push
 
     /// Delivers the "new media nearby" push as a real system notification (banner also while the
-    /// app is foregrounded — see `willPresent`). Foreground is live (no throttle); background runs
-    /// are throttled to 1 push / 30 min.
+    /// app is foregrounded — see `willPresent`). Live, no throttle.
     func deliverNewMedia(post: Post) async {
         let isActive = UIApplication.shared.applicationState == .active
         let isEvents = (post.category ?? "live") == "events"

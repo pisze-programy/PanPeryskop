@@ -14,9 +14,9 @@
 		13A1D4F80977B8D1EA84DB82 /* LazyPager in Frameworks */ = {isa = PBXBuildFile; productRef = 4A677370EF0D1A3DA130B241 /* LazyPager */; };
 		1CB0FED0894277F43672BBC2 /* StoryGradientBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA12A53A9C156B8B3251CBA3 /* StoryGradientBackground.swift */; };
 		206660903D27130B55C2095D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5356FAE97C8B9C005B61765A /* SettingsView.swift */; };
-		A1B2C3D4E5F60718293A4B5C /* AppPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* AppPolicyView.swift */; };
 		22654D8D1F5D231BD0E6854D /* MyContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C198549226A3AB8D8AD7C270 /* MyContentView.swift */; };
 		24B2FF9A64C3A7F84F3AD6C5 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 62E60A31C2421F71CE67D919 /* KeychainAccess */; };
+		2632F23971A3FECF86E58A60 /* AppPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704E2893041EA4ADD42E5D56 /* AppPolicyView.swift */; };
 		2A8563B9966C62951A4E8D67 /* MediaCompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AF85F0B111F42C315E257A2 /* MediaCompressor.swift */; };
 		32C1EF2CEFB79B6B8DF06DEF /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4962ABEB84A69F22E8AB6ED3 /* NetworkMonitor.swift */; };
 		336FB179832B034B90777C4E /* InAppBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFAC0F6833823EEC0C118343 /* InAppBrowserView.swift */; };
@@ -73,12 +73,12 @@
 		4962ABEB84A69F22E8AB6ED3 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		51183ED5E5EF86B278EE0CEB /* PendingPost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPost.swift; sourceTree = "<group>"; };
 		5356FAE97C8B9C005B61765A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		B2C3D4E5F60718293A4B5C6D /* AppPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPolicyView.swift; sourceTree = "<group>"; };
 		58C953E9B4F30356C1AF058A /* NicknameEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NicknameEditView.swift; sourceTree = "<group>"; };
 		6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		6CA2AF9B54DF0D4E30580F2D /* PendingPostsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPostsStore.swift; sourceTree = "<group>"; };
 		6D0328366619E568BB043CF9 /* SignInWithApple.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SignInWithApple.entitlements; sourceTree = "<group>"; };
 		702099485B19214D722CB2AB /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		704E2893041EA4ADD42E5D56 /* AppPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPolicyView.swift; sourceTree = "<group>"; };
 		8A37A2C635C84DB527D13F1A /* PanPeryskop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PanPeryskop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E2581E6150C834401927100 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
 		916F2163F2DBDBD7C763C34A /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
@@ -212,12 +212,12 @@
 		8FB460A6FDFAE52E5F9B14A1 /* Profile */ = {
 			isa = PBXGroup;
 			children = (
+				704E2893041EA4ADD42E5D56 /* AppPolicyView.swift */,
 				C198549226A3AB8D8AD7C270 /* MyContentView.swift */,
 				58C953E9B4F30356C1AF058A /* NicknameEditView.swift */,
 				DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */,
 				FFBA35634291A3B8F365D85D /* ProfileView.swift */,
 				5356FAE97C8B9C005B61765A /* SettingsView.swift */,
-				B2C3D4E5F60718293A4B5C6D /* AppPolicyView.swift */,
 			);
 			path = Profile;
 			sourceTree = "<group>";
@@ -346,6 +346,7 @@
 			files = (
 				EF416FDD5F47F902E0511EB7 /* APIClient.swift in Sources */,
 				D9702F1880D277CD3D4CE45E /* AddContentView.swift in Sources */,
+				2632F23971A3FECF86E58A60 /* AppPolicyView.swift in Sources */,
 				F83DB2EE1C81C2E3A19B19B9 /* AppleSignIn.swift in Sources */,
 				704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */,
 				DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */,
@@ -378,7 +379,6 @@
 				44DCBF845465155C6A877FEE /* ProfileView.swift in Sources */,
 				07C0E84951D3E2FF925CC951 /* ProximityMonitor.swift in Sources */,
 				206660903D27130B55C2095D /* SettingsView.swift in Sources */,
-				A1B2C3D4E5F60718293A4B5C /* AppPolicyView.swift in Sources */,
 				CA6B53CF05EDBC94617C3745 /* StoryFullScreenView.swift in Sources */,
 				1CB0FED0894277F43672BBC2 /* StoryGradientBackground.swift in Sources */,
 				8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */,
@@ -502,7 +502,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -562,7 +562,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

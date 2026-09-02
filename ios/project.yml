@@ -2,7 +2,7 @@ name: PanPeryskop
 
 settings:
   MARKETING_VERSION: "1.1"
-  CURRENT_PROJECT_VERSION: 12
+  CURRENT_PROJECT_VERSION: 13
   DEVELOPMENT_TEAM: "3UKH2QRFKZ"
   SWIFT_VERSION: "6.0"
   INFOPLIST_KEY_CFBundleDisplayName: "Pan Peryskop"
@@ -48,18 +48,12 @@ targets:
           - CFBundleURLName: com.panperyskop
             CFBundleURLSchemes:
               - panperyskop
-        BGTaskSchedulerPermittedIdentifiers:
-          - com.panperyskop.refresh.media
-        UIBackgroundModes:
-          - fetch
         ITSAppUsesNonExemptEncryption: false
     entitlements:
       path: PanPeryskop/SignInWithApple.entitlements
       properties:
         com.apple.developer.applesignin:
           - Default
-    scheme:
-      configVariants: []
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pl.piszeprogramy.panperyskop
@@ -75,3 +69,18 @@ targets:
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Potrzebujemy mikrofonu do nagrywania filmów."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać treści do miejsc."
         GENERATE_INFOPLIST_FILE: YES
+
+# XcodeGen defaults Run to Debug; keep Release so running from Xcode matches the shipped build.
+schemes:
+  PanPeryskop:
+    build:
+      targets:
+        PanPeryskop: all
+    run:
+      config: Release
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

@@ -44,10 +44,9 @@ enum NotificationSettings {
 }
 
 /// City-wide detection of "new media nearby". Shared by the foreground 20 s polling (live,
-/// no throttle) and the background BGAppRefreshTask (~1 h, throttled to 1 push / 30 min).
-/// Detects both categories (Live + Wydarzenia) regardless of the currently selected map category;
-/// the target post is the one closest to the reference point (city center for "Miasto", user
-/// location for the GPS ranges).
+/// no throttle) and the in-app banner delivery. Detects both categories (Live + Wydarzenia)
+/// regardless of the currently selected map category; the target post is the one closest to
+/// the reference point (city center for "Miasto", user location for the GPS ranges).
 @MainActor
 final class MediaNearbyNotifier {
     static let shared = MediaNearbyNotifier()
@@ -77,11 +76,6 @@ final class MediaNearbyNotifier {
         UserDefaults.standard.string(forKey: Store.currentUserIdKey)
     }
 
-    private static var selectedCity: City {
-        let id = UserDefaults.standard.string(forKey: "map.last_city_id")
-        return City.all.first { $0.id == id } ?? City.all[0]
-    }
-
     private func persistSeen() {
         UserDefaults.standard.set(Array(seenIds), forKey: Store.seenKey)
     }
@@ -93,21 +87,12 @@ final class MediaNearbyNotifier {
         guard !isChecking else { return false }
         isChecking = true
         defer { isChecking = false }
-        return await check(city: city, fromBackground: false)
-    }
-
-    /// Background BGTask check — delivery is throttled to once per 30 min.
-    func pollBackground() async {
-        guard NotificationSettings.isMediaPushEnabled else { return }
-        guard !isChecking else { return }
-        isChecking = true
-        defer { isChecking = false }
-        _ = await check(city: Self.selectedCity, fromBackground: true)
+        return await check(city: city)
     }
 
     /// Fetch city-wide stories (both categories), filter by settings + range, pick the most
     /// relevant new post and deliver the push. Returns whether a push was delivered.
-    private func check(city: City, fromBackground: Bool) async -> Bool {
+    private func check(city: City) async -> Bool {
         let region = city.region
         let params = [
             "sw_lat": String(region.center.latitude - region.span.latitudeDelta / 2),

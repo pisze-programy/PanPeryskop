@@ -13,6 +13,7 @@ enum AllowedWebDomains {
         "helios.pl", "cinema-city.pl", "multikino.pl",
         "meetup.com", "getyourguide.com", "maratonypolskie.pl",
         "lu.ma", "luma.com",
+        "ebilet.pl", "tradedoubler.com",
     ]
 
     /// Exact host or a subdomain of a registrable domain, e.g. "bilety.helios.pl".

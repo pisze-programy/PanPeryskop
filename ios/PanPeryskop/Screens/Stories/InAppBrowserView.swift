@@ -1,6 +1,27 @@
 import SwiftUI
 import WebKit
 
+/// Registrable domains the in-app browser may load. Any main-frame navigation to a
+/// host outside this list is cancelled and handed off to the system browser, so the
+/// app never becomes an unrestricted browser (keeps the App Store age-rating
+/// "Unrestricted Web Access = No" honest).
+/// ponytail: hand-maintained; keep in sync with backend seed providers
+/// (backend/src/seed/core/constants.ts) and any new link_url source.
+enum AllowedWebDomains {
+    static let registrableDomains: Set<String> = [
+        "kupbilecik.pl", "dzis.app", "eventylive.pl", "goingapp.pl",
+        "helios.pl", "cinema-city.pl", "multikino.pl",
+        "meetup.com", "getyourguide.com", "maratonypolskie.pl",
+        "lu.ma", "luma.com",
+    ]
+
+    /// Exact host or a subdomain of a registrable domain, e.g. "bilety.helios.pl".
+    static func isAllowed(_ host: String) -> Bool {
+        let host = host.lowercased()
+        return registrableDomains.contains { host == $0 || host.hasSuffix("." + $0) }
+    }
+}
+
 /// In-app browser presented as a bottom sheet (max 70% of the screen height).
 /// Every external web link opens here first; the bottom toolbar offers
 /// open-in-system-browser (globe), back/forward and close.
@@ -87,6 +108,7 @@ private struct BrowserWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
         webView.uiDelegate = context.coordinator
+        webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
         context.coordinator.attach(webView)
         webView.load(URLRequest(url: url))
@@ -95,12 +117,45 @@ private struct BrowserWebView: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
-    final class Coordinator: NSObject, WKUIDelegate {
+    final class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate {
         let model: BrowserModel
         private var observations: [NSKeyValueObservation] = []
 
         init(model: BrowserModel) {
             self.model = model
+        }
+
+        /// In-app browsing stays on the allow-list; any other main-frame navigation
+        /// (outbound link, payment hop, non-web scheme) is bounced straight to the
+        /// system browser so the flow keeps working without unrestricted in-app web.
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.cancel)
+                return
+            }
+            if navigationAction.targetFrame?.isMainFrame == true,
+               !isAllowedWebNavigation(to: url) {
+                decisionHandler(.cancel)
+                openExternally(url)
+                return
+            }
+            decisionHandler(.allow)
+        }
+
+        private func isAllowedWebNavigation(to url: URL) -> Bool {
+            let scheme = url.scheme?.lowercased()
+            guard scheme == "http" || scheme == "https" else { return false }
+            return url.host.map(AllowedWebDomains.isAllowed) == true
+        }
+
+        private func openExternally(_ url: URL) {
+            DispatchQueue.main.async {
+                UIApplication.shared.open(url)
+            }
         }
 
         func attach(_ webView: WKWebView) {
@@ -128,7 +183,11 @@ private struct BrowserWebView: UIViewRepresentable {
             windowFeatures: WKWindowFeatures
         ) -> WKWebView? {
             if let url = navigationAction.request.url {
-                webView.load(URLRequest(url: url))
+                if isAllowedWebNavigation(to: url) {
+                    webView.load(URLRequest(url: url))
+                } else {
+                    openExternally(url)
+                }
             }
             return nil
         }

@@ -30,6 +30,7 @@ import { resolveGeo } from '../core/geo';
 import { PROVIDER_FETCH_TIMEOUT_MS, HOUR_MS } from '../core/constants';
 
 const EBILET_UNLIMITED = 'https://api.tradedoubler.com/1.0/productsUnlimited.json';
+const EBILET_LAST_UPDATED = 'https://api.tradedoubler.com/1.0/productsUnlimited/lastUpdated.json';
 const EBILET_FID = '94944';
 // TD reports "not for sale right now" through availability tokens. Treat only the
 // explicit sold-out/ended vocabulary as sold-out — anything unknown stays available
@@ -250,30 +251,56 @@ export async function fetchEbiletFeed(token: string): Promise<{ products: Ebilet
  *  provider slots into the per-day seed batch model.
  *
  *  The Unlimited export download is QUOTED by TradeDoubler: max 3 downloads / 24h of
- *  the SAME file version, then HTTP 429. Each seed batch re-runs this scope, so the
- *  fetched feed is cached in R2 (key seed/ebilet-feed.json, 12h TTL): the daily cron
- *  downloads once, every scope/batch in between reuses the cached copy. On a network
- *  error (incl. 429) a stale cached copy is used as fallback instead of failing the
- *  scope — freshness matters at daily granularity only. */
+ *  the SAME file version, then HTTP 429. Following the docs' recommendation, we check
+ *  the lightweight "Unlimited Last Updated" endpoint first and download the feed ONLY
+ *  when its version changed. The fetched feed is cached in R2 (seed/ebilet-feed.json)
+ *  with the version stored in custom metadata; a download that fails (incl. 429) falls
+ *  back to the cached copy. When the version check is unavailable, a 12h age cap
+ *  decides freshness so we never re-download an unchanged feed in the same window. */
 const FEED_CACHE_KEY = 'seed/ebilet-feed.json';
 const FEED_CACHE_TTL_MS = 12 * HOUR_MS;
+
+/** Version of the feed file per the Unlimited Last Updated service, or null on error. */
+async function ebiletFeedVersion(token: string): Promise<string | null> {
+  const url = `${EBILET_LAST_UPDATED};fid=${EBILET_FID}?token=${encodeURIComponent(token)}`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { lastUpdatedTime?: string };
+    return typeof body.lastUpdatedTime === 'string' ? body.lastUpdatedTime : null;
+  } catch (e) {
+    console.warn(`ebilet lastUpdated check failed (${(e as Error).message})`);
+    return null;
+  }
+}
 
 async function loadFeed(ctx: SeedContext): Promise<{ products: EbiletProduct[] }> {
   const token = ctx.env.EBILET_TD_TOKEN;
   if (!token) throw new Error('EBILET_TD_TOKEN secret missing');
   const cached = await ctx.env.MEDIA.get(FEED_CACHE_KEY);
-  const fresh = !!cached && Date.now() - cached.uploaded.getTime() < FEED_CACHE_TTL_MS;
-  if (fresh) return JSON.parse(await cached!.text()) as { products: EbiletProduct[] };
+  const parseCached = async (): Promise<{ products: EbiletProduct[] }> =>
+    JSON.parse(await cached!.text()) as { products: EbiletProduct[] };
+
+  const version = await ebiletFeedVersion(token);
+  if (cached && cached.customMetadata?.feedUpdated === version) return parseCached();
+  if (cached && version === null && Date.now() - cached.uploaded.getTime() < FEED_CACHE_TTL_MS) {
+    // Version check unavailable → reuse a still-fresh cached copy.
+    return parseCached();
+  }
   try {
     const feed = await fetchEbiletFeed(token);
     await ctx.env.MEDIA.put(FEED_CACHE_KEY, JSON.stringify(feed), {
       httpMetadata: { contentType: 'application/json' },
+      customMetadata: { feedUpdated: version ?? String(Date.now()) },
     }).catch(() => { /* cache write is best-effort */ });
     return feed;
   } catch (e) {
     if (cached) {
       console.warn(`ebilet feed download failed (${(e as Error).message}) — using cached copy`);
-      return JSON.parse(await cached.text()) as { products: EbiletProduct[] };
+      return parseCached();
     }
     throw e;
   }

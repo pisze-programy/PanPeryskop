@@ -1,5 +1,10 @@
 // ebilet.pl provider — 'fetch' transport (TradeDoubler affiliate feed, fid 94944).
-// The feed is a public REST API (no bot management), so it runs on the Worker.
+//
+// The Worker CANNOT download the feed: api.tradedoubler.com returns HTTP 400 (empty
+// body) to Cloudflare Workers egress (a WAF — the same reason other providers run on
+// the VPS executor). The feed is instead pushed into R2 (seed/ebilet-feed.json) by an
+// external job via admin POST /seed/ebilet/feed (see loadFeed), and this provider
+// consumes that cache. All parsing/mapping below is exercised against the real feed.
 //
 // Data model per product (one eBilet event page, identified by SourceProductId):
 //   fields: many "Availability|Location|Date|Segment<N>" = "In Stock|Venue, City|2026-09-04 19:00:00|Segment X"
@@ -29,7 +34,7 @@ import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/ty
 import { resolveGeo } from '../core/geo';
 import { diacriticFold } from '../core/match';
 import { toWarsawIso } from '../core/dates';
-import { PROVIDER_FETCH_TIMEOUT_MS, HOUR_MS } from '../core/constants';
+import { PROVIDER_FETCH_TIMEOUT_MS } from '../core/constants';
 
 const EBILET_UNLIMITED = 'https://api.tradedoubler.com/1.0/productsUnlimited.json';
 const EBILET_LAST_UPDATED = 'https://api.tradedoubler.com/1.0/productsUnlimited/lastUpdated.json';
@@ -298,15 +303,15 @@ export async function fetchEbiletFeed(token: string): Promise<{ products: Ebilet
 /** Candidates for the target day (whole Poland, all categories). Day-scoped so the
  *  provider slots into the per-day seed batch model.
  *
- *  The Unlimited export download is QUOTED by TradeDoubler: max 3 downloads / 24h of
- *  the SAME file version, then HTTP 429. Following the docs' recommendation, we check
- *  the lightweight "Unlimited Last Updated" endpoint first and download the feed ONLY
- *  when its version changed. The fetched feed is cached in R2 (seed/ebilet-feed.json)
- *  with the version stored in custom metadata; a download that fails (incl. 429) falls
- *  back to the cached copy. When the version check is unavailable, a 12h age cap
- *  decides freshness so we never re-download an unchanged feed in the same window. */
+ *  IMPORTANT: api.tradedoubler.com rejects Cloudflare Workers egress (HTTP 400, empty
+ *  body). The Worker can NOT download the feed itself. Instead the feed is pushed into
+ *  R2 (seed/ebilet-feed.json) by an EXTERNAL job (admin POST /seed/ebilet/feed, run from
+ *  the VPS/mac where a plain download works) whenever the feed changes. The provider
+ *  reads that cache and only attempts its own download when no cache exists (then the
+ *  scope fails loudly until the external warm). TradeDoubler's quota (3 downloads / 24h
+ *  per version) is therefore irrelevant on the Worker side; the external job checks the
+ *  "Unlimited Last Updated" endpoint before re-pushing. */
 const FEED_CACHE_KEY = 'seed/ebilet-feed.json';
-const FEED_CACHE_TTL_MS = 12 * HOUR_MS;
 
 /** Version of the feed file per the Unlimited Last Updated service, or null on error. */
 async function ebiletFeedVersion(token: string): Promise<string | null> {
@@ -332,26 +337,30 @@ async function loadFeed(ctx: SeedContext): Promise<{ products: EbiletProduct[] }
   const parseCached = async (): Promise<{ products: EbiletProduct[] }> =>
     JSON.parse(await cached!.text()) as { products: EbiletProduct[] };
 
-  const version = await ebiletFeedVersion(token);
-  if (cached && cached.customMetadata?.feedUpdated === version) return parseCached();
-  if (cached && version === null && Date.now() - cached.uploaded.getTime() < FEED_CACHE_TTL_MS) {
-    // Version check unavailable → reuse a still-fresh cached copy.
-    return parseCached();
-  }
-  try {
-    const feed = await fetchEbiletFeed(token);
-    await ctx.env.MEDIA.put(FEED_CACHE_KEY, JSON.stringify(feed), {
-      httpMetadata: { contentType: 'application/json' },
-      customMetadata: { feedUpdated: version ?? String(Date.now()) },
-    }).catch(() => { /* cache write is best-effort */ });
-    return feed;
-  } catch (e) {
-    if (cached) {
+  if (cached) {
+    const version = await ebiletFeedVersion(token);
+    // Version check blocked/error (worker egress to TD) → trust the external cache.
+    if (version === null || cached.customMetadata?.feedUpdated === version) return parseCached();
+    // Version changed → try to download ourselves; fall back to the cache on failure.
+    try {
+      const feed = await fetchEbiletFeed(token);
+      await ctx.env.MEDIA.put(FEED_CACHE_KEY, JSON.stringify(feed), {
+        httpMetadata: { contentType: 'application/json' },
+        customMetadata: { feedUpdated: version },
+      }).catch(() => { /* cache write is best-effort */ });
+      return feed;
+    } catch (e) {
       console.warn(`ebilet feed download failed (${(e as Error).message}) — using cached copy`);
       return parseCached();
     }
-    throw e;
   }
+  // No cache yet: the worker download will fail until an external job warms R2.
+  const feed = await fetchEbiletFeed(token);
+  await ctx.env.MEDIA.put(FEED_CACHE_KEY, JSON.stringify(feed), {
+    httpMetadata: { contentType: 'application/json' },
+    customMetadata: { feedUpdated: 'external' },
+  }).catch(() => { /* cache write is best-effort */ });
+  return feed;
 }
 
 export async function fetchEbiletDay(ctx: SeedContext): Promise<SeedCandidate[]> {

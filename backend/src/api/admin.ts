@@ -111,6 +111,25 @@ adminRoutes.get('/seed/coverage', async (c) => {
   return c.json({ window, counts });
 });
 
+// Warm/refresh the ebilet feed cache in R2. api.tradedoubler.com rejects Cloudflare
+// Workers egress (HTTP 400, empty body — a WAF, same class as the VPS-executor
+// origins), while a plain residential/browser download works. The Worker provider
+// reads this R2 cache (seed/ebilet-feed.json) and falls back to it whenever its own
+// download fails, so an external job (VPS/mac) pushes the feed here on change.
+// Body = the raw productsUnlimited JSON response.
+adminRoutes.post('/seed/ebilet/feed', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.text();
+  if (!body || body.length < 1000 || !body.includes('"products"')) {
+    return c.json({ error: 'Invalid feed body' }, 400);
+  }
+  await c.env.MEDIA.put('seed/ebilet-feed.json', body, {
+    httpMetadata: { contentType: 'application/json' },
+    customMetadata: { feedUpdated: 'external' },
+  });
+  return c.json({ ok: true, bytes: body.length });
+});
+
 // One-off data cleanup: delete all event posts earlier than today (Europe/Warsaw),
 // their R2 media and dependent rows (reports/likes/dislikes/views/shares).
 // Without ?source it removes events earlier than today; with ?source=a,b it

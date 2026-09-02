@@ -1,4 +1,6 @@
 // ebilet.pl provider — 'fetch' transport (TradeDoubler affiliate feed, fid 94944).
+// TradeDoubler reference: https://dev.tradedoubler.com/products/publisher/
+// Integration notes: docs/ebilet-tradedoubler.md
 //
 // The Worker CANNOT download the feed: api.tradedoubler.com returns HTTP 400 (empty
 // body) to Cloudflare Workers egress (a WAF — the same reason other providers run on

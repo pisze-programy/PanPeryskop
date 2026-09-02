@@ -12,10 +12,25 @@ ID is 94944.
 The provider runs on the Cloudflare Worker. It is a 'fetch' provider. It does
 not need the browser.
 
-Reference documentation:
-<https://dev.tradedoubler.com/products/publisher/>
+Reference documentation (TradeDoubler Products API — Publishers):
+
+- Products API overview:
+  <https://dev.tradedoubler.com/products/publisher/>
+- Unlimited service (download limits, example requests):
+  <https://dev.tradedoubler.com/products/publisher/#Unlimited_service>
+- Unlimited Last Updated service:
+  <https://dev.tradedoubler.com/products/publisher/#Unlimited_Last_Updated_service>
+- Search service + response fields (Availability, priceHistory, categories):
+  <https://dev.tradedoubler.com/products/publisher/#Search_service>
+- Error management (HTTP codes, PF_ codes):
+  <https://dev.tradedoubler.com/products/publisher/#Error_management>
 
 ## 2. Endpoints
+
+See the [Unlimited service](https://dev.tradedoubler.com/products/publisher/#Unlimited_service)
+and the
+[Unlimited Last Updated service](https://dev.tradedoubler.com/products/publisher/#Unlimited_Last_Updated_service)
+in the TradeDoubler documentation.
 
 We use two endpoints.
 

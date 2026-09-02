@@ -11,7 +11,6 @@ import { buildDescription, dedupe, showtimesJson, showtimeBookingJson, tagsJson 
 import { fallbackSeedGeo } from '../core/geo';
 import { dropCancelled, rescueRealShows } from '../core/filters';
 import { loadBlacklistRules, findBlacklist, blacklistReason } from '../core/blacklist';
-import { resolveKupGeo } from '../providers/kupbilecik';
 import { resolveEbiletGeo } from '../providers/ebilet';
 import { writeSeedRun, browserBudget, BrowserBudget } from '../core/log';
 import { SEED_DEVICE_ID } from '../core/constants';
@@ -97,17 +96,10 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
     }
     let pendingGeo = false;
     if (typeof c.lat !== 'number' || typeof c.lng !== 'number') {
-      // kupbilecik defers geo to after dedupe (venue store → browser fallback);
-      // ebilet too (venue store → Nominatim), see queue/handlers.ts.
-      if (c.source === ProviderId.KUPBILECIK && c.geoRef) {
-        const ctx: SeedContext = {
-          env, day, dayStart,
-          dayEnd: eventDayEndMs(day), createdAt,
-          recordBrowserMs: (ms) => { providerResult.browserMs += ms; },
-        };
-        const geo = await resolveKupGeo(ctx, c.venue, c.geoRef, day, c.city);
-        if (geo.lat != null && geo.lng != null) { c.lat = geo.lat; c.lng = geo.lng; }
-      } else if (c.source === ProviderId.EBILET) {
+      // ebilet defers geo to after dedupe (venues store → Nominatim), see queue/handlers.ts.
+      // kupbilecik's new API provides coords directly; any geo-less row falls through
+      // to the generic default pin below.
+      if (c.source === ProviderId.EBILET) {
         const ctx: SeedContext = {
           env, day, dayStart,
           dayEnd: eventDayEndMs(day), createdAt,

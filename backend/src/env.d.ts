@@ -20,6 +20,8 @@ interface Env {
   GETYOURGUIDE_TOKEN?: string;
   // ebilet TradeDoubler feed token (productsUnlimited.json?token=...).
   EBILET_TD_TOKEN?: string;
+  // kupbilecik official partner API token (api/?token=...).
+  KUPBILECIK_API_TOKEN?: string;
   // cf-snitch email service (seed digest) — see docs/seed-digest.md.
   SNITCH_URL?: string;
   SNITCH_TOKEN?: string;

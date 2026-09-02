@@ -40,11 +40,12 @@ export interface ProviderConfig {
 
 export const PROVIDER_CONFIGS: ProviderConfig[] = [
   // ---- Worker executor (CF Workers edge) ---------------------------------
-  // kupbilecik stays on the Worker: it needs the BROWSER binding (Bot Fight
-  // Mode blocks plain fetch, and Browser Run is free within the 10h/month budget).
-  // ebilet joins it: its TradeDoubler feed is a plain JSON API (no bot management).
+  // kupbilecik + ebilet run on the Worker. kupbilecik uses the official partner API
+  // (plain fetch works from the edge — probed) but consumes a PER-DAY R2 manifest
+  // pushed by an external job (the full catalog is ~60 MB, too big to parse per day).
+  // ebilet reads its own external-warmed R2 feed cache.
   {
-    id: ProviderId.KUPBILECIK, transport: 'browser', enabled: true, priority: 3,
+    id: ProviderId.KUPBILECIK, transport: 'fetch', enabled: true, priority: 3,
     executors: { worker: true },
   },
   // ebilet.pl via the TradeDoubler feed — public REST API, plain fetch works from

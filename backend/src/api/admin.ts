@@ -130,6 +130,25 @@ adminRoutes.post('/seed/ebilet/feed', async (c) => {
   return c.json({ ok: true, bytes: body.length });
 });
 
+// Warm one day of kupbilecik events into R2. The official API returns the WHOLE
+// future catalog (~60 MB JSON) — too big to parse per-day on the Worker. An external
+// job (VPS/mac) downloads it once and pushes a per-day manifest (trimmed events for
+// one window day) here; the provider reads only its batch day. R2 key:
+// seed/kupbilecik/<day>.json
+adminRoutes.post('/seed/kupbilecik/day', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ day?: unknown; events?: unknown }>().catch(() => ({} as { day?: unknown; events?: unknown }));
+  const day = typeof body.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day) ? body.day : null;
+  const events = Array.isArray(body.events) ? body.events : null;
+  if (!day || !events) return c.json({ error: 'day + events[] required' }, 400);
+  if (events.length > 2000) return c.json({ error: 'too many events' }, 400);
+  await c.env.MEDIA.put(`seed/kupbilecik/${day}.json`, JSON.stringify(events), {
+    httpMetadata: { contentType: 'application/json' },
+    customMetadata: { feedUpdated: 'external' },
+  });
+  return c.json({ ok: true, day, events: events.length });
+});
+
 // One-off data cleanup: delete all event posts earlier than today (Europe/Warsaw),
 // their R2 media and dependent rows (reports/likes/dislikes/views/shares).
 // Without ?source it removes events earlier than today; with ?source=a,b it

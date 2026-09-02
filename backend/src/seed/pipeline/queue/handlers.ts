@@ -13,7 +13,6 @@ import { fallbackSeedGeo } from '../../core/geo';
 import { dropCancelled, rescueRealShows, isCancelled } from '../../core/filters';
 import { loadBlacklistRules, findBlacklist, blacklistReason } from '../../core/blacklist';
 import { buildVenueCache } from '../../providers/eventylive';
-import { resolveKupGeo } from '../../providers/kupbilecik';
 import { resolveEbiletGeo } from '../../providers/ebilet';
 import { writeSeedRun } from '../../core/log';
 import { reportBatchDigest } from '../../digest';
@@ -237,12 +236,10 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     // falling back to a venue-page browser call for unknowns). ebilet does the
     // same (venues store → Nominatim) — its feed carries venue names, not coords,
     // and the Nominatim pace (module-global) would blow a single fetch scope's
-    // runtime if it ran there.
+    // runtime if it ran there. (kupbilecik's new API provides coords directly —
+    // geo-less rows are rare and fall through to the generic default pin.)
     let pendingGeo = false;
-    if (row.provider === ProviderId.KUPBILECIK && (cand.lat == null || cand.lng == null)) {
-      const geo = await resolveKupGeo(ctx, cand.venue, row.geo_ref || '', day, cand.city);
-      if (geo.lat != null && geo.lng != null) { cand.lat = geo.lat; cand.lng = geo.lng; }
-    } else if (row.provider === ProviderId.EBILET && (cand.lat == null || cand.lng == null)) {
+    if (row.provider === ProviderId.EBILET && (cand.lat == null || cand.lng == null)) {
       const geo = await resolveEbiletGeo(ctx, cand);
       if (geo && geo.lat != null && geo.lng != null) { cand.lat = geo.lat; cand.lng = geo.lng; }
     }

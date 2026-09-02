@@ -286,7 +286,10 @@ export async function fetchEbiletFeed(token: string): Promise<{ products: Ebilet
       await sleep(15_000); // export still generating — try again
       continue;
     }
-    if (!res.ok) throw new Error(`ebilet feed -> ${res.status}`);
+    if (!res.ok) {
+      const snippet = (await res.text().catch(() => '')).slice(0, 300);
+      throw new Error(`ebilet feed -> ${res.status} ${snippet}`);
+    }
     return (await res.json()) as { products: EbiletProduct[] };
   }
   throw new Error('ebilet feed still generating (202 after 6 attempts)');

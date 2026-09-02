@@ -288,7 +288,7 @@ export async function fetchEbiletFeed(token: string): Promise<{ products: Ebilet
     }
     if (!res.ok) {
       const snippet = (await res.text().catch(() => '')).slice(0, 300);
-      throw new Error(`ebilet feed -> ${res.status} ${snippet}`);
+      throw new Error(`ebilet feed -> ${res.status} at ${res.url} ${snippet}`);
     }
     return (await res.json()) as { products: EbiletProduct[] };
   }

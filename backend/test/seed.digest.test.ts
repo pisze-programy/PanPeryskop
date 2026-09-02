@@ -73,9 +73,9 @@ function capturedReports(): { reports: Report[]; fetch: typeof fetch } {
   return { reports, fetch: original };
 }
 
-test('activeSeedProviders: returns the 7 automated providers, excludes facebook + disabled', () => {
+test('activeSeedProviders: returns the 8 automated providers, excludes facebook + disabled', () => {
   const p = activeSeedProviders();
-  assert.deepEqual(p, ['cinemacity', 'going', 'helios', 'kupbilecik', 'luma', 'meetup', 'multikino'].sort());
+  assert.deepEqual(p, ['cinemacity', 'ebilet', 'going', 'helios', 'kupbilecik', 'luma', 'meetup', 'multikino'].sort());
   assert.ok(!p.includes('facebook'), 'manual facebook is not a daily job');
   assert.ok(!p.includes('maratonypolskie') && !p.includes('getyourguide'), 'disabled providers are excluded');
 });
@@ -91,7 +91,7 @@ test('recordSeedDigest: dedupes a same-status retry (one report)', async () => {
     assert.equal(mine.length, 1, 'same status must not re-report');
     assert.equal(mine[0].status, 'ok');
     assert.equal(mine[0].notify, 'on-error', 'per-provider ok must not email (on-error)');
-    assert.equal(mine[0].data?.job, '1/7');
+    assert.equal(mine[0].data?.job, '1/8');
   } finally {
     global.fetch = fetch;
   }
@@ -114,7 +114,7 @@ test('recordSeedDigest: status change (failed → ok) reports both states', asyn
   }
 });
 
-test('recordSeedDigest: day-done email fires once when all 7 providers report', async () => {
+test('recordSeedDigest: day-done email fires once when all 8 providers report', async () => {
   const { reports, fetch } = capturedReports();
   try {
     const db = new MockDigestDB();
@@ -128,7 +128,7 @@ test('recordSeedDigest: day-done email fires once when all 7 providers report', 
     assert.equal(dayDone.length, 1, 'day-done must fire exactly once');
     assert.equal(dayDone[0].status, 'ok');
     assert.equal(dayDone[0].notify, 'always', 'day-done emails on ok');
-    assert.equal(dayDone[0].data?.providers, 7);
+    assert.equal(dayDone[0].data?.providers, 8);
   } finally {
     global.fetch = fetch;
   }

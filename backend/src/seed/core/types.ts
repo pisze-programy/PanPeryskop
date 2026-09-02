@@ -18,6 +18,7 @@ export const ProviderId = {
   MEETUP: 'meetup',
   MARATONYPOLSKIE: 'maratonypolskie',
   GETYOURGUIDE: 'getyourguide',
+  EBILET: 'ebilet',
   FACEBOOK: 'facebook',
 } as const;
 export type ProviderId = (typeof ProviderId)[keyof typeof ProviderId];
@@ -71,6 +72,12 @@ export interface SeedCandidate {
   partnerId?: string;
   /** Organizer name (goingapp Algolia partner_name) — display only. */
   partnerName?: string;
+  /** Ticket price in PLN (provider-reported, e.g. ebilet). Null/absent = unknown. */
+  price?: number | null;
+  /** Affiliate click URL (provider-specific, e.g. TradeDoubler). Kept separate from
+   *  `link` because the dedupe-facing link must be per-event unique, while the
+   *  affiliate tracker is a shared redirect host. Replaces `link` at ingest. */
+  affiliateLink?: string;
 }
 
 export interface SeedProviderResult {

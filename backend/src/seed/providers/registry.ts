@@ -40,10 +40,20 @@ export interface ProviderConfig {
 
 export const PROVIDER_CONFIGS: ProviderConfig[] = [
   // ---- Worker executor (CF Workers edge) ---------------------------------
-  // Only kupbilecik stays on the Worker: it needs the BROWSER binding (Bot Fight
+  // kupbilecik stays on the Worker: it needs the BROWSER binding (Bot Fight
   // Mode blocks plain fetch, and Browser Run is free within the 10h/month budget).
+  // ebilet joins it: its TradeDoubler feed is a plain JSON API (no bot management).
   {
     id: ProviderId.KUPBILECIK, transport: 'browser', enabled: true, priority: 3,
+    executors: { worker: true },
+  },
+  // ebilet.pl via the TradeDoubler feed — public REST API, plain fetch works from
+  // the Worker edge. Whole Poland, all categories. priority 7: going/kupbilecik/
+  // meetup stay canonical for covered events; ebilet wins only when nothing else
+  // has the event. Geo is deferred to ingest (venues store → Nominatim) like
+  // kupbilecik — the feed carries venue names, never coordinates.
+  {
+    id: ProviderId.EBILET, transport: 'fetch', enabled: true, priority: 7,
     executors: { worker: true },
   },
   {

@@ -18,6 +18,8 @@ interface Env {
   CLOUDINARY_SIG?: string;
   // getyourguide Partner API access token (X-ACCESS-TOKEN header).
   GETYOURGUIDE_TOKEN?: string;
+  // ebilet TradeDoubler feed token (productsUnlimited.json?token=...).
+  EBILET_TD_TOKEN?: string;
   // cf-snitch email service (seed digest) — see docs/seed-digest.md.
   SNITCH_URL?: string;
   SNITCH_TOKEN?: string;

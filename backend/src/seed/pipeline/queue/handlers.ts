@@ -14,6 +14,7 @@ import { dropCancelled, rescueRealShows, isCancelled } from '../../core/filters'
 import { loadBlacklistRules, findBlacklist, blacklistReason } from '../../core/blacklist';
 import { buildVenueCache } from '../../providers/eventylive';
 import { resolveKupGeo } from '../../providers/kupbilecik';
+import { resolveEbiletGeo } from '../../providers/ebilet';
 import { writeSeedRun } from '../../core/log';
 import { reportBatchDigest } from '../../digest';
 import { EnvQ, SeedQueueMessage } from './types';
@@ -100,14 +101,15 @@ export async function handleFetch(env: EnvQ, m: Extract<SeedQueueMessage, { type
   const stmt = env.DB.prepare(
     `INSERT INTO seed_candidates
       (id, batch_id, provider, scope, external_id, title, start_ms, lat, lng, city, venue, address, link, media_url, thumb_url,
-       is_sold_out, geo_ref, showtimes, showtime_booking, tags, partner_id, partner_name, status, attempts, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '${CandidateStatus.PENDING}', 0, ?, ?)`
+       is_sold_out, geo_ref, showtimes, showtime_booking, tags, partner_id, partner_name, price_pln, affiliate_link, status, attempts, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '${CandidateStatus.PENDING}', 0, ?, ?)`
   );
   for (const c of candidates) {
     await stmt.bind(nanoid(24), m.batchId, provider.id, m.scope, c.externalId, c.title, c.startMs,
       c.lat, c.lng, c.city, c.venue, c.address, c.link, c.mediaUrl, c.thumbUrl,
       c.isSoldOut ? 1 : 0, c.geoRef || null, showtimesJson(c), showtimeBookingJson(c), tagsJson(c),
-      c.partnerId || null, c.partnerName || null, t, t).run();
+      c.partnerId || null, c.partnerName || null,
+      typeof c.price === 'number' ? c.price : null, c.affiliateLink || null, t, t).run();
   }
 
   // Log per-scope run (duration + browser ms) to seed_runs so the dashboard and
@@ -154,6 +156,11 @@ async function runDedupe(env: EnvQ, batchId: string): Promise<void> {
   const pre = dropCancelled(dedupeInput);
   const merged = rescueRealShows(pre, dedupe(pre));
   const winnerRowIds = new Set(merged.map((x) => x.externalId));
+  // dedupe() merged each group's cheapest known price onto the winner — persist it
+  // to the winner row so handleIngest (which reloads the row) stores it on the post
+  // even when ebilet lost dedupe to a higher-rank source (going/kupbilecik/...).
+  const priceById = new Map<string, number>();
+  for (const w of merged) if (typeof w.price === 'number') priceById.set(w.externalId, w.price);
   const t = now();
   const ingestMsgs: MessageSendRequest<SeedQueueMessage>[] = [];
   for (const row of results || []) {
@@ -161,6 +168,12 @@ async function runDedupe(env: EnvQ, batchId: string): Promise<void> {
       await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.DUPLICATE}', reason=?, updated_at=? WHERE id=?`)
         .bind(isCancelled(row.title) ? 'title: cancelled' : 'dedupe: covered by another provider', t, row.id).run();
       continue;
+    }
+    const mergedPrice = priceById.get(row.id);
+    if (mergedPrice !== undefined && row.price_pln !== mergedPrice) {
+      await env.DB.prepare('UPDATE seed_candidates SET price_pln=?, updated_at=? WHERE id=?')
+        .bind(mergedPrice, t, row.id).run();
+      row.price_pln = mergedPrice;
     }
     if (!row.media_url) {
       await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.NO_MEDIA}', reason='missing media url', updated_at=? WHERE id=?`)
@@ -221,11 +234,17 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     };
 
     // kupbilecik defers geo to after dedupe: resolve it now (shared venues store,
-    // falling back to a venue-page browser call for unknowns).
+    // falling back to a venue-page browser call for unknowns). ebilet does the
+    // same (venues store → Nominatim) — its feed carries venue names, not coords,
+    // and the Nominatim pace (module-global) would blow a single fetch scope's
+    // runtime if it ran there.
     let pendingGeo = false;
     if (row.provider === ProviderId.KUPBILECIK && (cand.lat == null || cand.lng == null)) {
       const geo = await resolveKupGeo(ctx, cand.venue, row.geo_ref || '', day, cand.city);
       if (geo.lat != null && geo.lng != null) { cand.lat = geo.lat; cand.lng = geo.lng; }
+    } else if (row.provider === ProviderId.EBILET && (cand.lat == null || cand.lng == null)) {
+      const geo = await resolveEbiletGeo(ctx, cand);
+      if (geo && geo.lat != null && geo.lng != null) { cand.lat = geo.lat; cand.lng = geo.lng; }
     }
     // Still no geo → collect with a default pin (city center / 0,0) and ingest as
     // PENDING: it never shows in the app until the admin fixes geo / approves.
@@ -261,7 +280,7 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     await doSavePost(env as unknown as Env, user, postId, 'photo', cand.lat!, cand.lng!, description,
       mediaKey, thumbKey, createdAt, true, cand.link, cand.externalId, Boolean(existing), Boolean(cand.isSoldOut), showtimesJson(cand), showtimeBookingJson(cand), tagsJson(cand),
       (pendingGeo || provider.pendingByDefault) ? STATUS_PENDING : STATUS_APPROVED,
-      cand.partnerId || null, cand.partnerName || null);
+      cand.partnerId || null, cand.partnerName || null, cand.price ?? null);
 
     await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.DONE}', post_id=?, reason=NULL, updated_at=? WHERE id=?`)
       .bind(postId, now(), m.candidateId).run();

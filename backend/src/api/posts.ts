@@ -232,7 +232,8 @@ export async function doSavePost(
   tags: string | null = null,
   status: string = STATUS_APPROVED,
   partnerId: string | null = null,
-  partnerName: string | null = null
+  partnerName: string | null = null,
+  price: number | null = null
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
@@ -256,19 +257,19 @@ export async function doSavePost(
              event_date = ?, showtimes = CASE WHEN time_locked = 1 THEN showtimes ELSE ? END,
              showtime_booking = CASE WHEN time_locked = 1 THEN showtime_booking ELSE ? END,
              tags = CASE WHEN tags_locked = 1 THEN tags ELSE ? END,
-             partner_id = ?, partner_name = ?
+             partner_id = ?, partner_name = ?, price_pln = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name, price_pln)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName)
+      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price)
       .run();
     await db
       .prepare(
@@ -297,6 +298,7 @@ export async function doSavePost(
     showtimes: showtimes ? (JSON.parse(showtimes) as string[]) : null,
     showtime_booking: showtimeBooking ? JSON.parse(showtimeBooking) : null,
     tags: tags ? JSON.parse(tags) : null,
+    price_pln: price,
   };
 }
 

@@ -82,6 +82,11 @@ export function dedupe(events: SeedCandidate[]): SeedCandidate[] {
       );
       const winner = members[0];
       winner.startMs = Math.min(...members.map((m) => m.startMs));
+      // Price survives the merge: the group keeps the cheapest known price. Most
+      // sources (going/kupbilecik) carry none, so this is what lets an ebilet
+      // price reach the post even when ebilet loses dedupe to a higher-rank source.
+      const prices = members.map((m) => m.price).filter((p): p is number => typeof p === 'number');
+      if (prices.length > 0) winner.price = Math.min(...prices);
       out.push(winner);
     }
   }

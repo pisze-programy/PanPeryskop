@@ -14,6 +14,7 @@ export interface CandRow {
   status?: CandidateStatus; is_sold_out?: number; geo_ref?: string | null; showtimes?: string | null;
   showtime_booking?: string | null; tags?: string | null;
   partner_id?: string | null; partner_name?: string | null;
+  price_pln?: number | null; affiliate_link?: string | null;
 }
 
 export interface BatchRow {
@@ -82,5 +83,7 @@ export function toCandidate(row: CandRow, forDedupe = false): SeedCandidate {
     tags: row.tags ? JSON.parse(row.tags) : undefined,
     partnerId: row.partner_id || undefined,
     partnerName: row.partner_name || undefined,
+    price: row.price_pln ?? null,
+    affiliateLink: row.affiliate_link || undefined,
   };
 }

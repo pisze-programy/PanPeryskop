@@ -64,6 +64,7 @@ export interface PostRow {
   event_date: string | null;
   showtime_booking?: string | null;
   tags?: string | null;
+  price_pln: number | null;
 }
 
 // A post row joined with author info (and optional watched flag) for /stories.

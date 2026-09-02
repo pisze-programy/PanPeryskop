@@ -124,9 +124,9 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
     };
     try {
       const existing = await env.DB
-        .prepare('SELECT id FROM posts WHERE external_id = ?')
+        .prepare('SELECT id, media_key, thumb_key FROM posts WHERE external_id = ?')
         .bind(c.externalId)
-        .first<{ id: string }>();
+        .first<{ id: string; media_key: string | null; thumb_key: string | null }>();
       const postId = existing?.id || nanoid(24);
 
       // Optional provider hook: resolve the post link to the direct source (dzis.app).
@@ -134,14 +134,18 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
         try { c.link = await provider.resolveLink(ctx, c); } catch { /* best-effort */ }
       }
 
-      const mediaBytes = await provider.fetchBytes(ctx, c.mediaUrl);
-      const mediaType = detectMediaType(mediaBytes);
-      if (!mediaType || !mediaType.startsWith('image/')) throw new Error(`bad media ${mediaType || 'unknown'}`);
-      const mediaKey = `posts/${postId}/media.${extForMediaType(mediaType)}`;
-      await env.MEDIA.put(mediaKey, mediaBytes, { httpMetadata: { contentType: mediaType } });
+      // Idempotent re-seed: reuse stored media for existing posts (see queue/handlers.ts).
+      let mediaKey: string | null = existing?.media_key ?? null;
+      if (!mediaKey) {
+        const mediaBytes = await provider.fetchBytes(ctx, c.mediaUrl);
+        const mediaType = detectMediaType(mediaBytes);
+        if (!mediaType || !mediaType.startsWith('image/')) throw new Error(`bad media ${mediaType || 'unknown'}`);
+        mediaKey = `posts/${postId}/media.${extForMediaType(mediaType)}`;
+        await env.MEDIA.put(mediaKey, mediaBytes, { httpMetadata: { contentType: mediaType } });
+      }
 
-      let thumbKey: string | null = null;
-      if (c.thumbUrl) {
+      let thumbKey: string | null = existing?.thumb_key ?? null;
+      if (!thumbKey && c.thumbUrl) {
         try {
           const thumbBytes = await provider.fetchBytes(ctx, c.thumbUrl);
           const thumbType = detectMediaType(thumbBytes) ?? 'image/webp';

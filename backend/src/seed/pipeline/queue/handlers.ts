@@ -208,7 +208,8 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
 
     const cand = toCandidate(row);
     const user = await getOrCreateSeedUser(env.DB);
-    const existing = await env.DB.prepare('SELECT id FROM posts WHERE external_id=?').bind(cand.externalId).first<{ id: string }>();
+    const existing = await env.DB.prepare('SELECT id, media_key, thumb_key FROM posts WHERE external_id=?')
+      .bind(cand.externalId).first<{ id: string; media_key: string | null; thumb_key: string | null }>();
     const postId = existing?.id || nanoid(24);
 
     // Blacklist gate: a rule matched on title/venue/organizer drops the candidate
@@ -257,14 +258,20 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
       try { cand.link = await provider.resolveLink(ctx, cand); } catch { /* best-effort */ }
     }
 
-    const mediaBytes = await provider.fetchBytes(ctx, cand.mediaUrl!);
-    const mediaType = detectMediaType(mediaBytes);
-    if (!mediaType || !mediaType.startsWith('image/')) throw new Error(`bad media ${mediaType || 'unknown'}`);
-    const mediaKey = `posts/${postId}/media.${extForMediaType(mediaType)}`;
-    await env.MEDIA.put(mediaKey, mediaBytes, { httpMetadata: { contentType: mediaType } });
+    // Idempotent re-seed: reuse the stored media when the post already exists —
+    // downloading the poster again on every backfill is wasteful and trips origin
+    // rate limits (kupbilecik 429ed a full-window re-run). Only NEW posts download.
+    let mediaKey: string | null = existing?.media_key ?? null;
+    if (!mediaKey) {
+      const mediaBytes = await provider.fetchBytes(ctx, cand.mediaUrl!);
+      const mediaType = detectMediaType(mediaBytes);
+      if (!mediaType || !mediaType.startsWith('image/')) throw new Error(`bad media ${mediaType || 'unknown'}`);
+      mediaKey = `posts/${postId}/media.${extForMediaType(mediaType)}`;
+      await env.MEDIA.put(mediaKey, mediaBytes, { httpMetadata: { contentType: mediaType } });
+    }
 
-    let thumbKey: string | null = null;
-    if (cand.thumbUrl) {
+    let thumbKey: string | null = existing?.thumb_key ?? null;
+    if (!thumbKey && cand.thumbUrl) {
       try {
         const thumbBytes = await provider.fetchBytes(ctx, cand.thumbUrl);
         const thumbType = detectMediaType(thumbBytes) ?? 'image/webp';

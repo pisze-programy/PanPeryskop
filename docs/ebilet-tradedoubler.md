@@ -93,7 +93,8 @@ Feed facts:
 |---|---|
 | `externalId` | `ebilet-<SourceProductId>-<event-day>` |
 | `title` | Product name |
-| `startMs` | Segment date and time for the seed day |
+| `startMs` | Earliest available segment time for the seed day |
+| `showtimes` | Every available in-day segment time (sorted unique "HH:MM") |
 | `venue`, `city` | Last comma part of the Location string |
 | `link` | ebilet event page URL (dedupe key) |
 | `affiliateLink` | TradeDoubler click URL (stored on the post) |
@@ -103,6 +104,15 @@ Feed facts:
 | `tags` | Mapped from the category (see section 6) |
 
 The external ID is stable. It does not change between downloads.
+
+### 5.1 Showtimes rule
+
+One event-day-venue is ONE post. Do not create duplicate posts.
+
+- All in-day segments of one product become `showtimes` (sorted unique "HH:MM").
+- The post start time is the earliest available segment.
+- If the same event-day-venue appears as several products, we merge them into one
+  post. We keep the union of times and the cheapest price.
 
 ### 5.1 Link rules
 

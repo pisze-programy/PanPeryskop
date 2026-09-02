@@ -27,6 +27,8 @@
 // (resolveLink hook).
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { resolveGeo } from '../core/geo';
+import { diacriticFold } from '../core/match';
+import { toWarsawIso } from '../core/dates';
 import { PROVIDER_FETCH_TIMEOUT_MS, HOUR_MS } from '../core/constants';
 
 const EBILET_UNLIMITED = 'https://api.tradedoubler.com/1.0/productsUnlimited.json';
@@ -169,20 +171,19 @@ export function ebiletTags(category: string | null): string | null {
   return INNE.has(path) ? 'inne' : null;
 }
 
-/** Build candidates for ONE target day from one product. Multiple in-day segments
- *  collapse to the earliest slot (one post per event-day); sold-out is applied only
- *  when EVERY in-day segment is unavailable (a venue that sold out 16:30 but still
- *  sells 19:00 is not sold out). */
+/** Build candidates for ONE target day from one product. All in-day segments of the
+ *  product are the SAME event at the SAME venue on different times — they collapse into
+ *  ONE post carrying showtimes[] (no duplicate posts). is_sold_out applies only when NO
+ *  segment is on sale; the post startMs is the earliest AVAILABLE slot (a venue that sold
+ *  out 16:30 but still sells 19:00 starts at 19:00). */
 export function parseEbiletProduct(p: EbiletProduct, day: string, dayStartMs: number): SeedCandidate[] {
   const name = (p.name || '').trim();
   const offers = p.offers || [];
   const sid = offers[0]?.sourceProductId || '';
   if (!name || !sid) return [];
 
-  // Collect every usable in-day segment. Sold-out applies only when NO segment for the
-  // day is on sale; the shown time is then the earliest AVAILABLE slot (a venue that
-  // sold out 16:30 but still sells 19:00 is not sold out and starts at 19:00).
-  interface Slot { ms: number; soldOut: boolean; location: string }
+  // Collect every usable in-day segment (product × day → one candidate).
+  interface Slot { ms: number; soldOut: boolean; hhmm: string; location: string }
   const slots: Slot[] = [];
   for (const f of p.fields || []) {
     if (!f?.name?.startsWith('Availability|Location|Date|Segment')) continue;
@@ -193,16 +194,20 @@ export function parseEbiletProduct(p: EbiletProduct, day: string, dayStartMs: nu
     slots.push({
       ms: dayStartMs + (h * 60 + mi) * 60_000,
       soldOut: SOLD_OUT_RE.test(seg.availability),
+      hhmm: seg.time.slice(0, 5),
       location: seg.location,
     });
   }
   if (slots.length === 0) return [];
 
+  // Showtimes = every AVAILABLE slot when any is on sale, else every slot (sold-out
+  // day). Sorted unique HH:MM — the UI renders them as the post's time picker.
   const available = slots.filter((s) => !s.soldOut);
   const pick = available.length > 0 ? available : slots;
   pick.sort((a, b) => a.ms - b.ms);
   const winner = pick[0];
   const soldOut = available.length === 0;
+  const times = [...new Set((available.length > 0 ? available : slots).map((s) => s.hhmm))].sort();
 
   const { venue, city } = parseEbiletLocation(winner.location);
   const img = isUsableImage(p.productImage?.url);
@@ -224,7 +229,47 @@ export function parseEbiletProduct(p: EbiletProduct, day: string, dayStartMs: nu
     isSoldOut: soldOut,
     price: ebiletPrice(p),
     tags: tag ? [tag] : undefined,
+    times,
   }];
+}
+
+function hhmmOf(ms: number): string {
+  return toWarsawIso(ms).slice(11, 16);
+}
+
+/** Merge candidates that are the SAME event at the SAME venue on the SAME day
+ *  (identical normalized title + venue). TradeDoubler can emit one show as several
+ *  products/segments; the app wants ONE post per event-day with showtimes[] — never
+ *  duplicate posts for the same event-day-venue. The earliest-start member stays
+ *  canonical (its externalId/link/media); times, price and the sold-out flag are the
+ *  union/min/AND across the group. */
+export function aggregateEbiletDayCandidates(cands: SeedCandidate[]): SeedCandidate[] {
+  if (cands.length < 2) return cands;
+  const groups = new Map<string, SeedCandidate[]>();
+  for (const c of cands) {
+    const key = `${diacriticFold(c.title)}\u0000${diacriticFold(c.venue)}`;
+    const arr = groups.get(key);
+    if (arr) arr.push(c);
+    else groups.set(key, [c]);
+  }
+  const out: SeedCandidate[] = [];
+  for (const arr of groups.values()) {
+    if (arr.length === 1) { out.push(arr[0]); continue; }
+    arr.sort((a, b) => a.startMs - b.startMs);
+    const winner = arr[0];
+    const times = new Set<string>();
+    let price: number | null = null;
+    for (const m of arr) {
+      const list = m.times && m.times.length > 0 ? m.times : [hhmmOf(m.startMs)];
+      for (const t of list) times.add(t);
+      if (typeof m.price === 'number' && (price === null || m.price < price)) price = m.price;
+    }
+    winner.times = [...times].sort();
+    winner.price = price;
+    winner.isSoldOut = arr.every((m) => m.isSoldOut);
+    out.push(winner);
+  }
+  return out;
 }
 
 /** Fetch the whole feed (all ~1292 products) once. The unlimited export regenerates
@@ -313,7 +358,7 @@ export async function fetchEbiletDay(ctx: SeedContext): Promise<SeedCandidate[]>
   for (const p of feed.products || []) {
     out.push(...parseEbiletProduct(p, ctx.day, dayStart));
   }
-  return out;
+  return aggregateEbiletDayCandidates(out);
 }
 
 /** Deferred geo (ingest-time, survivors only): shared venues store → Nominatim.

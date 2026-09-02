@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseEbiletProduct, splitSegment, parseEbiletLocation, ebiletPrice, ebiletPageUrl,
-  ebiletTags, firstEbiletCategory,
+  ebiletTags, firstEbiletCategory, aggregateEbiletDayCandidates,
 } from '../src/seed/providers/ebilet';
 
 const DAY = '2026-09-08';
@@ -41,6 +41,7 @@ test('parseEbiletProduct: earliest in-day slot, externalId, price, distinct dedu
   assert.ok(c, 'one candidate for the target day');
   assert.equal(c.externalId, 'ebilet-111-20260908');
   assert.equal(c.startMs - DAY_MS, (16 * 60 + 30) * 60_000, 'earliest in-day slot wins');
+  assert.deepEqual(c.times, ['16:30', '19:00'], 'all in-day showtimes are kept (showtimes[], no duplicates)');
   assert.equal(c.venue, 'Teatr Studio');
   assert.equal(c.city, 'Warszawa');
   assert.equal(c.price, 120.9);
@@ -68,6 +69,7 @@ test('parseEbiletProduct: sold-out mapping', () => {
   const [s] = parseEbiletProduct(soldOut, DAY, DAY_MS);
   assert.equal(s.isSoldOut, true);
   assert.equal(s.startMs - DAY_MS, 19 * 60 * 60_000);
+  assert.deepEqual(s.times, ['19:00', '20:30'], 'sold-out day keeps every showtime');
 
   // One segment still on sale → NOT sold out; time = earliest AVAILABLE slot.
   const mixed = product({
@@ -79,6 +81,7 @@ test('parseEbiletProduct: sold-out mapping', () => {
   const [m] = parseEbiletProduct(mixed, DAY, DAY_MS);
   assert.equal(m.isSoldOut, false);
   assert.equal(m.startMs - DAY_MS, 19 * 60 * 60_000, 'skips the sold-out early slot');
+  assert.deepEqual(m.times, ['19:00'], 'showtimes list only on-sale slots when any is available');
 });
 
 test('parseEbiletProduct: duplicated-city venue name is normalized', () => {
@@ -186,4 +189,24 @@ test('parseEbiletProduct: candidate carries the mapped canonical tag', () => {
     categories: [{ name: 'Muzyka/Rock' }],
   });
   assert.deepEqual(parseEbiletProduct(rock, DAY, DAY_MS)[0].tags, ['muzyka']);
+});
+
+test('aggregateEbiletDayCandidates: same title+venue+day across products → one post with union showtimes', () => {
+  const a = product({
+    fields: [seg('Availability|Location|Date|Segment1', 'In Stock|Teatr Studio, Warszawa|2026-09-08 16:30:00|Segment 1')],
+    offers: [{ productUrl: CLICK('111'), sourceProductId: '111', priceHistory: [{ price: { value: '120.9', currency: 'PLN' } }] }],
+  });
+  const b = product({
+    name: 'Koncert Kameralny',
+    fields: [seg('Availability|Location|Date|Segment1', 'In Stock|Teatr Studio, Warszawa|2026-09-08 19:00:00|Segment 1')],
+    offers: [{ productUrl: CLICK('222'), sourceProductId: '222', priceHistory: [{ price: { value: '80.0', currency: 'PLN' } }] }],
+  });
+  const [c] = parseEbiletProduct(a, DAY, DAY_MS);
+  const [d] = parseEbiletProduct(b, DAY, DAY_MS);
+  assert.notEqual(c.externalId, d.externalId, 'two products → two candidate rows');
+  const merged = aggregateEbiletDayCandidates([c, d]);
+  assert.equal(merged.length, 1, 'aggregation collapses the duplicate event-day');
+  assert.equal(merged[0].externalId, c.externalId, 'earliest-start member is canonical');
+  assert.deepEqual(merged[0].times, ['16:30', '19:00'], 'showtimes are the union');
+  assert.equal(merged[0].price, 80.0, 'cheapest known price survives');
 });

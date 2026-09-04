@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 import { enabledProviders } from '../../providers';
 import { EnvQ, SeedQueueMessage } from './types';
 import { now } from './state';
+import { planDayUnits, writeDayUnits } from './units';
 import { D1_BATCH_STATEMENT_CAP, QUEUE_SEND_BATCH_CAP } from '../../core/constants';
 
 // Enqueue a seed for a day. Single-flight: if a batch for that day is already
@@ -35,6 +36,15 @@ export async function enqueueSeedDay(env: EnvQ, day: string, runType: 'cron' | '
     }
   }
   for (let i = 0; i < stmts.length; i += D1_BATCH_STATEMENT_CAP) await env.DB.batch(stmts.slice(i, i + D1_BATCH_STATEMENT_CAP));
+
+  // Shadow ledger for the queue redesign (step 4): mirror the same work as
+  // seed_units rows. Nothing routes through them yet. Best-effort — a failure
+  // here must never break the existing pipeline.
+  try {
+    await writeDayUnits(env.DB, planDayUnits(day, batchId), t, D1_BATCH_STATEMENT_CAP);
+  } catch (e) {
+    console.error(`seed: shadow seed_units write failed (day ${day}): ${(e as Error).message}`);
+  }
 
   await env.SEED_FETCH_QUEUE.send({ type: 'seed-day', batchId, day, runType });
   return { batchId, created: true };

@@ -116,6 +116,9 @@ export async function upsertVenue(db: D1Database, v: VenueInput): Promise<string
 // (e.g. "Katedra Marii Magdaleny"), so it resolves despite the missing city —
 // otherwise a geo'd venue with an unknown city silently drops every candidate.
 // Returns {lat, lng, id} or null.
+// NOTE: rows without coordinates (stubs stamped by the Phase-1 sink, see
+// ensureCanonicalVenue) are excluded everywhere here — geo resolution must never
+// return null coordinates.
 export async function resolveVenueGeo(
   db: D1Database, name: string, city?: string | null
 ): Promise<{ lat: number; lng: number; id: string } | null> {
@@ -123,7 +126,7 @@ export async function resolveVenueGeo(
   const rows = await loadVenuePool(db, city);
   let match = bestVenueMatch(name, rows);
   if (!match && city) {
-    const cityless = await db.prepare('SELECT * FROM venues WHERE city IS NULL AND id = ?')
+    const cityless = await db.prepare('SELECT * FROM venues WHERE city IS NULL AND id = ? AND lat IS NOT NULL AND lng IS NOT NULL')
       .bind(venueKey(name)).first<VenueRow>();
     if (cityless) match = bestVenueMatch(name, [cityless]);
   }
@@ -134,13 +137,14 @@ export async function resolveVenueGeo(
 
 // Load the candidate venue rows. With a known city ONLY exact same-city rows are
 // candidates — city-less rows are ambiguous ("Amfiteatr" could be any city's).
+// Coordinate-less stubs are excluded (see resolveVenueGeo note).
 async function loadVenuePool(db: D1Database, city?: string | null): Promise<VenueRow[]> {
   if (city) {
-    const { results } = await db.prepare('SELECT * FROM venues WHERE city = ?')
+    const { results } = await db.prepare('SELECT * FROM venues WHERE city = ? AND lat IS NOT NULL AND lng IS NOT NULL')
       .bind(venueKey(city)).all<VenueRow>();
     return results || [];
   }
-  const { results } = await db.prepare('SELECT * FROM venues').all<VenueRow>();
+  const { results } = await db.prepare('SELECT * FROM venues WHERE lat IS NOT NULL AND lng IS NOT NULL').all<VenueRow>();
   return results || [];
 }
 
@@ -159,11 +163,35 @@ function bestVenueMatch(name: string, rows: VenueRow[]): VenueRow | null {
 }
 
 // All venues (optionally filtered by city) for in-memory fuzzy matching (matchVenueGeo).
+// Coordinate-less stubs (see ensureCanonicalVenue) are excluded — callers use this
+// for geo, and geo must never be null.
 export async function listVenues(db: D1Database, city?: string | null): Promise<{ name: string; geo: { lat: number; lng: number }; city: string | null }[]> {
   const { results } = city
-    ? await db.prepare('SELECT name, lat, lng, city FROM venues WHERE city = ?').bind(venueKey(city)).all<{ name: string; lat: number; lng: number; city: string | null }>()
-    : await db.prepare('SELECT name, lat, lng, city FROM venues').all<{ name: string; lat: number; lng: number; city: string | null }>();
+    ? await db.prepare('SELECT name, lat, lng, city FROM venues WHERE city = ? AND lat IS NOT NULL AND lng IS NOT NULL').bind(venueKey(city)).all<{ name: string; lat: number; lng: number; city: string | null }>()
+    : await db.prepare('SELECT name, lat, lng, city FROM venues WHERE lat IS NOT NULL AND lng IS NOT NULL').all<{ name: string; lat: number; lng: number; city: string | null }>();
   return (results || []).map((r) => ({ name: r.name, geo: { lat: r.lat, lng: r.lng }, city: r.city }));
+}
+
+/** Stamp a canonical venue id for a (name, city) pair, creating a coordinate-less
+ *  stub row when unknown. Deterministic on purpose: exact venueKey match (plus city
+ *  compatibility) or a city-suffixed key — NO fuzzy merging here, so two different
+ *  places can never collapse into one id. A later geo'd visit fills coordinates via
+ *  the existing upsertVenue path. Returns null only when there is no name at all. */
+export async function ensureCanonicalVenue(db: D1Database, name: string, city?: string | null): Promise<string | null> {
+  const clean = (name || '').trim();
+  if (!clean) return null;
+  const now = Date.now();
+  const key = venueKey(clean);
+  const cityNorm = venueKey(city || '') || null;
+  const existing = await db.prepare('SELECT id, city FROM venues WHERE id = ?').bind(key)
+    .first<{ id: string; city: string | null }>();
+  if (existing && (!existing.city || !cityNorm || existing.city === cityNorm)) return existing.id;
+  const id = existing ? `${key}@${cityNorm}` : key;
+  await db.prepare(
+    `INSERT OR IGNORE INTO venues (id, name, aliases, lat, lng, city, sources, hit_count, first_seen, last_seen, created_at)
+     VALUES (?, ?, '[]', NULL, NULL, ?, '{}', 0, ?, ?, ?)`
+  ).bind(id, clean, cityNorm, now, now, now).run();
+  return id;
 }
 
 function safeJSON<T>(s: string | null | undefined, fallback: T): T {

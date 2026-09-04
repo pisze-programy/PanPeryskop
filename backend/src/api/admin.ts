@@ -4,6 +4,7 @@ import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
 import { SEED_DAYS_AHEAD } from '../seed/core/constants';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { recordSeedDigest } from '../seed/digest';
+import { claimUnit, completeUnit, failUnit, unitDayStatus } from '../seed/pipeline/queue/units';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -149,11 +150,49 @@ adminRoutes.post('/seed/kupbilecik/day', async (c) => {
   return c.json({ ok: true, day, events: events.length });
 });
 
+// Durable unit work-list (queue redesign, shadow): claim exactly one pending unit
+// for an executor. The VPS poller and CF consumers share this; the UPDATE flips
+// only from 'pending', so concurrent claimants get at most one winner.
+adminRoutes.post('/seed/units/claim', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ executor?: unknown }>().catch(() => ({} as { executor?: unknown }));
+  if (body.executor !== 'worker' && body.executor !== 'vps') {
+    return c.json({ error: 'executor must be worker or vps' }, 400);
+  }
+  const unit = await claimUnit(c.env.DB, body.executor);
+  return c.json({ unit });
+});
+
+// Mark a claimed unit done (rowsWritten = Phase-1 rows staged) or failed with a reason.
+adminRoutes.post('/seed/units/complete', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ unitId?: unknown; rowsWritten?: unknown; error?: unknown }>()
+    .catch(() => ({} as { unitId?: unknown; rowsWritten?: unknown; error?: unknown }));
+  if (typeof body.unitId !== 'string' || !body.unitId) return c.json({ error: 'unitId required' }, 400);
+  if (typeof body.error === 'string' && body.error) {
+    await failUnit(c.env.DB, body.unitId, body.error);
+    return c.json({ ok: true, status: 'failed' });
+  }
+  const rows = typeof body.rowsWritten === 'number' && Number.isFinite(body.rowsWritten) ? Math.max(0, Math.floor(body.rowsWritten)) : 0;
+  const ok = await completeUnit(c.env.DB, body.unitId, rows);
+  return ok ? c.json({ ok: true, status: 'done' }) : c.json({ error: 'unit not found or not claimable' }, 409);
+});
+
+// Counts by unit status for one day — the future reconcile gate and today's debug view.
+adminRoutes.get('/seed/units/status', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const day = String(c.req.query('day') ?? '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: 'day=YYYY-MM-DD required' }, 400);
+  return c.json({ day, counts: await unitDayStatus(c.env.DB, day) });
+});
+
 // One-off data cleanup: delete all event posts earlier than today (Europe/Warsaw),
 // their R2 media and dependent rows (reports/likes/dislikes/views/shares).
 // Without ?source it removes events earlier than today; with ?source=a,b it
 // removes ALL events from those sources (source = external_id prefix) regardless
 // of date — used to retire a provider.
+// Optional ?before=YYYY-MM-DD narrows the date cutoff to event_date < before
+// (one-off backfills loop over days instead of one giant sweep).
 adminRoutes.post('/events/cleanup', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const db = c.env.DB;
@@ -161,40 +200,60 @@ adminRoutes.post('/events/cleanup', async (c) => {
   const sources = source ? source.split(',').map((s) => s.trim()).filter((s) => /^[a-z0-9_-]+$/.test(s)) : [];
   let scope: string;
   let binds: unknown[];
+  let limit = 500;
   if (sources.length) {
     const ph = sources.map(() => `substr(external_id,1,instr(external_id,'-')-1) = ?`).join(' OR ');
     scope = `category='events' AND (${ph})`;
     binds = sources;
   } else {
-    const today = todayWarsaw();
-    const todayStart = Date.parse(`${today}T00:00:00+02:00`);
-    scope = `category='events' AND (event_date < ?1 OR (event_date IS NULL AND created_at < ?2))`;
-    binds = [today, todayStart];
+    const before = String(c.req.query('before') ?? '').trim();
+    const day = String(c.req.query('day') ?? '').trim();
+    const limitRaw = String(c.req.query('limit') ?? '').trim();
+    if (before && !/^\d{4}-\d{2}-\d{2}$/.test(before)) return c.json({ error: 'before=YYYY-MM-DD required' }, 400);
+    if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: 'day=YYYY-MM-DD required' }, 400);
+    limit = Math.min(Math.max(parseInt(limitRaw || '500', 10) || 500, 1), 500);
+    if (day) {
+      scope = `category='events' AND event_date = ?1`;
+      binds = [day];
+    } else {
+      const cutoff = before || todayWarsaw();
+      const cutoffStart = Date.parse(`${cutoff}T00:00:00+02:00`);
+      scope = `category='events' AND (event_date < ?1 OR (event_date IS NULL AND created_at < ?2))`;
+      binds = [cutoff, cutoffStart];
+    }
   }
 
   const { results } = await db.prepare(
-    `SELECT id, media_key, thumb_key FROM posts WHERE ${scope}`
-  ).bind(...binds).all<{ id: string; media_key: string | null; thumb_key: string | null }>();
+    `SELECT id, media_key, thumb_key FROM posts WHERE ${scope} LIMIT ?`
+  ).bind(...binds, limit).all<{ id: string; media_key: string | null; thumb_key: string | null }>();
   const rows = results || [];
   if (!rows.length) return c.json({ deleted: 0, mediaDeleted: 0 });
 
   // Remove R2 objects (media + thumb) for the deleted posts — parallel batches.
   const keys = rows.flatMap((r) => [r.media_key, r.thumb_key]).filter((k): k is string => !!k);
   let mediaDeleted = 0;
-  const CONCURRENCY = 25;
+  const CONCURRENCY = 100;
   for (let i = 0; i < keys.length; i += CONCURRENCY) {
     const chunk = keys.slice(i, i + CONCURRENCY);
     const res = await Promise.allSettled(chunk.map((k) => c.env.MEDIA.delete(k)));
     mediaDeleted += res.filter((r) => r.status === 'fulfilled').length;
   }
 
-  // Dependent rows first, then the posts themselves (no FK constraints in D1).
-  for (const table of ['reports', 'likes', 'dislikes', 'views', 'shares']) {
-    await db.prepare(`DELETE FROM ${table} WHERE post_id IN (SELECT id FROM posts WHERE ${scope})`).bind(...binds).run();
+  // Delete exactly the selected rows (chunked IN-lists) — never more than we
+  // cleaned in R2 above, so no orphaned objects are left behind.
+  // NOTE: D1 caps bound variables at 100 per statement — keep chunks below that.
+  const ids = rows.map((r) => r.id);
+  const ID_CHUNK = 90;
+  for (let i = 0; i < ids.length; i += ID_CHUNK) {
+    const chunk = ids.slice(i, i + ID_CHUNK);
+    const ph = chunk.map(() => '?').join(',');
+    for (const table of ['reports', 'likes', 'dislikes', 'views', 'shares']) {
+      await db.prepare(`DELETE FROM ${table} WHERE post_id IN (${ph})`).bind(...chunk).run();
+    }
+    await db.prepare(`DELETE FROM posts WHERE id IN (${ph})`).bind(...chunk).run();
   }
-  const del = await db.prepare(`DELETE FROM posts WHERE ${scope}`).bind(...binds).run();
 
-  return c.json({ deleted: rows.length, mediaDeleted, rowsDeleted: del.meta.changes });
+  return c.json({ deleted: rows.length, mediaDeleted });
 });
 
 adminRoutes.post('/posts/:id/approve', async (c) => {

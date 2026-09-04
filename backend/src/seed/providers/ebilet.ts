@@ -35,6 +35,7 @@
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { resolveGeo } from '../core/geo';
 import { aggregateDayCandidates } from '../core/aggregate';
+import { detectBlockedBody, parseFeedJson, SourceBlockedError } from '../core/fetchOnce';
 import { PROVIDER_FETCH_TIMEOUT_MS } from '../core/constants';
 
 const EBILET_UNLIMITED = 'https://api.tradedoubler.com/1.0/productsUnlimited.json';
@@ -59,6 +60,10 @@ interface EbiletProduct {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function isEbiletFeed(v: unknown): v is { products: EbiletProduct[] } {
+  return !!v && typeof v === 'object' && Array.isArray((v as { products: unknown }).products);
+}
 
 function isUsableImage(url: string | undefined): string {
   if (!url || /blank\.gif|teaser|placeholder/i.test(url)) return '';
@@ -267,9 +272,11 @@ export async function fetchEbiletFeed(token: string): Promise<{ products: Ebilet
     }
     if (!res.ok) {
       const snippet = (await res.text().catch(() => '')).slice(0, 300);
+      const blocked = detectBlockedBody(snippet);
+      if (blocked) throw new SourceBlockedError('ebilet', `HTTP ${res.status}, matched "${blocked}"`);
       throw new Error(`ebilet feed -> ${res.status} at ${res.url} ${snippet}`);
     }
-    return (await res.json()) as { products: EbiletProduct[] };
+    return parseFeedJson(await res.text(), 'ebilet', isEbiletFeed);
   }
   throw new Error('ebilet feed still generating (202 after 6 attempts)');
 }
@@ -308,13 +315,21 @@ async function loadFeed(ctx: SeedContext): Promise<{ products: EbiletProduct[] }
   const token = ctx.env.EBILET_TD_TOKEN;
   if (!token) throw new Error('EBILET_TD_TOKEN secret missing');
   const cached = await ctx.env.MEDIA.get(FEED_CACHE_KEY);
-  const parseCached = async (): Promise<{ products: EbiletProduct[] }> =>
-    JSON.parse(await cached!.text()) as { products: EbiletProduct[] };
+  const readCached = async (): Promise<{ products: EbiletProduct[] } | null> => {
+    if (!cached) return null;
+    try {
+      return parseFeedJson(await cached.text(), 'ebilet-cache', isEbiletFeed);
+    } catch (e) {
+      console.warn(`ebilet cached copy unusable (${(e as Error).message}) — refetching`);
+      return null;
+    }
+  };
 
-  if (cached) {
+  const usable = await readCached();
+  if (usable) {
     const version = await ebiletFeedVersion(token);
     // Version check blocked/error (worker egress to TD) → trust the external cache.
-    if (version === null || cached.customMetadata?.feedUpdated === version) return parseCached();
+    if (version === null || cached!.customMetadata?.feedUpdated === version) return usable;
     // Version changed → try to download ourselves; fall back to the cache on failure.
     try {
       const feed = await fetchEbiletFeed(token);
@@ -325,7 +340,7 @@ async function loadFeed(ctx: SeedContext): Promise<{ products: EbiletProduct[] }
       return feed;
     } catch (e) {
       console.warn(`ebilet feed download failed (${(e as Error).message}) — using cached copy`);
-      return parseCached();
+      return usable;
     }
   }
   // No cache yet: the worker download will fail until an external job warms R2.

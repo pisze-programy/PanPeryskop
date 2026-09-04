@@ -16,6 +16,7 @@
 // event-day-venue, showtimes[] aggregation, price, tags, geo from Object.Location).
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { aggregateDayCandidates } from '../core/aggregate';
+import { parseFeedJson } from '../core/fetchOnce';
 
 const KUP_CACHE_PREFIX = 'seed/kupbilecik/';
 
@@ -112,12 +113,14 @@ export function parseKupEvent(e: KupEvent, day: string, dayStartMs: number): See
   }];
 }
 
-/** Candidates for one target day from the per-day R2 manifest. */
+/** Candidates for one target day from the per-day R2 manifest. The manifest body
+ *  is validated, never trusted: a rate-limit block or corrupt copy throws a named
+ *  error instead of seeding garbage. An empty array is valid (a day with no events). */
 export async function fetchKupDay(ctx: SeedContext): Promise<SeedCandidate[]> {
   const key = `${KUP_CACHE_PREFIX}${ctx.day}.json`;
   const obj = await ctx.env.MEDIA.get(key);
   if (!obj) throw new Error(`kupbilecik manifest missing for ${ctx.day} — run scripts/kup-warm.mjs`);
-  const rows = (await obj.json()) as KupEvent[];
+  const rows = parseFeedJson(await obj.text(), 'kupbilecik', (v): v is KupEvent[] => Array.isArray(v));
   const out: SeedCandidate[] = [];
   for (const e of rows || []) out.push(...parseKupEvent(e, ctx.day, ctx.dayStart));
   return aggregateDayCandidates(out);

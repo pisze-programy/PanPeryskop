@@ -68,6 +68,16 @@ postsRoutes.post('/', async (c) => {
     linkUrl = lv;
   }
 
+  // Original plain provider landing (seed-only) — preserved when link_url was
+  // swapped to an affiliate click URL (going/ebilet). Provenance + rebuilds.
+  let sourceUrl: string | null = null;
+  const sourceUrlRaw = strField(form, 'source_url');
+  if (sourceUrlRaw) {
+    const sv = sourceUrlRaw.trim();
+    if (!isValidHttpUrl(sv)) return c.json({ error: 'Invalid source_url' }, 400);
+    sourceUrl = sv;
+  }
+
   let externalId: string | null = null;
   const externalIdRaw = strField(form, 'external_id');
   if (externalIdRaw) {
@@ -206,7 +216,7 @@ postsRoutes.post('/', async (c) => {
   const result = await doSavePost(
     c.env, user, postId, type, lat, lng, description,
     mediaKey, thumbKey, createdAt, isSponsored, linkUrl, externalId, isUpdate, false, showtimesJson, showtimeBookingJson, tagsJson, status,
-    partnerId, partnerName
+    partnerId, partnerName, undefined, sourceUrl
   );
   return c.json(result, isUpdate ? 200 : 201);
 });
@@ -233,7 +243,8 @@ export async function doSavePost(
   status: string = STATUS_APPROVED,
   partnerId: string | null = null,
   partnerName: string | null = null,
-  price: number | null = null
+  price: number | null = null,
+  sourceUrl: string | null = null
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
@@ -257,19 +268,19 @@ export async function doSavePost(
              event_date = ?, showtimes = CASE WHEN time_locked = 1 THEN showtimes ELSE ? END,
              showtime_booking = CASE WHEN time_locked = 1 THEN showtime_booking ELSE ? END,
              tags = CASE WHEN tags_locked = 1 THEN tags ELSE ? END,
-             partner_id = ?, partner_name = ?, price_pln = ?
+             partner_id = ?, partner_name = ?, price_pln = ?, source_url = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price, sourceUrl, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name, price_pln)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, source_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name, price_pln)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price)
+      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, sourceUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price)
       .run();
     await db
       .prepare(
@@ -292,6 +303,7 @@ export async function doSavePost(
     is_sponsored: isSponsored,
     category,
     link_url: linkUrl,
+    source_url: sourceUrl,
     external_id: externalId,
     is_sold_out: soldOut,
     event_date: eventDate,

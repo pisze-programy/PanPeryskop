@@ -40,16 +40,16 @@ test('providers: kupbilecik + ebilet on Worker (fetch), going/helios + cinemas o
   // no longer carry an `enabled` flag.
   for (const p of SEED_PROVIDERS) assert.ok(!('enabled' in p), `${p.id} must not define enabled`);
 
-  // Worker executor: kupbilecik + ebilet (plain fetch, external-warmed R2 caches) run
-  // in the CF queue pipeline. dzisapp/eventylive are retired (enabled=false) — they
-  // must not run anywhere.
+  // Worker executor: kupbilecik + ebilet + eventim (plain fetch, external-warmed R2
+  // caches) run in the CF queue pipeline. dzisapp/eventylive are retired
+  // (enabled=false) — they must not run anywhere.
   const workerIds = workerExecutor.providerIds(PROVIDER_CONFIGS);
-  assert.deepEqual(workerIds, ['kupbilecik', 'ebilet'], 'kupbilecik + ebilet enabled on worker');
+  assert.deepEqual(workerIds, ['kupbilecik', 'ebilet', 'eventim'], 'kupbilecik + ebilet + eventim enabled on worker');
   for (const id of ['dzisapp', 'eventylive'] as const) {
     assert.ok(!workerIds.includes(id), `${id} retired (not on worker)`);
     assert.equal(configOf(id)!.enabled, false, `${id} disabled in the registry`);
   }
-  assert.equal(enabledProviders().length, 2);
+  assert.equal(enabledProviders().length, 3);
   assert.deepEqual(
     enabledProviders().map((p) => p.id).sort(),
     workerIds.sort(),

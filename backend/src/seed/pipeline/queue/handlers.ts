@@ -14,6 +14,7 @@ import { dropCancelled, rescueRealShows, isCancelled } from '../../core/filters'
 import { loadBlacklistRules, findBlacklist, blacklistReason } from '../../core/blacklist';
 import { buildVenueCache } from '../../providers/eventylive';
 import { resolveEbiletGeo } from '../../providers/ebilet';
+import { resolveEventimGeo } from '../../providers/eventim';
 import { writeSeedRun } from '../../core/log';
 import { reportBatchDigest } from '../../digest';
 import { EnvQ, SeedQueueMessage } from './types';
@@ -240,8 +241,8 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     // runtime if it ran there. (kupbilecik's new API provides coords directly —
     // geo-less rows are rare and fall through to the generic default pin.)
     let pendingGeo = false;
-    if (row.provider === ProviderId.EBILET && (cand.lat == null || cand.lng == null)) {
-      const geo = await resolveEbiletGeo(ctx, cand);
+    if ((row.provider === ProviderId.EBILET || row.provider === ProviderId.EVENTIM) && (cand.lat == null || cand.lng == null)) {
+      const geo = row.provider === ProviderId.EBILET ? await resolveEbiletGeo(ctx, cand) : await resolveEventimGeo(ctx, cand);
       if (geo && geo.lat != null && geo.lng != null) { cand.lat = geo.lat; cand.lng = geo.lng; }
     }
     // Still no geo → collect with a default pin (city center / 0,0) and ingest as

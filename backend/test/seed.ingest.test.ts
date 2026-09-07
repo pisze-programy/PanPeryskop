@@ -60,12 +60,12 @@ class MockIngestDB {
             if (sql.includes('INSERT INTO posts (')) {
               // doSavePost bind order: postId, userId, type, lat, lng, description,
               // status, mediaKey, thumbKey, createdAt, cellId, sponsored, category,
-              // linkUrl, externalId, soldOut, eventDate, showtimes, booking, tags,
-              // partnerId, partnerName, price (23 binds).
-              const [id, , , lat, lng, description, status, mediaKey, thumbKey, , , , , linkUrl, externalId, , , showtimes, booking, , partnerId, partnerName, price] = args as [
+              // linkUrl, sourceUrl, externalId, soldOut, eventDate, showtimes,
+              // booking, tags, partnerId, partnerName, price (24 binds).
+              const [id, , , lat, lng, description, status, mediaKey, thumbKey, , , , , linkUrl, , externalId, , , showtimes, booking, , partnerId, partnerName, price] = args as [
                 string, string, string, number, number, string, string, string | null, string | null,
-                number, string, number, string, string | null, string, number, string | null, string | null,
-                string | null, string | null, string | null, string | null, number | null,
+                number, string, number, string, string | null, string | null, string, number, string | null,
+                string | null, string | null, string | null, string | null, string | null, number | null,
               ];
               db.posts.set(String(externalId), {
                 id, external_id: String(externalId), status, lat, lng, description,

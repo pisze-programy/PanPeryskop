@@ -37,19 +37,20 @@ test('doSavePost: persists is_sold_out flag on insert and update', async () => {
   assert.ok(/price_pln/.test(ins!.sql), 'INSERT includes price_pln column');
 
   // Update without sold out resets the flag. Binds: (type, lat, lng, desc, media,
-  // thumb, sponsored, category, linkUrl, createdAt, externalId, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name, price_pln, id).
+  // thumb, sponsored, category, linkUrl, createdAt, externalId, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name, price_pln, source_url, id).
   calls.length = 0;
   await doSavePost(env, user, 'p1', 'photo', 52.4, 16.9, 'Koncert: 20:00', 'm1', 't1', now, true, 'https://x.pl', 'ext-1', true, false);
   const upd = calls.find((c) => /UPDATE posts/i.test(c.sql));
   assert.ok(upd, 'UPDATE statement executed');
-  assert.equal(upd!.binds[upd!.binds.length - 9], 0, 'is_sold_out=0 on update');
-  assert.equal(upd!.binds[upd!.binds.length - 8], '2026-08-17', 'event_date updated');
-  assert.equal(upd!.binds[upd!.binds.length - 7], null, 'showtimes NULL on update');
-  assert.equal(upd!.binds[upd!.binds.length - 6], null, 'showtime_booking NULL on update');
-  assert.equal(upd!.binds[upd!.binds.length - 5], null, 'tags NULL on update');
-  assert.equal(upd!.binds[upd!.binds.length - 4], null, 'partner_id NULL on update');
-  assert.equal(upd!.binds[upd!.binds.length - 3], null, 'partner_name NULL on update');
-  assert.equal(upd!.binds[upd!.binds.length - 2], null, 'price_pln NULL on update');
+  assert.equal(upd!.binds[upd!.binds.length - 10], 0, 'is_sold_out=0 on update');
+  assert.equal(upd!.binds[upd!.binds.length - 9], '2026-08-17', 'event_date updated');
+  assert.equal(upd!.binds[upd!.binds.length - 8], null, 'showtimes NULL on update');
+  assert.equal(upd!.binds[upd!.binds.length - 7], null, 'showtime_booking NULL on update');
+  assert.equal(upd!.binds[upd!.binds.length - 6], null, 'tags NULL on update');
+  assert.equal(upd!.binds[upd!.binds.length - 5], null, 'partner_id NULL on update');
+  assert.equal(upd!.binds[upd!.binds.length - 4], null, 'partner_name NULL on update');
+  assert.equal(upd!.binds[upd!.binds.length - 3], null, 'price_pln NULL on update');
+  assert.equal(upd!.binds[upd!.binds.length - 2], null, 'source_url NULL on update');
   assert.ok(/is_sold_out/.test(upd!.sql), 'UPDATE includes is_sold_out column');
   assert.ok(/event_date/.test(upd!.sql), 'UPDATE includes event_date column');
   assert.ok(/showtimes/.test(upd!.sql), 'UPDATE includes showtimes column');
@@ -58,6 +59,7 @@ test('doSavePost: persists is_sold_out flag on insert and update', async () => {
   assert.ok(/partner_id/.test(upd!.sql), 'UPDATE includes partner_id column');
   assert.ok(/partner_name/.test(upd!.sql), 'UPDATE includes partner_name column');
   assert.ok(/price_pln/.test(upd!.sql), 'UPDATE includes price_pln column');
+  assert.ok(/source_url/.test(upd!.sql), 'UPDATE includes source_url column');
 });
 
 test('doSavePost: live posts (no external_id) get event_date NULL', async () => {

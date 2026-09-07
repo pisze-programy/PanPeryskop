@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS posts (
   is_sponsored  INTEGER NOT NULL DEFAULT 0,
   category      TEXT NOT NULL DEFAULT 'live',
   link_url      TEXT,
+  source_url    TEXT,
   external_id   TEXT,
   rejection_reason TEXT
 );

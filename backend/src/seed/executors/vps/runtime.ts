@@ -44,7 +44,7 @@ export function findRepoDir(start: string): string {
   return '/opt/panperyskop';
 }
 const REPO_DIR = findRepoDir(__dirname);
-const SEED_DIR = join(REPO_DIR, 'admin', 'seed');
+export const SEED_DIR = join(REPO_DIR, 'admin', 'seed');
 const LOGS_DIR = join(REPO_DIR, 'admin', 'vps', 'logs');
 const BASE_URL = process.env.BASE_URL || 'https://api.panperyskop.app';
 const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
@@ -224,6 +224,10 @@ export interface SeedEntry {
   lat: number;
   lng: number;
   link: string;
+  /** TradeDoubler click URL (going affiliate). link stays the plain goingapp URL
+   *  through dedupe; the swap happens at upload (seed-ingest: link_url =
+   *  affiliate || link) and the plain URL travels as source_url for provenance. */
+  affiliate_link?: string;
   media: string;
   status: string;
   post_id: string | null;
@@ -357,6 +361,7 @@ export function entryFor(c: SeedCandidate & { lat: number; lng: number }, mediaR
     lat: c.lat,
     lng: c.lng,
     link: c.link,
+    affiliate_link: c.affiliateLink,
     media: mediaRel,
     status: 'pending',
     post_id: null,

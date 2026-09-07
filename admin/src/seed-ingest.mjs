@@ -202,7 +202,11 @@ async function upload(session, entry, media, createdAt) {
   form.append('description', entry.description || entry.title || '');
   form.append('created_at', String(createdAt));
   form.append('is_sponsored', '1');
-  if (entry.link) form.append('link_url', entry.link);
+  // Affiliate swap (going): the app opens the TD click URL (commission earned);
+  // the plain goingapp URL rides along as source_url for provenance/rebuilds.
+  const linkUrl = entry.affiliate_link || entry.link;
+  if (linkUrl) form.append('link_url', linkUrl);
+  if (entry.affiliate_link && entry.link) form.append('source_url', entry.link);
   form.append('external_id', entry.external_id);
   if (entry.showtimes) form.append('showtimes', JSON.stringify(entry.showtimes));
   if (entry.showtime_booking) form.append('showtime_booking', JSON.stringify(entry.showtime_booking));
@@ -241,6 +245,19 @@ async function approvePost(id) {
     signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) throw new Error(`approve ${id} -> ${res.status}`);
+}
+
+// Backfill: an already-live going post whose entry now carries an affiliate link
+// gets link_url swapped (server keeps source_url provenance). Idempotent — the
+// endpoint only updates posts that still lack source_url, so re-runs are cheap.
+async function patchAffiliate(entry) {
+  const res = await fetch(`${BASE_URL}/admin/seed/affiliate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${ADMIN_SECRET}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ external_id: entry.external_id, link_url: entry.affiliate_link, source_url: entry.link }),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) throw new Error(`affiliate update -> ${res.status}`);
 }
 
 async function fetchSeedIds(path) {
@@ -297,10 +314,20 @@ async function main() {
 
     // Resume: a post that already exists is left untouched (upsert would also
     // keep its status, but skipping avoids re-converting media on every pass).
+    // Exception: a going post that now has an affiliate link gets it backfilled.
     if (existingIds.has(entry.external_id || '')) {
+      if (entry.affiliate_link) {
+        try {
+          await patchAffiliate(entry);
+          console.log(`↳ ${label}: already exists — affiliate link ensured`);
+        } catch (e) {
+          throw new Error(`affiliate backfill: ${e.message}`);
+        }
+      } else {
+        console.log(`↷ ${label}: already exists — skip`);
+      }
       entry.status = 'done';
       results.skipped += 1;
-      console.log(`↷ ${label}: already exists — skip`);
       continue;
     }
 

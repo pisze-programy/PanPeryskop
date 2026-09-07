@@ -50,6 +50,16 @@ Rules we must follow:
 4. **Do not re-download on retry storms.** If ingest fails later (for example
    a media download), do not fetch the catalog again. Reuse the data we
    already have.
+5. **Egress / budget (hard-won, 2026-09-07):** access is keyed on the token and
+   the usable budget is roughly **10 requests/day TOTAL** (all IPs share it).
+   Exceeding it flips the API to a generic **404 HTML page** ("Strona nie
+   znaleziona") for every subsequent request — from any IP (home, datacenter,
+   proxy), until the window clears. We exhausted it by burst-testing (≈25
+   requests across mac/box/CF/webshare) and everything 404'd for the rest of
+   the day. Also: Cloudflare Workers egress gets **403** (their HTML page) and
+   the Webshare residential pool also 404s once the token budget is gone. The
+   warm therefore makes exactly one request per day, and nothing else calls the
+   API — never probe, never retry in a loop.
 
 ## 4. Response format
 
@@ -147,11 +157,43 @@ One post per (event, venue, city, day):
 
 ### 6.1 Freshness
 
-The daily job fetches the catalog once. It keeps only the target day.
-It discards the rest. No old catalog is stored. Each day uses fresh data.
+The nightly warm fetches the catalog once and trims per-day manifests to R2.
 
-If the API answers with the 24h block text, the job must fail loudly and
-retry later. It must never treat the block text as event data.
+- Runs **00:01 Warsaw** on the VPS box via root crontab:
+  `node --max-old-space-size=128 backend/dist/kup-warm.mjs` (see `setup-vps.sh`).
+  Clean env — no residential proxy (an 8 MB gzip download does not pay proxy
+  bandwidth).
+- **Separate lightweight bundle** (`kup-warm.mjs`, ~18 KB) imports ONLY the
+  kupbilecik module — NOT the whole orchestrator. The 256 MB box OOM-killed
+  (3×, 2026-09-07) when the full vps-seed bundle (≈80 MB baseline, 170 MB heap
+  cap) ran the warm concurrently with the orchestrator; the standalone bundle's
+  baseline is ~20 MB with a 128 MB cap.
+- **Exactly one catalog request per warm** (bounded retries: up to 3 attempts,
+  still far below the ~10/day token ceiling — see §3). Send **minimal headers**
+  only: `User-Agent: Mozilla/5.0`, `Accept: application/json`. Browser extras
+  (`X-Requested-With`, `Referer`, `Accept-Language`, `text/javascript` Accept)
+  were verified to flip the catalog request to their 404 page on 2026-09-07.
+- **Streaming scanner** (`scanKupEvents` in `backend/src/seed/providers/kupbilecik.ts`)
+  never materializes the ~60 MB decompressed JSON: gzip arrives on the wire
+  (~8 MB), the scanner walks the stream, parses one top-level object at a time,
+  drops heavy fields (Description/Artist) and buckets the rest per window day.
+- **BYTE-LEVEL scanning** (memory-critical on the 256 MB box): the scanner reads
+  raw `Uint8Array` bytes, never per-char strings. A string-based version
+  allocated one 1-char string per input character (~60 M allocations → V8 heap
+  spike ~90–190 MB, a real OOM-killer contributor on 2026-09-07). Structural
+  bytes are ASCII (< 0x80) and UTF-8 continuation bytes are ≥ 0x80, so
+  multi-byte characters cannot collide with them. Measured overhead on a 60 MB
+  catalog with realistic (mostly out-of-window) retention: **~1 MB**. Peak warm
+  memory ≈ bundle baseline (~20 MB) + one event.
+- Manifests are pushed through `POST /admin/seed/kupbilecik/day` (Worker admin
+  endpoint → R2 `seed/kupbilecik/<day>.json`). The whole window
+  (today..today+SEED_DAYS_AHEAD) is refreshed every night, so one missed run
+  never kills a day.
+- **Failure mode stays loud:** a block/empty/shape body aborts with nothing
+  pushed (never empty manifests). If the warm fails, the morning seed batch
+  throws `manifest missing` → failed-mail alarm. Manual run:
+  `node backend/dist/vps-seed.mjs --warm-kup` on the box; log
+  `admin/vps/logs/warm-kup.log`.
 
 ### 6.2 Manual check commands
 

@@ -46,12 +46,15 @@ else
   say "sudoers NOPASSWD already set"
 fi
 
-# ---------- 4. deploy the pre-built bundle + scripts (NO git, no TS on the box) ----------
-# deploy.sh ships these to /tmp: vps-seed.mjs (bundle), orchestrator.sh,
-# setup-vps.sh, ipv4-proxy.mjs, seed-ingest.mjs. .env and logs stay in place.
+# ---------- 4. deploy the pre-built bundles + scripts (NO git, no TS on the box) ----------
+# deploy.sh ships these to /tmp: vps-seed.mjs (orchestrator), kup-warm.mjs,
+# awin-warm.mjs (standalone feed warms), orchestrator.sh, setup-vps.sh,
+# ipv4-proxy.mjs, seed-ingest.mjs. .env and logs stay in place.
 SRC_TMP="/tmp"
 mkdir -p "$REPO_DIR/backend/dist" "$REPO_DIR/admin/vps" "$REPO_DIR/admin/src"
 install -m 0644 "$SRC_TMP/vps-seed.mjs"    "$REPO_DIR/backend/dist/vps-seed.mjs"
+install -m 0644 "$SRC_TMP/kup-warm.mjs"    "$REPO_DIR/backend/dist/kup-warm.mjs"
+install -m 0644 "$SRC_TMP/awin-warm.mjs"   "$REPO_DIR/backend/dist/awin-warm.mjs"
 install -m 0755 "$SRC_TMP/orchestrator.sh" "$REPO_DIR/admin/vps/orchestrator.sh"
 install -m 0755 "$SRC_TMP/setup-vps.sh"    "$REPO_DIR/admin/vps/setup-vps.sh"
 install -m 0644 "$SRC_TMP/ipv4-proxy.mjs"  "$REPO_DIR/admin/vps/ipv4-proxy.mjs"
@@ -65,11 +68,23 @@ say "legacy files cleaned"
 
 # ---------- 5. crontab (preserve system + user entries; swap our seed line) ----------
 TMP_CRON=$(mktemp)
-crontab -l 2>/dev/null | grep -vE 'panperyskop.*(watchdog|orchestrator)\.sh' > "$TMP_CRON"
+crontab -l 2>/dev/null | grep -vE 'panperyskop.*(watchdog|orchestrator)\.sh|(vps-seed\.mjs --warm-kup|kup-warm\.mjs|awin-warm\.mjs)' > "$TMP_CRON"
 printf '%s\n' '*/5 * * * * /opt/panperyskop/admin/vps/orchestrator.sh' >> "$TMP_CRON"
+# Nightly kupbilecik manifest warm — 00:01 Warsaw, CLEAN env (no proxy: the origin
+# needs none and we don't pay residential bandwidth for an 8 MB gzip download).
+# Standalone LIGHTWEIGHT bundle (kup-warm.mjs imports only the kupbilecik module,
+# not the whole orchestrator) with a LOW heap cap — the full bundle at 170 MB +
+# the orchestrator OOM'd the 256 MB box (3× OOM-killer, 2026-09-07). Streaming
+# scanner keeps the 60 MB catalog out of RAM. Failures surface via the morning
+# seed failed-mail (provider throws "manifest missing" → batch failed).
+printf '%s\n' '1 0 * * * cd /opt/panperyskop && /usr/bin/node --max-old-space-size=128 backend/dist/kup-warm.mjs >> admin/vps/logs/warm-kup.log 2>&1' >> "$TMP_CRON"
+# Eventim (Awin) feed warm — 00:03 Warsaw, after the kupbilecik warm. Slim 14-column
+# datafeed (advertiser 19044 / feed 99885), gated by Last Imported; pushes to the
+# Worker endpoint → R2. Failures surface via the morning seed failed-mail.
+printf '%s\n' '3 0 * * * cd /opt/panperyskop && /usr/bin/node --max-old-space-size=128 backend/dist/awin-warm.mjs >> admin/vps/logs/warm-awin.log 2>&1' >> "$TMP_CRON"
 crontab "$TMP_CRON"
 rm -f "$TMP_CRON"
-say "crontab ok: */5 * * * * orchestrator.sh (co 5 min cały dzień, okno 05-22 PL)"
+say "crontab ok: */5 orchestrator.sh + 00:01 kup-warm + 00:03 awin-warm (co 5 min cały dzień, okno 05-22 PL)"
 
 # ---------- env ----------
 if [ -f "$ENV_FILE" ]; then

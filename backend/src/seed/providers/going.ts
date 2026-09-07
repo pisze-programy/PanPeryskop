@@ -5,6 +5,7 @@ import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/ty
 import { getJson } from './http';
 import { upsertVenue } from '../venues/venueStore';
 import { GOING_BASE, GOING_ALGOLIA_ORIGIN, GOING_PLACE, GOING_POSTER, GOING_THUMB } from '../core/constants';
+import { goingSlugKey } from '../core/goingTd';
 
 interface GoingHit {
   name_pl?: string;
@@ -54,6 +55,9 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
   const apiKey = ctx.env.ALGOLIA_API_KEY;
   const cloudSig = ctx.env.CLOUDINARY_SIG || '';
   if (!appId || !apiKey) throw new Error('going: ALGOLIA_APP_ID/ALGOLIA_API_KEY not configured');
+  // TradeDoubler slug→click map (built by the VPS runner, env.GOING_TD_MAP).
+  // Absent (e.g. no TD token) → plain links, unchanged behavior.
+  const tdMap = (ctx.env as unknown as Record<string, unknown>).GOING_TD_MAP as Record<string, string> | undefined;
   const algoliaUrl = `https://${appId}-dsn.algolia.net/1/indexes/*/queries?x-algolia-api-key=${encodeURIComponent(apiKey)}&x-algolia-application-id=${encodeURIComponent(appId)}`;
 
   // Page over the whole day — Algolia caps hitsPerPage at 100 and busy days
@@ -97,6 +101,13 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
     const cloudPath = h.thumbnail;
     if (!cloudPath) continue;
     const enc = encodeURIComponent(cloudPath).replace(/%2F/g, '/');
+    // Affiliate: exact (event-slug, rundate-slug) match against the TD feed map.
+    // No match → plain link (today's behavior — no commission to lose). The
+    // plain link stays in `link` so intra/cross-provider dedupe is unaffected.
+    let affiliateLink: string | undefined;
+    if (h.slug && h.rundate_slug && tdMap) {
+      affiliateLink = tdMap[goingSlugKey(h.slug, h.rundate_slug)];
+    }
     out.push({
       source: ProviderId.GOING,
       externalId: `going-${id}`,
@@ -110,12 +121,17 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
       link: h.slug && h.rundate_slug
         ? `${GOING_BASE}/wydarzenie/${h.slug}/${h.rundate_slug}`
         : `${GOING_BASE}/${h.path}`,
+      affiliateLink,
       mediaUrl: GOING_POSTER(enc, cloudSig),
       thumbUrl: GOING_THUMB(enc, cloudSig),
       tags: goingTags(h.category_slug, h.name_pl) ?? undefined,
       partnerId: h.partner_id != null ? String(h.partner_id) : undefined,
       partnerName: h.partner_name || undefined,
     });
+  }
+  if (tdMap && out.length > 0) {
+    const matched = out.filter((c) => c.affiliateLink).length;
+    console.log(`going affiliate: ${matched}/${out.length} candidates matched`);
   }
   return out;
 }
@@ -127,4 +143,7 @@ export const goingProvider: SeedProvider = {
   fetchBytes: (ctx, url) => import('./http').then((m) => m.getBytes(url)),
   scopes: ['all'],
   fetchScope: (ctx, _scope) => fetchGoing(ctx),
+  // VPS staging swaps affiliateLink→link at upload (seed-ingest), mirroring the
+  // queue ingest hook here for parity if going ever moves to the Worker.
+  resolveLink: (_ctx, cand) => Promise.resolve(cand.affiliateLink || cand.link),
 };

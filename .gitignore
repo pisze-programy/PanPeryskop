@@ -49,3 +49,4 @@ admin/vps/.env
 # facebook scrape test dump
 browser-ext/*.json
 wrangler.toml
+.playwright-cli/

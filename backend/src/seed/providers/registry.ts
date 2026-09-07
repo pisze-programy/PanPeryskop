@@ -57,6 +57,15 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: ProviderId.EBILET, transport: 'fetch', enabled: true, priority: 7,
     executors: { worker: true },
   },
+  // Eventim.pl via the Awin affiliate datafeed (advertiser 19044 / feed 99885) —
+  // warmed to R2 by the VPS awin-warm job. Whole Poland, all categories; priority 7
+  // like ebilet: going/kupbilecik stay canonical for covered events, eventim wins
+  // only when nothing else has the event. Geo deferred to ingest (venues → Nominatim)
+  // for the rows the feed reports as 0.0.
+  {
+    id: ProviderId.EVENTIM, transport: 'fetch', enabled: true, priority: 7,
+    executors: { worker: true },
+  },
   {
     id: ProviderId.DZISAPP, transport: 'fetch', enabled: false, priority: 4,
     executors: { worker: true },

@@ -72,6 +72,26 @@ adminRoutes.post('/seed/reject', async (c) => {
   return c.json({ rejected: matched.length, requested: ids.length });
 });
 
+// Backfill affiliate links on already-live seed posts (going): swap link_url to
+// the TD click URL and preserve the plain goingapp URL in source_url. Idempotent
+// — once source_url is set, later calls are no-ops (guard keeps re-runs cheap).
+// seed-ingest calls this for existing entries that now carry an affiliate_link.
+adminRoutes.post('/seed/affiliate', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ external_id?: unknown; link_url?: unknown; source_url?: unknown }>().catch(() => ({})) as { external_id?: unknown; link_url?: unknown; source_url?: unknown };
+  const ext = typeof body.external_id === 'string' ? body.external_id.trim() : '';
+  const isHttp = (v: unknown): v is string => typeof v === 'string' && /^https?:\/\/.+/.test(v);
+  const linkUrl = isHttp(body.link_url) ? body.link_url.trim() : '';
+  const sourceUrl = isHttp(body.source_url) ? body.source_url.trim() : null;
+  if (!ext || !linkUrl) return c.json({ error: 'external_id and link_url required' }, 400);
+  if (ext.length > 200) return c.json({ error: 'Invalid external_id' }, 400);
+  const res = await c.env.DB
+    .prepare(`UPDATE posts SET link_url = ?, source_url = ? WHERE external_id = ? AND category = 'events' AND status <> '${STATUS_REJECTED}' AND (source_url IS NULL OR source_url = '')`)
+    .bind(linkUrl, sourceUrl, ext)
+    .run();
+  return c.json({ updated: res.meta.changes });
+});
+
 // Per-source per-day approved-event counts over the seed window — the VPS
 adminRoutes.post('/seed/digest', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
@@ -129,6 +149,21 @@ adminRoutes.post('/seed/ebilet/feed', async (c) => {
     customMetadata: { feedUpdated: 'external' },
   });
   return c.json({ ok: true, bytes: body.length });
+});
+
+// Warm the Eventim (Awin) feed into R2. The VPS awin-warm job downloads the slim
+// 14-column datafeed (advertiser 19044 / feed 99885), parses CSV → JSON and posts
+// the event rows here; the Worker provider reads only its batch day from
+// seed/awin-eventim.json.
+adminRoutes.post('/seed/awin/feed', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<unknown>().catch(() => null);
+  if (!Array.isArray(body) || body.length < 10) return c.json({ error: 'Invalid feed body' }, 400);
+  await c.env.MEDIA.put('seed/awin-eventim.json', JSON.stringify(body), {
+    httpMetadata: { contentType: 'application/json' },
+    customMetadata: { feedUpdated: new Date().toISOString() },
+  });
+  return c.json({ ok: true, events: body.length });
 });
 
 // Warm one day of kupbilecik events into R2. The official API returns the WHOLE

@@ -4,7 +4,7 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.2.0] — 2026-09-07
 
 ### Added
 - Seed cadence: full-window refill every 3 days (was daily far-edge rolling).
@@ -20,9 +20,8 @@ All notable changes to PanPeryskop. Format based on
 - App browse window: 5 days forward (was 3) — `DaySliderView` maxDay 3→5.
 - `SEED_DAYS_AHEAD` 6→5.
 
-## [1.0.0] — first tagged release
+## [1.1.0] — 2026-09-05
 
-Seed pipeline foundation: Worker queue (kupbilecik / ebilet / eventim) + VPS
-executor (going / luma / meetup / helios / cinemas), TradeDoubler affiliate
-links (going), Awin affiliate datafeed (eventim), streaming kupbilecik warm,
-MTP annual backfill, manual Facebook ingest, digest emails.
+### Added
+- Eventim (Awin affiliate datafeed), MTP annual backfill, going TradeDoubler
+  affiliate links, streaming kupbilecik warm, manual Facebook ingest.

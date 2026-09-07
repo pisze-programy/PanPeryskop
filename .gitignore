@@ -50,3 +50,6 @@ admin/vps/.env
 browser-ext/*.json
 wrangler.toml
 .playwright-cli/
+
+# temp
+tmp/

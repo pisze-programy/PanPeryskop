@@ -155,6 +155,13 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: ProviderId.FACEBOOK, transport: 'manual', enabled: true, priority: 3.5,
     executors: {},
   },
+  // ---- Manual provider: MTP (Targi Poznańskie) annual calendar, one-time backfill
+  //      via POST /admin/seed/mtp. Trade fairs rarely overlap ticket providers, but
+  //      the low priority means going/kupbilecik win dedupe when they do.
+  {
+    id: ProviderId.MTP, transport: 'manual', enabled: true, priority: 7,
+    executors: {},
+  },
 ];
 
 const byId = new Map(PROVIDER_CONFIGS.map((c) => [c.id, c]));

@@ -20,6 +20,7 @@ export const ProviderId = {
   GETYOURGUIDE: 'getyourguide',
   EBILET: 'ebilet',
   EVENTIM: 'eventim',
+  MTP: 'mtp',
   FACEBOOK: 'facebook',
 } as const;
 export type ProviderId = (typeof ProviderId)[keyof typeof ProviderId];

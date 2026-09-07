@@ -5,6 +5,7 @@ import { SEED_DAYS_AHEAD } from '../seed/core/constants';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { recordSeedDigest } from '../seed/digest';
 import { claimUnit, completeUnit, failUnit, unitDayStatus } from '../seed/pipeline/queue/units';
+import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -164,6 +165,24 @@ adminRoutes.post('/seed/awin/feed', async (c) => {
     customMetadata: { feedUpdated: new Date().toISOString() },
   });
   return c.json({ ok: true, events: body.length });
+});
+
+// Manual MTP (Targi Poznańskie) backfill — the annual calendar is pulled once a
+// year by backend/scripts/mtp-backfill.mjs and posted here as a JSON batch of
+// per-day fair events (geo fixed to the MTP complex; each starts 10:00 Warsaw).
+adminRoutes.post('/seed/mtp', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<MtpEventInput[]>().catch(() => null);
+  if (!Array.isArray(body) || body.length === 0) return c.json({ error: 'events[] required' }, 400);
+  const results = [];
+  for (const ev of body) {
+    if (!ev || !ev.externalId || !ev.title || !/^\d{4}-\d{2}-\d{2}$/.test(ev.day || '') || !ev.link || !ev.imageUrl) {
+      results.push({ externalId: ev?.externalId || '?', status: 'error', reason: 'invalid fields' });
+      continue;
+    }
+    results.push(await ingestMtpEvent(c.env, ev));
+  }
+  return c.json({ ok: true, results });
 });
 
 // Warm one day of kupbilecik events into R2. The official API returns the WHOLE

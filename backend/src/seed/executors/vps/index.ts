@@ -54,6 +54,7 @@ import { heliosSource } from './runners/helios';
 import { todayWarsaw, addDaysWarsaw } from '../../../../src/seed/core/dates';
 import {
   SEED_DAYS_AHEAD,
+  SEED_REFILL_AHEAD,
   VPS_IPV4_PROXY_HOST, VPS_IPV4_PROXY_PORT, VPS_WINDOW_START_HOUR, VPS_WINDOW_END_HOUR,
   VPS_EXIT_IPHONE, VPS_EXIT_MAC, VPS_EXIT_PROBE_TIMEOUT_MS, VPS_EXIT_SWITCH_WAIT_MS,
 } from '../../../../src/seed/core/constants';
@@ -153,6 +154,27 @@ function inWindow(): boolean {
   if (FORCE) return true;
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Warsaw', hour: 'numeric', hour12: false }).format(new Date()));
   return hour >= VPS_WINDOW_START_HOUR && hour < VPS_WINDOW_END_HOUR;
+}
+
+// Seed cadence: the orchestrator refills providers only on seed (full-window
+// refill) days. On a check failure or missing secret default to RUN — a broken
+// gate must not silently freeze the seed.
+async function cadenceDue(env: Record<string, string>): Promise<boolean> {
+  const base = env.BASE_URL || 'https://api.panperyskop.app';
+  const secret = env.ADMIN_SECRET;
+  if (!secret) return true;
+  try {
+    const res = await fetch(`${base}/admin/seed/cadence`, {
+      headers: { Authorization: `Bearer ${secret}` },
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!res.ok) return true;
+    const data = (await res.json()) as { due?: boolean };
+    return data.due !== false;
+  } catch (e) {
+    log(`cadence check failed (${(e as Error).message}) — proceeding`);
+    return true;
+  }
 }
 
 // ---------- IPv4-forcing proxy ----------
@@ -272,32 +294,33 @@ function upload(cfg: ProviderConfig, env: Record<string, string>): void {
   if (r.status !== 0) throw new Error(`seed-ingest ${cfg.id} exit ${r.status}`);
 }
 
-/** Per-provider daily digest report → the Worker coordinator (cf-snitch email).
- *  Fire-and-forget: a failure here never breaks the seed. Counts come from the
- *  staged JSON after seed-ingest stamped each entry's terminal status. */
-function reportDigest(cfg: ProviderConfig, day: string, status: string, env: Record<string, string>, message?: string): void {
+/** Per-provider digest report → the Worker coordinator (cf-snitch email), for
+ *  EVERY day of the refill horizon the orchestrator just refilled — including days
+ *  with zero entries, so a legitimately empty provider is RECORDED, not flagged as
+ *  missing by the watchdog. Fire-and-forget. */
+function reportDigest(cfg: ProviderConfig, target: string, status: string, env: Record<string, string>, message?: string): void {
   const out = join(SEED_DIR, cfg.executors.vps!.output);
-  let candidates = 0, ingested = 0, errors = 0;
+  let entries: Array<{ external_id?: string; status?: string; created_at?: string }> = [];
   try {
-    if (existsSync(out)) {
-      const entries = JSON.parse(readFileSync(out, 'utf8')) as Array<{ external_id?: string; status?: string; created_at?: string }>;
-      // The staged output accumulates the WHOLE window — count only the target day.
-      // Filter by created_at (the event's own day, set in entryFor) — NOT by a date
-      // embedded in external_id, which going/luma/meetup do not carry (going-<id>,
-      // luma-evt-<id>, meetup-<id>) and would always report 0 ingested for.
-      const dayEntries = entries.filter((e) => (e.created_at || '').slice(0, 10) === day);
-      candidates = dayEntries.length;
-      ingested = dayEntries.filter((e) => e.status === 'done').length;
-      errors = dayEntries.filter((e) => e.status === 'error').length;
-    }
-  } catch { /* keep zeros */ }
+    if (existsSync(out)) entries = JSON.parse(readFileSync(out, 'utf8')) as Array<{ external_id?: string; status?: string; created_at?: string }>;
+  } catch { /* keep empty */ }
   const base = env.BASE_URL || 'https://api.panperyskop.app';
-  fetch(`${base}/admin/seed/digest`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.ADMIN_SECRET}` },
-    body: JSON.stringify({ day, provider: String(cfg.id), status, candidates, ingested, errors, message }),
-    signal: AbortSignal.timeout(15_000),
-  }).catch(() => log(`${cfg.id}: digest report failed (fire-and-forget)`));
+  const today = todayWarsaw();
+  for (let i = 0; i <= SEED_REFILL_AHEAD; i++) {
+    const day = addDaysWarsaw(today, i);
+    // Count by created_at (the event's own day, set in entryFor) — NOT by a date
+    // embedded in external_id, which going/luma/meetup do not carry.
+    const dayEntries = entries.filter((e) => (e.created_at || '').slice(0, 10) === day);
+    const candidates = dayEntries.length;
+    const ingested = dayEntries.filter((e) => e.status === 'done').length;
+    const errors = dayEntries.filter((e) => e.status === 'error').length;
+    fetch(`${base}/admin/seed/digest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.ADMIN_SECRET}` },
+      body: JSON.stringify({ day, provider: String(cfg.id), status, candidates, ingested, errors, message }),
+      signal: AbortSignal.timeout(15_000),
+    }).catch(() => log(`${cfg.id}: digest report failed (fire-and-forget)`));
+  }
 }
 
 // Mark the provider complete ONLY after a successful upload — a failed upload
@@ -385,6 +408,16 @@ async function main(): Promise<void> {
   // the spawned seed-ingest uploads.
   for (const [k, v] of Object.entries(env)) process.env[k] = v;
   await ensureProxy();
+
+  // Seed cadence: skip the pass on non-seed days (manual --full/--provider/FORCE
+  // bypass the gate). The warm CLIs read the same cadence endpoint.
+  if (!FORCE && !FULL && !onlyProvider) {
+    if (!(await cadenceDue(env))) {
+      log('not a seed day — skip (refill cadence)');
+      releaseLock();
+      return;
+    }
+  }
 
   // Route every in-process fetch (providers + media) through the IPv4-forcing
   // proxy → exit node. Without this the bundles egress straight from the VPS's

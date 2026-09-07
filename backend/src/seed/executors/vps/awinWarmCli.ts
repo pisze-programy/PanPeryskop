@@ -109,6 +109,20 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+  // Seed cadence: only push on seed (full-window refill) days. On a check failure
+  // default to RUN — a broken gate must not silently freeze the feed.
+  try {
+    const cad = (await (await fetch(`${base}/admin/seed/cadence`, {
+      headers: { Authorization: `Bearer ${secret}` },
+      signal: AbortSignal.timeout(20_000),
+    })).json().catch(() => ({}))) as { due?: boolean; lastSeedDay?: string | null };
+    if (cad.due === false) {
+      log(`not a seed day (last ${cad.lastSeedDay ?? 'never'}) — skip`);
+      return;
+    }
+  } catch (e) {
+    log(`cadence check failed (${(e as Error).message}) — proceeding`);
+  }
   try {
     // 1. Gate on the feed's Last Imported timestamp (avoid pointless re-downloads).
     const listRes = await fetch(`https://productdata.awin.com/datafeed/list/apikey/${encodeURIComponent(key)}`, {

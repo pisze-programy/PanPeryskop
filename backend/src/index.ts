@@ -16,7 +16,8 @@ import {runSeed, tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
 import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/pipeline/queue';
 import {pruneSeedData, watchdogSeedBatches} from './seed/pipeline/cleanup';
 import {checkDigestIncomplete} from './seed/digest';
-import {SEED_DAYS_AHEAD} from './seed/core/constants';
+import {getLastSeedDay, setLastSeedDay, seedDue} from './seed/cadence';
+import {SEED_DAYS_AHEAD, SEED_INTERVAL_DAYS, SEED_REFILL_AHEAD} from './seed/core/constants';
 // Nominatim pace per executor: the Worker egresses from Cloudflare's shared
 // datacenter IPs — the OSM policy caps regular (daily cron) bulk geocoding at
 // 4 req/min (the VPS rotates residential IPs via Webshare and keeps 1/s).
@@ -149,13 +150,28 @@ export default {
       );
       return;
     }
-    // Daily seed (SEED_CRON): roll the seed window one day forward (today+SEED_DAYS_AHEAD).
-    // Single-flight per day prevents duplicate batches; the queue consumer does the
-    // heavy work with per-message retries + bounded DLQ re-drive.
+    // Seed (SEED_CRON): refill [today..today+SEED_REFILL_AHEAD] every SEED_INTERVAL_DAYS
+    // (cadence gate via the D1 marker). The refill horizon outruns the app window
+    // (SEED_DAYS_AHEAD) by the days until the next refill, so every browsable day is
+    // always already seeded. Idempotent by external_id; single-flight prevents
+    // duplicate active batches; the queue consumer does the heavy work.
     ctx.waitUntil(
-      enqueueSeedDay(env, addDaysWarsaw(todayWarsaw(), SEED_DAYS_AHEAD), 'cron')
-        .then(({ batchId, created }) => console.log(`seed cron enqueued: day=${addDaysWarsaw(todayWarsaw(), SEED_DAYS_AHEAD)} batch=${batchId} created=${created}`))
-        .catch((e) => console.error(`seed cron enqueue failed: ${(e as Error).message}`))
+      (async () => {
+        const today = todayWarsaw();
+        const last = await getLastSeedDay(env.DB);
+        if (!seedDue(last, today)) {
+          console.log(`seed cron: not due (last ${last ?? 'never'}, interval ${SEED_INTERVAL_DAYS}) — skip`);
+          return;
+        }
+        for (let i = 0; i <= SEED_REFILL_AHEAD; i++) {
+          const day = addDaysWarsaw(today, i);
+          const { batchId, created } = await enqueueSeedDay(env, day, 'cron');
+          console.log(`seed cron enqueued: day=${day} batch=${batchId} created=${created}`);
+        }
+        // Commit the cadence only after every window day was enqueued — a partial
+        // failure retries on the next cron.
+        await setLastSeedDay(env.DB, today);
+      })().catch((e) => console.error(`seed cron failed: ${(e as Error).message}`))
     );
   },
 };

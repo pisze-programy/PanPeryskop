@@ -6,6 +6,8 @@ import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { recordSeedDigest } from '../seed/digest';
 import { claimUnit, completeUnit, failUnit, unitDayStatus } from '../seed/pipeline/queue/units';
 import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
+import { getLastSeedDay, seedDue } from '../seed/cadence';
+import { SEED_INTERVAL_DAYS } from '../seed/core/constants';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -53,6 +55,17 @@ adminRoutes.get('/seed/blacklist', async (c) => {
     .prepare('SELECT id, pattern, venue, partner_id, partner_name FROM event_blacklist WHERE active = 1')
     .all<{ id: string; pattern: string; venue: string | null; partner_id: string | null; partner_name: string | null }>();
   return c.json({ rules: results ?? [] });
+});
+
+// Seed cadence — the VPS warms and the orchestrator read this to run only on
+// seed (full-window refill) days.
+adminRoutes.get('/seed/cadence', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const last = await getLastSeedDay(c.env.DB);
+  const today = todayWarsaw();
+  // due = a refill is due (cron will run) OR the refill already ran today (lastSeedDay
+  // === today — the VPS/warms run AFTER the 02:00 UTC cron sets the marker).
+  return c.json({ due: seedDue(last, today) || last === today, lastSeedDay: last, today, interval: SEED_INTERVAL_DAYS });
 });
 
 // Reject posts by external_id (a batch) — used by one-off duplicate cleanups.

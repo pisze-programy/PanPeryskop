@@ -7,10 +7,19 @@ export const DAY_MS = 24 * HOUR_MS;
 export const EVENT_VISIBLE_OFFSET_MS = 6 * HOUR_MS;
 
 // ---------- Seed window ----------
-// The app browses [today, today+SEED_DAYS_AHEAD]. EVERY provider (Worker and VPS)
-// re-seeds this window daily — idempotent by external_id, so late-published
-// events for today/+1/+2 still land. Single source of truth for the window.
-export const SEED_DAYS_AHEAD = 6;
+// The app browses [today, today+SEED_DAYS_AHEAD]. The seed REFILLS the whole
+// window every SEED_INTERVAL_DAYS (cadence) instead of rolling daily — idempotent
+// by external_id, so late-published events for the whole window still land.
+// Single source of truth for the window.
+export const SEED_DAYS_AHEAD = 5;
+/** Days between full-window refills. Aligned with the app's browse window and the
+ *  ~3-day freshness most providers hold; warms (kupbilecik/awin) follow it. */
+export const SEED_INTERVAL_DAYS = 3;
+/** A refill covers [today..today+SEED_REFILL_AHEAD] — SEED_DAYS_AHEAD plus the
+ *  days until the next refill, so the app window [today..+SEED_DAYS_AHEAD] is
+ *  ALWAYS a subset of the last refill's horizon (no empty slider days between
+ *  refills). */
+export const SEED_REFILL_AHEAD = SEED_DAYS_AHEAD + SEED_INTERVAL_DAYS - 1;
 
 // ---------- provider fetch timeouts ----------
 // Generous on purpose: the VPS fetches through the phone's cellular exit node,

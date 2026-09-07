@@ -3,7 +3,7 @@ import SwiftUI
 /// Vertical "scroll" day picker for the map (events only). Fully custom, modeled on
 /// the CompactSlider scrollable behavior:
 ///  - the CENTER of the rail is always the selected day (the scale scrolls under it)
-///  - major ticks for days 0…3 (no ghost ticks — the rail is empty before/after the
+///  - major ticks for days 0…5 (no ghost ticks — the rail is empty before/after the
 ///    range) with 3 minor graduations between every day
 ///  - generous pixels-per-day so a day change needs real drag distance (no "falling"
 ///    into the next day), and a "wall" clamps at the ends with its own haptic
@@ -16,7 +16,7 @@ struct DaySliderView: View {
     private static let spacing: CGFloat = 72
     private static let railHeight: CGFloat = 150
     private static let minDay = 0
-    private static let maxDay = 3
+    private static let maxDay = 5
     private static let minorDivisions = 3      // sub-steps between major days
 
     @State private var offset: CGFloat = 0

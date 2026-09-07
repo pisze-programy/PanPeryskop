@@ -6,6 +6,7 @@
 import { PROVIDER_CONFIGS } from './providers/registry';
 import { SEED_DAYS_AHEAD } from './core/constants';
 import { addDaysWarsaw, toWarsawIso, warsawDateOf } from './core/dates';
+import { getLastSeedDay } from './cadence';
 
 export type DigestStatus = 'ok' | 'partial' | 'failed';
 
@@ -176,8 +177,11 @@ export async function reportProviderFailed(env: DigestEnv, batchId: string, prov
   await postDigestSelf(env, { day: batch.day, provider, status: 'failed', candidates: 0, ingested: 0, errors: 0, message });
 }
 
-/** When every active provider reported for the day, email the daily summary once. */
+/** When every active provider reported for the day, email the summary once.
+ *  Only the CURRENT far edge (today+SEED_DAYS_AHEAD) triggers it — the full-window
+ *  refill completes 6 days per seed run; a day-done email for each would spam. */
 async function maybeDayDone(env: DigestEnv, day: string, total: number): Promise<void> {
+  if (day !== addDaysWarsaw(warsawDateOf(Date.now()), SEED_DAYS_AHEAD)) return;
   const rows = await env.DB.prepare(
     'SELECT provider, status, candidates, ingested, errors FROM seed_digest WHERE day = ? ORDER BY provider'
   ).bind(day).all<{ provider: string; status: string; candidates: number; ingested: number; errors: number }>();
@@ -195,33 +199,27 @@ async function maybeDayDone(env: DigestEnv, day: string, total: number): Promise
   });
 }
 
-/** Every provider must report its daily job by 14:00 Europe/Warsaw. */
-export const DIGEST_DEADLINE_HOUR = 14;
+/** Every provider must report the refill window's days by 23:00 Europe/Warsaw of
+ *  the refill day (after the VPS provider window 05-22, so a slow pass still lands). */
+export const DIGEST_DEADLINE_HOUR = 23;
 
 function warsawHour(ms: number): number {
   return Number(toWarsawIso(ms).slice(11, 13));
 }
 
-/** The digest day D is produced by the job that runs on calendar day (D - SEED_DAYS_AHEAD).
- *  Its deadline (14:00 Warsaw) passed when that job day is before today, or is today
- *  and the current Warsaw hour is past the deadline. */
-function jobDeadlinePassed(day: string, nowMs: number): boolean {
-  const today = warsawDateOf(nowMs);
-  const jobDay = addDaysWarsaw(day, -SEED_DAYS_AHEAD);
-  if (jobDay < today) return true;
-  if (jobDay === today) return warsawHour(nowMs) >= DIGEST_DEADLINE_HOUR;
-  return false;
-}
-
-/** Watchdog: after the deadline, email once which providers did not report for a day. */
+/** Watchdog: after the refill day's 23:00 deadline, email once which providers did
+ *  not report any day of the last refill's app window [lastSeed..lastSeed+SEED_DAYS_AHEAD]
+ *  — NOT [today..today+5], which would flag days the refill hasn't produced yet. */
 export async function checkDigestIncomplete(env: DigestEnv, nowMs: number = Date.now()): Promise<void> {
   const providers = activeSeedProviders();
   const today = warsawDateOf(nowMs);
-  const farEdge = addDaysWarsaw(today, SEED_DAYS_AHEAD);
-  // Current far edge + the two previous days (their job deadlines already passed).
-  const days = [farEdge, addDaysWarsaw(farEdge, -1), addDaysWarsaw(farEdge, -2)];
+  const lastSeed = await getLastSeedDay(env.DB);
+  if (!lastSeed) return; // never refilled yet
+  // Only once the last refill day's deadline passed (same day after 23:00, or past).
+  if (lastSeed > today) return;
+  if (lastSeed === today && warsawHour(nowMs) < DIGEST_DEADLINE_HOUR) return;
+  const days = Array.from({ length: SEED_DAYS_AHEAD + 1 }, (_, i) => addDaysWarsaw(lastSeed, i));
   for (const day of days) {
-    if (!jobDeadlinePassed(day, nowMs)) continue;
     const rows = await env.DB.prepare('SELECT DISTINCT provider FROM seed_digest WHERE day = ?').bind(day).all<{ provider: string }>();
     const reported = new Set((rows?.results ?? []).map((r) => r.provider));
     const missing = providers.filter((p) => !reported.has(p));
@@ -230,7 +228,7 @@ export async function checkDigestIncomplete(env: DigestEnv, nowMs: number = Date
     if (guard.meta.changes === 0) continue; // already reported incomplete
     await snitchReport(env, 'panperyskop/seed/day-incomplete', 'failed', {
       data: { day, reported: providers.length - missing.length, missing: missing.join(', ') },
-      message: `Missing by ${DIGEST_DEADLINE_HOUR}:00 Warsaw: ${missing.join(', ')}`,
+      message: `Missing by ${DIGEST_DEADLINE_HOUR}:00 Warsaw (refill ${lastSeed}): ${missing.join(', ')}`,
     });
   }
 }

@@ -1,12 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { activeSeedProviders, recordSeedDigest, snitchReport, checkDigestIncomplete } from '../src/seed/digest';
+import { SEED_DAYS_AHEAD } from '../src/seed/core/constants';
+import { addDaysWarsaw, warsawDateOf } from '../src/seed/core/dates';
 
 // In-memory D1 for the digest tables (seed_digest / seed_digest_done / seed_digest_incomplete).
 class MockDigestDB {
   digest = new Map<string, { day: string; provider: string; status: string; candidates: number; ingested: number; errors: number; message: string | null }>();
   done = new Set<string>();
   incomplete = new Set<string>();
+  cadence = new Map<string, string>();
 
   prepare(sql: string) {
     const db = this;
@@ -16,6 +19,9 @@ class MockDigestDB {
         const s = String(sql);
         return {
           async first<T>(): Promise<T | null> {
+            if (s.includes('SELECT value FROM seed_cadence')) {
+              return (db.cadence.has(a[0]) ? { value: db.cadence.get(a[0]) } : null) as T;
+            }
             if (s.includes('SELECT status FROM seed_digest')) {
               const row = db.digest.get(`${a[0]}|${a[1]}`);
               return (row ? { status: row.status } : null) as T;
@@ -36,6 +42,10 @@ class MockDigestDB {
             return { results: [] as T[] };
           },
           async run(): Promise<{ meta: { changes: number } }> {
+            if (s.includes('seed_cadence')) {
+              db.cadence.set(a[0], a[1]);
+              return { meta: { changes: 1 } };
+            }
             if (s.includes('INSERT INTO seed_digest ')) {
               const [day, provider, status, candidates, ingested, errors, message] = a;
               db.digest.set(`${day}|${provider}`, { day, provider, status, candidates: Number(candidates), ingested: Number(ingested), errors: Number(errors), message });
@@ -59,7 +69,9 @@ class MockDigestDB {
   }
 }
 
-const DAY = '2026-08-30';
+// The far edge — day-done emails only for it now (the full-window refill would
+// otherwise fire one per window day).
+const DAY = addDaysWarsaw(warsawDateOf(Date.now()), SEED_DAYS_AHEAD);
 type Report = { source: string; status: string; notify: string; data?: Record<string, unknown> };
 
 function capturedReports(): { reports: Report[]; fetch: typeof fetch } {
@@ -150,20 +162,22 @@ test('checkDigestIncomplete: only emails missing providers after the deadline', 
   try {
     const db = new MockDigestDB();
     const env = { DB: db, SNITCH_URL: 'https://cf-snitch.example', SNITCH_TOKEN: 't' };
-    // Two providers reported; five are still missing. Fixed clock: 2026-08-24 15:00
-    // Warsaw (past the 14:00 deadline for the 2026-08-30 far-edge job).
-    const nowMs = Date.UTC(2026, 7, 24, 13, 0, 0);
-    await recordSeedDigest(env, { day: DAY, provider: 'going', status: 'ok' });
-    await recordSeedDigest(env, { day: DAY, provider: 'helios', status: 'ok' });
+    // Fixed clock: 00:00 Warsaw Aug 25 (past the 23:00 refill deadline of Aug 24).
+    const nowMs = Date.UTC(2026, 7, 24, 22, 0, 0);
+    db.cadence.set('last_seed_day', '2026-08-24');
+    const winDay = '2026-08-25';
+    await recordSeedDigest(env, { day: winDay, provider: 'going', status: 'ok' });
+    await recordSeedDigest(env, { day: winDay, provider: 'helios', status: 'ok' });
     await checkDigestIncomplete(env, nowMs);
-    const inc = reports.filter((r) => r.source === 'panperyskop/seed/day-incomplete');
-    assert.ok(inc.length >= 1, 'missing providers must be reported');
+    const inc = reports.filter((r) => r.source === 'panperyskop/seed/day-incomplete' && r.data?.day === winDay);
+    assert.ok(inc.length >= 1, 'missing providers must be reported for the window day');
     assert.equal(inc[0].status, 'failed');
     const missing = String((inc[0].data?.missing as string) ?? '');
     assert.ok(!missing.includes('going') && !missing.includes('helios'), 'reported providers must not be in missing');
     // Second run — guarded, no duplicate.
+    const totalAfterFirst = reports.filter((r) => r.source === 'panperyskop/seed/day-incomplete').length;
     await checkDigestIncomplete(env, nowMs);
-    assert.equal(reports.filter((r) => r.source === 'panperyskop/seed/day-incomplete').length, inc.length, 'guarded once');
+    assert.equal(reports.filter((r) => r.source === 'panperyskop/seed/day-incomplete').length, totalAfterFirst, 'guarded once');
   } finally {
     global.fetch = fetch;
   }

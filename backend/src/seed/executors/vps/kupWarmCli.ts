@@ -58,6 +58,21 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+  // Seed cadence: the warm only runs on seed (full-window refill) days. On a
+  // cadence-check failure default to RUN (a broken gate must not silently freeze
+  // the manifests — the push then fails loudly instead).
+  try {
+    const cad = (await (await fetch(`${base}/admin/seed/cadence`, {
+      headers: { Authorization: `Bearer ${secret}` },
+      signal: AbortSignal.timeout(20_000),
+    })).json().catch(() => ({}))) as { due?: boolean; lastSeedDay?: string | null };
+    if (cad.due === false) {
+      log(`not a seed day (last ${cad.lastSeedDay ?? 'never'}) — skip`);
+      return;
+    }
+  } catch (e) {
+    log(`cadence check failed (${(e as Error).message}) — proceeding`);
+  }
   // The origin intermittently 404s (and occasionally returns a corrupt 200) once
   // the ~10/day token budget is being exceeded or a burst trips it. Retry the
   // whole fetch+scan a few times — bounded so a day never burns >3 requests.

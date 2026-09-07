@@ -23,7 +23,7 @@ import { dedupe, buildDescription } from '../../../../src/seed/core/dedupe';
 import { isCancelled, dropCancelled, rescueRealShows } from '../../../../src/seed/core/filters';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs, warsawDateOf, eventDayEndMs } from '../../../../src/seed/core/dates';
 import { GeoStore, fallbackSeedGeo } from '../../../../src/seed/core/geo';
-import { SEED_DAYS_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1, VPS_CONCURRENCY } from '../../../../src/seed/core/constants';
+import { SEED_DAYS_AHEAD, SEED_REFILL_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1, VPS_CONCURRENCY } from '../../../../src/seed/core/constants';
 import { UA_HEADERS } from '../../../../src/seed/providers/http';
 import { configOf } from '../../../../src/seed/providers/registry';
 import type { SeedCandidate, ProviderId } from '../../../../src/seed/core/types';
@@ -666,9 +666,10 @@ function seedDays(args: CommonArgs): { days: string[]; target: string } {
     for (let d = start; d <= end; d = addDaysWarsaw(d, 1)) out.push(d);
     return { days: out, target: farEdge };
   }
-  const days = args.full
-    ? Array.from({ length: SEED_DAYS_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i))
-    : [farEdge];
+  // The refill model seeds the refill horizon [today..today+SEED_REFILL_AHEAD] on each
+  // seed day (the orchestrator skips non-seed days) — not a single far edge. The
+  // horizon outruns the app window so no browsable day is ever unseeded.
+  const days = Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i));
   return { days, target: farEdge };
 }
 

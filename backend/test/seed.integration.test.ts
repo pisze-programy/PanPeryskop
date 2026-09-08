@@ -15,7 +15,7 @@ import { PROVIDER_CONFIGS } from '../src/seed/providers/registry';
 import { enqueueSeedDay, runQueue, QUEUE_NAMES } from '../src/seed/pipeline/queue';
 import { storiesRoutes } from '../src/api/stories';
 import { parseStoriesLimit } from '../src/api/stories';
-import { todayWarsaw, addDaysWarsaw } from '../src/seed/core/dates';
+import { todayWarsaw, addDaysWarsaw, warsawMidnightMs } from '../src/seed/core/dates';
 import { SEED_DAYS_AHEAD } from '../src/seed/core/constants';
 import type { SeedQueueMessage } from '../src/seed/pipeline/queue';
 import type { SeedProvider } from '../src/seed/core/types';
@@ -385,6 +385,71 @@ test('integration: /stories/tag-counts returns per-tag + total for a city+day', 
   // Unknown city → 404; missing day → 400.
   assert.equal((await storiesRoutes.request('/tag-counts?city=nope&day=' + today, {}, env)).status, 404);
   assert.equal((await storiesRoutes.request('/tag-counts?city=warszawa', {}, env)).status, 400);
+});
+
+test('integration: /stories applies the +1h liveness rule to events and showtimes', async () => {
+  const sqlite = new DatabaseSync(':memory:');
+  applyMigrations(sqlite);
+  const env = { DB: d1(sqlite), MEDIA: { put: async () => {}, get: async () => null, delete: async () => {} } } as unknown as Env;
+
+  sqlite.prepare("INSERT INTO users (id, device_id, session_token, role, created_at) VALUES ('u1','seed','t','user',0)").run();
+  const ins = sqlite.prepare(
+    `INSERT INTO posts (id, user_id, type, lat, lng, description, status, created_at, category, event_date, showtimes, showtime_booking)
+     VALUES (?, 'u1', 'photo', ?, ?, ?, 'approved', ?, 'events', ?, ?, ?)`
+  );
+
+  const today = todayWarsaw();
+  const now = Date.now();
+  const dayStart = warsawMidnightMs(today);
+  const warsawHhmm = (ms: number) => new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(ms));
+  // Times relative to now — the test mirrors the rule (oracle) so it stays correct
+  // regardless of the hour the suite runs (including Warsaw midnight rollover).
+  const tPast = warsawHhmm(now - 2 * 3_600_000);   // 2h ago → over the grace
+  const tGrace = warsawHhmm(now - 30 * 60_000);    // 30min ago → still within grace
+  const tFuture = warsawHhmm(now + 2 * 3_600_000); // upcoming → kept
+  const hhmmMs = (t: string) => (Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))) * 60_000;
+  const isLive = (t: string) => t === '00:00' || dayStart + hhmmMs(t) + 3_600_000 > now;
+
+  const bbox = 'sw_lat=52.0&sw_lng=20.9&ne_lat=52.5&ne_lng=21.3';
+
+  // Single showtime 2h in the past → the whole post must be dropped.
+  ins.run('gone', 52.2, 21.0, 'gone', now, today, JSON.stringify([tPast]), null);
+  // Single showtime within the 1h grace → kept.
+  ins.run('grace', 52.2, 21.0, 'grace', now, today, JSON.stringify([tGrace]), null);
+  // Multi-showtime: past trimmed, future kept; booking must follow the kept times.
+  ins.run('multi', 52.2, 21.0, 'multi', now, today,
+    JSON.stringify([tPast, tFuture]),
+    JSON.stringify([
+      { time: tPast, kind: 'link', params: { url: 'https://a' } },
+      { time: tFuture, kind: 'link', params: { url: 'https://b' } },
+    ]));
+  // Unknown time ("00:00") → all-day event, never filtered.
+  ins.run('allday', 52.2, 21.0, 'allday', now, today, JSON.stringify(['00:00']), null);
+  // No showtimes → liveness unknown → kept.
+  ins.run('notime', 52.2, 21.0, 'notime', now, today, null, null);
+
+  const res = await storiesRoutes.request(`/?${bbox}&day=${today}`, {}, env);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { stories: any[] };
+
+  const expected = ['allday', 'grace', 'multi', 'notime'].filter((id) => {
+    const times = { allday: ['00:00'], grace: [tGrace], multi: [tPast, tFuture], notime: null }[id];
+    return !times || times.some(isLive);
+  }).sort();
+  assert.deepEqual(body.stories.map((s) => s.id).sort(), expected);
+  assert.ok(!body.stories.some((s) => s.id === 'gone'));
+
+  // Multi: only the future showtime survives and the booking is trimmed with it.
+  const multi = body.stories.find((s) => s.id === 'multi');
+  if (multi) {
+    assert.deepEqual(multi.showtimes, [tFuture]);
+    assert.deepEqual(multi.showtime_booking.map((b: any) => b.time), [tFuture]);
+  }
+  // Grace: single showtime intact.
+  const grace = body.stories.find((s) => s.id === 'grace');
+  if (grace) assert.deepEqual(grace.showtimes, [tGrace]);
 });
 
 test('integration: parseStoriesLimit defaults to 50, caps at 1000, clamps to >=1', () => {

@@ -4,8 +4,60 @@ import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, S
 import { mediaUrl, originFromRequest } from '../core/media';
 import { tagCatalog, tagIdSet } from '../core/tagCatalog';
 import { cityBbox } from '../admin/cities';
+import { warsawMidnightMs } from '../seed/core/dates';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
+
+// Event liveness: an event/showtime is shown until its start + 1h (grace window),
+// then it is considered over. Events with an UNKNOWN time ("00:00" marker — marathons,
+// tours, feeds that omit the hour) are all-day and never filtered.
+const EVENT_GRACE_MS = 3_600_000;
+const UNKNOWN_TIME = '00:00';
+
+function hhmmToMs(t: string): number {
+  const m = /^(\d{2}):(\d{2})$/.exec(t);
+  if (!m) return 0;
+  return (Number(m[1]) * 60 + Number(m[2])) * 60_000;
+}
+
+// Filter an event's showtimes to those still live (start within the past 1h or future).
+// Returns { keep: false } when the event has no live showtime left (drop the whole post).
+function liveShowtimes(showtimes: string[] | null, eventDate: string | null): { keep: boolean; showtimes: string[] | null } {
+  // No day or no times → unknown liveness → keep unchanged (all-day events, live posts).
+  if (!eventDate || !showtimes || showtimes.length === 0) return { keep: true, showtimes };
+  const known = showtimes.filter((t) => t !== UNKNOWN_TIME);
+  // All times are the "unknown" marker → all-day event → never filter.
+  if (known.length === 0) return { keep: true, showtimes };
+  const now = Date.now();
+  const dayStart = warsawMidnightMs(eventDate);
+  const live = showtimes.filter((t) => t === UNKNOWN_TIME || dayStart + hhmmToMs(t) + EVENT_GRACE_MS > now);
+  return live.length > 0 ? { keep: true, showtimes: live } : { keep: false, showtimes: [] };
+}
+
+interface LivenessRow {
+  category: string | null;
+  event_date: string | null;
+  showtimes?: string | null;
+  showtime_booking?: string | null;
+}
+
+// Apply the +1h liveness rule to one story row in place (trims showtimes AND the
+// matching showtime_booking entries). Returns false when the post must be dropped.
+function applyEventLiveness(row: LivenessRow): boolean {
+  if (row.category !== 'events') return true;
+  const times = row.showtimes ? (JSON.parse(row.showtimes) as string[]) : null;
+  const res = liveShowtimes(times, row.event_date);
+  if (!res.keep) return false;
+  // Unknown time (no times / all "00:00") or nothing trimmed → leave the row untouched.
+  if (!res.showtimes || JSON.stringify(res.showtimes) === row.showtimes) return true;
+  row.showtimes = JSON.stringify(res.showtimes);
+  if (row.showtime_booking) {
+    const booking = JSON.parse(row.showtime_booking) as { time: string }[];
+    const kept = booking.filter((b) => res.showtimes?.includes(b.time));
+    row.showtime_booking = kept.length > 0 ? JSON.stringify(kept) : null;
+  }
+  return true;
+}
 
 // Canonical + admin-created tags for the map filter chips (public, ordered:
 // canonical vocabulary first, then custom tags alphabetically).
@@ -28,20 +80,22 @@ storiesRoutes.get('/tag-counts', async (c) => {
 
   // Select approved events for that day within the city bbox and tally tags in TS
   // (single query, no N LIKE scans). NULL-tag posts contribute only to total.
+  // The same +1h liveness rule as /stories keeps badges consistent with the pins.
   const { results } = await db
     .prepare(
-      `SELECT tags FROM posts
+      `SELECT category, event_date, showtimes, tags FROM posts
        WHERE lat BETWEEN ? AND ?
        AND lng BETWEEN ? AND ?
        AND status = '${STATUS_APPROVED}'
        AND event_date = ?`
     )
     .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, day)
-    .all<{ tags: string | null }>();
+    .all<{ category: string | null; event_date: string | null; showtimes: string | null; tags: string | null }>();
 
   const counts = new Map<string, number>();
   let total = 0;
   for (const row of results || []) {
+    if (!applyEventLiveness(row)) continue;
     total += 1;
     if (!row.tags) continue;
     for (const id of JSON.parse(row.tags) as string[]) {
@@ -229,8 +283,10 @@ storiesRoutes.get('/', async (c) => {
         .bind(user.id, user.id, swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []), ...(tag ? [tagBind] : []))
         .all<StoryRow>();
 
+      const live = results.filter(applyEventLiveness);
+
       return c.json({
-        stories: results.map((p) => storyJson(p, c)),
+        stories: live.map((p) => storyJson(p, c)),
       });
     }
   }
@@ -253,8 +309,10 @@ storiesRoutes.get('/', async (c) => {
     .bind(swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []), ...(tag ? [tagBind] : []))
     .all<StoryRow>();
 
+  const live = results.filter(applyEventLiveness);
+
   return c.json({
-    stories: results.map((p) => storyJson(p, c)),
+    stories: live.map((p) => storyJson(p, c)),
   });
 });
 

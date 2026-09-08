@@ -151,10 +151,10 @@ test('ebiletTags: safe prefixes map to their obvious tag', () => {
   assert.equal(ebiletTags('Widowiska/Stand-up'), 'komedia');
   assert.equal(ebiletTags('Widowiska/Kabarety'), 'komedia');
   assert.equal(ebiletTags('Sport/Sporty walki'), 'sport');
-  assert.equal(ebiletTags('Zwiedzanie/ZOO'), 'atrakcje');
-  assert.equal(ebiletTags('Zwiedzanie/Wycieczki'), 'atrakcje');
-  assert.equal(ebiletTags('Rodzina/Atrakcje dla rodziny'), 'atrakcje');
-  assert.equal(ebiletTags('Rodzina/Rekreacja'), 'atrakcje');
+  assert.equal(ebiletTags('Zwiedzanie/ZOO'), 'inne');
+  assert.equal(ebiletTags('Zwiedzanie/Wycieczki'), 'inne');
+  assert.equal(ebiletTags('Rodzina/Atrakcje dla rodziny'), 'inne');
+  assert.equal(ebiletTags('Rodzina/Rekreacja'), 'inne');
 });
 
 test('ebiletTags: reviewed ambiguous taxonomy (classical → muzyka, business meetings → meetup, rest → inne)', () => {

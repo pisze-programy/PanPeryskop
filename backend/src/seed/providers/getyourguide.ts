@@ -2,7 +2,7 @@
 // (https://api.getyourguide.com), auth via the X-ACCESS-TOKEN header
 // (wrangler secret GETYOURGUIDE_TOKEN). JSON API, no anti-bot → runs on the CF
 // Workers edge. Content: attractions & tours anchored to a destination city —
-// tagged 'atrakcje'. Attractions are ongoing products, so each is seeded as a
+// tagged 'inne' (the 'atrakcje' tag was removed). Attractions are ongoing products, so each is seeded as a
 // post for the far-edge day (today+SEED_DAYS_AHEAD) and re-seeded daily
 // (idempotent upsert by external_id 'getyourguide-<tour_id>'). showtimes (real
 // start times for the day, when the API exposes them) come from the per-tour
@@ -93,7 +93,7 @@ async function fetchCityTours(ctx: SeedContext, token: string, city: CityDef): P
       mediaUrl: img ? img.replace('[format_id]', GYG_IMG_FORMAT) : '',
       thumbUrl: null,
       times: times && times.length ? times : undefined,
-      tags: ['atrakcje'],
+      tags: ['inne'],
     });
   }
   return out;

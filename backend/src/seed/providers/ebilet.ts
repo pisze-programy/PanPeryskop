@@ -152,7 +152,7 @@ export function firstEbiletCategory(p: EbiletProduct): string | null {
 
 /** Map an eBilet category path onto the CANONICAL tag set (seed/core/tags.ts).
  *  Classification reviewed with the user on the real 48-path taxonomy:
- *    safe prefixes (Muzyka|Teatr|Sport + stand-up/kabarety + zwiedzanie/rekreacja/atrakcje)
+ *    safe prefixes (Muzyka|Teatr|Sport + stand-up/kabarety + zwiedzanie/rekreacja)
  *    → their obvious tag; classical concerts (Klasyka/...) → 'muzyka'; business
  *    conferences/trainings → 'meetup'; the enumerated ambiguous paths → the 'inne'
  *    catch-all bag. Unknown/missing categories → null (never a guessed tag). */
@@ -164,7 +164,7 @@ export function ebiletTags(category: string | null): string | null {
   if (path.startsWith('Sport/')) return 'sport';
   if (path.startsWith('Teatr/') || path === 'Rodzina/Teatr dla dzieci') return 'teatr';
   if (path === 'Widowiska/Stand-up' || path === 'Widowiska/Kabarety') return 'komedia';
-  if (path.startsWith('Zwiedzanie/') || path === 'Rodzina/Atrakcje dla rodziny' || path === 'Rodzina/Rekreacja') return 'atrakcje';
+  if (path.startsWith('Zwiedzanie/') || path === 'Rodzina/Atrakcje dla rodziny' || path === 'Rodzina/Rekreacja') return 'inne';
   if (path === 'Klasyka/Koncerty muzyki poważnej' || path === 'Klasyka/Muzyka filmowa' || path === 'Klasyka/Opera i Operetka') return 'muzyka';
   if (path === 'Biznes/Konferencje' || path === 'Biznes/Szkolenia' || path === 'Biznes/Inne') return 'meetup';
   // Reviewed catch-all bag (Balet, Wystawy, Targi, Rodzina/Widowiska dla dzieci,

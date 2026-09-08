@@ -122,7 +122,7 @@ export function venueFromLoc(loc: string): string {
   return loc.split(',')[0].trim();
 }
 
-/** Provider prefix of an external_id ("dzisapp-123-…" -> "dzisapp"). */
+/** Provider prefix of an external_id ("going-123-…" -> "going"). */
 export function sourceFromExternalId(externalId: string | null): string {
   if (!externalId) return 'unknown';
   return externalId.split('-')[0];

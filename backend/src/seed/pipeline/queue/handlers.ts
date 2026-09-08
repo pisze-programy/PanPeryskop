@@ -10,9 +10,8 @@ import { doSavePost } from '../../../api/posts';
 import { TTL_MS, STATUS_APPROVED, STATUS_PENDING } from '../../../core/models';
 import { dedupe, buildDescription, showtimesJson, showtimeBookingJson, tagsJson } from '../../core/dedupe';
 import { fallbackSeedGeo } from '../../core/geo';
-import { dropCancelled, rescueRealShows, isCancelled } from '../../core/filters';
+import { dropBlocked, dropCancelled, rescueRealShows, isCancelled } from '../../core/filters';
 import { loadBlacklistRules, findBlacklist, blacklistReason } from '../../core/blacklist';
-import { buildVenueCache } from '../../providers/eventylive';
 import { resolveEbiletGeo } from '../../providers/ebilet';
 import { resolveEventimGeo } from '../../providers/eventim';
 import { writeSeedRun } from '../../core/log';
@@ -32,20 +31,6 @@ export async function handleSeedDay(env: EnvQ, m: Extract<SeedQueueMessage, { ty
   if (createdAt < now() - TTL_MS) throw new Error(`created_at (${new Date(createdAt).toISOString()}) too far in the past`);
 
   await setBatchStatus(env, m.batchId, 'fetching');
-
-  // Build the shared venue geo cache once (eventylive city scopes read it from D1
-  // instead of each re-fetching dzis.app). Best-effort — a failure leaves the
-  // cache empty and eventylive falls back to city centers.
-  try {
-    const ctx: SeedContext = {
-      env: env as unknown as Env, day: m.day,
-      dayStart, dayEnd: eventDayEndMs(m.day), createdAt,
-      recordBrowserMs: () => {},
-    };
-    await buildVenueCache(ctx, m.day);
-  } catch (e) {
-    console.error(`seed venue-cache build failed: ${(e as Error).message}`);
-  }
 
   const { results } = await env.DB.prepare("SELECT provider, scope FROM seed_scopes WHERE batch_id=? AND status='pending'").bind(m.batchId).all<{ provider: string; scope: string }>();
   const msgs: MessageSendRequest<SeedQueueMessage>[] = (results || []).map((r) => ({
@@ -254,7 +239,7 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
       pendingGeo = true;
     }
 
-    // Optional provider hook: resolve the post link to the direct source (dzis.app).
+    // Optional provider hook: resolve the post link to the direct source.
     if (provider.resolveLink) {
       try { cand.link = await provider.resolveLink(ctx, cand); } catch { /* best-effort */ }
     }

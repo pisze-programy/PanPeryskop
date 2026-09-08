@@ -20,7 +20,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { dedupe, buildDescription } from '../../../../src/seed/core/dedupe';
-import { isCancelled, dropCancelled, rescueRealShows } from '../../../../src/seed/core/filters';
+import { isCancelled, dropBlocked, rescueRealShows } from '../../../../src/seed/core/filters';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs, warsawDateOf, eventDayEndMs } from '../../../../src/seed/core/dates';
 import { GeoStore, fallbackSeedGeo } from '../../../../src/seed/core/geo';
 import { SEED_DAYS_AHEAD, SEED_REFILL_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1, VPS_CONCURRENCY } from '../../../../src/seed/core/constants';
@@ -524,7 +524,7 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
       // copy is staged and uploaded as its own post. Cinema sources stay exempt
       // (dedupe() skips them internally). Later the blacklist (applied by
       // seed-ingest at upload) drops matched spam entirely.
-      const pre = dropCancelled(fetched);
+      const pre = dropBlocked(fetched);
       const cands = rescueRealShows(pre, dedupe(pre));
       console.log(`[${src.source}] ✓ ${scope}: ${fetched.length} candidates → ${cands.length} after dedupe`);
       logLoad('scope:fetch', `${src.source}/${scope} fetched=${fetched.length} deduped=${cands.length} ${Date.now() - t0}ms`);

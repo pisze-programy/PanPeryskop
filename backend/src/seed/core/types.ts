@@ -9,8 +9,6 @@ export type RunType = 'manual' | 'cron';
 export const ProviderId = {
   GOING: 'going',
   KUPBILECIK: 'kupbilecik',
-  DZISAPP: 'dzisapp',
-  EVENTYLIVE: 'eventylive',
   MULTIKINO: 'multikino',
   CINEMACITY: 'cinemacity',
   HELIOS: 'helios',

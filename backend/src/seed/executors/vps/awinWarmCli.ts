@@ -16,7 +16,7 @@ const FEED_ID = process.env.AWIN_FEED_ID || '99885';
 const COLUMNS =
   'aw_deep_link,aw_product_id,aw_image_url,merchant_deep_link,Tickets%3Aevent_name,Tickets%3Aevent_date,' +
   'Tickets%3Avenue_name,Tickets%3Avenue_address,Tickets%3Alatitude,Tickets%3Alongitude,Tickets%3Agenre,' +
-  'Tickets%3Amin_price,Tickets%3Amax_price,custom_1';
+  'Tickets%3Amin_price,Tickets%3Amax_price,merchant_category,custom_1';
 
 // Repo root — works from BOTH the TS source and the pre-built bundle (dist/awin-warm.mjs).
 function findRepoDir(start: string): string {

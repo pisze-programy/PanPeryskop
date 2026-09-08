@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseEventimRow, eventimCity, eventimTags } from '../src/seed/providers/eventim';
+import { parseEventimRow, eventimCity, eventimTags, eventimCategoryTag, eventimTitleTag, isEventimVoucher } from '../src/seed/providers/eventim';
 import { aggregateDayCandidates } from '../src/seed/core/aggregate';
 
 const DAY = '2026-09-18';
@@ -73,6 +73,62 @@ test('eventimTags: genre mapping, unknown → null', () => {
   assert.equal(eventimTags('Wydarzenie rodzinne'), 'inne');
   assert.equal(eventimTags(''), null);
   assert.equal(eventimTags('Inna'), null);
+});
+
+test('eventimCategoryTag: merchant_category code → canonical tag, unknown → null', () => {
+  assert.equal(eventimCategoryTag('1B'), 'muzyka');
+  assert.equal(eventimCategoryTag('1G'), 'muzyka');
+  assert.equal(eventimCategoryTag('2B'), 'teatr');
+  assert.equal(eventimCategoryTag('3G'), 'sport');
+  assert.equal(eventimCategoryTag('3I'), 'sport');
+  assert.equal(eventimCategoryTag('4B'), 'komedia');
+  assert.equal(eventimCategoryTag('2E'), 'inne');
+  assert.equal(eventimCategoryTag('2H'), 'inne');
+  assert.equal(eventimCategoryTag('4A'), 'inne');
+  assert.equal(eventimCategoryTag('4F'), 'inne');
+  assert.equal(eventimCategoryTag('4d'), 'inne', 'code normalized case-insensitively');
+  assert.equal(eventimCategoryTag('9Z'), null);
+  assert.equal(eventimCategoryTag(''), null);
+  assert.equal(eventimCategoryTag(null), null);
+});
+
+test('isEventimVoucher: 5* codes are vouchers/merch, not events', () => {
+  assert.ok(isEventimVoucher('5D'));
+  assert.ok(isEventimVoucher('5A'));
+  assert.ok(!isEventimVoucher('4B'));
+  assert.ok(!isEventimVoucher('1B'));
+  assert.ok(!isEventimVoucher(''));
+  assert.ok(!isEventimVoucher(null));
+});
+
+test('eventimTitleTag: title fallback, unknown → null', () => {
+  assert.equal(eventimTitleTag('Koncert Chopinowski'), 'muzyka');
+  assert.equal(eventimTitleTag('Kabaret Hrabi'), 'komedia');
+  assert.equal(eventimTitleTag('Spektakl: Genialny pomysł'), 'teatr');
+  assert.equal(eventimTitleTag('Mecz piłki ręcznej'), 'sport');
+  assert.equal(eventimTitleTag('Teatr dla dzieci'), 'inne');
+  assert.equal(eventimTitleTag('MUZEUM BANKSY'), null);
+  assert.equal(eventimTitleTag(''), null);
+});
+
+test('parseEventimRow: tag priority merchant_category → genre → title', () => {
+  // code wins over genre
+  const [c] = parseEventimRow(row({ merchant_category: '4B', 'Tickets:genre': 'Koncert' }), DAY, DAY_MS);
+  assert.deepEqual(c.tags, ['komedia']);
+  // no code → genre fallback
+  const [g] = parseEventimRow(row({ 'Tickets:genre': 'Teatr' }), DAY, DAY_MS);
+  assert.deepEqual(g.tags, ['teatr']);
+  // no code, empty genre → title fallback
+  const [t] = parseEventimRow(row({ 'Tickets:genre': '', 'Tickets:event_name': 'Koncert przy świecach' }), DAY, DAY_MS);
+  assert.deepEqual(t.tags, ['muzyka']);
+  // nothing usable → untagged
+  const [u] = parseEventimRow(row({ merchant_category: '9Z', 'Tickets:genre': '', 'Tickets:event_name': 'MUZEUM BANKSY KRAKÓW' }), DAY, DAY_MS);
+  assert.equal(u.tags, undefined);
+});
+
+test('parseEventimRow: voucher codes are skipped (not events)', () => {
+  assert.equal(parseEventimRow(row({ merchant_category: '5D', 'Tickets:event_name': 'Voucher do Multikina' }), DAY, DAY_MS).length, 0);
+  assert.equal(parseEventimRow(row({ merchant_category: '5A' }), DAY, DAY_MS).length, 0);
 });
 
 test('aggregate: same event-day-venue at different times → one post with showtimes[]', () => {

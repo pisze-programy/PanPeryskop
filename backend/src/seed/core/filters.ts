@@ -1,23 +1,56 @@
-// Separate pre/post dedupe filters — intentionally NOT part of dedupe().
-//   dropCancelled   — pre-filter: an event whose title says "cancelled" is always
-//                     removed (never becomes the canonical winner).
-//   rescueRealShows — post-filter: re-keeps same-title+venue entries from trusted
-//                     real sources (kupbilecik/going) whose hours are >= 2h apart —
-//                     those are two separate shows (e.g. SKOLIM 17:00 + 20:00),
-//                     not duplicates.
 import { SeedCandidate, ProviderId } from './types';
 import { toWarsawIso } from './dates';
 import { diacriticFold, linkKey, containment, titleTokens, venuesClose } from './match';
 
 const CANCELLED_MARKERS = ['cancelled', 'odwolany', 'odwolana', 'odwolane', 'anulowany', 'anulowana', 'anulowane'];
+const GLOBAL_BAN_PATTERNS = [
+    'KONCERTY FORTEPIANOWE PRZY ŚWIECACH',
+    'Koncert przy świecach',
+    'KONCERT PRZY ŚWIECACH',
+    'Koncert Chopinowski w Sali Koncertowej Fryderyk',
+    'Plac Defilad Warszawa w pigułce (ebilet)',
+    'Kolejkowo Warszawa *',
+    'Koncert przy świecach – ¡Viva España! – hiszpańska noc przy świecach',
+    'Koncert przy świecach – Tango przy świecach',
+    'Koncert przy świecach – Bridgertonowie',
+    'I like Queen - piano',
+    'Chopin & Friends - koncerty fortepianowe',
+    'Chopin & Friends Concert By Candle Glow',
+    'Grand Piano Trio Chopin & Friends By Candle Glow',
+    'Queen Classic Concert By Candle Glow',
+    'Royal Chopin Hall - Queen Classic Candlelight',
+    'GENESIS – The Creation Light Show',
+    'Koncert Przy Świecach w Sali Koncertowej Fryderyk',
+    'Nastrojowy wieczór z muzyką Chopina',
+];
+const TOKEN_RE = /[a-z0-9]+/g;
+
+export function isBannedGlobal(title: string): boolean {
+  const set = new Set(diacriticFold(title).match(TOKEN_RE) ?? []);
+  if (set.size === 0) return false;
+
+  for (const pattern of GLOBAL_BAN_PATTERNS) {
+    const tokens = diacriticFold(pattern).match(TOKEN_RE) ?? [];
+    if (tokens.length > 0 && tokens.every((w) => set.has(w))) return true;
+  }
+  return false;
+}
 
 export function isCancelled(title: string): boolean {
-  const t = diacriticFold(title);
-  return CANCELLED_MARKERS.some((m) => t.includes(m));
+    const t = diacriticFold(title);
+    return CANCELLED_MARKERS.some((m) => t.includes(m));
 }
 
 export function dropCancelled(events: SeedCandidate[]): SeedCandidate[] {
   return events.filter((e) => !isCancelled(e.title));
+}
+
+export function dropBanned(events: SeedCandidate[]): SeedCandidate[] {
+  return events.filter((e) => !isBannedGlobal(e.title));
+}
+
+export function dropBlocked(events: SeedCandidate[]): SeedCandidate[] {
+  return dropBanned(dropCancelled(events));
 }
 
 // Only sources that list genuine, distinct shows can carry two entries of the

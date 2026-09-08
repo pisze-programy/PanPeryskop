@@ -2,8 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { enabledProviders, SEED_PROVIDERS } from '../src/seed';
 import { ProviderId, SeedContext } from '../src/seed/core/types';
-import { parseLocalDateTime, externalOfferUrl, primaryOutHref, resolveDzisLink } from '../src/seed/providers/dzisapp';
-import { parseEvlEvent, getOfferUrl } from '../src/seed/providers/eventylive';
 import { parseMkFilms, extractToken, resolveMkGeo } from '../src/seed/providers/multikino';
 import { parseHeliosPayload } from '../src/seed/providers/helios';
 import { parseCcScope } from '../src/seed/providers/cinemacity';
@@ -17,8 +15,6 @@ test('providers: kupbilecik + ebilet on Worker (fetch), going/helios + cinemas o
   assert.ok(byId.has('going'));
   assert.ok(byId.has('kupbilecik'));
   assert.ok(byId.has('ebilet'));
-  assert.ok(byId.has('dzisapp'));
-  assert.ok(byId.has('eventylive'));
   assert.ok(byId.has('multikino'));
   assert.ok(byId.has('cinemacity'));
   assert.ok(byId.has('helios'));
@@ -27,8 +23,6 @@ test('providers: kupbilecik + ebilet on Worker (fetch), going/helios + cinemas o
   assert.equal(byId.get('going')!.transport, 'fetch');
   assert.equal(byId.get('kupbilecik')!.transport, 'fetch');
   assert.equal(byId.get('ebilet')!.transport, 'fetch');
-  assert.equal(byId.get('dzisapp')!.transport, 'fetch');
-  assert.equal(byId.get('eventylive')!.transport, 'fetch');
   assert.equal(byId.get('multikino')!.transport, 'fetch');
   assert.equal(byId.get('cinemacity')!.transport, 'fetch');
   assert.equal(byId.get('helios')!.transport, 'fetch');
@@ -41,14 +35,9 @@ test('providers: kupbilecik + ebilet on Worker (fetch), going/helios + cinemas o
   for (const p of SEED_PROVIDERS) assert.ok(!('enabled' in p), `${p.id} must not define enabled`);
 
   // Worker executor: kupbilecik + ebilet + eventim (plain fetch, external-warmed R2
-  // caches) run in the CF queue pipeline. dzisapp/eventylive are retired
-  // (enabled=false) — they must not run anywhere.
+  // caches) run in the CF queue pipeline.
   const workerIds = workerExecutor.providerIds(PROVIDER_CONFIGS);
   assert.deepEqual(workerIds, ['kupbilecik', 'ebilet', 'eventim'], 'kupbilecik + ebilet + eventim enabled on worker');
-  for (const id of ['dzisapp', 'eventylive'] as const) {
-    assert.ok(!workerIds.includes(id), `${id} retired (not on worker)`);
-    assert.equal(configOf(id)!.enabled, false, `${id} disabled in the registry`);
-  }
   assert.equal(enabledProviders().length, 3);
   assert.deepEqual(
     enabledProviders().map((p) => p.id).sort(),
@@ -84,9 +73,10 @@ test('registry: executors, priority and vps specs are consistent', () => {
   }
 
   // Priority ranks the dedupe winner (lower = canonical). Luma above going,
-  // meetup is the lowest-priority fallback.
+  // maratonypolskie/getyourguide are the lowest-priority fetch providers.
   assert.ok(priorityOf(ProviderId.LUMA) < priorityOf(ProviderId.GOING));
-  assert.ok(priorityOf(ProviderId.MEETUP) > priorityOf(ProviderId.EVENTYLIVE));
+  assert.ok(priorityOf(ProviderId.MARATONYPOLSKIE) > priorityOf(ProviderId.MEETUP));
+  assert.ok(priorityOf(ProviderId.GETYOURGUIDE) > priorityOf(ProviderId.MEETUP));
   assert.equal(priorityOf(ProviderId.MULTIKINO), 0);
   assert.equal(priorityOf('madeup' as ProviderId), 99, 'unknown sources rank last');
 
@@ -317,104 +307,6 @@ test('cinemacity: booking carries the per-event order id and cinema code', () =>
     { time: '10:10', kind: 'cinemacity', params: { order: '1647332', cinema: '1081' } },
     { time: '11:50', kind: 'cinemacity', params: { order: '1646304', cinema: '1081' } },
   ]);
-});
-
-test('dzisapp: parseLocalDateTime handles Warsaw local time', () => {
-  const ms = parseLocalDateTime('2026-08-22 18:30:00');
-  assert.ok(ms);
-  assert.equal(new Date(ms).toISOString().slice(11, 16), '16:30'); // 18:30 local = 16:30 UTC in summer
-  assert.equal(parseLocalDateTime('bad'), null);
-});
-
-test('eventylive: parseEvlEvent decodes entities and extracts offer link', () => {
-  const html = `<script type="application/ld+json">{"@graph":[{"@type":"Event","name":"Chopin &amp; Friends - koncerty","startDate":"2026-08-22","location":{"@type":"Place","name":"Sala koncertowa","address":{"@type":"PostalAddress","addressLocality":"Poznań"}},"offers":{"@type":"Offer","url":"https://www.bilety24.pl/kup-bilet-x"},"image":"https://image.bilety24.pl/x.jpg"}]}</script>`;
-  const ev = parseEvlEvent(html);
-  assert.ok(ev);
-  assert.equal(ev.name, 'Chopin & Friends - koncerty');
-  assert.equal(getOfferUrl(ev.offers), 'https://www.bilety24.pl/kup-bilet-x');
-  assert.equal(parseEvlEvent('<html>no json</html>'), null);
-});
-
-test('eventylive: sold-out from offers.availability', () => {
-  const soldJson = { offers: { url: 'https://www.ebilet.pl/x', availability: 'https://schema.org/SoldOut' } };
-  const avail = Array.isArray(soldJson.offers) ? soldJson.offers : [soldJson.offers];
-  const text = avail.map((o) => String(o.availability || '')).join(' ');
-  assert.ok(/(?:soldout|outofstock|discontinued)/i.test(text));
-  assert.ok(!/(?:soldout|outofstock|discontinued)/i.test('https://schema.org/InStock'));
-});
-
-test('eventylive: ebilet link gets a ?date= param for the target day', () => {
-  const mk = (url: string) => /ebilet\.pl/.test(url) ? url + (url.includes('?') ? '&' : '?') + 'date=2026-08-16' : url;
-  assert.equal(mk('https://www.ebilet.pl/klasyka/koncert/x?city=Gdańsk'), 'https://www.ebilet.pl/klasyka/koncert/x?city=Gdańsk&date=2026-08-16');
-  assert.equal(mk('https://www.ebilet.pl/klasyka/koncert/x'), 'https://www.ebilet.pl/klasyka/koncert/x?date=2026-08-16');
-  assert.equal(mk('https://biletyna.pl/kabaret/x?eid=1'), 'https://biletyna.pl/kabaret/x?eid=1');
-});
-
-test('dzisapp: externalOfferUrl returns an external source, ignores dzis.app self-links', () => {
-  const paid = `<script type="application/ld+json">{"@type":"MusicEvent","offers":[{"@type":"Offer","url":"https://www.kupbilecik.pl/imprezy/191429/Warszawa/Koncert","price":"1"}]}</script>`;
-  assert.equal(externalOfferUrl(paid), 'https://www.kupbilecik.pl/imprezy/191429/Warszawa/Koncert');
-  // Free event self-links with price 0 — must NOT be treated as a source.
-  const free = `<script type="application/ld+json">{"@type":"ExhibitionEvent","offers":[{"@type":"Offer","url":"https://dzis.app/wydarzenia/x","price":"0"}]}</script>`;
-  assert.equal(externalOfferUrl(free), null);
-  assert.equal(externalOfferUrl('<html>no json</html>'), null);
-});
-
-test('dzisapp: primaryOutHref extracts the pos=primary out link (decodes &amp;)', () => {
-  const html = `<a class="hero__side-cta" href="/out/c8de1336-c125-47cc-ab44-c59cd99c3d50?pos=primary&amp;city=warszawa" target="_blank">Bilety</a>`;
-  assert.equal(primaryOutHref(html), '/out/c8de1336-c125-47cc-ab44-c59cd99c3d50?pos=primary&city=warszawa');
-  assert.equal(primaryOutHref('<html>no out</html>'), null);
-});
-
-test('dzisapp: resolveDzisLink returns external source first, then the out link, then the page', async () => {
-  const realFetch = globalThis.fetch;
-  const cand = { link: 'https://dzis.app/wydarzenia/koncert-chopinowski-sala-koncertowa-fryderyk-warszawa-2026-08-17' } as never;
-  try {
-    // 1) External offers.url wins (no follow needed).
-    globalThis.fetch = (async () => new Response(
-      `<script type="application/ld+json">{"offers":[{"@type":"Offer","url":"https://www.kupbilecik.pl/imprezy/191429/Warszawa/Koncert"}]}</script>`,
-      { status: 200, headers: { 'content-type': 'application/json' } },
-    )) as typeof fetch;
-    assert.equal(await resolveDzisLink(cand), 'https://www.kupbilecik.pl/imprezy/191429/Warszawa/Koncert');
-
-    // 2) Self-link offers + out link → falls back to following /out/ (final url unknown → out url).
-    let calls = 0;
-    globalThis.fetch = (async (url: string | URL | Request) => {
-      calls++;
-      if (String(url).includes('/out/')) return new Response('<html>x</html>', { status: 200 });
-      return new Response(
-        `<a href="/out/0575c549-c0de-475b-a5e5-ae38149e8624?pos=primary&amp;city=warszawa">Bilety</a>` +
-        `<script type="application/ld+json">{"offers":[{"@type":"Offer","url":"https://dzis.app/wydarzenia/x","price":"0"}]}</script>`,
-        { status: 200 },
-      );
-    }) as typeof fetch;
-    const r = await resolveDzisLink(cand);
-    assert.ok(r.startsWith('https://dzis.app/out/0575c549-c0de-475b-a5e5-ae38149e8624?pos=primary'), r);
-    assert.equal(calls, 2, 'page + out fetch');
-
-    // 3) Page 404 → falls back to the dzis.app event page.
-    globalThis.fetch = (async () => new Response('404', { status: 404 })) as typeof fetch;
-    assert.equal(await resolveDzisLink(cand), 'https://dzis.app/wydarzenia/koncert-chopinowski-sala-koncertowa-fryderyk-warszawa-2026-08-17');
-  } finally {
-    globalThis.fetch = realFetch;
-  }
-});
-
-test('eventylive: ebilet JSON-LD marks the target-day showtime sold out', () => {
-  // A page with many showtimes; only the one on 2026-08-16 is SoldOut.
-  const block = (id: number, startDate: string, availability: string) =>
-    `<script type="application/ld+json" id="json-ld-event-data-${id}">` +
-    JSON.stringify({ '@type': 'Event', name: 'Kabaret', startDate, offers: [{ '@type': 'AggregateOffer', availability, validThrough: startDate }] }) +
-    `</script>`;
-  const html = block(1, '2026-08-16T18:00:00', 'https://schema.org/SoldOut') + block(2, '2026-09-11T18:00:00', 'https://schema.org/InStock');
-  let soldOut = false;
-  for (const m of html.matchAll(/<script[^>]*application\/ld\+json[^>]*id="json-ld-event-data-[^"]+"[^>]*>(.*?)<\/script>/gs)) {
-    const d = JSON.parse(m[1]);
-    if (!d.startDate || !String(d.startDate).startsWith('2026-08-16')) continue;
-    const offers = Array.isArray(d.offers) ? d.offers : [d.offers];
-    const avail = offers.map((o) => String(o.availability || '')).join(' ');
-    if (/(?:soldout|outofstock)/i.test(avail)) soldOut = true;
-  }
-  assert.ok(soldOut);
 });
 
 test('luma: parseLumaEntry keeps offline events, drops online, UTC start', async () => {

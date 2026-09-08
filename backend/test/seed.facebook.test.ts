@@ -55,18 +55,18 @@ test('facebook: dedupe rank is below going and kupbilecik', () => {
   assert.equal(dedupe([fb, kup])[0].externalId, 'kup-1');
 });
 
-test('facebook: dedupe rank is above dzisapp and eventylive', () => {
+test('facebook: dedupe rank is above getyourguide and maratonypolskie', () => {
   const fb = cand(ProviderId.FACEBOOK, 'facebook-1');
-  const dzis = cand(ProviderId.DZISAPP, 'dzis-1');
-  const evl = cand(ProviderId.EVENTYLIVE, 'evl-1');
+  const dzis = cand(ProviderId.GETYOURGUIDE, 'dzis-1');
+  const evl = cand(ProviderId.MARATONYPOLSKIE, 'evl-1');
 
   assert.equal(dedupe([fb, dzis])[0].externalId, 'facebook-1');
   assert.equal(dedupe([fb, evl])[0].externalId, 'facebook-1');
 });
 
-test('facebook: priority sits between kupbilecik and dzisapp', () => {
+test('facebook: priority sits between kupbilecik and getyourguide', () => {
   assert.ok(priorityOf(ProviderId.KUPBILECIK) < priorityOf(ProviderId.FACEBOOK));
-  assert.ok(priorityOf(ProviderId.FACEBOOK) < priorityOf(ProviderId.DZISAPP));
+  assert.ok(priorityOf(ProviderId.FACEBOOK) < priorityOf(ProviderId.GETYOURGUIDE));
 });
 
 test('parseDescription: extracts title and loc from a seed description', () => {
@@ -81,7 +81,7 @@ test('venueFromLoc: first comma segment is the venue name', () => {
 });
 
 test('sourceFromExternalId: provider prefix of the external_id', () => {
-  assert.equal(sourceFromExternalId('dzisapp-123-2026-08-18'), 'dzisapp');
+  assert.equal(sourceFromExternalId('going-123-2026-08-18'), 'going');
   assert.equal(sourceFromExternalId(null), 'unknown');
 });
 
@@ -113,7 +113,7 @@ test('findWinner: higher-priority provider beats facebook', () => {
 
 test('findWinner: facebook beats a lower-priority provider', () => {
   const candM = matchable('facebook', 'Koncert', 'Klub Tama');
-  const dzis = existing({ postId: 'd', externalId: 'dzisapp-1', title: 'Koncert', venue: 'Klub Tama' });
+  const dzis = existing({ postId: 'd', externalId: 'getyourguide-1', title: 'Koncert', venue: 'Klub Tama' });
   assert.equal(findWinner(candM, [dzis]), 'facebook');
 });
 
@@ -197,11 +197,11 @@ function fbInput(over: Partial<import('../src/seed/manual/facebook').IngestInput
   };
 }
 
-test('facebook ingest: beats a lower-priority (dzisapp) post -> rejects it, creates a pending post', async () => {
+test('facebook ingest: beats a lower-priority (getyourguide) post -> rejects it, creates a pending post', async () => {
   const restore = stubNominatim();
   try {
     const { sqlite, env } = makeFbEnv();
-    const dzisId = await insertEventPost(env, { provider: 'dzisapp', title: 'Koncert', venue: 'Klub Tama', day: '2026-08-20' });
+    const dzisId = await insertEventPost(env, { provider: 'getyourguide', title: 'Koncert', venue: 'Klub Tama', day: '2026-08-20' });
 
     const res = await ingestFacebookEvent(env, fbInput());
     assert.equal(res.status, 'pending');
@@ -209,7 +209,7 @@ test('facebook ingest: beats a lower-priority (dzisapp) post -> rejects it, crea
     assert.equal(res.lat, 52.4064);
 
     const rejected = sqlite.prepare('SELECT status FROM posts WHERE id=?').get(dzisId) as any;
-    assert.equal(rejected.status, 'rejected', 'dzisapp copy must be rejected when facebook wins');
+    assert.equal(rejected.status, 'rejected', 'getyourguide copy must be rejected when facebook wins');
 
     const post = sqlite.prepare('SELECT link_url, external_id, is_sponsored, status FROM posts WHERE id=?').get(res.postId!) as any;
     assert.equal(post.link_url, 'https://www.facebook.com/events/111/');

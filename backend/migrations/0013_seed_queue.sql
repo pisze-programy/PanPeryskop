@@ -15,7 +15,7 @@ CREATE INDEX IF NOT EXISTS idx_seed_batches_day ON seed_batches(day);
 CREATE TABLE IF NOT EXISTS seed_candidates (
   id          TEXT PRIMARY KEY,       -- uuid per candidate run
   batch_id    TEXT NOT NULL REFERENCES seed_batches(id),
-  provider    TEXT NOT NULL,          -- going|kupbilecik|dzisapp|eventylive
+  provider    TEXT NOT NULL,          -- ProviderId, e.g. going|kupbilecik
   external_id TEXT NOT NULL,
   title       TEXT,
   start_ms    INTEGER,

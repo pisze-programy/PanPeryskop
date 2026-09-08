@@ -22,8 +22,8 @@ const EVENT_SOURCES = Object.values(ProviderId);
 
 const SOURCE_BADGE: Record<string, string> = {
   helios: 'bg-red-lt text-red', cinemacity: 'bg-blue-lt text-blue', multikino: 'bg-cyan-lt text-cyan',
-  going: 'bg-green-lt text-green', kupbilecik: 'bg-purple-lt text-purple', dzisapp: 'bg-pink-lt text-pink',
-  eventylive: 'bg-orange-lt text-orange', luma: 'bg-teal-lt text-teal', meetup: 'bg-indigo-lt text-indigo',
+  going: 'bg-green-lt text-green', kupbilecik: 'bg-purple-lt text-purple',
+  luma: 'bg-teal-lt text-teal', meetup: 'bg-indigo-lt text-indigo',
   facebook: 'bg-blue-lt text-blue',
 };
 

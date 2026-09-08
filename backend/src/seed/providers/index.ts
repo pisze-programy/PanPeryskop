@@ -3,8 +3,6 @@ import { workerExecutor } from '../executors/worker';
 import { PROVIDER_CONFIGS } from './registry';
 import { goingProvider } from './going';
 import { kupbilecikProvider } from './kupbilecik';
-import { dzisappProvider } from './dzisapp';
-import { eventyliveProvider } from './eventylive';
 import { multikinoProvider } from './multikino';
 import { cinemacityProvider } from './cinemacity';
 import { heliosProvider } from './helios';
@@ -23,8 +21,6 @@ export const SEED_PROVIDERS: SeedProvider[] = [
   kupbilecikProvider,
   ebiletProvider,
   eventimProvider,
-  dzisappProvider,
-  eventyliveProvider,
   multikinoProvider,
   cinemacityProvider,
   heliosProvider,

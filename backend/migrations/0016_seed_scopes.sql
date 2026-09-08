@@ -7,8 +7,9 @@ ALTER TABLE seed_batches ADD COLUMN scopes_done INTEGER NOT NULL DEFAULT 0;
 -- Which scope (city/category) produced each candidate, for per-scope idempotency.
 ALTER TABLE seed_candidates ADD COLUMN scope TEXT;
 
--- Venue geo cache shared by parallel eventylive city scopes. Built once per seed
--- day (dzis.app venue snapshot), read by every eventylive city scope from D1.
+-- Legacy venue geo cache table (the retired eventylive provider was its only
+-- writer). Dropped in 0043_drop_seed_venue_cache.sql; kept here untouched as
+-- migration history.
 CREATE TABLE IF NOT EXISTS seed_venue_cache (
   venue_name TEXT PRIMARY KEY,
   lat REAL NOT NULL,

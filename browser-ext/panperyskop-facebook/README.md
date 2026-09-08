@@ -3,7 +3,7 @@
 A manual seed provider: captures Facebook events from the events feed while you
 browse, lets you review/edit them, and uploads each to the PanPeryskop API
 (`POST /admin/seed/facebook`) where the standard dedupe hierarchy applies
-(facebook loses to going/kupbilecik, beats dzisapp/eventylive), geo is resolved
+(facebook loses to going/kupbilecik, beats getyourguide/maratonypolskie), geo is resolved
 (Nominatim, like the other providers), the cover is stored in R2, and the event
 appears in the app with a direct link to the Facebook event.
 

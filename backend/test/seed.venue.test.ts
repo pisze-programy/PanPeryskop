@@ -22,7 +22,7 @@ test('venueMatch: matchVenueGeo returns geo or null', () => {
 });
 
 test('venueMatch: real-world short-name and abbreviation pairs match', () => {
-  // Prefixed venue vs bare name (dzis.app "Klub Tama" vs kupbilecik "Tama").
+  // Prefixed venue vs bare name ("Klub Tama" vs kupbilecik "Tama").
   assert.ok(venueSimilarity('Klub Tama', 'Tama') >= VENUE_MATCH_THRESHOLD);
   assert.ok(venueSimilarity('Klub 2progi', '2progi') >= VENUE_MATCH_THRESHOLD);
   // Abbreviation vs full name (Aula UAM = Uniwersytet Adama Mickiewicza).
@@ -46,7 +46,7 @@ test('venueMatch: prefers same-city venue, ignores other city', () => {
 });
 
 test('venueMatch: live production pairs match to the right city geo', () => {
-  // Real dzis.app venue cache (geo verified on 2026-08-16). "I like Chopin" exists
+  // Real venue store (geo verified on 2026-08-16). "I like Chopin" exists
   // in Gdańsk AND Warszawa with different coordinates — city disambiguates.
   const gdansk = [
     { name: 'I like Chopin', geo: { lat: 54.3549, lng: 18.6494 }, city: 'gdansk' },
@@ -146,7 +146,7 @@ function mockDb() {
 
 test('venueStore: upsert creates, fuzzy-matches alias, resolves', async () => {
   const db = mockDb();
-  await upsertVenue(db, { name: 'Sala Koncertowa Fryderyk', lat: 52.25, lng: 21.01, city: 'warszawa', provider: 'dzisapp' });
+  await upsertVenue(db, { name: 'Sala Koncertowa Fryderyk', lat: 52.25, lng: 21.01, city: 'warszawa', provider: 'going' });
   // Same venue with a slightly different spelling → fuzzy match (alias), not a new row.
   const id2 = await upsertVenue(db, { name: 'Sala koncertowa Fryderyk', lat: 52.25, lng: 21.01, provider: 'kupbilecik', ref: '3326' });
   assert.equal(id2, venueKey('Sala Koncertowa Fryderyk'));
@@ -161,8 +161,8 @@ test('venueStore: upsert creates, fuzzy-matches alias, resolves', async () => {
 test('venueStore: same venue name in different cities resolves to the right geo', async () => {
   const db = mockDb();
   // Two distinct venues that look alike — Warszawa "Tama" vs Poznań "Klub Tama".
-  await upsertVenue(db, { name: 'Tama', lat: 52.2297, lng: 21.0122, city: 'warszawa', provider: 'dzisapp' });
-  await upsertVenue(db, { name: 'Klub Tama', lat: 52.4064, lng: 16.9252, city: 'poznan', provider: 'dzisapp' });
+  await upsertVenue(db, { name: 'Tama', lat: 52.2297, lng: 21.0122, city: 'warszawa', provider: 'going' });
+  await upsertVenue(db, { name: 'Klub Tama', lat: 52.4064, lng: 16.9252, city: 'poznan', provider: 'going' });
   // Same name+city → warszawa.
   const wa = await resolveVenueGeo(db, 'Tama', 'warszawa');
   assert.ok(wa);
@@ -180,7 +180,7 @@ test('venueStore: generic name never resolves to a different city venue', async 
   const db = mockDb();
   // The real polluted case: a city-less "Amfiteatr" with Warszawa geo + the
   // correct Mrągowo amphitheater.
-  await upsertVenue(db, { name: 'Amfiteatr Wolskiego Centrum Kultury', lat: 52.2309856, lng: 20.9492338, provider: 'dzisapp' });
+  await upsertVenue(db, { name: 'Amfiteatr Wolskiego Centrum Kultury', lat: 52.2309856, lng: 20.9492338, provider: 'going' });
   await upsertVenue(db, { name: 'Amfiteatr w Mrągowie', lat: 53.8719008, lng: 21.3242328, city: 'mragowo', provider: 'going' });
 
   // Mrągowo "Amfiteatr" → the Mrągowo amphitheater, NOT the Warszawa one.

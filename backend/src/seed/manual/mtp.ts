@@ -13,7 +13,6 @@ import { getOrCreateSeedUser } from '../pipeline/queue/state';
 import { writeSeedRun } from '../core/log';
 import { loadDayEvents, findWinner, matchesExisting, rejectPosts } from './facebook';
 
-/** Międzynarodowe Targi Poznańskie — the whole complex, one fixed pin. */
 export const MTP_GEO = { lat: 52.40348664284927, lng: 16.91105358308765 };
 
 /** One day of one fair (externalId = mtp-<slug>-<day>). */

@@ -1,4 +1,4 @@
-// Venue fuzzy matching between providers (e.g. eventylive venue → dzis.app geo).
+// Venue fuzzy matching between providers (e.g. going venue → shared venue geo).
 // Strategy: normalized n-gram Dice similarity on the flattened name, requiring a
 // shared significant token as a guard against false positives ("Kino Muza" should
 // NOT match "Teatr Muzyczny" just because "muza" ⊂ "muzyczny").
@@ -79,7 +79,7 @@ function initialsOf(words: string[]): string {
 
 export const VENUE_MATCH_THRESHOLD = 0.55;
 
-// Find best matching venue geo from a cache (dzis.app venues). Returns geo or null.
+// Find best matching venue geo from a cache (shared venue store). Returns geo or null.
 // When a city is given, ONLY candidates in the same city are considered — "Tama"
 // in Warszawa is not "Tama" in Poznań, and a city-less row must never hijack a
 // different city (generic names like "Amfiteatr"). No cross-city fallback.

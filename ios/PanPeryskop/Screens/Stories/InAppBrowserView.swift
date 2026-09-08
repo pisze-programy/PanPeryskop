@@ -9,7 +9,7 @@ import WebKit
 /// (backend/src/seed/core/constants.ts) and any new link_url source.
 enum AllowedWebDomains {
     static let registrableDomains: Set<String> = [
-        "kupbilecik.pl", "dzis.app", "eventylive.pl", "goingapp.pl",
+        "kupbilecik.pl", "goingapp.pl",
         "helios.pl", "cinema-city.pl", "multikino.pl",
         "meetup.com", "getyourguide.com", "maratonypolskie.pl",
         "lu.ma", "luma.com",

@@ -30,6 +30,8 @@ interface AwinRow {
   'Tickets:genre'?: string;
   'Tickets:min_price'?: string;
   'Tickets:max_price'?: string;
+  /** Eventim internal category code ("1A".."5D") — see EVENTIM_CATEGORY_TAGS. */
+  merchant_category?: string;
   custom_1?: string;
 }
 
@@ -50,6 +52,47 @@ export function eventimTags(genre: string | null): string | null {
   if (/(sport|mecz|bieg|maraton|siatkówka|piłka)/.test(g)) return 'sport';
   if (/(teatr|spektakl)/.test(g)) return 'teatr';
   if (/(dzieci|rodzin)/.test(g)) return 'inne';
+  return null;
+}
+
+/**
+ * Eventim category code → canonical tag. The feed's `merchant_category` column
+ * carries Eventim's internal category codes (tree: 1*=Koncerty, 2*=Kultura,
+ * 3*=Sport, 4*=Rozrywka, 5*=Vouchery) — decoded from the live feed titles
+ * (verified 2026-09-08, see _internal/awin-datafeed-options.md).
+ */
+export const EVENTIM_CATEGORY_TAGS: Record<string, string> = {
+  // Koncerty
+  '1A': 'muzyka', '1B': 'muzyka', '1C': 'muzyka', '1D': 'muzyka', '1E': 'muzyka',
+  '1F': 'muzyka', '1G': 'muzyka', '1I': 'muzyka', '1J': 'muzyka', '1L': 'muzyka',
+  // Kultura
+  '2A': 'muzyka', '2B': 'teatr', '2E': 'inne', '2H': 'inne',
+  // Sport
+  '3C': 'sport', '3D': 'sport', '3F': 'sport', '3G': 'sport', '3I': 'sport',
+  // Rozrywka
+  '4A': 'inne', '4B': 'komedia', '4D': 'inne', '4F': 'inne',
+};
+
+/** Category code → canonical tag; unknown code → null (fall back to genre/title). */
+export function eventimCategoryTag(code: string | null): string | null {
+  const c = (code || '').trim().toUpperCase();
+  return EVENTIM_CATEGORY_TAGS[c] ?? null;
+}
+
+/** Vouchers / merch ("5*" codes) are NOT events — the row must be skipped. */
+export function isEventimVoucher(code: string | null): boolean {
+  return /^5[A-Z]$/.test((code || '').trim().toUpperCase());
+}
+
+/** Title-based fallback when the feed carries no usable category/genre. */
+export function eventimTitleTag(title: string): string | null {
+  const t = (title || '').trim().toLowerCase();
+  if (!t) return null;
+  if (/(kabaret|stand-?up)/.test(t)) return 'komedia';
+  if (/(koncert|muzyka|opera|filharmoni|klasyka|jazz|festiwal)/.test(t)) return 'muzyka';
+  if (/(sport|mecz|liga|siatkówka|piłka|koszykówka)/.test(t)) return 'sport';
+  if (/(dzieci|rodzin|bajka)/.test(t)) return 'inne';
+  if (/(spektakl|teatr)/.test(t)) return 'teatr';
   return null;
 }
 
@@ -76,7 +119,9 @@ export function parseEventimRow(row: AwinRow, day: string, dayStartMs: number): 
   const img = (row.aw_image_url || '').trim();
   const link = (row.merchant_deep_link || '').trim() || `https://www.eventim.pl/event/${id}`;
   const aff = (row.aw_deep_link || '').trim() || undefined;
-  const tag = eventimTags(row['Tickets:genre'] ?? null);
+  const code = (row.merchant_category || '').trim();
+  if (isEventimVoucher(code)) return []; // vouchers / merch are not events
+  const tag = eventimCategoryTag(code) ?? eventimTags(row['Tickets:genre'] ?? null) ?? eventimTitleTag(title);
 
   return [{
     source: ProviderId.EVENTIM,

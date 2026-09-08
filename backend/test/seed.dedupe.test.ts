@@ -30,18 +30,18 @@ test('dedupe: same hour+venue -> going wins over kupbilecik', () => {
 
 test('dedupe: canonical source wins regardless of input order', () => {
   const mk = (source: ProviderId, ext: string) => cand({ source, externalId: ext, title: 'Koncert', startMs: 1_782_765_000_000, venue: 'Venue' });
-  // Priority: going > kupbilecik > dzisapp > eventylive.
-  const out1 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.DZISAPP, 'd'), mk(ProviderId.GOING, 'g')]);
+  // Priority: going > kupbilecik > maratonypolskie/getyourguide.
+  const out1 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.GETYOURGUIDE, 'd'), mk(ProviderId.GOING, 'g')]);
   assert.equal(out1.length, 1);
   assert.equal(out1[0].externalId, 'g');
   // Same result when going comes last in input.
-  const out2 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.GOING, 'g'), mk(ProviderId.DZISAPP, 'd')]);
+  const out2 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.GOING, 'g'), mk(ProviderId.GETYOURGUIDE, 'd')]);
   assert.equal(out2[0].externalId, 'g');
-  // kupbilecik beats dzisapp when going is absent.
-  const out3 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.DZISAPP, 'd')]);
+  // kupbilecik beats getyourguide when going is absent.
+  const out3 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.GETYOURGUIDE, 'd')]);
   assert.equal(out3[0].externalId, 'k');
-  // kupbilecik beats eventylive.
-  const out4 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.EVENTYLIVE, 'e')]);
+  // kupbilecik beats maratonypolskie.
+  const out4 = dedupe([mk(ProviderId.KUPBILECIK, 'k'), mk(ProviderId.MARATONYPOLSKIE, 'e')]);
   assert.equal(out4[0].externalId, 'k');
 });
 
@@ -66,7 +66,7 @@ test('dedupe: identical link is a duplicate even with different venue/geo (TBA v
     venue: 'Poznań - różne lokalizacje', link: 'https://goingapp.pl/wydarzenie/internet-irl/poznan',
   });
   const dzis = cand({
-    source: ProviderId.DZISAPP, externalId: 'dzis-1', title: 'Internet Irl: Kejter',
+    source: ProviderId.GETYOURGUIDE, externalId: 'dzis-1', title: 'Internet Irl: Kejter',
     venue: '3ecia Strona Baru', link: 'https://goingapp.pl/wydarzenie/internet-irl/poznan',
   });
   const out = dedupe([going, dzis]);
@@ -142,7 +142,7 @@ test('dedupe: Obsesja and Odyseja are different films -> stay separate', () => {
 
 test('dedupe: same special event at different cinemas -> NOT merged (per-cinema)', () => {
   const mk = (ext: string, venue: string) => cand({
-    source: ProviderId.DZISAPP, externalId: ext,
+    source: ProviderId.GETYOURGUIDE, externalId: ext,
     title: 'André Rieu. Niech żyje Maastricht! – Retransmisja letniego koncertu z Maastricht',
     venue,
   });
@@ -175,7 +175,7 @@ test('dedupe: fuzzy venue (>=0.8) merges cross-provider theater spellings', () =
     venue: 'Teatr Capitol, ul. Marszałkowska 115', lat: 52.230, lng: 21.012,
   });
   const evl = cand({
-    source: ProviderId.EVENTYLIVE, externalId: 'e', title: 'Boeing Boeing - Teatr Capitol',
+    source: ProviderId.GETYOURGUIDE, externalId: 'e', title: 'Boeing Boeing - Teatr Capitol',
     venue: 'Teatr Capitol w Warszawie, Marszałkowska 115', lat: 52.230, lng: 21.012,
   });
   const out = dedupe([going, evl]);
@@ -195,14 +195,14 @@ test('dedupe: two known venues stay separate even when geo is close (no geo fall
   assert.equal(dedupe([a, b]).length, 2, 'known venues never fall back to geo');
 });
 
-test('dedupe: all-day eventylive collapses into timed going/dzis duplicate', () => {
+test('dedupe: all-day getyourguide collapses into timed going duplicate', () => {
   const mk = (source: ProviderId, ext: string, title: string, startMs: number, venue: string) => ({
     source, externalId: ext, title, startMs, lat: 52.4, lng: 16.9, city: 'Poznań',
     venue, address: '', link: '', mediaUrl: '', thumbUrl: null,
   });
   const midnight = Date.parse('2026-08-22T00:00:00+02:00');
   const evening = Date.parse('2026-08-22T18:30:00+02:00');
-  const evl = mk(ProviderId.EVENTYLIVE, 'evl-1', 'Muzyka z serialu Bridgerton: Koncert przy świecach', midnight, 'Ogród Dendrologiczny Uniwersytetu Przyrodniczego');
+  const evl = mk(ProviderId.GETYOURGUIDE, 'evl-1', 'Muzyka z serialu Bridgerton: Koncert przy świecach', midnight, 'Ogród Dendrologiczny Uniwersytetu Przyrodniczego');
   const going = mk(ProviderId.GOING, 'going-1', 'Bridgerton: Koncert przy świecach w plenerze', evening, 'Ogród Dendrologiczny Uniwersytetu Przyrodniczego');
   const out = dedupe([evl, going]);
   assert.equal(out.length, 1);
@@ -215,8 +215,8 @@ test('dedupe: distinct all-day events stay separate', () => {
     venue, address: '', link: '', mediaUrl: '', thumbUrl: null,
   });
   const midnight = Date.parse('2026-08-22T00:00:00+02:00');
-  const a = mk(ProviderId.EVENTYLIVE, 'evl-a', 'Wystawa Beksiński', midnight, 'MTP Hala nr 1');
-  const b = mk(ProviderId.EVENTYLIVE, 'evl-b', 'K-Pop Party', midnight, 'Klub HAH');
+  const a = mk(ProviderId.GETYOURGUIDE, 'evl-a', 'Wystawa Beksiński', midnight, 'MTP Hala nr 1');
+  const b = mk(ProviderId.GETYOURGUIDE, 'evl-b', 'K-Pop Party', midnight, 'Klub HAH');
   const out = dedupe([a, b]);
   assert.equal(out.length, 2);
 });

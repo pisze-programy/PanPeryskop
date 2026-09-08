@@ -96,9 +96,9 @@ test('isCancelled: drops PL/EN variants, keeps normal titles', () => {
   assert.ok(!isCancelled('Przeniesiony na inny termin'));
 });
 
-test('rescueRealShows: does NOT rescue aggregator sources (dzisapp)', () => {
-  const a = cand({ source: ProviderId.DZISAPP, externalId: 'd-1', title: 'SKOLIM', startMs: Date.parse('2026-08-22T17:00:00+02:00'), venue: 'Amfiteatr' });
-  const b = cand({ source: ProviderId.DZISAPP, externalId: 'd-2', title: 'SKOLIM', startMs: Date.parse('2026-08-22T20:00:00+02:00'), venue: 'Amfiteatr' });
+test('rescueRealShows: does NOT rescue aggregator sources (getyourguide)', () => {
+  const a = cand({ source: ProviderId.GETYOURGUIDE, externalId: 'd-1', title: 'SKOLIM', startMs: Date.parse('2026-08-22T17:00:00+02:00'), venue: 'Amfiteatr' });
+  const b = cand({ source: ProviderId.GETYOURGUIDE, externalId: 'd-2', title: 'SKOLIM', startMs: Date.parse('2026-08-22T20:00:00+02:00'), venue: 'Amfiteatr' });
   const out = rescueRealShows([a, b], dedupe([a, b]));
   assert.equal(out.length, 1, 'only kupbilecik/going get rescued');
 });

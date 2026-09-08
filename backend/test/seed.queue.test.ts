@@ -147,7 +147,7 @@ test('queue DLQ: fresh dead-lettered fetch is re-driven once within budget', asy
 
 test('queue toCandidate: carries is_sold_out from the candidate row', () => {
   const row = {
-    id: 'c1', external_id: 'evl-1', provider: 'eventylive', title: 'Koncert', start_ms: 1786809600000,
+    id: 'c1', external_id: 'evl-1', provider: 'getyourguide', title: 'Koncert', start_ms: 1786809600000,
     lat: 52.4, lng: 16.9, city: 'Poznań', venue: 'Hala', address: 'ul. X', link: 'https://x.pl',
     media_url: 'https://x.pl/m.webp', thumb_url: null, is_sold_out: 1,
   };

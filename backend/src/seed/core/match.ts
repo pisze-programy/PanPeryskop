@@ -10,6 +10,7 @@ export function diacriticFold(s: string): string {
   return (s || '')
     .normalize('NFC')
     .toLowerCase()
+      // FIXME:  ADD ALL POLISH ÓĄĘ.......
     .replaceAll('ł', 'l')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
@@ -22,7 +23,6 @@ const STOP = new Set([
   'bilety', 'bilet', 'jest', 'tak', 'nie', 'sala', 'hala', 'pozn', 'kino', 'nad',
   'seans', 'seansy', 'premiera', 'dnia', 'czesc',
 ]);
-// Version/format noise: PL vs UA dubbing, 2D/3D etc. of the SAME film.
 const NOISE = new Set([
   'ukrainski', 'ukrainska', 'ukrainskie', 'ukrainskiej', 'ukrainian',
   'dubbing', 'napisy', 'lektor', 'oryginalny', 'oryginalna', 'oryginalnej',
@@ -41,12 +41,10 @@ export function titleTokens(title: string, venue?: string): Set<string> {
   return out;
 }
 
-/** Folded, token-joined normalization for similarity ("Teatr Capitol, ul. X"). */
 export function flatNorm(s: string): string {
   return (diacriticFold(s).match(TOKEN_RE) ?? []).join(' ');
 }
 
-/** LCS-based sequence ratio in [0,1] — mirrors difflib.SequenceMatcher.ratio(). */
 export function seqRatio(a: string, b: string): number {
   const A = flatNorm(a), B = flatNorm(b);
   if (A.length === 0 && B.length === 0) return 1;
@@ -64,7 +62,6 @@ export function seqRatio(a: string, b: string): number {
   return (2 * dp[m]) / (n + m);
 }
 
-// TBA / ambiguous venue markers — geo is the only usable signal for these.
 const TBA_MARKERS = [
   'rozne lokalizacje', 'roznych lokalizacji', 'tba', 'tbd', 'miejsce',
   'do ustalenia', 'wkrotce', 'zapowiedz', 'to be announced', '- 0',
@@ -161,11 +158,6 @@ export function containment(a: Set<string>, b: Set<string>, min = 0.8): boolean 
   return shared >= 1 && shared / Math.min(a.size, b.size) >= min;
 }
 
-// Cinema chains are NEVER deduped: the API may return many films per cinema
-// (morning/evening showings, PL/UA language versions, dubbing variants) and we
-// show ALL of them. Their short venue names ("Multikino Kielce") would otherwise
-// false-positive on the fuzzy venue ratio ("Multikino Kielce" vs "Multikino
-// Katowice" = 0.82 >= 0.8) and collapse distinct cinemas.
 export function isCinemaSource(source: ProviderId): boolean {
   return source === ProviderId.MULTIKINO || source === ProviderId.CINEMACITY || source === ProviderId.HELIOS;
 }

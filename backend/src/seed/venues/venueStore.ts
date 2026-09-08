@@ -1,6 +1,6 @@
 // Persistent venue geo store shared by all seed providers. Each provider upserts
-// locations it discovers (dzisapp API, kupbilecik venue pages, eventylive, going)
-// and resolves venue geo by fuzzy name matching (venueMatch.ts). Aliases track the
+// locations it discovers (kupbilecik venue pages, going) and resolves venue geo
+// by fuzzy name matching (venueMatch.ts). Aliases track the
 // different spellings providers use for the same place.
 import { venueSimilarity, flat } from './venueMatch';
 
@@ -30,34 +30,6 @@ const MATCH_THRESHOLD = 0.55;
 // venue_key for a name: flattened lowercase alphanumeric.
 export function venueKey(name: string): string {
   return flat(name);
-}
-
-// Bulk upsert without fuzzy matching — used for canonical, exact sources
-// (dzis.app venue names during buildVenueCache). Uses D1 batch (single round-trip
-// per chunk) so a ~10k-venue daily build doesn't block the seed-day message.
-// Rows keep their id, so repeated daily builds are idempotent.
-const BATCH_SIZE = 500; // keep well under D1's 1000-statement batch cap
-export async function upsertVenuesBatch(db: D1Database, venues: VenueInput[]): Promise<number> {
-  const now = Date.now();
-  let n = 0;
-  for (let i = 0; i < venues.length; i += BATCH_SIZE) {
-    const chunk = venues.slice(i, i + BATCH_SIZE);
-    const statements: D1PreparedStatement[] = [];
-    for (const v of chunk) {
-      if (!v.name || typeof v.lat !== 'number' || typeof v.lng !== 'number') continue;
-      const sources = v.provider && v.ref ? { [v.provider]: v.ref } : {};
-      statements.push(
-        db.prepare(
-          `INSERT INTO venues (id, name, aliases, lat, lng, city, sources, hit_count, first_seen, last_seen, created_at)
-           VALUES (?, ?, '[]', ?, ?, ?, ?, 1, ?, ?, ?)
-           ON CONFLICT(id) DO UPDATE SET lat=excluded.lat, lng=excluded.lng, city=excluded.city, last_seen=excluded.last_seen`
-        ).bind(venueKey(v.name), v.name, v.lat, v.lng, venueKey(v.city || '') || null, JSON.stringify(sources), now, now, now)
-      );
-      n++;
-    }
-    if (statements.length) await db.batch(statements);
-  }
-  return n;
 }
 
 // Upsert a venue by fuzzy-matching against existing rows. Returns the venue id

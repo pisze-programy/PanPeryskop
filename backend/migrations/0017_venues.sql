@@ -1,5 +1,5 @@
--- Persistent, shared venue geo store. Every seed provider (dzisapp, eventylive,
--- kupbilecik, going) upserts venue locations it discovers and reads back matches
+-- Persistent, shared venue geo store. Every seed provider (kupbilecik, going)
+-- upserts venue locations it discovers and reads back matches
 -- via fuzzy name matching (venueStore.ts). Poland has a finite set of venues, so
 -- this table fills up quickly and eliminates per-event venue page fetches.
 CREATE TABLE IF NOT EXISTS venues (

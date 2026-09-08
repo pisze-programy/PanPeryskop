@@ -66,14 +66,6 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: ProviderId.EVENTIM, transport: 'fetch', enabled: true, priority: 7,
     executors: { worker: true },
   },
-  {
-    id: ProviderId.DZISAPP, transport: 'fetch', enabled: false, priority: 4,
-    executors: { worker: true },
-  },
-  {
-    id: ProviderId.EVENTYLIVE, transport: 'fetch', enabled: false, priority: 5,
-    executors: { worker: true },
-  },
   // maratonypolskie.pl — ready but NOT yet enabled in production (pending the
   // user's go: logo fix + autoapprove decision). Flip `enabled` + deploy when approved.
   {
@@ -149,8 +141,8 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
   },
   // ---- Manual provider (no executor): Facebook events are ingested by hand from
   //      the browser addon via POST /admin/seed/facebook. Never runs in cron; the
-  //      priority still feeds cross-provider dedupe (below kupbilecik, above
-  //      dzisapp/eventylive — facebook events are often covered by ticket sellers).
+  //      priority still feeds cross-provider dedupe (facebook events are often
+  //      covered by ticket sellers, so it sits below going/kupbilecik).
   {
     id: ProviderId.FACEBOOK, transport: 'manual', enabled: true, priority: 3.5,
     executors: {},

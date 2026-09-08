@@ -1,4 +1,3 @@
-// SeedQueueMessage is defined in src/seed/queue.ts (single source of truth).
 type SeedQueueMessage = import('./seed/queue').SeedQueueMessage;
 
 interface Env {

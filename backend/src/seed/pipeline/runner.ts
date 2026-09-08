@@ -9,7 +9,7 @@ import { enabledProviders } from '../providers';
 import { warsawMidnightMs, tomorrowWarsaw, eventCreatedAtMs, eventDayEndMs } from '../core/dates';
 import { buildDescription, dedupe, showtimesJson, showtimeBookingJson, tagsJson } from '../core/dedupe';
 import { fallbackSeedGeo } from '../core/geo';
-import { dropCancelled, rescueRealShows } from '../core/filters';
+import { dropBlocked, rescueRealShows } from '../core/filters';
 import { loadBlacklistRules, findBlacklist, blacklistReason } from '../core/blacklist';
 import { resolveEbiletGeo } from '../providers/ebilet';
 import { writeSeedRun, browserBudget, BrowserBudget } from '../core/log';
@@ -76,7 +76,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
   for (const p of enabledProviders()) bySource.set(p.id, p);
 
   const collectedCands = collected.map((x) => x.candidate);
-  const pre = dropCancelled(collectedCands);
+  const pre = dropBlocked(collectedCands);
   const merged = rescueRealShows(pre, dedupe(pre));
   // Blacklist rules load once per run; matched survivors are skipped before any
   // media download (counted as skipped, not errors).
@@ -129,7 +129,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
         .first<{ id: string; media_key: string | null; thumb_key: string | null }>();
       const postId = existing?.id || nanoid(24);
 
-      // Optional provider hook: resolve the post link to the direct source (dzis.app).
+      // Optional provider hook: resolve the post link to the direct source.
       if (provider.resolveLink) {
         try { c.link = await provider.resolveLink(ctx, c); } catch { /* best-effort */ }
       }

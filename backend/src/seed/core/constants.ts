@@ -36,20 +36,6 @@ export const QUEUE_RETRY_DELAY_SECONDS = 30;
 // Per-invocation message concurrency cap (respects the 6-connection limit + D1 writes).
 export const QUEUE_CONSUMER_CONCURRENCY = 6;
 
-// ---------- Provider base URLs + scraping limits ----------
-export const KUP_BASE = 'https://www.kupbilecik.pl';
-export const KUP_LISTINGS = ['/koncerty/?q=', '/kabarety/?q=', '/standup/?q=', '/festiwal/?q='];
-export const KUP_MAX_PAGES = 6;
-
-export const DZIS_API = 'https://api.dzis.app/events';
-export const DZIS_LIMIT = 1000;
-// Event page URL is plural /wydarzenia/<slug> (singular /wydarzenie/ 404s).
-export const DZIS_WEB = 'https://dzis.app/wydarzenia';
-
-export const EVL_BASE = 'https://www.eventylive.pl';
-export const EVL_LIST_BASE = `${EVL_BASE}/miasto`;
-export const EVL_MAX_PAGES = 30;
-
 export const GOING_BASE = 'https://goingapp.pl';
 export const GOING_ALGOLIA_ORIGIN = 'https://goingapp.pl';
 export const GOING_PLACE = (slug: string) => `https://api-empikbilety.prod.goingapp.eu/api/v1/place/${slug}`;

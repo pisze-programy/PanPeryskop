@@ -4,7 +4,6 @@ import CoreLocation
 /// User-facing notification preferences for the "new media nearby" push (Profile → Ustawienia).
 enum NotificationSettings {
     static let mediaNearbyLiveKey = "notifications.mediaNearbyLive"
-    static let mediaNearbyEventsKey = "notifications.mediaNearbyEvents"
     static let mediaNearbyRangeKey = "notifications.mediaNearbyRange"
 
     /// "100" | "300" | "city"
@@ -16,12 +15,8 @@ enum NotificationSettings {
         UserDefaults.standard.object(forKey: mediaNearbyLiveKey) as? Bool ?? true
     }
 
-    static var mediaNearbyEventsEnabled: Bool {
-        UserDefaults.standard.object(forKey: mediaNearbyEventsKey) as? Bool ?? true
-    }
-
     static var isMediaPushEnabled: Bool {
-        mediaNearbyLiveEnabled || mediaNearbyEventsEnabled
+        mediaNearbyLiveEnabled
     }
 
     static var needsGps: Bool {
@@ -44,9 +39,9 @@ enum NotificationSettings {
 }
 
 /// City-wide detection of "new media nearby". Shared by the foreground 20 s polling (live,
-/// no throttle) and the in-app banner delivery. Detects both categories (Live + Wydarzenia)
-/// regardless of the currently selected map category; the target post is the one closest to
-/// the reference point (city center for "Miasto", user location for the GPS ranges).
+/// no throttle) and the in-app banner delivery. Live category only — Wydarzenia never push.
+/// The target post is the one closest to the reference point (city center for "Miasto",
+/// user location for the GPS ranges).
 @MainActor
 final class MediaNearbyNotifier {
     static let shared = MediaNearbyNotifier()
@@ -109,7 +104,6 @@ final class MediaNearbyNotifier {
         }
 
         let liveOn = NotificationSettings.mediaNearbyLiveEnabled
-        let eventsOn = NotificationSettings.mediaNearbyEventsEnabled
         let me = Self.currentUserId
         let range = NotificationSettings.mediaNearbyRange
 
@@ -124,12 +118,8 @@ final class MediaNearbyNotifier {
         let newPosts = resp.stories.filter { post in
             guard !seenIds.contains(post.id) else { return false }
             guard me == nil || post.user_id != me else { return false }
-            let cat = post.category ?? "live"
-            if cat == "live" {
-                guard liveOn else { return false }
-            } else {
-                guard eventsOn else { return false }
-            }
+            guard (post.category ?? "live") == "live" else { return false } // Wydarzenia: notifications disabled
+            guard liveOn else { return false }
             switch range {
             case "100":
                 guard let loc = NotificationSettings.lastLocation else { return false }

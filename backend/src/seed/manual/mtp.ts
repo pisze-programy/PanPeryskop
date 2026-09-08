@@ -118,7 +118,7 @@ export async function ingestMtpEvent(env: Env, input: MtpEventInput): Promise<Mt
   const createdAt = eventCreatedAtMs(day);
   await doSavePost(
     env, user, postId, 'photo', MTP_GEO.lat, MTP_GEO.lng, buildDescription(seedCand as never),
-    mediaKey, null, createdAt, true, input.link, input.externalId, isUpdate, false,
+    mediaKey, mediaKey, createdAt, true, input.link, input.externalId, isUpdate, false,
     showtimesJson(seedCand as never), null, tagsJson(seedCand as never), STATUS_APPROVED,
   );
 

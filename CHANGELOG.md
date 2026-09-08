@@ -20,6 +20,17 @@ All notable changes to PanPeryskop. Format based on
 - App browse window: 5 days forward (was 3) — `DaySliderView` maxDay 3→5.
 - `SEED_DAYS_AHEAD` 6→5.
 
+### Fixed
+- MTP (Targi Poznańskie) posts had no thumbnail — the map pin resolved a
+  non-existent `posts/{id}/thumb.jpg`. Seed posts now carry `thumb_key = media_key`
+  (poster reused as thumbnail); 290 existing MTP posts backfilled.
+
+### Changed
+- Notifications: Wydarzenia never push. The "new media nearby" notifier now
+  delivers Live only; the Wydarzenia toggle was removed from Settings.
+- Event tag + source badges on the story card are now dark gray (adaptive to the
+  color scheme); SPONSOROWANE / WYPRZEDANE keep their orange / red colors.
+
 ## [1.1.0] — 2026-09-05
 
 ### Added

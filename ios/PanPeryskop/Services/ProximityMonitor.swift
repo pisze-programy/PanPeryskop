@@ -102,14 +102,11 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
     // MARK: - "New media nearby" push
 
     /// Delivers the "new media nearby" push as a real system notification (banner also while the
-    /// app is foregrounded — see `willPresent`). Live, no throttle.
+    /// app is foregrounded — see `willPresent`). Live category only. No throttle.
     func deliverNewMedia(post: Post) async {
         let isActive = UIApplication.shared.applicationState == .active
-        let isEvents = (post.category ?? "live") == "events"
-        let title = isEvents ? "Nowe Wydarzenie w okolicy" : "Nowe Live w okolicy"
-        let body = isEvents
-            ? "Sprawdź co się dzieje w okolicy, nowe Wydarzenie dodane"
-            : "Sprawdź co się dzieje w okolicy, nowe Live dodane"
+        let title = "Nowe Live w okolicy"
+        let body = "Sprawdź co się dzieje w okolicy, nowe Live dodane"
 
         if !isActive && !canDeliverBackground() {
             return

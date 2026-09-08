@@ -5,6 +5,7 @@ struct StoryFullScreenView: View {
     let startIndex: Int
     @Binding var isPresented: Bool
     @ObservedObject var viewModel: MapViewModel
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var currentIndex: Int
     @State private var photoTimer: Task<Void, Never>?
@@ -453,13 +454,21 @@ struct StoryFullScreenView: View {
         }
         for tagId in currentPost.tags ?? [] {
             if let label = tagBadgeLabel(tagId) {
-                items.append(EventBadge(id: "tag-\(tagId)", text: label.uppercased(), icon: "tag.fill", color: .blue))
+                items.append(EventBadge(id: "tag-\(tagId)", text: label.uppercased(), icon: "tag.fill", color: badgeGray))
             }
         }
         if let source = currentPost.source, !source.isEmpty {
-            items.append(EventBadge(id: "source-\(source)", text: source.uppercased(), icon: "network", color: .green))
+            items.append(EventBadge(id: "source-\(source)", text: source.uppercased(), icon: "network", color: badgeGray))
         }
         return items
+    }
+
+    /// Dark gray for neutral badges (tags + source). Adapts to the color scheme so it stays
+    /// readable on the `.ultraThinMaterial` info card next to the `.primary` title.
+    private var badgeGray: Color {
+        colorScheme == .dark
+            ? Color(red: 0.75, green: 0.76, blue: 0.78)
+            : Color(red: 0.35, green: 0.36, blue: 0.38)
     }
 
     private var badgesRow: some View {

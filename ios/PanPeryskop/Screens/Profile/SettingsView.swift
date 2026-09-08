@@ -3,7 +3,6 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var authManager: AuthManager
     @AppStorage(NotificationSettings.mediaNearbyLiveKey) private var mediaNearbyLive = true
-    @AppStorage(NotificationSettings.mediaNearbyEventsKey) private var mediaNearbyEvents = true
     @AppStorage(NotificationSettings.mediaNearbyRangeKey) private var mediaNearbyRange = "city"
 
     @State private var showDeleteConfirm = false
@@ -163,10 +162,8 @@ struct SettingsView: View {
 
             Toggle("Nowe Live w okolicy", isOn: $mediaNearbyLive)
                 .font(.subheadline)
-            Toggle("Nowe Wydarzenia w okolicy", isOn: $mediaNearbyEvents)
-                .font(.subheadline)
 
-            if mediaNearbyLive || mediaNearbyEvents {
+            if mediaNearbyLive {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Zakres")
                         .font(.caption)

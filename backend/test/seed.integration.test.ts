@@ -354,6 +354,39 @@ test('integration: /stories?day= browses that day even outside the live TTL wind
   assert.equal(((await resL1.json()) as { stories: { id: string }[] }).stories.length, 1);
 });
 
+test('integration: /stories/tag-counts returns per-tag + total for a city+day', async () => {
+  const sqlite = new DatabaseSync(':memory:');
+  applyMigrations(sqlite);
+  const env = { DB: d1(sqlite), MEDIA: { put: async () => {}, get: async () => null, delete: async () => {} } } as unknown as Env;
+
+  sqlite.prepare("INSERT INTO users (id, device_id, session_token, role, created_at) VALUES ('u1','seed','t','user',0)").run();
+  const ins = sqlite.prepare(
+    `INSERT INTO posts (id, user_id, type, lat, lng, description, status, created_at, category, event_date, tags)
+     VALUES (?, 'u1', 'photo', ?, ?, ?, 'approved', ?, 'events', ?, ?)`
+  );
+  const today = todayWarsaw();
+  const now = Date.now();
+  // In Warszawa bbox (±0.2 ~ 52.03–52.43 / 20.81–21.21).
+  ins.run('a', 52.23, 21.02, 'a', now, today, '["koncert","sport"]');
+  ins.run('b', 52.20, 21.00, 'b', now, today, '["koncert"]');
+  ins.run('c', 52.25, 21.05, 'c', now, today, null); // untagged → total only
+  // Outside the city bbox — must NOT count.
+  ins.run('d', 55.0, 21.0, 'd', now, today, '["koncert"]');
+  // Wrong day — must NOT count.
+  ins.run('e', 52.23, 21.02, 'e', now, addDaysWarsaw(today, 1), '["koncert"]');
+
+  const res = await storiesRoutes.request('/tag-counts?city=warszawa&day=' + today, {}, env);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { total: number; counts: { tag: string; count: number }[] };
+  assert.equal(body.total, 3); // a + b + c
+  const byTag = Object.fromEntries(body.counts.map((x) => [x.tag, x.count]));
+  assert.deepEqual(byTag, { koncert: 2, sport: 1 });
+
+  // Unknown city → 404; missing day → 400.
+  assert.equal((await storiesRoutes.request('/tag-counts?city=nope&day=' + today, {}, env)).status, 404);
+  assert.equal((await storiesRoutes.request('/tag-counts?city=warszawa', {}, env)).status, 400);
+});
+
 test('integration: parseStoriesLimit defaults to 50, caps at 1000, clamps to >=1', () => {
   assert.equal(parseStoriesLimit(undefined), 50);
   assert.equal(parseStoriesLimit('0'), 1);

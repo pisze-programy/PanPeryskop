@@ -1,5 +1,3 @@
-import { nanoid } from 'nanoid';
-
 export interface User {
   id: string;
   device_id: string;

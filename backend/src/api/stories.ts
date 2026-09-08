@@ -3,6 +3,7 @@ import { authenticate } from './auth';
 import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED } from '../core/models';
 import { mediaUrl, originFromRequest } from '../core/media';
 import { tagCatalog, tagIdSet } from '../core/tagCatalog';
+import { cityBbox } from '../admin/cities';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
 
@@ -11,6 +12,48 @@ export const storiesRoutes = new Hono<{ Bindings: Env }>();
 storiesRoutes.get('/tags', async (c) => c.json({
   tags: (await tagCatalog(c.env.DB)).map((t) => ({ id: t.id, label: t.label })),
 }));
+
+// Per-tag event counts for the map tag badges — scoped to a CITY (not the current
+// viewport) for a specific day. The client cannot derive these from its viewport
+// posts, and seeds change ~every 3 days, so the app calls this on app-start and on
+// city/day/tag changes (never on a timer).
+storiesRoutes.get('/tag-counts', async (c) => {
+  const db = c.env.DB;
+  const city = c.req.query('city');
+  const day = c.req.query('day');
+  if (!city || !day) return c.json({ error: 'city and day required' }, 400);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: 'Invalid day' }, 400);
+  const bbox = cityBbox(city);
+  if (!bbox) return c.json({ error: 'Unknown city' }, 404);
+
+  // Select approved events for that day within the city bbox and tally tags in TS
+  // (single query, no N LIKE scans). NULL-tag posts contribute only to total.
+  const { results } = await db
+    .prepare(
+      `SELECT tags FROM posts
+       WHERE lat BETWEEN ? AND ?
+       AND lng BETWEEN ? AND ?
+       AND status = '${STATUS_APPROVED}'
+       AND event_date = ?`
+    )
+    .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, day)
+    .all<{ tags: string | null }>();
+
+  const counts = new Map<string, number>();
+  let total = 0;
+  for (const row of results || []) {
+    total += 1;
+    if (!row.tags) continue;
+    for (const id of JSON.parse(row.tags) as string[]) {
+      if (typeof id === 'string') counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+  }
+
+  return c.json({
+    total,
+    counts: Array.from(counts.entries()).map(([tag, count]) => ({ tag, count })),
+  });
+});
 
 // Seed sources actually present in the events feed (distinct external_id prefixes,
 // e.g. 'kupbilecik', 'going'). Single source of truth for client "sources" lists

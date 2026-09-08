@@ -34,6 +34,11 @@ class MapViewModel: ObservableObject {
     // Selected day offset 0…3 (dziś / jutro / +2 / +3). Kept only as a live variable
     // (no persistence) — resets to today on a fresh launch, survives view switches.
     @Published var selectedDayOffset: Int = 0
+    /// Event-count badge per tag id for the selected day+city (city scope, not viewport).
+    /// Refreshed on app-start and city/day/category/tag change — seeds change rarely, never polled.
+    @Published var tagCounts: [String: Int] = [:]
+    /// Total approved events for the selected day+city ("Wszystkie" badge).
+    @Published var tagTotalCount: Int = 0
 
     private var serverPosts: [Post] = []
     private var serverRequests: [MediaRequest] = []
@@ -70,6 +75,7 @@ class MapViewModel: ObservableObject {
         let savedCityId = UserDefaults.standard.string(forKey: MapPrefs.cityId)
         selectedCity = City.all.first { $0.id == savedCityId } ?? City.all[0]
         loadTags()
+        loadTagCounts()
     }
 
     // MARK: - Tag filter (events only)
@@ -106,6 +112,7 @@ class MapViewModel: ObservableObject {
     func toggleTag(_ id: String) {
         selectedTag = (selectedTag == id) ? nil : id
         refreshCurrentRegion()
+        loadTagCounts()
     }
 
     /// Back to "Wszystkie" (no tag filter). Already "all" → no-op (no refetch);
@@ -114,6 +121,31 @@ class MapViewModel: ObservableObject {
         guard selectedTag != nil else { return }
         selectedTag = nil
         refreshCurrentRegion()
+        loadTagCounts()
+    }
+
+    // MARK: - Tag count badges (events, per city+day)
+
+    /// Fetch per-tag event counts for the current city + day. City-scoped (not the
+    /// viewport), so it needs its own endpoint. No timer — counts change only on
+    /// app-start and city/day/category/tag changes.
+    @MainActor
+    func loadTagCounts() {
+        guard feedCategory == .events else {
+            tagCounts = [:]
+            tagTotalCount = 0
+            return
+        }
+        Task {
+            struct TagCount: Decodable { let tag: String; let count: Int }
+            struct TagCountsResponse: Decodable { let total: Int; let counts: [TagCount] }
+            guard let resp: TagCountsResponse = try? await APIClient.get(
+                "/stories/tag-counts",
+                params: ["city": selectedCity.id, "day": dayString(offset: selectedDayOffset)]
+            ) else { return }
+            tagTotalCount = resp.total
+            tagCounts = Dictionary(uniqueKeysWithValues: resp.counts.map { ($0.tag, $0.count) })
+        }
     }
 
     var restoredViewport: MKCoordinateRegion? {
@@ -174,6 +206,7 @@ class MapViewModel: ObservableObject {
         guard selectedDayOffset != offset else { return }
         selectedDayOffset = offset
         refreshCurrentRegion()
+        loadTagCounts()
     }
 
     func refreshCurrentRegion() {
@@ -185,6 +218,7 @@ class MapViewModel: ObservableObject {
         guard feedCategory != category else { return }
         feedCategory = category
         refreshCurrentRegion()
+        loadTagCounts()
     }
 
     private var debounceTask: Task<Void, Never>?
@@ -201,6 +235,7 @@ class MapViewModel: ObservableObject {
         fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
         startCityTransition()
         runMediaNearbyCheck()
+        loadTagCounts()
     }
 
     private func startCityTransition() {

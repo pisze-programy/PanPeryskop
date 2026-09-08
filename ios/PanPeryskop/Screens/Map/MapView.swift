@@ -235,7 +235,8 @@ struct MapScreen: View {
     }
 
     /// Shared glass chip look (selected = accent tint + stroke). Pure visualization.
-    private func chipButton(_ label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+    /// `badgeCount` (when > 0) renders a quantity badge in the top-right corner.
+    private func chipButton(_ label: String, isSelected: Bool, badgeCount: Int = 0, action: @escaping () -> Void) -> some View {
         Button {
             Haptics.selection()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
@@ -251,15 +252,29 @@ struct MapScreen: View {
                 .overlay(Capsule().fill(isSelected ? Color.accentColor.opacity(0.25) : .clear))
                 .overlay(Capsule().stroke(isSelected ? Color.accentColor : Color.white.opacity(0.2), lineWidth: isSelected ? 1.5 : 1))
                 .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 3)
+                .overlay(alignment: .topTrailing) {
+                    if badgeCount > 0 {
+                        Text("\(badgeCount)")
+                            .font(.caption2.bold())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 5)
+                            .frame(minWidth: 16, minHeight: 16)
+                            .background(Capsule().fill(Color.accentColor))
+                            .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                            .offset(x: 6, y: -6)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
         }
         .buttonStyle(.plain)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: badgeCount)
     }
 
     /// "Wszystkie" — the no-tag state. Selected when nothing is filtered; cannot be
     /// deselected by tapping it (already-all → no-op, no refetch). Selecting another
     /// tag deselects it.
     private var allChip: some View {
-        chipButton("Wszystkie", isSelected: viewModel.selectedTag == nil) {
+        chipButton("Wszystkie", isSelected: viewModel.selectedTag == nil, badgeCount: viewModel.tagTotalCount) {
             viewModel.selectAll()
         }
     }
@@ -268,7 +283,7 @@ struct MapScreen: View {
     /// but tints with the accent color. Single-select; tapping again returns to
     /// "all" (no tag selected).
     private func tagChip(_ tag: TagPill) -> some View {
-        chipButton(tag.label, isSelected: viewModel.selectedTag == tag.id) {
+        chipButton(tag.label, isSelected: viewModel.selectedTag == tag.id, badgeCount: viewModel.tagCounts[tag.id] ?? 0) {
             viewModel.toggleTag(tag.id)
         }
     }

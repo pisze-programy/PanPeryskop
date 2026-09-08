@@ -4,6 +4,15 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.2.1] — 2026-09-08
+
+### Added
+- Map tag filter badges: each tag chip (and "Wszystkie") shows the number of
+  approved events for the selected day in the selected city. City-scoped (not the
+  map viewport) via the new `GET /stories/tag-counts?city=&day=` endpoint; hidden
+  when zero. Counts refresh on app start and on city/day/category/tag change —
+  never polled (seeds change ~every 3 days).
+
 ## [1.2.0] — 2026-09-07
 
 ### Added

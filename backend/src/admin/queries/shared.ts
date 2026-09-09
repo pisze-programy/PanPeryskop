@@ -1,6 +1,7 @@
 // Shared query helpers: Warsaw-day bucketing, series, totals, cron info.
 import { browserBudget } from '../../seed/core/log';
 import { todayWarsaw, addDaysWarsaw, warsawOffset } from '../../seed/core/dates';
+import { DAY_MS } from '../../seed/core/constants';
 import { cronSchedules, nextCronRunMs, cronSummary, CronInfo } from '../cron';
 
 // SQLite unixepoch day-bucket offset for Europe/Warsaw (+2 summer / +1 winter) —
@@ -38,7 +39,7 @@ export async function statsRange(
   extraWhere = '',
   endDay: string = todayWarsaw()
 ): Promise<{ d: string; n: number }[]> {
-  const since = Date.now() - days * 86_400_000;
+  const since = Date.now() - days * DAY_MS;
   const raw = await daySeries(db, table, col, since, extraWhere);
   const byDay = new Map(raw.map((r) => [r.d, r.n]));
   const list: string[] = [];

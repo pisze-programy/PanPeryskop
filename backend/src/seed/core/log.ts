@@ -1,8 +1,9 @@
 // Persistent seed-run logs in D1 (manual + cron) + Browser Run budget tracking.
 import { nanoid } from 'nanoid';
 import { RunType } from './types';
+import { HOUR_MS } from './constants';
 
-const BROWSER_BUDGET_MS = 10 * 3_600_000; // 10h / month (Workers Paid included)
+const BROWSER_BUDGET_MS = 10 * HOUR_MS; // 10h / month (Workers Paid included)
 
 export interface SeedRunLog {
   runType: RunType;

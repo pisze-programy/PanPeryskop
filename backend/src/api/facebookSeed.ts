@@ -7,12 +7,11 @@ import { strField, fileField, ParsedForm } from '../core/form';
 import { ingestFacebookEvent, previewFacebookEvents, previewGeo, PreviewInput, GeoPreviewInput } from '../seed/manual/facebook';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { warsawDateOf, eventCreatedAtMs } from '../seed/core/dates';
-import { TTL_MS, MAX_LOOKAHEAD_MS } from '../core/models';
+import { TTL_MS, MAX_LOOKAHEAD_MS, MAX_EXTERNAL_ID_LEN, STATUS_PENDING } from '../core/models';
 
 export const facebookSeedRoutes = new Hono<{ Bindings: Env }>();
 
 const MAX_TITLE_LEN = 200;
-const MAX_EXTERNAL_ID_LEN = 200;
 
 function requireString(form: ParsedForm, name: string): string | undefined {
   const v = strField(form, name);
@@ -156,6 +155,6 @@ facebookSeedRoutes.post('/seed/facebook', async (c) => {
   if (!parsed.ok) return c.json({ error: parsed.error }, 400);
 
   const result = await ingestFacebookEvent(c.env, parsed.input);
-  const code = result.status === 'pending' ? 201 : 200;
+  const code = result.status === STATUS_PENDING ? 201 : 200;
   return c.json(result, code);
 });

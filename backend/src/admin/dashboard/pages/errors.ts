@@ -6,10 +6,10 @@ import { Hono } from 'hono';
 import { bars, card, cardHeader, empty, esc, fmtDate, icon, pageHeader, pagination, pill } from '../../ui';
 import { requireSession } from '../common';
 import { renderPage } from './shared';
+import { ADMIN_PAGE_SIZE_COMPACT, ADMIN_DAYS_OPTIONS_COMPACT } from '../../config';
+import { DAY_MS } from '../../../seed/core/constants';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
-const PAGE_SIZE = 25;
-const DAYS_OPTIONS = [7, 14, 30];
 
 function typePill(t: string): string {
   return t === 'upload_failed' ? pill(t, 'err') : t === 'stale_drop' ? pill(t, 'warn') : `<span class="badge bg-secondary-lt text-muted">${esc(t)}</span>`;
@@ -19,16 +19,16 @@ pageRoutes.get('/errors', async (c) => {
   const db = c.env.DB;
   const q = c.req.query();
   const daysRaw = parseInt(String(q.days || '7'), 10);
-  const days = DAYS_OPTIONS.includes(daysRaw) ? daysRaw : 7;
+  const days = ADMIN_DAYS_OPTIONS_COMPACT.includes(daysRaw) ? daysRaw : 7;
   const type = q.type ? String(q.type) : null;
   const search = q.q ? String(q.q) : null;
   const page = Math.max(1, parseInt(String(q.page || '1'), 10) || 1);
-  const since = Date.now() - days * 86_400_000;
+  const since = Date.now() - days * DAY_MS;
 
   const [c24, c7d, c30d, unique] = await Promise.all([
-    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 86_400_000).first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 7 * 86_400_000).first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 30 * 86_400_000).first<{ n: number }>(),
+    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - DAY_MS).first<{ n: number }>(),
+    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 7 * DAY_MS).first<{ n: number }>(),
+    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 30 * DAY_MS).first<{ n: number }>(),
     db.prepare('SELECT COUNT(DISTINCT device_id) n FROM client_errors WHERE created_at>=?').bind(since).first<{ n: number }>(),
   ]);
 
@@ -86,11 +86,11 @@ pageRoutes.get('/errors', async (c) => {
       FROM client_errors e
       LEFT JOIN users u ON u.device_id = e.device_id
       LEFT JOIN banned_devices b ON b.device_id = e.device_id
-      WHERE ${where} ORDER BY e.created_at DESC LIMIT ? OFFSET ?`).bind(...binds, PAGE_SIZE, (page - 1) * PAGE_SIZE).all<any>(),
+      WHERE ${where} ORDER BY e.created_at DESC LIMIT ? OFFSET ?`).bind(...binds, ADMIN_PAGE_SIZE_COMPACT, (page - 1) * ADMIN_PAGE_SIZE_COMPACT).all<any>(),
     db.prepare(`SELECT COUNT(*) n FROM client_errors e WHERE ${where}`).bind(...binds).first<{ n: number }>(),
   ]);
   const total = cnt?.n ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE_COMPACT));
 
   const rowsHtml = ((rows.results ?? []) as any[]).map((e) => {
     let meta = '';
@@ -132,7 +132,7 @@ pageRoutes.get('/errors', async (c) => {
   const filterBar = `<form method="get" action="/admin/errors" class="row g-2 mb-3">
     <div class="col-6 col-md-2">
       <label class="form-label">Okres</label>
-      <select name="days" class="form-select" onchange="this.form.submit()">${DAYS_OPTIONS.map((d) => `<option value="${d}" ${days === d ? 'selected' : ''}>${d} dni</option>`).join('')}</select>
+      <select name="days" class="form-select" onchange="this.form.submit()">${ADMIN_DAYS_OPTIONS_COMPACT.map((d) => `<option value="${d}" ${days === d ? 'selected' : ''}>${d} dni</option>`).join('')}</select>
     </div>
     <div class="col-6 col-md-2">
       <label class="form-label">Typ</label>

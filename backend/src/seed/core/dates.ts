@@ -1,4 +1,4 @@
-import { DAY_MS, EVENT_VISIBLE_OFFSET_MS } from './constants';
+import { DAY_MS, HOUR_MS, EVENT_VISIBLE_OFFSET_MS } from './constants';
 
 // Build "YYYY-MM-DD" for a Warsaw-wall-clock instant WITHOUT relying on a locale's
 // short-date format. Node 24 (Alpine, and newer macOS builds) stopped rendering
@@ -31,8 +31,8 @@ export function warsawDateOf(ms: number): string {
 export function warsawMidnightMs(isoDate: string): number {
   const [y, m, d] = isoDate.split('-').map(Number);
   let t = Date.UTC(y, m - 1, d);
-  while (warsawYmd(t) === isoDate) t -= 3_600_000;
-  return t + 3_600_000;
+  while (warsawYmd(t) === isoDate) t -= HOUR_MS;
+  return t + HOUR_MS;
 }
 // Event posts for a day become visible at 06:00 Europe/Warsaw (TTL window start).
 export function eventCreatedAtMs(isoDate: string): number {

@@ -2,7 +2,8 @@
 export { runSeed, seedTomorrow } from './seed/pipeline/runner';
 export { enabledProviders, SEED_PROVIDERS } from './seed/providers';
 export { todayWarsaw, tomorrowWarsaw, warsawMidnightMs, toWarsawIso, addDaysWarsaw, warsawDateOf } from './seed/core/dates';
-export { buildDescription, dedupe } from './seed/core/dedupe';
+export { dedupe } from './seed/core/dedupe';
+export { buildDescription } from './seed/core/eventFormat';
 export { dropCancelled, dropBanned, dropBlocked, isCancelled, isBannedGlobal, rescueRealShows } from './seed/core/filters';
 export type { SeedQueueMessage } from './seed/pipeline/queue';
 export type {

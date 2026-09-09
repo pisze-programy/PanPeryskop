@@ -119,7 +119,7 @@ final class ProximityMonitor: NSObject, @preconcurrency CLLocationManagerDelegat
         content.userInfo = [
             "type": "media",
             "post_id": post.id,
-            "category": post.category ?? "live",
+            "category": post.category ?? AppConstants.categoryLive,
             "lat": post.lat,
             "lng": post.lng,
         ]
@@ -268,7 +268,7 @@ final class NotificationDelegate: NSObject, @preconcurrency UNUserNotificationCe
         if info["type"] as? String == "media", let postId = info["post_id"] as? String {
             let payload = PushPostPayload(
                 postId: postId,
-                category: info["category"] as? String ?? "live"
+                category: info["category"] as? String ?? AppConstants.categoryLive
             )
             Self.pendingPushPost = payload
             NotificationCenter.default.post(name: .openPushPost, object: payload)

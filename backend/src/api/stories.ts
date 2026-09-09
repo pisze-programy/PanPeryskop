@@ -1,18 +1,13 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
-import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED } from '../core/models';
+import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED, CATEGORY_LIVE, CATEGORY_EVENTS } from '../core/models';
 import { mediaUrl, originFromRequest } from '../core/media';
 import { tagCatalog, tagIdSet } from '../core/tagCatalog';
 import { cityBbox } from '../admin/cities';
 import { warsawMidnightMs } from '../seed/core/dates';
+import { EVENT_GRACE_MS, UNKNOWN_TIME } from '../seed/core/constants';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
-
-// Event liveness: an event/showtime is shown until its start + 1h (grace window),
-// then it is considered over. Events with an UNKNOWN time ("00:00" marker — marathons,
-// tours, feeds that omit the hour) are all-day and never filtered.
-const EVENT_GRACE_MS = 3_600_000;
-const UNKNOWN_TIME = '00:00';
 
 function hhmmToMs(t: string): number {
   const m = /^(\d{2}):(\d{2})$/.exec(t);
@@ -44,7 +39,7 @@ interface LivenessRow {
 // Apply the +1h liveness rule to one story row in place (trims showtimes AND the
 // matching showtime_booking entries). Returns false when the post must be dropped.
 function applyEventLiveness(row: LivenessRow): boolean {
-  if (row.category !== 'events') return true;
+  if (row.category !== CATEGORY_EVENTS) return true;
   const times = row.showtimes ? (JSON.parse(row.showtimes) as string[]) : null;
   const res = liveShowtimes(times, row.event_date);
   if (!res.keep) return false;
@@ -114,8 +109,7 @@ storiesRoutes.get('/tag-counts', async (c) => {
 // (policy view) — never hardcoded on the client.
 storiesRoutes.get('/sources', async (c) => {
   const { results } = await c.env.DB.prepare(
-    "SELECT DISTINCT substr(external_id, 1, instr(external_id, '-') - 1) AS source " +
-    "FROM posts WHERE category = 'events' AND external_id IS NOT NULL AND external_id != '' " +
+    `SELECT DISTINCT substr(external_id, 1, instr(external_id, '-') - 1) AS source FROM posts WHERE category = '${CATEGORY_EVENTS}' AND external_id IS NOT NULL AND external_id != '' ` +
     "ORDER BY source"
   ).all<{ source: string }>();
   return c.json({ sources: (results || []).map((r) => r.source).filter(Boolean) });
@@ -241,7 +235,7 @@ storiesRoutes.get('/', async (c) => {
   const tagBind = tag ? `%"${tag}"%` : null;
   // Seen (watched) media is hidden from the Live feed entirely — the map removes
   // it locally and future fetches must not return it either.
-  const hideWatchedLive = category === 'live';
+  const hideWatchedLive = category === CATEGORY_LIVE;
 
   // Day browser: `day=YYYY-MM-DD` shows pins for that day regardless of the live
   // TTL window (future days are otherwise hidden by created_at <= now). Live posts
@@ -283,7 +277,7 @@ storiesRoutes.get('/', async (c) => {
         .bind(user.id, user.id, swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []), ...(tag ? [tagBind] : []))
         .all<StoryRow>();
 
-      const live = results.filter(applyEventLiveness);
+const live = results.filter(applyEventLiveness);
 
       return c.json({
         stories: live.map((p) => storyJson(p, c)),

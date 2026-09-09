@@ -25,6 +25,7 @@
 		44DCBF845465155C6A877FEE /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBA35634291A3B8F365D85D /* ProfileView.swift */; };
 		4B4F1CC0CF0CA5F623869733 /* MediaCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9D108F77E19B9CD9251305B /* MediaCaptureView.swift */; };
 		4C0651523049450AC40E39FB /* MediaNearbyNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3257AF225A3FC46AC22646 /* MediaNearbyNotifier.swift */; };
+		4E5ECD95505E13F2876F1A78 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3605C7F045D296916C8949B4 /* AppConstants.swift */; };
 		4F1DE6D265333AD7AC276477 /* YPImagePicker in Frameworks */ = {isa = PBXBuildFile; productRef = 5A701F52FD63A75ECBD6B80F /* YPImagePicker */; };
 		576B4EB45DFED915802A7168 /* PendingPostsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CA2AF9B54DF0D4E30580F2D /* PendingPostsStore.swift */; };
 		5B74FDF4D5FE18C2F20CE69B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A59CECBDD13DDF3C2C11972 /* OnboardingView.swift */; };
@@ -67,6 +68,7 @@
 		29F8ADC2168E421BBB920569 /* PostUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostUploader.swift; sourceTree = "<group>"; };
 		2A410D659343E3DD704F7BF1 /* ProximityMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProximityMonitor.swift; sourceTree = "<group>"; };
 		3502EE142841F8A4A0F57B00 /* MediaRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaRequest.swift; sourceTree = "<group>"; };
+		3605C7F045D296916C8949B4 /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
 		364467F234AEB3E0D0E2513C /* FaveLikeButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaveLikeButton.swift; sourceTree = "<group>"; };
 		4243C0678522339A2173990C /* YPImagePicker */ = {isa = PBXFileReference; lastKnownFileType = folder; name = YPImagePicker; path = vendor/YPImagePicker; sourceTree = SOURCE_ROOT; };
 		44766F2DE7DFC8576566A0AF /* DescriptionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStepView.swift; sourceTree = "<group>"; };
@@ -173,6 +175,7 @@
 		52A84047D3D5BB28DB9B94B0 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				3605C7F045D296916C8949B4 /* AppConstants.swift */,
 				FBDD7756E22141DD95593257 /* City.swift */,
 				3502EE142841F8A4A0F57B00 /* MediaRequest.swift */,
 				0AFF2D3AC0370D62EABBDC9C /* MyPost.swift */,
@@ -346,6 +349,7 @@
 			files = (
 				EF416FDD5F47F902E0511EB7 /* APIClient.swift in Sources */,
 				D9702F1880D277CD3D4CE45E /* AddContentView.swift in Sources */,
+				4E5ECD95505E13F2876F1A78 /* AppConstants.swift in Sources */,
 				2632F23971A3FECF86E58A60 /* AppPolicyView.swift in Sources */,
 				F83DB2EE1C81C2E3A19B19B9 /* AppleSignIn.swift in Sources */,
 				704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */,

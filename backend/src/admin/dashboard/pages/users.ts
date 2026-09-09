@@ -6,9 +6,10 @@ import { Hono } from 'hono';
 import { cards, empty, esc, fmtDate, icon, initialsAvatar, pageHeader, pagination, pill, relAgo, staticFilePath } from '../../ui';
 import { requireSession } from '../common';
 import { renderPage } from './shared';
+import { ADMIN_PAGE_SIZE } from '../../config';
+import { DAY_MS } from '../../../seed/core/constants';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
-const PAGE_SIZE = 50;
 
 const PROVIDER_BADGE: Record<string, string> = {
   device: 'bg-secondary-lt text-secondary',
@@ -19,7 +20,7 @@ const PROVIDER_BADGE: Record<string, string> = {
 function dotColor(ms: number | null | undefined): string {
   if (!ms) return 'status-muted';
   const diff = Date.now() - ms;
-  if (diff < 7 * 86_400_000) return diff < 86_400_000 ? 'status-green' : 'status-yellow';
+  if (diff < 7 * DAY_MS) return diff < DAY_MS ? 'status-green' : 'status-yellow';
   return 'status-muted';
 }
 
@@ -40,7 +41,7 @@ pageRoutes.get('/users', async (c) => {
         AND NOT EXISTS (SELECT 1 FROM auth_events e WHERE e.user_id=u.id)
         AND NOT EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id)
         AND NOT EXISTS (SELECT 1 FROM views v WHERE v.user_id=u.id)) AS never_active,
-      (SELECT COUNT(*) FROM banned_devices) AS banned`).bind(Date.now() - 86_400_000, Date.now() - 7 * 86_400_000, Date.now() - 30 * 86_400_000).first<{ total: number; active24h: number; active7d: number; active30d: number; never_active: number; banned: number }>();
+      (SELECT COUNT(*) FROM banned_devices) AS banned`).bind(Date.now() - DAY_MS, Date.now() - 7 * DAY_MS, Date.now() - 30 * DAY_MS).first<{ total: number; active24h: number; active7d: number; active30d: number; never_active: number; banned: number }>();
   const provRow = await db.prepare('SELECT auth_provider, COUNT(*) n FROM users GROUP BY auth_provider').all<{ auth_provider: string; n: number }>();
   const providers = provRow.results ?? [];
 
@@ -70,11 +71,11 @@ pageRoutes.get('/users', async (c) => {
         b.reason AS ban_reason, (b.device_id IS NOT NULL) AS banned
       FROM users u LEFT JOIN banned_devices b ON b.device_id=u.device_id
       WHERE 1=1${whereSql}
-      ORDER BY (u.last_seen IS NULL), u.last_seen DESC, u.created_at DESC LIMIT ? OFFSET ?`).bind(...binds, PAGE_SIZE, (page - 1) * PAGE_SIZE).all<any>(),
+      ORDER BY (u.last_seen IS NULL), u.last_seen DESC, u.created_at DESC LIMIT ? OFFSET ?`).bind(...binds, ADMIN_PAGE_SIZE, (page - 1) * ADMIN_PAGE_SIZE).all<any>(),
     db.prepare(`SELECT COUNT(*) n FROM users u WHERE 1=1${whereSql}`).bind(...binds).first<{ n: number }>(),
   ]);
   const total = cnt?.n ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
   const results = (rows.results ?? []) as any[];
   const maxPosts = Math.max(1, ...results.map((u) => u.post_count));
   const maxViews = Math.max(1, ...results.map((u) => u.view_count));
@@ -173,8 +174,8 @@ pageRoutes.get('/users', async (c) => {
     action: '<a class="btn btn-primary" href="/admin/users">Wyczyść filtry</a>',
   })}</td></tr>`;
 
-  const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const to = Math.min(page * PAGE_SIZE, total);
+  const from = total === 0 ? 0 : (page - 1) * ADMIN_PAGE_SIZE + 1;
+  const to = Math.min(page * ADMIN_PAGE_SIZE, total);
   const pagerFooter = totalPages > 1
     ? `<div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
         <span class="text-secondary">Pokazano ${from}–${to} z ${total}</span>

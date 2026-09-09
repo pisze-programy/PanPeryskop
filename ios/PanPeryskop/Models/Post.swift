@@ -41,7 +41,7 @@ struct Post: Codable, Identifiable, Equatable {
 
     /// Events (category "events") are re-viewable: "seen" is stored but never blocks
     /// or hides them. Live stays one-time.
-    var isEvent: Bool { category == "events" }
+    var isEvent: Bool { category == AppConstants.categoryEvents }
 
     /// Seed events encode `Tytuł: HH:MM, Lokalizacja` in the description — parse it
     /// for the calendar/timer panel. `00:00` means the start time is unknown.
@@ -59,14 +59,14 @@ struct Post: Codable, Identifiable, Equatable {
             let time = String(format: "%02d:%02d", hh, mm)
             return EventInfo(
                 title: title.isEmpty ? description : title,
-                time: time == "00:00" ? nil : time,
+                time: time == AppConstants.unknownTime ? nil : time,
                 venue: venue.isEmpty ? nil : venue
             )
         }
         return EventInfo(title: description, time: nil, venue: nil)
     }
 
-    static let ttlMs: Int64 = 24 * 3_600_000
+    static let ttlMs: Int64 = AppConstants.postTTLMs
 
     /// Server-side visibility window: [created_at, created_at + 24h].
     var isExpired: Bool {

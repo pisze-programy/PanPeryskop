@@ -118,7 +118,7 @@ final class MediaNearbyNotifier {
         let newPosts = resp.stories.filter { post in
             guard !seenIds.contains(post.id) else { return false }
             guard me == nil || post.user_id != me else { return false }
-            guard (post.category ?? "live") == "live" else { return false } // Wydarzenia: notifications disabled
+            guard (post.category ?? AppConstants.categoryLive) == AppConstants.categoryLive else { return false } // Wydarzenia: notifications disabled
             guard liveOn else { return false }
             switch range {
             case "100":

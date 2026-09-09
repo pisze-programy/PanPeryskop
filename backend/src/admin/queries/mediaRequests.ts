@@ -1,5 +1,6 @@
 // Media requests query builders.
 import { cityBbox } from '../cities';
+import { DAY_MS, HOUR_MS } from '../../seed/core/constants';
 
 export interface MediaRequestFilter {
   days: number;
@@ -13,7 +14,7 @@ export interface MediaRequestFilter {
 }
 
 function mediaRequestsWhere(f: MediaRequestFilter): { where: string; binds: unknown[] } {
-  const since = Date.now() - f.days * 86_400_000;
+  const since = Date.now() - f.days * DAY_MS;
   const where: string[] = ['r.created_at>=?'];
   const binds: unknown[] = [since];
   if (f.cityId) {
@@ -23,7 +24,7 @@ function mediaRequestsWhere(f: MediaRequestFilter): { where: string; binds: unkn
   if (f.userId) { where.push('r.user_id=?'); binds.push(f.userId); }
   if (f.fromMs) { where.push('r.created_at>=?'); binds.push(f.fromMs); }
   if (f.toMs) { where.push('r.created_at<=?'); binds.push(f.toMs); }
-  if (f.activeOnly) { where.push('r.created_at>=?'); binds.push(Date.now() - 4 * 3_600_000); }
+  if (f.activeOnly) { where.push('r.created_at>=?'); binds.push(Date.now() - 4 * HOUR_MS); }
   return { where: where.join(' AND '), binds };
 }
 

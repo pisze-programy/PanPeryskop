@@ -1,5 +1,7 @@
 // Events query builders + aggregates (category='events').
 import { CITIES, cityBbox } from '../cities';
+import { CATEGORY_EVENTS } from '../../core/models';
+import { UNKNOWN_TIME } from '../../seed/core/constants';
 
 export interface EventFilter {
   cityId: string | null;
@@ -22,7 +24,7 @@ export interface EventFilter {
 const GEO_DEFAULT_EPS = 0.002;
 
 function eventsWhere(f: EventFilter): { where: string; binds: unknown[] } {
-  let where = `p.category='events'`;
+  let where = `p.category='${CATEGORY_EVENTS}'`;
   const binds: unknown[] = [];
   const bbox = f.cityId ? cityBbox(f.cityId) : null;
   if (bbox) { where += ' AND p.lat BETWEEN ? AND ? AND p.lng BETWEEN ? AND ?'; binds.push(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng); }
@@ -48,7 +50,7 @@ function eventsWhere(f: EventFilter): { where: string; binds: unknown[] } {
   // Time filter on the first showtime (or absence of one). "zero" = the seed
   // default placeholder 00:00 OR no time at all; the rest are lower bounds on
   // the first showtime string (HH:MM compares lexicographically).
-  if (f.time === 'zero') { where += " AND (p.showtimes IS NULL OR json_extract(p.showtimes,'$[0]')='00:00')"; }
+  if (f.time === 'zero') { where += ` AND (p.showtimes IS NULL OR json_extract(p.showtimes,'$[0]')='${UNKNOWN_TIME}')`; }
   else if (f.time === '06') { where += " AND json_extract(p.showtimes,'$[0]')>='06:00'"; }
   else if (f.time === '12') { where += " AND json_extract(p.showtimes,'$[0]')>='12:00'"; }
   else if (f.time === '18') { where += " AND json_extract(p.showtimes,'$[0]')>='18:00'"; }
@@ -82,7 +84,7 @@ export function eventsCountSql(f: EventFilter): { sql: string; binds: unknown[] 
 // Event status counts (all-time, category='events') for the doughnut + KPIs.
 export async function eventStatusBreakdown(db: D1Database): Promise<{ approved: number; pending: number; rejected: number }> {
   const { results } = await db.prepare(
-    "SELECT status, COUNT(*) n FROM posts WHERE category='events' GROUP BY status"
+    `SELECT status, COUNT(*) n FROM posts WHERE category='${CATEGORY_EVENTS}' GROUP BY status`
   ).all<{ status: string; n: number }>();
   const r: Record<string, number> = { approved: 0, pending: 0, rejected: 0 };
   for (const x of results ?? []) if (x.status in r) r[x.status] = x.n;
@@ -92,7 +94,7 @@ export async function eventStatusBreakdown(db: D1Database): Promise<{ approved: 
 // Per-source event counts (source = external_id prefix).
 export async function eventSourceBreakdown(db: D1Database): Promise<{ source: string; n: number }[]> {
   const { results } = await db.prepare(
-    "SELECT substr(external_id,1,instr(external_id,'-')-1) AS source, COUNT(*) AS n FROM posts WHERE category='events' GROUP BY source ORDER BY n DESC"
+    `SELECT substr(external_id,1,instr(external_id,'-')-1) AS source, COUNT(*) AS n FROM posts WHERE category='${CATEGORY_EVENTS}' GROUP BY source ORDER BY n DESC`
   ).all<{ source: string; n: number }>();
   return results ?? [];
 }

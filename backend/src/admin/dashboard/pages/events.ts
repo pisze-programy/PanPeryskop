@@ -12,6 +12,8 @@ import { CANONICAL_TAG_SET } from '../../../seed/core/tags';
 import { ProviderId } from '../../../seed/core/types';
 import { tagCatalog, tagIdSet } from '../../../core/tagCatalog';
 import { todayWarsaw } from '../../../seed/core/dates';
+import { parseEventDescription } from '../../../seed/core/eventFormat';
+import { STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED } from '../../../core/models';
 import { propagationTargets, venueFromDescription } from '../../propagation';
 import { upsertVenue } from '../../../seed/venues/venueStore';
 import { renderPage } from './shared';
@@ -41,15 +43,15 @@ function parseTags(t: string | null | undefined): string[] {
 
 // "Tytuł: HH:MM, Lokalizacja" → { title, time, loc } — the seed description format.
 function descParts(description: string): { title: string; time: string; loc: string } {
-  const m = /^(.+?):\s*(\d{2}:\d{2}),\s*(.*)$/.exec(description || '');
-  return m ? { title: m[1], time: m[2], loc: m[3] } : { title: description || '', time: '', loc: '' };
+  const p = parseEventDescription(description);
+  return p ? { title: p.title, time: p.time ?? '', loc: p.loc } : { title: description || '', time: '', loc: '' };
 }
 
 // Status dropdown — colored per status, auto-submits on change.
 function statusSelect(e: { id: string; status: string }): string {
-  const colorCls = e.status === 'approved' ? ' text-success' : e.status === 'pending' ? ' text-warning' : ' text-danger';
-  const opts = ['approved', 'pending', 'rejected'].map((s) =>
-    `<option value="${s}" ${e.status === s ? 'selected' : ''} class="text-${s === 'approved' ? 'success' : s === 'pending' ? 'warning' : 'danger'}">${s}</option>`).join('');
+  const colorCls = e.status === STATUS_APPROVED ? ' text-success' : e.status === STATUS_PENDING ? ' text-warning' : ' text-danger';
+  const opts = [STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED].map((s) =>
+    `<option value="${s}" ${e.status === s ? 'selected' : ''} class="text-${s === STATUS_APPROVED ? 'success' : s === STATUS_PENDING ? 'warning' : 'danger'}">${s}</option>`).join('');
   return `<form method="post" action="/admin/events/${esc(e.id)}">
     <select name="status" class="form-select form-select-sm${colorCls}" onchange="ppUpdate('${esc(e.id)}', this.form)">${opts}</select>
     <input type="hidden" name="field" value="status" /></form>`;
@@ -131,8 +133,8 @@ function geoButtonHtml(id: string, loc: string, lat: number | null, lng: number 
 }
 
 function rewriteLoc(description: string, name: string): string | null {
-  const m = /^(.+?):\s*(\d{2}:\d{2}),\s*(.*)$/.exec(description || '');
-  if (m) return `${m[1]}: ${m[2]}, ${name}`;
+  const p = parseEventDescription(description);
+  if (p) return `${p.title}: ${p.time}, ${name}`;
   return null;
 }
 
@@ -188,8 +190,8 @@ function soldOutBadge(e: { id: string; is_sold_out?: number | null; sold_out_loc
 }
 
 function rewriteTime(description: string, time: string): string | null {
-  const m = /^(.+?):\s*(\d{2}:\d{2}),\s*(.*)$/.exec(description || '');
-  if (m) return `${m[1]}: ${time}, ${m[3]}`;
+  const p = parseEventDescription(description);
+  if (p) return `${p.title}: ${time}, ${p.loc}`;
   return null;
 }
 
@@ -359,9 +361,9 @@ pageRoutes.get('/events', async (c) => {
     <span class="text-secondary fw-bold">Status</span>
     <div class="btn-group btn-group-segmented" role="group">
       ${seg('Wszystkie', `/admin/events?${buildQs(q, { status: null })}`, !status)}
-      ${seg('Oczekujące', `/admin/events?${buildQs(q, { status: 'pending' })}`, status === 'pending', `<span class="text-warning ms-1">${statusCnt.pending}</span>`)}
-      ${seg('Zaakceptowane', `/admin/events?${buildQs(q, { status: 'approved' })}`, status === 'approved')}
-      ${seg('Odrzucone', `/admin/events?${buildQs(q, { status: 'rejected' })}`, status === 'rejected')}
+      ${seg('Oczekujące', `/admin/events?${buildQs(q, { status: STATUS_PENDING })}`, status === STATUS_PENDING, `<span class="text-warning ms-1">${statusCnt.pending}</span>`)}
+      ${seg('Zaakceptowane', `/admin/events?${buildQs(q, { status: STATUS_APPROVED })}`, status === STATUS_APPROVED)}
+      ${seg('Odrzucone', `/admin/events?${buildQs(q, { status: STATUS_REJECTED })}`, status === STATUS_REJECTED)}
     </div>
     <span class="text-secondary ms-auto">Wynik: <strong>${total}</strong> wydarzeń</span>
   </div>`;
@@ -429,7 +431,7 @@ pageRoutes.get('/events', async (c) => {
   </div></div>`;
 
   // ---- Moderation banner ----
-  const modBanner = status === 'pending'
+  const modBanner = status === STATUS_PENDING
     ? `<div class="alert alert-warning mb-3">Nowy dzień seeda do przejrzenia — <strong>${statusCnt.pending}</strong> wydarzeń czeka na decyzję. ${icon('chevron-right')}</div>`
     : '';
 
@@ -459,7 +461,7 @@ pageRoutes.get('/events', async (c) => {
     const geoLockBadge = e.geo_locked ? `<span class="badge bg-primary-lt text-primary" title="GEO ustawione ręcznie">${icon('lock', 'icon icon-tiny me-1')}geo</span>` : '';
     const geoZeroBadge = e.lat === 0 && e.lng === 0 ? `<span class="badge bg-warning-lt text-warning" title="Geo fallback 0,0 — popraw w adminie">geo 0,0</span>` : '';
     const tagLockBadge = e.tags_locked ? `<span class="badge bg-primary-lt text-primary" title="Tag ustawiony ręcznie">${icon('lock', 'icon icon-tiny me-1')}tag</span>` : '';
-    const rejectHint = e.status === 'rejected' && e.rejection_reason ? `<i class="text-danger" title="${esc(String(e.rejection_reason))}">⚠</i>` : '';
+    const rejectHint = e.status === STATUS_REJECTED && e.rejection_reason ? `<i class="text-danger" title="${esc(String(e.rejection_reason))}">⚠</i>` : '';
     const seedDay = e.created_at ? new Date(e.created_at).toISOString().slice(5, 10) : '';
     return `<tr>
       <td>${eventThumb(e)}</td>
@@ -566,11 +568,11 @@ pageRoutes.post('/events/:id', async (c) => {
   const form = (await c.req.parseBody({ all: true }).catch(() => ({}))) as Record<string, unknown>;
 
   const rawStatus = Array.isArray(form.status) ? String(form.status[0]) : String(form.status ?? '');
-  const status = rawStatus === 'approved' || rawStatus === 'pending' || rawStatus === 'rejected' ? rawStatus : null;
+  const status = rawStatus === STATUS_APPROVED || rawStatus === STATUS_PENDING || rawStatus === STATUS_REJECTED ? rawStatus : null;
   const rawField = Array.isArray(form.field) ? String(form.field[0]) : String(form.field ?? '');
 
   if (status && rawField === 'status') {
-    if (status === 'rejected') {
+    if (status === STATUS_REJECTED) {
       await db.prepare('UPDATE posts SET status = ? WHERE id = ?').bind(status, id).run();
     } else {
       await db.prepare('UPDATE posts SET status = ?, rejection_reason = NULL WHERE id = ?').bind(status, id).run();

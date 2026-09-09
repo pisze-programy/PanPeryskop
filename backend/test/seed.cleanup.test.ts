@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pruneSeedData, watchdogSeedBatches } from '../src/seed/pipeline/cleanup';
+import { DAY_MS, HOUR_MS } from '../src/seed/core/constants';
 
 test('cleanup: watchdogSeedBatches marks stale batches failed with a reason', async () => {
   const updates: { sql: string }[] = [];
@@ -49,7 +50,7 @@ test('cleanup: pruneSeedData removes audit older than 4 days, keeps venues', asy
   } as unknown as D1Database;
 
   const env = { DB: db } as unknown as Env;
-  const old = Date.now() - 10 * 24 * 3_600_000; // 10 days ago — should be pruned
+  const old = Date.now() - 10 * DAY_MS; // 10 days ago — should be pruned
   await pruneSeedData(env, 'manual');
 
   // seed_candidates / seed_scopes / seed_batches / seed_runs pruned by cutoff.
@@ -57,8 +58,8 @@ test('cleanup: pruneSeedData removes audit older than 4 days, keeps venues', asy
   const scopes = deletes.find((d) => d.sql.includes('seed_scopes'));
   const batches = deletes.find((d) => d.sql.includes('seed_batches'));
   const runs = deletes.find((d) => d.sql.includes('seed_runs'));
-  assert.ok(cands && cands.cutoff <= Date.now() - 4 * 24 * 3_600_000);
-  assert.ok(scopes && scopes.cutoff <= Date.now() - 4 * 24 * 3_600_000, 'scopes pruned');
+  assert.ok(cands && cands.cutoff <= Date.now() - 4 * DAY_MS);
+  assert.ok(scopes && scopes.cutoff <= Date.now() - 4 * DAY_MS, 'scopes pruned');
   assert.ok(batches, 'batches pruned');
   assert.ok(runs, 'runs pruned');
   // The persistent venues store must never be pruned.

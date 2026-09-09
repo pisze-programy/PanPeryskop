@@ -1,17 +1,16 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { nanoid } from 'nanoid';
-import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, POST_TYPE_SET, STATUS_APPROVED, PostRow } from '../core/models';
+import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, MAX_EXTERNAL_ID_LEN, POST_TYPE_SET, POST_TYPE_PHOTO, POST_TYPE_VIDEO, STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED, CATEGORY_EVENTS, CATEGORY_LIVE, PostRow } from '../core/models';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { strField, fileField, ParsedForm } from '../core/form';
 import { mediaUrl, originFromRequest } from '../core/media';
 import { detectMediaType, extForMediaType } from '../core/mediaFormat';
 import { warsawDateOf } from '../seed/core/dates';
 import { loadBlacklistRules, findBlacklist, blacklistReason } from '../seed/core/blacklist';
+import { parseEventDescription } from '../seed/core/eventFormat';
 
 export const postsRoutes = new Hono<{ Bindings: Env }>();
-
-const MAX_EXTERNAL_ID_LEN = 200;
 
 function isValidHttpUrl(value: string): boolean {
   try {
@@ -33,7 +32,7 @@ postsRoutes.post('/', async (c) => {
 
   const form = await c.req.parseBody() as ParsedForm;
 
-  const type = strField(form, 'type') ?? 'photo';
+  const type = strField(form, 'type') ?? POST_TYPE_PHOTO;
   if (!POST_TYPE_SET.has(type)) {
     return c.json({ error: 'Invalid post type' }, 400);
   }
@@ -93,8 +92,8 @@ postsRoutes.post('/', async (c) => {
   const fileData = new Uint8Array(await file.arrayBuffer());
   const detectedType = detectMediaType(fileData);
   if (!detectedType) return c.json({ error: 'Invalid media file' }, 400);
-  const isPhoto = type === 'photo' && detectedType.startsWith('image/');
-  const isVideo = type === 'video' && detectedType.startsWith('video/');
+  const isPhoto = type === POST_TYPE_PHOTO && detectedType.startsWith('image/');
+  const isVideo = type === POST_TYPE_VIDEO && detectedType.startsWith('video/');
   if (!isPhoto && !isVideo) return c.json({ error: 'Media type does not match post type' }, 400);
 
   // Upsert by external_id keeps the post id (and media path) stable across re-seeds.
@@ -176,7 +175,7 @@ postsRoutes.post('/', async (c) => {
   let status: string = STATUS_APPROVED;
   const statusRaw = strField(form, 'status');
   if (statusRaw) {
-    if (statusRaw !== 'approved' && statusRaw !== 'pending') return c.json({ error: 'Invalid status' }, 400);
+    if (statusRaw !== STATUS_APPROVED && statusRaw !== STATUS_PENDING) return c.json({ error: 'Invalid status' }, 400);
     status = statusRaw;
   }
 
@@ -202,10 +201,10 @@ postsRoutes.post('/', async (c) => {
   // earlier (seed-ingest / queue ingest); this guards any future ingest path.
   if (externalId && description) {
     const rules = await loadBlacklistRules(c.env.DB);
-    const m = /^(.+?):\s*\d{2}:\d{2},\s*(.*)$/.exec(description);
+    const parsed = parseEventDescription(description);
     const bl = findBlacklist(rules, {
-      title: m ? m[1] : description,
-      venue: m ? (m[2].split(',')[0] || '').trim() : '',
+      title: parsed ? parsed.title : description,
+      venue: parsed ? (parsed.loc.split(',')[0] || '').trim() : '',
       partnerId,
     });
     if (bl) {
@@ -250,7 +249,7 @@ export async function doSavePost(
   const sponsored = isSponsored ? 1 : 0;
   const soldOut = isSoldOut ? 1 : 0;
   // Category is assigned server-side: seed (has external_id) -> 'events', app -> 'live'.
-  const category = externalId ? 'events' : 'live';
+  const category = externalId ? CATEGORY_EVENTS : CATEGORY_LIVE;
   // Day-browser key: the event's day in Europe/Warsaw (created_at = 06:00 of that day).
   const eventDate = externalId ? warsawDateOf(createdAt) : null;
 
@@ -263,7 +262,7 @@ export async function doSavePost(
              description = CASE WHEN geo_locked = 1 OR time_locked = 1 THEN description ELSE ? END,
              media_key = ?, thumb_key = ?,
              is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?,
-             status = CASE WHEN status = 'rejected' THEN status ELSE ? END,
+             status = CASE WHEN status = '${STATUS_REJECTED}' THEN status ELSE ? END,
              is_sold_out = CASE WHEN sold_out_locked = 1 THEN is_sold_out ELSE ? END,
              event_date = ?, showtimes = CASE WHEN time_locked = 1 THEN showtimes ELSE ? END,
              showtime_booking = CASE WHEN time_locked = 1 THEN showtime_booking ELSE ? END,

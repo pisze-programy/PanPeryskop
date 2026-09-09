@@ -7,6 +7,7 @@ import {
   pageHeader, pill, relAgo, safeJson, staticFilePath, timeline, timelineItem,
 } from '../../ui';
 import { overviewData, overviewCharts } from '../../queries';
+import { DAY_MS, HOUR_MS } from '../../../seed/core/constants';
 import { fmtPctNum } from '../common';
 import { todayWarsaw, addDaysWarsaw } from '../../../seed/core/dates';
 import { SEED_DAYS_AHEAD } from '../../../seed/core/constants';
@@ -16,7 +17,7 @@ const pageRoutes = new Hono<{ Bindings: Env }>();
 
 function dayLabel(dateStr: string): string {
   const today = todayWarsaw();
-  const diff = Math.round((Date.parse(`${dateStr}T00:00:00+02:00`) - Date.parse(`${today}T00:00:00+02:00`)) / 86400000);
+  const diff = Math.round((Date.parse(`${dateStr}T00:00:00+02:00`) - Date.parse(`${today}T00:00:00+02:00`)) / DAY_MS);
   if (diff === 0) return 'Dziś';
   if (diff === 1) return 'Jutro';
   if (diff === 2) return 'Pojutrze';
@@ -47,7 +48,7 @@ pageRoutes.get('/', async (c) => {
   if (d.status.pending > 0) failures.push(`${d.status.pending} event <strong>pending</strong>`);
   if (d.failedLogins7d > 0) failures.push(`${d.failedLogins7d} prób logowania do admina`);
   if (d.budget?.exceeded) failures.push('budget Browser <strong>przekroczony</strong>');
-  if (d.cron.lastCronRunMs && now - d.cron.lastCronRunMs > 30 * 3_600_000) failures.push('cron nie uruchomił się od <strong>30 h</strong>');
+  if (d.cron.lastCronRunMs && now - d.cron.lastCronRunMs > 30 * HOUR_MS) failures.push('cron nie uruchomił się od <strong>30 h</strong>');
   const healthHtml = failures.length
     ? `<div class="alert alert-danger mb-3" role="alert">
         <div class="d-flex gap-3">

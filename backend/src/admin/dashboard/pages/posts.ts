@@ -6,16 +6,16 @@ import { Hono } from 'hono';
 import { cards, empty, esc, fmtDate, icon, initialsAvatar, mediaModal, pageHeader, pagination, pill, relAgo, staticFilePath, thumbAvatar } from '../../ui';
 import { postsSql, postsCountSql, postStatusCounts, PostsFilter } from '../../queries';
 import { requireSession } from '../common';
-import { STATUS_REJECTED } from '../../../core/models';
+import { STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED, POST_TYPE_PHOTO, POST_TYPE_VIDEO } from '../../../core/models';
 import { jsStr } from '../../utils/esc';
 import { truncate } from '../../utils/fmt';
 import { renderPage } from './shared';
+import { ADMIN_PAGE_SIZE } from '../../config';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
-const PAGE_SIZE = 50;
 
 function statusPill(s: string): string {
-  return s === 'approved' ? pill('approved', 'ok') : s === 'pending' ? pill('pending', 'warn') : pill('rejected', 'err');
+  return s === STATUS_APPROVED ? pill(STATUS_APPROVED, 'ok') : s === STATUS_PENDING ? pill(STATUS_PENDING, 'warn') : pill(STATUS_REJECTED, 'err');
 }
 
 pageRoutes.get('/posts', async (c) => {
@@ -27,7 +27,7 @@ pageRoutes.get('/posts', async (c) => {
   const reported = q.reported === '1';
   const page = Math.max(1, parseInt(String(q.page || '1'), 10) || 1);
 
-  const filter: PostsFilter = { status, type, q: search, reported, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE };
+  const filter: PostsFilter = { status, type, q: search, reported, limit: ADMIN_PAGE_SIZE, offset: (page - 1) * ADMIN_PAGE_SIZE };
   const [counts, { sql, binds }, cnt] = await Promise.all([
     postStatusCounts(db),
     Promise.resolve(postsSql(filter)),
@@ -36,7 +36,7 @@ pageRoutes.get('/posts', async (c) => {
   const { results } = await db.prepare(sql).bind(...binds).all<any>();
   const cntRow = await db.prepare(cnt.sql).bind(...cnt.binds).first<{ n: number }>();
   const total = cntRow?.n ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
 
   const header = pageHeader({
     title: 'Posty (live)',
@@ -56,9 +56,9 @@ pageRoutes.get('/posts', async (c) => {
     `<a class="nav-link ${status === val ? 'active' : ''}" href="${esc(href)}">${label}</a>`;
   const navSeg = `<nav class="nav nav-segmented w-100">
     ${seg('Wszystkie', null, '/admin/posts')}
-    ${seg('Zatwierdzone', 'approved', '/admin/posts?status=approved')}
-    ${seg('W kolejce', 'pending', '/admin/posts?status=pending')}
-    ${seg('Odrzucone', 'rejected', '/admin/posts?status=rejected')}
+    ${seg('Zatwierdzone', STATUS_APPROVED, `/admin/posts?status=${STATUS_APPROVED}`)}
+    ${seg('W kolejce', STATUS_PENDING, `/admin/posts?status=${STATUS_PENDING}`)}
+    ${seg('Odrzucone', STATUS_REJECTED, `/admin/posts?status=${STATUS_REJECTED}`)}
   </nav>`;
 
   const filterBar = `<form method="get" action="/admin/posts" class="card mb-3"><div class="card-body">
@@ -75,8 +75,8 @@ pageRoutes.get('/posts', async (c) => {
         <label class="form-label">Typ</label>
         <select name="type" class="form-select" onchange="this.form.submit()">
           <option value="">Wszystkie</option>
-          <option value="photo" ${type === 'photo' ? 'selected' : ''}>Zdjęcie</option>
-          <option value="video" ${type === 'video' ? 'selected' : ''}>Wideo</option>
+          <option value="${POST_TYPE_PHOTO}" ${type === POST_TYPE_PHOTO ? 'selected' : ''}>Zdjęcie</option>
+          <option value="${POST_TYPE_VIDEO}" ${type === POST_TYPE_VIDEO ? 'selected' : ''}>Wideo</option>
         </select>
       </div>
       <div class="col-6 col-md-2">
@@ -113,7 +113,7 @@ pageRoutes.get('/posts', async (c) => {
     const bannedTag = p.banned ? ` · ${pill('BAN', 'err')}` : '';
     const typeBadge = p.type ? `<span class="badge bg-secondary-lt text-secondary ms-1">${esc(p.type)}</span>` : '';
     const reportBadge = p.open_reports ? `<span class="badge bg-warning-lt text-warning ms-1">raport ×${p.open_reports}</span>` : '';
-    const rejectReason = p.status === 'rejected' && p.rejection_reason ? `<div class="text-danger fs-6">${esc(String(p.rejection_reason))}</div>` : '';
+    const rejectReason = p.status === STATUS_REJECTED && p.rejection_reason ? `<div class="text-danger fs-6">${esc(String(p.rejection_reason))}</div>` : '';
     return `<tr data-id="${esc(p.id)}">
       <td>${p.thumb_key || p.media_key ? `<a href="javascript:void(0)" onclick="ppMediaOpen('/media/${esc(mediaUrl)}');return false;" title="Podgląd">${thumbAvatar(`/media/${esc(mediaUrl)}`)}</a>` : '—'}</td>
       <td>
@@ -140,8 +140,8 @@ pageRoutes.get('/posts', async (c) => {
           <button class="btn btn-sm btn-icon btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button" title="Akcje">${icon('more-horizontal')}</button>
           <div class="dropdown-menu dropdown-menu-end">
             <a class="dropdown-item" href="javascript:void(0)" onclick="ppMediaOpen('/media/${esc(mediaUrl)}')">Podgląd</a>
-            ${p.status !== 'approved' ? `<a class="dropdown-item text-success" href="javascript:void(0)" onclick="ppPostSet('${esc(p.id)}','approved')">Zatwierdź</a>` : ''}
-            ${p.status !== 'rejected' ? `<a class="dropdown-item text-danger" href="javascript:void(0)" onclick="ppPostReject('${esc(p.id)}')">Odrzuć…</a>` : ''}
+            ${p.status !== STATUS_APPROVED ? `<a class="dropdown-item text-success" href="javascript:void(0)" onclick="ppPostSet('${esc(p.id)}','${STATUS_APPROVED}')">Zatwierdź</a>` : ''}
+            ${p.status !== STATUS_REJECTED ? `<a class="dropdown-item text-danger" href="javascript:void(0)" onclick="ppPostReject('${esc(p.id)}')">Odrzuć…</a>` : ''}
             <div class="dropdown-divider"></div>
             <a class="dropdown-item text-danger" href="javascript:void(0)" onclick="ppPostBan('${esc(p.id)}','${jsStr(p.device_id || '')}')">Banuj urządzenie</a>
           </div>
@@ -152,7 +152,7 @@ pageRoutes.get('/posts', async (c) => {
   const emptyRow = `<tr><td colspan="7">${empty({
     icon: icon('photo'),
     title: status || type || search || reported ? 'Brak wyników dla filtrów' : 'Brak postów (live)',
-    subtitle: status === 'pending' ? 'Posty live są zatwierdzane automatycznie — kolejka jest zwykle pusta.' : 'Zmniejsz zakres filtrów lub sprawdź później.',
+    subtitle: status === STATUS_PENDING ? 'Posty live są zatwierdzane automatycznie — kolejka jest zwykle pusta.' : 'Zmniejsz zakres filtrów lub sprawdź później.',
     action: status || type || search || reported ? '<a class="btn btn-primary" href="/admin/posts">Wyczyść filtry</a>' : '',
   })}</td></tr>`;
 
@@ -194,11 +194,11 @@ pageRoutes.post('/posts/:id/status', async (c) => {
   const id = c.req.param('id');
   const form = (await c.req.parseBody({ all: true }).catch(() => ({}))) as Record<string, unknown>;
   const rawStatus = Array.isArray(form.status) ? String(form.status[0]) : String(form.status ?? '');
-  const status = rawStatus === 'approved' || rawStatus === 'pending' || rawStatus === 'rejected' ? rawStatus : null;
+  const status = rawStatus === STATUS_APPROVED || rawStatus === STATUS_PENDING || rawStatus === STATUS_REJECTED ? rawStatus : null;
   if (!status) return c.json({ error: 'Invalid status' }, 400);
   const reasonRaw = Array.isArray(form.reason) ? String(form.reason[0]) : String(form.reason ?? '');
   const reason = reasonRaw.trim() || null;
-  if (status === 'rejected') {
+  if (status === STATUS_REJECTED) {
     await db.prepare('UPDATE posts SET status = ?, rejection_reason = ? WHERE id = ?').bind(status, reason, id).run();
   } else {
     await db.prepare('UPDATE posts SET status = ?, rejection_reason = NULL WHERE id = ?').bind(status, id).run();

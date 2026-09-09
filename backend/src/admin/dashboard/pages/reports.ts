@@ -5,13 +5,13 @@
 import { Hono } from 'hono';
 import { cards, dropdown, dropdownItem, dropdownDivider, empty, esc, fmtDate, icon, mediaModal, pageHeader, pagination, pill, relAgo, staticFilePath } from '../../ui';
 import { requireSession } from '../common';
-import { STATUS_REJECTED } from '../../../core/models';
+import { STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED } from '../../../core/models';
 import { jsStr } from '../../utils/esc';
 import { truncate } from '../../utils/fmt';
 import { renderPage } from './shared';
+import { ADMIN_PAGE_SIZE_COMPACT } from '../../config';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
-const PAGE_SIZE = 25;
 
 const REASON_LABELS: Record<string, { label: string; badge: string }> = {
   spam: { label: 'Spam', badge: 'bg-warning-lt text-warning' },
@@ -124,11 +124,11 @@ pageRoutes.get('/reports', async (c) => {
       JOIN users u ON u.id=r.reporter_user_id
       JOIN posts p ON p.id=r.post_id
       JOIN users a ON a.id=p.user_id
-      WHERE ${where} ORDER BY (r.status='open') DESC, r.created_at DESC LIMIT ? OFFSET ?`).bind(...binds, PAGE_SIZE, (page - 1) * PAGE_SIZE).all<any>(),
+      WHERE ${where} ORDER BY (r.status='open') DESC, r.created_at DESC LIMIT ? OFFSET ?`).bind(...binds, ADMIN_PAGE_SIZE_COMPACT, (page - 1) * ADMIN_PAGE_SIZE_COMPACT).all<any>(),
     db.prepare(`SELECT COUNT(*) n FROM reports r WHERE ${where}`).bind(...binds).first<{ n: number }>(),
   ]);
   const total = cnt?.n ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE_COMPACT));
 
   const pageHref = (p: number) => {
     const qs = new URLSearchParams();
@@ -147,7 +147,7 @@ pageRoutes.get('/reports', async (c) => {
       : '—';
     const authorBan = r.author_banned ? ` ${pill('BAN', 'err')}` : '';
     const multi = r.open_for_post > 1 ? `<span class="badge bg-warning-lt text-warning ms-1">Zgłoszony ×${r.open_for_post}</span>` : '';
-    const postStatus = r.post_status ? pill(r.post_status, r.post_status === 'approved' ? 'ok' : r.post_status === 'pending' ? 'warn' : 'err') : '';
+    const postStatus = r.post_status ? pill(r.post_status, r.post_status === STATUS_APPROVED ? 'ok' : r.post_status === STATUS_PENDING ? 'warn' : 'err') : '';
     const rowCls = r.author_banned ? ' table-danger' : '';
     const actions = r.status === 'open'
       ? dropdown({

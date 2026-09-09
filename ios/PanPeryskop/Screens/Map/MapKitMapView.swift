@@ -249,13 +249,13 @@ struct SinglePostPin: View {
 
     @State private var bounceOffset: CGFloat = 0
 
-    private static let ttlHours: TimeInterval = 24
+    private static let ttlHours: TimeInterval = AppConstants.postTTLHours
 
     private var isMine: Bool { currentUserId != nil && post.user_id == currentUserId }
     private var isHighlighted: Bool { !isMine && !post.watched }
 
     private var ageHours: Double {
-        Double(Date().timeIntervalSince1970 - TimeInterval(post.created_at) / 1000) / 3600
+        Double(Date().timeIntervalSince1970 - TimeInterval(post.created_at) / 1000) / AppConstants.secondsPerHour
     }
 
     private var ringColor: Color {
@@ -267,7 +267,7 @@ struct SinglePostPin: View {
 
     private func progress(at date: Date) -> Double {
         let elapsed = date.timeIntervalSince1970 - TimeInterval(post.created_at) / 1000
-        return min(max(elapsed / (Self.ttlHours * 3600), 0), 1)
+        return min(max(elapsed / (Self.ttlHours * AppConstants.secondsPerHour), 0), 1)
     }
 
     private var bounceAmount: CGFloat {
@@ -357,7 +357,7 @@ private func iconForType(_ type: Post.MediaType) -> String {
 struct RequestPinBadge: View {
     let request: MediaRequest
 
-    private static let ttlHours: TimeInterval = 4
+    private static let ttlHours: TimeInterval = AppConstants.mediaRequestTTLHours
 
     private var ringColor: Color {
         if request.ageHours > 3 { return .red }
@@ -367,7 +367,7 @@ struct RequestPinBadge: View {
 
     private func progress(at date: Date) -> Double {
         let elapsed = date.timeIntervalSince1970 - TimeInterval(request.created_at) / 1000
-        return min(max(elapsed / (Self.ttlHours * 3600), 0), 1)
+        return min(max(elapsed / (Self.ttlHours * AppConstants.secondsPerHour), 0), 1)
     }
 
     var body: some View {
@@ -410,14 +410,14 @@ private func dist(_ lat1: Double, _ lng1: Double, _ lat2: Double, _ lng2: Double
 struct ClusterPin: View {
     let cluster: PostCluster
 
-    private static let ttlHours: TimeInterval = 24
+    private static let ttlHours: TimeInterval = AppConstants.postTTLHours
 
     private var oldest: Post {
         cluster.posts.min(by: { $0.created_at < $1.created_at }) ?? cluster.posts[0]
     }
 
     private var ageHours: Double {
-        Double(Date().timeIntervalSince1970 - TimeInterval(oldest.created_at) / 1000) / 3600
+        Double(Date().timeIntervalSince1970 - TimeInterval(oldest.created_at) / 1000) / AppConstants.secondsPerHour
     }
 
     private var ringColor: Color {
@@ -428,7 +428,7 @@ struct ClusterPin: View {
 
     private func progress(at date: Date) -> Double {
         let elapsed = date.timeIntervalSince1970 - TimeInterval(oldest.created_at) / 1000
-        return min(max(elapsed / (Self.ttlHours * 3600), 0), 1)
+        return min(max(elapsed / (Self.ttlHours * AppConstants.secondsPerHour), 0), 1)
     }
 
     var body: some View {

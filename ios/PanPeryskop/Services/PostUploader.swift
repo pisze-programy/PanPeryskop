@@ -9,7 +9,7 @@ final class PostUploader: @unchecked Sendable {
 
     private let store = PendingPostsStore.shared
     private let maxRetries = 3
-    private let staleAfter: TimeInterval = 12 * 3600
+    private let staleAfter: TimeInterval = AppConstants.pendingStaleAfter
     private let processingLock = NSLock()
     private var isProcessing = false
 

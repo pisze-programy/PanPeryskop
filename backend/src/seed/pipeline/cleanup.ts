@@ -56,7 +56,7 @@ export async function watchdogSeedBatches(env: Env, runType: RunType = 'cron'): 
   for (const b of results || []) {
     const t = Date.now();
     await env.DB.prepare('UPDATE seed_batches SET status=?, reason=?, updated_at=? WHERE id=?')
-      .bind('failed', `watchdog: no activity while in ${b.status} for ${STUCK_MS / 3600000}h`, t, b.id).run();
+      .bind('failed', `watchdog: no activity while in ${b.status} for ${STUCK_MS / HOUR_MS}h`, t, b.id).run();
     // Mark any non-terminal scopes/candidates so audit stays consistent.
     await env.DB.prepare(`UPDATE seed_scopes SET status='failed', error='watchdog: batch timed out', updated_at=? WHERE batch_id=? AND status NOT IN ('done','failed')`)
       .bind(t, b.id).run();

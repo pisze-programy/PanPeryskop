@@ -9,11 +9,11 @@
 // Shadow mode: nothing calls this in production yet (wiring comes later).
 import { nanoid } from 'nanoid';
 import { SeedCandidate, SeedProvider, ShowtimeBooking } from '../../core/types';
-import { buildDescription, showtimesJson, showtimeBookingJson, tagsJson } from '../../core/dedupe';
+import { buildDescription, showtimesJson, showtimeBookingJson, tagsJson } from '../../core/eventFormat';
 import { fallbackSeedGeo, resolveGeo } from '../../core/geo';
 import { detectMediaType, extForMediaType } from '../../../core/mediaFormat';
 import { doSavePost } from '../../../api/posts';
-import { STATUS_APPROVED, STATUS_PENDING } from '../../../core/models';
+import { STATUS_APPROVED, STATUS_PENDING, POST_TYPE_PHOTO } from '../../../core/models';
 import { findBlacklist, loadBlacklistRules, blacklistReason } from '../../core/blacklist';
 import { eventCreatedAtMs, eventDayEndMs, warsawMidnightMs } from '../../core/dates';
 import { now } from './state';
@@ -175,7 +175,7 @@ export async function ingestWinnerRow(
 
     const cand = rowToCandidate(row, dayStart, lat, lng, link);
     const description = buildDescription(cand);
-    await doSavePost(env as unknown as Env, { id: userId }, postId, 'photo', lat, lng, description,
+    await doSavePost(env as unknown as Env, { id: userId }, postId, POST_TYPE_PHOTO, lat, lng, description,
       mediaKey, thumbKey, createdAt, true, link, row.external_id, Boolean(existing), row.is_sold_out === 1,
       showtimesJson(cand), showtimeBookingJson(cand), tagsJson(cand),
       pendingGeo || provider.pendingByDefault ? STATUS_PENDING : STATUS_APPROVED,

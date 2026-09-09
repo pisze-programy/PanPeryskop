@@ -3,6 +3,7 @@
 import { Hono } from 'hono';
 import { browserBudget, cronInfo } from '../../queries';
 import { runSeed, seedTomorrow } from '../../../seed';
+import { DAY_MS } from '../../../seed/core/constants';
 import { api } from '../common';
 
 const apiRoutes = new Hono<{ Bindings: Env }>();
@@ -10,7 +11,7 @@ const apiRoutes = new Hono<{ Bindings: Env }>();
 apiRoutes.get('/seed', (c) => api(c, async (env) => {
   const q = c.req.query();
   const days = parseInt(String(q.days || '30'), 10) || 30;
-  const since = Date.now() - days * 86400000;
+  const since = Date.now() - days * DAY_MS;
   const { results } = await env.DB.prepare('SELECT * FROM seed_runs WHERE created_at>=? ORDER BY created_at DESC LIMIT 500').bind(since).all();
   const budget = env.BROWSER ? await browserBudget(env) : null;
   const cron = await cronInfo(env, env.DB);

@@ -46,7 +46,7 @@ class MapViewModel: ObservableObject {
     /// already-loaded pins; the 20s polling completes the cache and new pins appear.
     private var postsCache: [String: [String: Post]] = [:]
     private var postsCacheKey: String {
-        let day = feedCategory == .events ? dayString(offset: selectedDayOffset) : "live"
+        let day = feedCategory == .events ? dayString(offset: selectedDayOffset) : AppConstants.categoryLive
         return "\(feedCategory.rawValue)|\(day)|\(selectedTag ?? "")"
     }
     var currentUserId: String? {
@@ -182,7 +182,7 @@ class MapViewModel: ObservableObject {
         let dayBrowse = feedCategory == .events && selectedDayOffset > 0
         return serverPosts.filter {
             (dayBrowse ? true : $0.isStillValid)
-                && ($0.category ?? "live") == feedCategory.rawValue
+                && ($0.category ?? AppConstants.categoryLive) == feedCategory.rawValue
                 && (feedCategory != .live || !$0.watched)
         }
     }

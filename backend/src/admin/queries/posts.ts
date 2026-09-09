@@ -1,4 +1,7 @@
 // Live posts query builders + status aggregates (category='live').
+import { DAY_MS } from '../../seed/core/constants';
+import { CATEGORY_LIVE } from '../../core/models';
+
 export interface PostsFilter {
   status?: string | null;
   type?: string | null;
@@ -9,7 +12,7 @@ export interface PostsFilter {
 }
 
 function postsWhere(f: PostsFilter): { where: string; binds: unknown[] } {
-  let where = `p.category='live'`;
+  let where = `p.category='${CATEGORY_LIVE}'`;
   const binds: unknown[] = [];
   if (f.status) { where += ' AND p.status=?'; binds.push(f.status); }
   if (f.type) { where += ' AND p.type=?'; binds.push(f.type); }
@@ -54,9 +57,9 @@ export interface PostStatusCounts {
 
 export async function postStatusCounts(db: D1Database): Promise<PostStatusCounts> {
   const [total, active24h, byStatus] = await Promise.all([
-    db.prepare("SELECT COUNT(*) n FROM posts WHERE category='live'").first<{ n: number }>(),
-    db.prepare("SELECT COUNT(*) n FROM posts WHERE category='live' AND created_at>=?").bind(Date.now() - 86_400_000).first<{ n: number }>(),
-    db.prepare("SELECT status, COUNT(*) n FROM posts WHERE category='live' GROUP BY status").all<{ status: string; n: number }>(),
+    db.prepare(`SELECT COUNT(*) n FROM posts WHERE category='${CATEGORY_LIVE}'`).first<{ n: number }>(),
+    db.prepare(`SELECT COUNT(*) n FROM posts WHERE category='${CATEGORY_LIVE}' AND created_at>=?`).bind(Date.now() - DAY_MS).first<{ n: number }>(),
+    db.prepare(`SELECT status, COUNT(*) n FROM posts WHERE category='${CATEGORY_LIVE}' GROUP BY status`).all<{ status: string; n: number }>(),
   ]);
   const r: Record<string, number> = { total: total?.n ?? 0, active24h: active24h?.n ?? 0, approved: 0, pending: 0, rejected: 0 };
   for (const x of byStatus.results ?? []) if (x.status in r) r[x.status] = x.n;

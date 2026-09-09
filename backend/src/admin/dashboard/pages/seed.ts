@@ -8,6 +8,7 @@ import {
   pagination, pill, safeJson, staticFilePath,
 } from '../../ui';
 import { browserBudget, cronInfo } from '../../queries';
+import { DAY_MS, HOUR_MS } from '../../../seed/core/constants';
 import { requireSession, fmtPctNum } from '../common';
 import { PROVIDER_CONFIGS } from '../../../seed/providers/registry';
 import { renderPage } from './shared';
@@ -44,7 +45,7 @@ pageRoutes.get('/seed', async (c) => {
   const RUN_PAGE_SIZE = [25, 50, 100].includes(limitRaw) ? limitRaw : 25;
   const page = Math.max(1, parseInt(String(q.page || '1'), 10) || 1);
 
-  const since = Date.now() - 30 * 86_400_000;
+  const since = Date.now() - 30 * DAY_MS;
   const startOfMonth = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
 
   const [bAgg, rAgg, budget, cron, stuck] = await Promise.all([
@@ -56,7 +57,7 @@ pageRoutes.get('/seed', async (c) => {
     cronInfo(c.env, db),
     db.prepare(`SELECT day, status, updated_at, reason FROM seed_batches
                 WHERE status NOT IN ('done','failed') AND updated_at < ? ORDER BY updated_at ASC LIMIT 20`)
-      .bind(Date.now() - 2 * 3_600_000).all<{ day: string; status: string; updated_at: number; reason: string | null }>(),
+      .bind(Date.now() - 2 * HOUR_MS).all<{ day: string; status: string; updated_at: number; reason: string | null }>(),
   ]);
 
   // All providers (both executors) with their executor label — the seed page shows

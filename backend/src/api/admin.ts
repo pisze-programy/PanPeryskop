@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { STATUS_APPROVED, STATUS_REJECTED } from '../core/models';
+import { STATUS_APPROVED, STATUS_REJECTED, CATEGORY_EVENTS } from '../core/models';
 import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
 import { SEED_DAYS_AHEAD } from '../seed/core/constants';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
@@ -100,7 +100,7 @@ adminRoutes.post('/seed/affiliate', async (c) => {
   if (!ext || !linkUrl) return c.json({ error: 'external_id and link_url required' }, 400);
   if (ext.length > 200) return c.json({ error: 'Invalid external_id' }, 400);
   const res = await c.env.DB
-    .prepare(`UPDATE posts SET link_url = ?, source_url = ? WHERE external_id = ? AND category = 'events' AND status <> '${STATUS_REJECTED}' AND (source_url IS NULL OR source_url = '')`)
+    .prepare(`UPDATE posts SET link_url = ?, source_url = ? WHERE external_id = ? AND category = '${CATEGORY_EVENTS}' AND status <> '${STATUS_REJECTED}' AND (source_url IS NULL OR source_url = '')`)
     .bind(linkUrl, sourceUrl, ext)
     .run();
   return c.json({ updated: res.meta.changes });
@@ -135,7 +135,7 @@ adminRoutes.get('/seed/coverage', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT substr(external_id, 1, instr(external_id, '-') - 1) AS source, event_date, COUNT(*) AS n
      FROM posts
-     WHERE status = '${STATUS_APPROVED}' AND category = 'events' AND external_id IS NOT NULL
+     WHERE status = '${STATUS_APPROVED}' AND category = '${CATEGORY_EVENTS}' AND external_id IS NOT NULL
        AND event_date BETWEEN ?1 AND ?2
      GROUP BY source, event_date`
   ).bind(window[0], window[window.length - 1]).all<{ source: string; event_date: string; n: number }>();
@@ -270,7 +270,7 @@ adminRoutes.post('/events/cleanup', async (c) => {
   let limit = 500;
   if (sources.length) {
     const ph = sources.map(() => `substr(external_id,1,instr(external_id,'-')-1) = ?`).join(' OR ');
-    scope = `category='events' AND (${ph})`;
+    scope = `category='${CATEGORY_EVENTS}' AND (${ph})`;
     binds = sources;
   } else {
     const before = String(c.req.query('before') ?? '').trim();
@@ -280,12 +280,12 @@ adminRoutes.post('/events/cleanup', async (c) => {
     if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: 'day=YYYY-MM-DD required' }, 400);
     limit = Math.min(Math.max(parseInt(limitRaw || '500', 10) || 500, 1), 500);
     if (day) {
-      scope = `category='events' AND event_date = ?1`;
+      scope = `category='${CATEGORY_EVENTS}' AND event_date = ?1`;
       binds = [day];
     } else {
       const cutoff = before || todayWarsaw();
       const cutoffStart = Date.parse(`${cutoff}T00:00:00+02:00`);
-      scope = `category='events' AND (event_date < ?1 OR (event_date IS NULL AND created_at < ?2))`;
+      scope = `category='${CATEGORY_EVENTS}' AND (event_date < ?1 OR (event_date IS NULL AND created_at < ?2))`;
       binds = [cutoff, cutoffStart];
     }
   }

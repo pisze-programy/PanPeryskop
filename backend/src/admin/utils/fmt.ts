@@ -1,4 +1,5 @@
 // Date/number formatting + identity helpers shared across admin pages.
+import { DAY_MS, HOUR_MS } from '../../seed/core/constants';
 
 export function fmtDate(ms: number): string {
   if (!ms) return '—';
@@ -18,9 +19,9 @@ export function relAgo(ms: number | null | undefined): string {
   if (!ms) return '—';
   const diff = Date.now() - ms;
   if (diff < 60_000) return 'przed chwilą';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min temu`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} h temu`;
-  const days = Math.floor(diff / 86_400_000);
+  if (diff < HOUR_MS) return `${Math.floor(diff / 60_000)} min temu`;
+  if (diff < DAY_MS) return `${Math.floor(diff / HOUR_MS)} h temu`;
+  const days = Math.floor(diff / DAY_MS);
   if (days < 30) return `${days} d. temu`;
   return fmtDate(ms);
 }

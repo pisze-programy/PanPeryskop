@@ -1,15 +1,15 @@
 // JSON API: media requests — shared query builder, filter params + total.
 import { Hono } from 'hono';
 import { mediaRequestsSql, mediaRequestsCountSql, MediaRequestFilter } from '../../queries';
+import { ADMIN_DAYS_OPTIONS } from '../../config';
 import { api } from '../common';
 
 const apiRoutes = new Hono<{ Bindings: Env }>();
-const DAYS = [7, 14, 30, 90];
 
 apiRoutes.get('/media-requests', (c) => api(c, async (env) => {
   const q = c.req.query();
   const daysRaw = parseInt(String(q.days || '14'), 10);
-  const days = DAYS.includes(daysRaw) ? daysRaw : 14;
+  const days = ADMIN_DAYS_OPTIONS.includes(daysRaw) ? daysRaw : 14;
   const filter: MediaRequestFilter = {
     days,
     cityId: q.city ? String(q.city) : null,

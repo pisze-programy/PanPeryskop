@@ -1,4 +1,6 @@
 // Seed aggregates for the dashboard (excludes legacy provider='total' rows).
+import { DAY_MS } from '../../seed/core/constants';
+
 export async function seedDaySeries(db: D1Database, sinceMs: number): Promise<{ day: string; ingested: number; errors: number }[]> {
   const { results } = await db.prepare(
     `SELECT day, COALESCE(SUM(ingested),0) AS ingested, COALESCE(SUM(errors),0) AS errors
@@ -7,7 +9,7 @@ export async function seedDaySeries(db: D1Database, sinceMs: number): Promise<{ 
   return results ?? [];
 }
 
-export async function batchStatusCounts(db: D1Database, sinceMs = Date.now() - 30 * 86_400_000): Promise<{ status: string; n: number }[]> {
+export async function batchStatusCounts(db: D1Database, sinceMs = Date.now() - 30 * DAY_MS): Promise<{ status: string; n: number }[]> {
   const { results } = await db.prepare(
     'SELECT status, COUNT(*) n FROM seed_batches WHERE created_at>=? GROUP BY status'
   ).bind(sinceMs).all<{ status: string; n: number }>();

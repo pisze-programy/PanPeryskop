@@ -3,9 +3,10 @@
 // Secrets come ONLY from wrangler secrets (ADMIN_PASSWORD_HASH, ADMIN_COOKIE_SECRET)
 // and the legacy bearer ADMIN_SECRET for CLI/seed. No hardcoded defaults.
 import { nanoid } from 'nanoid';
+import { HOUR_MS } from '../seed/core/constants';
 
 export const COOKIE_NAME = 'pp_admin';
-export const SESSION_TTL_MS = 72 * 3_600_000; // 72h admin session
+export const SESSION_TTL_MS = 72 * HOUR_MS; // 72h admin session
 const MAX_ATTEMPTS = 5;
 const RATE_LIMIT_MS = 15 * 60_000;
 

@@ -9,11 +9,11 @@ import { priorityOf } from '../providers/registry';
 import { ProviderId } from '../core/types';
 import { containment, titleTokens, venuesMatch, isUkrainian } from '../core/match';
 import { eventCreatedAtMs, warsawDateOf } from '../core/dates';
-import { buildDescription, showtimesJson, tagsJson } from '../core/dedupe';
+import { buildDescription, showtimesJson, tagsJson } from '../core/eventFormat';
 import { resolveGeo, fallbackSeedGeo } from '../core/geo';
 import { detectMediaType, extForMediaType } from '../../core/mediaFormat';
 import { doSavePost } from '../../api/posts';
-import { STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED } from '../../core/models';
+import { STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED, POST_TYPE_PHOTO, CATEGORY_EVENTS } from '../../core/models';
 import { getOrCreateSeedUser } from '../pipeline/queue/state';
 import { writeSeedRun } from '../core/log';
 
@@ -185,7 +185,7 @@ export async function loadDayEvents(db: D1Database, day: string): Promise<Existi
   const { results } = await db
     .prepare(
       `SELECT id, external_id, link_url, description, lat, lng, created_at
-       FROM posts WHERE category='events' AND status=? AND event_date=?`
+       FROM posts WHERE category='${CATEGORY_EVENTS}' AND status=? AND event_date=?`
     )
     .bind(STATUS_APPROVED, day)
     .all<{
@@ -323,7 +323,7 @@ export async function ingestFacebookEvent(env: Env, input: IngestInput): Promise
   };
   const createdAt = eventCreatedAtMs(day);
   await doSavePost(
-    env, user, postId, 'photo', geo.lat, geo.lng, buildDescription(seedCand as never),
+    env, user, postId, POST_TYPE_PHOTO, geo.lat, geo.lng, buildDescription(seedCand as never),
     mediaKey, thumbKey, createdAt, true, input.link, input.externalId, isUpdate, false,
     showtimesJson(seedCand as never), null, tagsJson(seedCand as never), STATUS_PENDING,
   );

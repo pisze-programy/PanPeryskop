@@ -5,10 +5,10 @@
 import { nanoid } from 'nanoid';
 import { ProviderId } from '../core/types';
 import { eventCreatedAtMs, warsawMidnightMs } from '../core/dates';
-import { buildDescription, showtimesJson, tagsJson } from '../core/dedupe';
+import { buildDescription, showtimesJson, tagsJson } from '../core/eventFormat';
 import { detectMediaType, extForMediaType } from '../../core/mediaFormat';
 import { doSavePost } from '../../api/posts';
-import { STATUS_APPROVED } from '../../core/models';
+import { STATUS_APPROVED, POST_TYPE_PHOTO } from '../../core/models';
 import { getOrCreateSeedUser } from '../pipeline/queue/state';
 import { writeSeedRun } from '../core/log';
 import { loadDayEvents, findWinner, matchesExisting, rejectPosts } from './facebook';
@@ -116,7 +116,7 @@ export async function ingestMtpEvent(env: Env, input: MtpEventInput): Promise<Mt
   };
   const createdAt = eventCreatedAtMs(day);
   await doSavePost(
-    env, user, postId, 'photo', MTP_GEO.lat, MTP_GEO.lng, buildDescription(seedCand as never),
+    env, user, postId, POST_TYPE_PHOTO, MTP_GEO.lat, MTP_GEO.lng, buildDescription(seedCand as never),
     mediaKey, mediaKey, createdAt, true, input.link, input.externalId, isUpdate, false,
     showtimesJson(seedCand as never), null, tagsJson(seedCand as never), STATUS_APPROVED,
   );

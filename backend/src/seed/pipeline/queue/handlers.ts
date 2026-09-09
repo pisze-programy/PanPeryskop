@@ -7,8 +7,9 @@ import { SeedContext, ProviderId, CandidateStatus } from '../../core/types';
 import { warsawMidnightMs, eventCreatedAtMs, eventDayEndMs } from '../../core/dates';
 import { detectMediaType, extForMediaType } from '../../../core/mediaFormat';
 import { doSavePost } from '../../../api/posts';
-import { TTL_MS, STATUS_APPROVED, STATUS_PENDING } from '../../../core/models';
-import { dedupe, buildDescription, showtimesJson, showtimeBookingJson, tagsJson } from '../../core/dedupe';
+import { TTL_MS, STATUS_APPROVED, STATUS_PENDING, POST_TYPE_PHOTO } from '../../../core/models';
+import { dedupe } from '../../core/dedupe';
+import { buildDescription, showtimesJson, showtimeBookingJson, tagsJson } from '../../core/eventFormat';
 import { fallbackSeedGeo } from '../../core/geo';
 import { dropBlocked, dropCancelled, rescueRealShows, isCancelled } from '../../core/filters';
 import { loadBlacklistRules, findBlacklist, blacklistReason } from '../../core/blacklist';
@@ -267,7 +268,7 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     }
 
     const description = buildDescription(cand);
-    await doSavePost(env as unknown as Env, user, postId, 'photo', cand.lat!, cand.lng!, description,
+    await doSavePost(env as unknown as Env, user, postId, POST_TYPE_PHOTO, cand.lat!, cand.lng!, description,
       mediaKey, thumbKey, createdAt, true, cand.link, cand.externalId, Boolean(existing), Boolean(cand.isSoldOut), showtimesJson(cand), showtimeBookingJson(cand), tagsJson(cand),
       (pendingGeo || provider.pendingByDefault) ? STATUS_PENDING : STATUS_APPROVED,
       cand.partnerId || null, cand.partnerName || null, cand.price ?? null);

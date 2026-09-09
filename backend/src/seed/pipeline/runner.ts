@@ -3,11 +3,13 @@
 import { nanoid } from 'nanoid';
 import { detectMediaType, extForMediaType } from '../../core/mediaFormat';
 import { doSavePost } from '../../api/posts';
-import { TTL_MS, STATUS_APPROVED, STATUS_PENDING } from '../../core/models';
+import { TTL_MS, STATUS_APPROVED, STATUS_PENDING, POST_TYPE_PHOTO } from '../../core/models';
+import { HOUR_MS } from '../core/constants';
 import { SeedProvider, SeedProviderResult, SeedResult, SeedContext, RunType, SeedCandidate, ProviderId } from '../core/types';
 import { enabledProviders } from '../providers';
 import { warsawMidnightMs, tomorrowWarsaw, eventCreatedAtMs, eventDayEndMs } from '../core/dates';
-import { buildDescription, dedupe, showtimesJson, showtimeBookingJson, tagsJson } from '../core/dedupe';
+import { dedupe } from '../core/dedupe';
+import { buildDescription, showtimesJson, showtimeBookingJson, tagsJson } from '../core/eventFormat';
 import { fallbackSeedGeo } from '../core/geo';
 import { dropBlocked, rescueRealShows } from '../core/filters';
 import { loadBlacklistRules, findBlacklist, blacklistReason } from '../core/blacklist';
@@ -156,7 +158,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
 
       const description = buildDescription(c);
       await doSavePost(
-        env, user, postId, 'photo', c.lat, c.lng, description,
+        env, user, postId, POST_TYPE_PHOTO, c.lat, c.lng, description,
         mediaKey, thumbKey, createdAt, true, c.link, c.externalId, Boolean(existing), Boolean(c.isSoldOut), showtimesJson(c), showtimeBookingJson(c), tagsJson(c),
         (pendingGeo || provider.pendingByDefault) ? STATUS_PENDING : STATUS_APPROVED,
         c.partnerId || null, c.partnerName || null, c.price ?? null
@@ -188,7 +190,7 @@ export async function runSeed(env: Env, day: string, runType: RunType = 'manual'
 
   const budget = env.BROWSER ? await browserBudget(env) : null;
   if (budget && budget.exceeded) {
-    console.warn(`seed browser budget exceeded: ${(budget.monthMs / 3_600_000).toFixed(1)}h / ${(budget.limitMs / 3_600_000)}h`);
+    console.warn(`seed browser budget exceeded: ${(budget.monthMs / HOUR_MS).toFixed(1)}h / ${(budget.limitMs / HOUR_MS)}h`);
   }
   console.log(`seed ${runType} day=${day} total candidates=${merged.length} ingested=${totalIngested} skipped=${totalSkipped} errors=${allErrors.length} durationMs=${totalDurationMs} browserMs=${totalBrowserMs}`);
 

@@ -1,12 +1,15 @@
 export const SEED_DEVICE_ID = 'panperyskop-seed';
 
-// ---------- Time units ----------
 export const HOUR_MS = 3_600_000;
 export const DAY_MS = 24 * HOUR_MS;
 // Event posts become visible at 06:00 Europe/Warsaw of their day (TTL window start).
 export const EVENT_VISIBLE_OFFSET_MS = 6 * HOUR_MS;
+// An event/showtime stays visible for this long after its start (the "+1h filter").
+export const EVENT_GRACE_MS = HOUR_MS;
+// Showtime marker for an UNKNOWN start time ("00:00") — all-day events (marathons,
+// tours, feeds that omit the hour) carry it and are never time-filtered.
+export const UNKNOWN_TIME = '00:00';
 
-// ---------- Seed window ----------
 // The app browses [today, today+SEED_DAYS_AHEAD]. The seed REFILLS the whole
 // window every SEED_INTERVAL_DAYS (cadence) instead of rolling daily — idempotent
 // by external_id, so late-published events for the whole window still land.
@@ -21,12 +24,10 @@ export const SEED_INTERVAL_DAYS = 3;
  *  refills). */
 export const SEED_REFILL_AHEAD = SEED_DAYS_AHEAD + SEED_INTERVAL_DAYS - 1;
 
-// ---------- provider fetch timeouts ----------
 // Generous on purpose: the VPS fetches through the phone's cellular exit node,
 // where a tight (10-20s) timeout drops valid responses and yields 0 candidates.
 export const PROVIDER_FETCH_TIMEOUT_MS = 60_000;
 
-// ---------- Queue pipeline limits ----------
 // Cloudflare Queues sendBatch caps at 100 messages per call.
 export const QUEUE_SEND_BATCH_CAP = 100;
 // D1 batch() caps at 100 statements — keep chunks well under it.
@@ -62,7 +63,7 @@ export const MK_EMBARGO = 1;
 // Fallback anonymous-token cache TTL when the JWT has no usable `exp` claim.
 export const MK_TOKEN_TTL_MS = 12 * HOUR_MS;
 
-export interface MkCinema {
+interface MkCinema {
   id: string;
   name: string;
   city: string;
@@ -124,7 +125,6 @@ export function mkScopes(): string[] {
 // Thumbnail resizing on Sitecore media URLs (mw/mh keep aspect via fit).
 export const MK_THUMB_QUERY = '&mw=240&mh=350';
 
-// ---------- cinema-city.pl ----------
 export const CC_TENANT = '10103';
 export const CC_BASE = `https://www.cinema-city.pl/pl/data-api-service/v1/quickbook/${CC_TENANT}`;
 export const CC_SITE = 'https://www.cinema-city.pl/';
@@ -132,7 +132,7 @@ export const CC_FILM_EVENTS = (cinemaId: string, day: string) => `${CC_BASE}/fil
 export const CC_FILM_URL = (filmId: string) => `${CC_SITE}filmy/${filmId}`;
 export const CC_TIMEOUT_MS = PROVIDER_FETCH_TIMEOUT_MS;
 
-export interface CcCinema {
+interface CcCinema {
   code: string;
   name: string;
   city: string;
@@ -184,25 +184,19 @@ export function ccScopes(): string[] {
   return CC_CINEMAS.map((c) => c.code);
 }
 
-// ---------- helios.pl ----------
 export const HELIOS_BASE = 'https://www.helios.pl';
 export const HELIOS_API = 'https://api.helios.pl/api/v1';
-export const HELIOS_CINEMAS_URL = `${HELIOS_API}/cinemas`;
 export const HELIOS_SCREENINGS = (cinemaId: number) => `${HELIOS_API}/cinemas/${cinemaId}/screenings`;
 export const HELIOS_FILM = (cinema: HeliosCinema, filmSlug: string, filmId: number) =>
   `${HELIOS_BASE}/${cinema.citySlug}/${cinema.slug}/filmy/${filmSlug}-${filmId}`;
 export const HELIOS_TIMEOUT_MS = 20_000;
 
-// ---------- VPS executor (residential-egress seed runtime) ----------
-// Tunable knobs for the VPS "sposób wykonania" — see executors/vps/index.ts.
 export const VPS_IPV4_PROXY_HOST = '127.0.0.1';
 export const VPS_IPV4_PROXY_PORT = 1057;
 export const VPS_WINDOW_START_HOUR = 5; // Europe/Warsaw — outside this window a kick is a no-op
 export const VPS_WINDOW_END_HOUR = 22;
 export const VPS_EXIT_IPHONE = 'iphone-14-pro-max'; // primary residential exit node
 export const VPS_EXIT_MAC = 'macos'; // fallback exit node
-export const VPS_MAX_ATTEMPTS = 3;
-export const VPS_BACKOFF_MS = [0, 300_000, 600_000]; // after attempt 1 and 2
 export const VPS_EXIT_PROBE_TIMEOUT_MS = 20_000;
 export const VPS_EXIT_SWITCH_WAIT_MS = 2_000;
 // Resource gate — the VPS is a 256 MB shared box. Before each scope the seed
@@ -216,7 +210,6 @@ export const VPS_MAX_LOAD1 = 2.0;
 // in-flight media buffers. Override via env on the box (VPS_CONCURRENCY).
 export const VPS_CONCURRENCY = Number(process.env.VPS_CONCURRENCY || 8);
 
-// ---------- luma.com ----------
 export const LUMA_API = 'https://api.luma.com/discover';
 export const LUMA_EVENT_WEB = 'https://lu.ma';
 export const LUMA_LIMIT = 50; // server caps the page size at 50
@@ -226,12 +219,11 @@ export const LUMA_PLACE_WARSAW = 'discplace-PTcuEQVHuySJe8N';
 // covers the metro area incl. suburbs like Sopot for Gdańsk).
 export const LUMA_BBOX_RADIUS = 0.3;
 
-// ---------- meetup.com ----------
 export const MEETUP_GQL = 'https://www.meetup.com/gql2';
 export const MEETUP_RADIUS = 40; // km — city + surroundings; pins show by coords
 export const MEETUP_FIRST = 200; // page size for the custom recommendedEvents query
 
-export interface HeliosCinema {
+interface HeliosCinema {
   id: number;
   name: string;
   city: string;

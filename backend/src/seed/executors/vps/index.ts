@@ -55,6 +55,7 @@ import { todayWarsaw, addDaysWarsaw } from '../../../../src/seed/core/dates';
 import {
   SEED_DAYS_AHEAD,
   SEED_REFILL_AHEAD,
+  HOUR_MS,
   VPS_IPV4_PROXY_HOST, VPS_IPV4_PROXY_PORT, VPS_WINDOW_START_HOUR, VPS_WINDOW_END_HOUR,
   VPS_EXIT_IPHONE, VPS_EXIT_MAC, VPS_EXIT_PROBE_TIMEOUT_MS, VPS_EXIT_SWITCH_WAIT_MS,
 } from '../../../../src/seed/core/constants';
@@ -132,7 +133,7 @@ function runSync(cmd: string, args: string[], opts?: { cwd?: string; env?: Recor
     cwd: opts?.cwd,
     env: { ...process.env, ...opts?.env },
     stdio: opts?.stdio ?? 'pipe',
-    timeout: 3_600_000,
+    timeout: HOUR_MS,
   });
   return { status: r.status ?? 1, output: `${r.stdout ?? ''}${r.stderr ?? ''}` };
 }

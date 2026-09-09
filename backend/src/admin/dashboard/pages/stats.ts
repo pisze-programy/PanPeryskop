@@ -8,9 +8,9 @@ import { STAT_METRICS, statsPayload, StatsMetric } from '../../queries';
 import { requireSession } from '../common';
 import { plDay } from '../../utils/fmt';
 import { renderPage } from './shared';
+import { ADMIN_DAYS_OPTIONS } from '../../config';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
-const DAYS_OPTIONS = [7, 14, 30, 90];
 
 function statCardsHtml(p: { sum: number; bestDay: { d: string; n: number } | null; avgPerDay: number; deltaPct: number | null }): string {
   const delta = p.deltaPct === null || p.deltaPct === 0
@@ -38,7 +38,7 @@ pageRoutes.get('/stats', async (c) => {
   const metricRaw = String(q.metric || 'views');
   const metric: StatsMetric = metricRaw in STAT_METRICS ? (metricRaw as StatsMetric) : 'views';
   const daysRaw = parseInt(String(q.days || '14'), 10);
-  const days = DAYS_OPTIONS.includes(daysRaw) ? daysRaw : 14;
+  const days = ADMIN_DAYS_OPTIONS.includes(daysRaw) ? daysRaw : 14;
   const view = q.view === 'bar' ? 'bar' : 'area';
 
   const initial = await statsPayload(db, metric, days);
@@ -65,7 +65,7 @@ pageRoutes.get('/stats', async (c) => {
       ${Object.keys(STAT_METRICS).map((m) => metricBtn(m as StatsMetric)).join('')}
     </div>
     <div class="btn-group btn-group-sm ms-md-auto" role="group" aria-label="Zakres dni">
-      ${DAYS_OPTIONS.map((n) => dayBtn(n)).join('')}
+      ${ADMIN_DAYS_OPTIONS.map((n) => dayBtn(n)).join('')}
     </div>
     <div class="btn-group btn-group-sm" role="group" aria-label="Typ wykresu">
       ${viewBtn('area', 'chart-line', 'Wykres liniowy')}${viewBtn('bar', 'chart-bar', 'Słupki')}

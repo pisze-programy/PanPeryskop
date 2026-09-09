@@ -19,11 +19,12 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, renameSync, rmSync,
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { dedupe, buildDescription } from '../../../../src/seed/core/dedupe';
+import { dedupe } from '../../../../src/seed/core/dedupe';
+import { buildDescription, showtimesArray, parseEventDescription } from '../../../../src/seed/core/eventFormat';
 import { isCancelled, dropBlocked, rescueRealShows } from '../../../../src/seed/core/filters';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs, warsawDateOf, eventDayEndMs } from '../../../../src/seed/core/dates';
 import { GeoStore, fallbackSeedGeo } from '../../../../src/seed/core/geo';
-import { SEED_DAYS_AHEAD, SEED_REFILL_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1, VPS_CONCURRENCY } from '../../../../src/seed/core/constants';
+import { SEED_DAYS_AHEAD, SEED_REFILL_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1, VPS_CONCURRENCY, EVENT_VISIBLE_OFFSET_MS, HOUR_MS } from '../../../../src/seed/core/constants';
 import { UA_HEADERS } from '../../../../src/seed/providers/http';
 import { configOf } from '../../../../src/seed/providers/registry';
 import type { SeedCandidate, ProviderId } from '../../../../src/seed/core/types';
@@ -354,7 +355,7 @@ export function entryFor(c: SeedCandidate & { lat: number; lng: number }, mediaR
     external_id: c.externalId,
     title: c.title,
     description: buildDescription(c),
-    created_at: `${day}T06:00:00+02:00`,
+    created_at: `${day}T${String(EVENT_VISIBLE_OFFSET_MS / HOUR_MS).padStart(2, '0')}:00:00+02:00`,
     venue: c.venue,
     address: c.address,
     city: c.city,
@@ -366,7 +367,7 @@ export function entryFor(c: SeedCandidate & { lat: number; lng: number }, mediaR
     status: 'pending',
     post_id: null,
     error: null,
-    showtimes: c.times?.length ? c.times : null,
+    showtimes: showtimesArray(c),
     showtime_booking: c.showtimeBooking?.length ? c.showtimeBooking : null,
     tags: c.tags?.length ? c.tags : null,
     partner_id: c.partnerId || null,
@@ -389,10 +390,10 @@ export interface ExistingPost { postId: string; cand: SeedCandidate }
 
 export function postToCandidate(p: PostLike, day: string): SeedCandidate {
   const desc = p.description || '';
-  const m = /^(.+?):\s*(\d{2}:\d{2}),\s*(.*)$/.exec(desc);
-  const title = (m?.[1] || desc).trim();
-  const time = m?.[2] || null;
-  const loc = (m?.[3] || '').trim();
+  const parsed = parseEventDescription(desc);
+  const title = (parsed?.title || desc).trim();
+  const time = parsed?.time || null;
+  const loc = parsed?.loc || '';
   const venue = loc.split(',')[0].trim();
   const dayMs = warsawMidnightMs(day);
   const startMs = time ? dayMs + ((parseInt(time.slice(0, 2), 10) * 60 + parseInt(time.slice(3, 5), 10)) * 60_000) : dayMs;

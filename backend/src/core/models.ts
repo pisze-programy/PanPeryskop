@@ -75,12 +75,16 @@ export interface StoryRow extends PostRow {
 }
 
 // Content category enum — NOT driven by is_sponsored (which is visual only).
-export const POST_CATEGORIES = ['live', 'events'] as const;
+export const CATEGORY_LIVE = 'live';
+export const CATEGORY_EVENTS = 'events';
+export const POST_CATEGORIES = [CATEGORY_LIVE, CATEGORY_EVENTS] as const;
 export type PostCategory = (typeof POST_CATEGORIES)[number];
 export const POST_CATEGORY_SET: ReadonlySet<string> = new Set<string>(POST_CATEGORIES);
 
 // Media types and moderation statuses — single source of truth.
-export const POST_TYPES = ['photo', 'video'] as const;
+export const POST_TYPE_PHOTO = 'photo';
+export const POST_TYPE_VIDEO = 'video';
+export const POST_TYPES = [POST_TYPE_PHOTO, POST_TYPE_VIDEO] as const;
 export type PostType = (typeof POST_TYPES)[number];
 export const POST_TYPE_SET: ReadonlySet<string> = new Set<string>(POST_TYPES);
 
@@ -159,6 +163,8 @@ export const MAX_LOOKAHEAD_MS = 366 * 24 * HOUR_MS;
 
 export const USERNAME_MIN_LEN = 3;
 export const USERNAME_MAX_LEN = 30;
+// Seed external_id length cap (shared by the ingest API and the manual FB import).
+export const MAX_EXTERNAL_ID_LEN = 200;
 
 export function defaultUsername(): string {
   return `Peryskop no.${String(Math.floor(1000 + Math.random() * 9000))}`;

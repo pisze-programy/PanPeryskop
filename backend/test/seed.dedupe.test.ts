@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dedupe, buildDescription, todayWarsaw, tomorrowWarsaw, warsawMidnightMs, toWarsawIso } from '../src/seed';
 import { ProviderId } from '../src/seed/core/types';
+import { HOUR_MS } from '../src/seed/core/constants';
 
 function cand(over: Partial<{ source: ProviderId; externalId: string; title: string; startMs: number; venue: string; address: string; city: string; link: string }>) {
   const externalId = over.externalId ?? 'x-1';
@@ -54,7 +55,7 @@ test('dedupe: unknown source keeps the already-seen candidate', () => {
 
 test('dedupe: same day, same title+venue, different hours -> merged (earliest wins)', () => {
   const a = cand({ externalId: 'a', startMs: 1_782_765_000_000 });
-  const b = cand({ externalId: 'b', startMs: 1_782_765_000_000 + 3_600_000 });
+  const b = cand({ externalId: 'b', startMs: 1_782_765_000_000 + HOUR_MS });
   const out = dedupe([a, b]);
   assert.equal(out.length, 1, 'same event at a different hour in the same day must merge');
   assert.equal(out[0].externalId, 'a', 'earlier hour must become canonical');
@@ -96,7 +97,7 @@ test('dedupe: PL/UA versions of the same film are BOTH kept (cinema shows everyt
   });
   const ua = cand({
     source: ProviderId.MULTIKINO, externalId: 'ua', title: 'ЛЮДИНА-ПАВУК: АБСОЛЮТНО НОВИЙ ДЕНЬ',
-    startMs: t - 3_600_000, venue: 'Multikino Katowice, ul. 3 Maja 30',
+    startMs: t - HOUR_MS, venue: 'Multikino Katowice, ul. 3 Maja 30',
     link: 'https://www.multikino.pl/repertuar/katowice/filmy/spider-man-calkiem-nowy-dzien-ukrainian-dubbing',
   });
   assert.equal(dedupe([pl, ua]).length, 2, 'language versions of a cinema film both stay');

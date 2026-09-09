@@ -15,7 +15,7 @@ struct MyPost: Codable, Identifiable, Equatable {
     let is_expired: Bool
     let is_future: Bool
 
-    static let ttlMs: Int64 = 24 * 3_600_000
+    static let ttlMs: Int64 = AppConstants.postTTLMs
 
     var isPhoto: Bool { type == "photo" }
 

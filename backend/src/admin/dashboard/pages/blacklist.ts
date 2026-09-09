@@ -8,6 +8,7 @@ import {
 } from '../../ui';
 import { requireSession } from '../common';
 import { blacklistMatch, ruleFromRow } from '../../../seed/core/blacklist';
+import { CATEGORY_EVENTS, STATUS_APPROVED, STATUS_PENDING } from '../../../core/models';
 import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
@@ -30,7 +31,7 @@ pageRoutes.get('/blacklist', async (c) => {
     .prepare('SELECT id, pattern, venue, partner_id, partner_name, note, active, created_at FROM event_blacklist ORDER BY created_at DESC')
     .all<{ id: string; pattern: string | null; venue: string | null; partner_id: string | null; partner_name: string | null; note: string | null; active: number | null; created_at: number }>();
   const { results: posts } = await db.prepare(
-    "SELECT description, partner_id FROM posts WHERE category='events' AND status IN ('approved','pending')"
+    `SELECT description, partner_id FROM posts WHERE category='${CATEGORY_EVENTS}' AND status IN ('${STATUS_APPROVED}','${STATUS_PENDING}')`
   ).all<{ description: string | null; partner_id: string | null }>();
   const postCands = (posts ?? []).map(candFromPost);
 

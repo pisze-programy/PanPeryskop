@@ -9,6 +9,7 @@ import {
 import { requireSession } from '../common';
 import { CANONICAL_TAG_SET, TAG_LABELS } from '../../../seed/core/tags';
 import { tagCatalog } from '../../../core/tagCatalog';
+import { CATEGORY_EVENTS, STATUS_APPROVED, STATUS_PENDING } from '../../../core/models';
 import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
@@ -22,24 +23,24 @@ pageRoutes.get('/tags', async (c) => {
   const catalog = await tagCatalog(db);
 
   const [total, tagged, locked, customTags, perTag, perTagSource, perTagStatus, nonCinema, multiTag] = await Promise.all([
-    db.prepare("SELECT COUNT(*) n FROM posts WHERE category='events'").first<{ n: number }>(),
-    db.prepare("SELECT COUNT(*) n FROM posts WHERE category='events' AND tags IS NOT NULL AND tags <> '[]'").first<{ n: number }>(),
-    db.prepare("SELECT COUNT(*) n FROM posts WHERE category='events' AND tags_locked=1").first<{ n: number }>(),
+    db.prepare(`SELECT COUNT(*) n FROM posts WHERE category='${CATEGORY_EVENTS}'`).first<{ n: number }>(),
+    db.prepare(`SELECT COUNT(*) n FROM posts WHERE category='${CATEGORY_EVENTS}' AND tags IS NOT NULL AND tags <> '[]'`).first<{ n: number }>(),
+    db.prepare(`SELECT COUNT(*) n FROM posts WHERE category='${CATEGORY_EVENTS}' AND tags_locked=1`).first<{ n: number }>(),
     db.prepare('SELECT id, label, created_at FROM admin_tags ORDER BY created_at DESC').all<{ id: string; label: string; created_at: number }>(),
     db.prepare(`SELECT j.value AS tag, COUNT(*) n FROM posts p, json_each(p.tags) j
-                WHERE p.category='events' AND p.tags IS NOT NULL AND p.tags <> '[]' GROUP BY j.value ORDER BY n DESC`).all<{ tag: string; n: number }>(),
+                WHERE p.category='${CATEGORY_EVENTS}' AND p.tags IS NOT NULL AND p.tags <> '[]' GROUP BY j.value ORDER BY n DESC`).all<{ tag: string; n: number }>(),
     db.prepare(`SELECT j.value AS tag, substr(p.external_id,1,instr(p.external_id,'-')-1) AS source, COUNT(*) n
                 FROM posts p, json_each(p.tags) j
-                WHERE p.category='events' AND p.tags IS NOT NULL AND p.tags <> '[]'
+                WHERE p.category='${CATEGORY_EVENTS}' AND p.tags IS NOT NULL AND p.tags <> '[]'
                 GROUP BY tag, source ORDER BY tag, n DESC`).all<{ tag: string; source: string; n: number }>(),
     db.prepare(`SELECT j.value AS tag, p.status, COUNT(*) n
                 FROM posts p, json_each(p.tags) j
-                WHERE p.category='events' AND p.tags IS NOT NULL AND p.tags <> '[]'
+                WHERE p.category='${CATEGORY_EVENTS}' AND p.tags IS NOT NULL AND p.tags <> '[]'
                 GROUP BY tag, status ORDER BY tag, n DESC`).all<{ tag: string; status: string; n: number }>(),
     db.prepare(`SELECT j.value AS tag, COUNT(*) n FROM posts p, json_each(p.tags) j
-                WHERE p.category='events' AND p.tags IS NOT NULL AND p.tags <> '[]' AND ${NON_CINEMA}
+                WHERE p.category='${CATEGORY_EVENTS}' AND p.tags IS NOT NULL AND p.tags <> '[]' AND ${NON_CINEMA}
                 GROUP BY j.value ORDER BY n DESC`).all<{ tag: string; n: number }>(),
-    db.prepare("SELECT COUNT(*) n FROM posts WHERE category='events' AND tags IS NOT NULL AND json_array_length(tags) > 1").first<{ n: number }>(),
+    db.prepare(`SELECT COUNT(*) n FROM posts WHERE category='${CATEGORY_EVENTS}' AND tags IS NOT NULL AND json_array_length(tags) > 1`).first<{ n: number }>(),
   ]);
 
   const nTotal = total?.n ?? 0;
@@ -144,7 +145,7 @@ pageRoutes.get('/tags', async (c) => {
     .map((t) => {
       const n = counts.get(t.id) ?? 0;
       const statuses = (statusByTag.get(t.id) ?? []).map((s) =>
-        `<span class="${s.status === 'approved' ? 'text-success' : s.status === 'pending' ? 'text-warning' : 'text-danger'}">${s.status}: ${s.n}</span>`).join(' · ');
+        `<span class="${s.status === STATUS_APPROVED ? 'text-success' : s.status === STATUS_PENDING ? 'text-warning' : 'text-danger'}">${s.status}: ${s.n}</span>`).join(' · ');
       const pctTag = nTagged ? Math.round((n / nTagged) * 100) : 0;
       const pctAll = nTotal ? Math.round((n / nTotal) * 100) : 0;
       return `<tr>

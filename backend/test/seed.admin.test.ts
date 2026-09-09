@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { browserBudget } from '../src/seed/core/log';
 import { verifyPassword, readSession, createSession } from '../src/admin/auth';
+import { HOUR_MS } from '../src/seed/core/constants';
 import { nextCronRunMs, cronSummary } from '../src/admin/cron';
 import { cityBbox, nearestCity } from '../src/admin/cities';
 import { eventsSql } from '../src/admin/queries';
@@ -10,8 +11,8 @@ import { ProviderId } from '../src/seed/core/types';
 test('browserBudget: sums browser_ms for current month', async () => {
   // Fake D1 with two rows; one inside month (now), one old.
   const rows = [
-    { total: 5 * 3_600_000 },   // this month
-    { total: 5 * 3_600_000 },   // this month (second row)
+    { total: 5 * HOUR_MS },   // this month
+    { total: 5 * HOUR_MS },   // this month (second row)
   ];
   const env = {
     BROWSER: {},
@@ -25,7 +26,7 @@ test('browserBudget: sums browser_ms for current month', async () => {
   } as unknown as Env;
   const b = await browserBudget(env);
   assert.ok(b);
-  assert.equal(b.monthMs, 10 * 3_600_000);
+  assert.equal(b.monthMs, 10 * HOUR_MS);
   assert.equal(b.exceeded, false); // == limit, not > limit
 });
 

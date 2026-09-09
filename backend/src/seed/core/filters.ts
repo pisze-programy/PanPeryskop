@@ -1,5 +1,6 @@
 import { SeedCandidate, ProviderId } from './types';
 import { toWarsawIso } from './dates';
+import { HOUR_MS } from './constants';
 import { diacriticFold, linkKey, containment, titleTokens, venuesClose } from './match';
 
 const CANCELLED_MARKERS = ['cancelled', 'odwolany', 'odwolana', 'odwolane', 'anulowany', 'anulowana', 'anulowane'];
@@ -56,7 +57,7 @@ export function dropBlocked(events: SeedCandidate[]): SeedCandidate[] {
 // Only sources that list genuine, distinct shows can carry two entries of the
 // same title+venue with a large hour gap and mean two real performances.
 export const REAL_SOURCES = new Set<ProviderId>([ProviderId.KUPBILECIK, ProviderId.GOING]);
-export const RESCUE_MIN_MS = 2 * 3_600_000;
+export const RESCUE_MIN_MS = 2 * HOUR_MS;
 
 const dayKey = (startMs: number): string => toWarsawIso(startMs).slice(0, 10);
 

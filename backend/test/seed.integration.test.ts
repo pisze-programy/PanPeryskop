@@ -16,7 +16,8 @@ import { enqueueSeedDay, runQueue, QUEUE_NAMES } from '../src/seed/pipeline/queu
 import { storiesRoutes } from '../src/api/stories';
 import { parseStoriesLimit } from '../src/api/stories';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs } from '../src/seed/core/dates';
-import { SEED_DAYS_AHEAD } from '../src/seed/core/constants';
+import { SEED_DAYS_AHEAD, HOUR_MS } from '../src/seed/core/constants';
+import { entryFor } from '../src/seed/executors/vps/runtime';
 import type { SeedQueueMessage } from '../src/seed/pipeline/queue';
 import type { SeedProvider } from '../src/seed/core/types';
 
@@ -188,7 +189,7 @@ test('integration: seed pipeline completes end-to-end and catches provider/inges
 
   const boomCand = candidate({ externalId: 'fake-boom', title: 'Boom', mediaUrl: 'https://x.pl/boom.jpg' });
   const okCand = candidate({ externalId: 'fake-ok', title: 'Koncert', startMs: DAY_START });
-  const okCand2 = candidate({ externalId: 'fake-ok2', title: 'Standup', startMs: DAY_START + 3_600_000 });
+  const okCand2 = candidate({ externalId: 'fake-ok2', title: 'Standup', startMs: DAY_START + HOUR_MS });
 
   const restore = swapFakes([
     fakeProvider('fakea', ['city1', 'city2'], async (scope) => {
@@ -318,8 +319,9 @@ test('integration: /stories?day= browses that day even outside the live TTL wind
   const today = todayWarsaw();
   const futureDay = addDaysWarsaw(today, 2);
   const now = Date.now();
-  // p_today — event today, created_at 06:00 Warsaw today (inside the live window).
-  ins.run('p_today', 52.2, 21.0, 'dzis', Date.parse(`${today}T04:00:00Z`), 'events', today);
+  // p_today — event today, created now (always inside the live window — the 06:00
+  // anchor would be in the FUTURE when the suite runs before 06:00 Warsaw).
+  ins.run('p_today', 52.2, 21.0, 'dzis', now, 'events', today);
   // p_future — event in +2 days, created_at 06:00 Warsaw that day (OUTSIDE the
   // live window because created_at > now).
   ins.run('p_future', 52.3, 21.1, 'jutro', Date.parse(`${futureDay}T04:00:00Z`), 'events', futureDay);
@@ -406,11 +408,11 @@ test('integration: /stories applies the +1h liveness rule to events and showtime
   }).format(new Date(ms));
   // Times relative to now — the test mirrors the rule (oracle) so it stays correct
   // regardless of the hour the suite runs (including Warsaw midnight rollover).
-  const tPast = warsawHhmm(now - 2 * 3_600_000);   // 2h ago → over the grace
+  const tPast = warsawHhmm(now - 2 * HOUR_MS);   // 2h ago → over the grace
   const tGrace = warsawHhmm(now - 30 * 60_000);    // 30min ago → still within grace
-  const tFuture = warsawHhmm(now + 2 * 3_600_000); // upcoming → kept
+  const tFuture = warsawHhmm(now + 2 * HOUR_MS); // upcoming → kept
   const hhmmMs = (t: string) => (Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))) * 60_000;
-  const isLive = (t: string) => t === '00:00' || dayStart + hhmmMs(t) + 3_600_000 > now;
+  const isLive = (t: string) => t === '00:00' || dayStart + hhmmMs(t) + HOUR_MS > now;
 
   const bbox = 'sw_lat=52.0&sw_lng=20.9&ne_lat=52.5&ne_lng=21.3';
 
@@ -458,4 +460,20 @@ test('integration: parseStoriesLimit defaults to 50, caps at 1000, clamps to >=1
   assert.equal(parseStoriesLimit('42'), 42);
   assert.equal(parseStoriesLimit('5000'), 1000);
   assert.equal(parseStoriesLimit('abc'), 50);
+});
+
+test('vps entryFor: single startMs becomes a showtimes array (luma/meetup/going)', () => {
+  const today = todayWarsaw();
+  const startMs = warsawMidnightMs(today) + 11 * HOUR_MS; // 11:00 Europe/Warsaw
+  const cand = {
+    source: 'luma' as const, externalId: 'luma-x', title: 'Spacer', startMs,
+    lat: 52.4, lng: 16.9, city: 'Poznań', venue: 'Park', address: '', link: '',
+    // No `times` — single-time providers must still get a structured showtime.
+  };
+  const entry = entryFor(cand as any, 'media.jpg');
+  assert.deepEqual(entry.showtimes, ['11:00']);
+
+  // Cinema-style: the multi-showtime array wins as-is.
+  const cinema = entryFor({ ...cand, externalId: 'cinemacity-x', times: ['10:10', '20:20'] } as any, 'm.jpg');
+  assert.deepEqual(cinema.showtimes, ['10:10', '20:20']);
 });

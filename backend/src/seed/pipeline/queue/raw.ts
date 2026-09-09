@@ -9,7 +9,7 @@
 import { nanoid } from 'nanoid';
 import { SeedCandidate } from '../../core/types';
 import { linkKey, titleTokens } from '../../core/match';
-import { showtimesJson, showtimeBookingJson, tagsJson } from '../../core/dedupe';
+import { showtimesJson, showtimeBookingJson, tagsJson } from '../../core/eventFormat';
 import { toWarsawIso } from '../../core/dates';
 import { ensureCanonicalVenue, upsertVenue } from '../../venues/venueStore';
 import { now } from './state';

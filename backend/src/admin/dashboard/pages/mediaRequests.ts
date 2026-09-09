@@ -11,29 +11,29 @@ import { requireSession } from '../common';
 import { MEDIA_REQUEST_TTL_MS } from '../../../core/models';
 import { todayWarsaw } from '../../../seed/core/dates';
 import { renderPage } from './shared';
+import { ADMIN_PAGE_SIZE, ADMIN_DAYS_OPTIONS } from '../../config';
+import { DAY_MS } from '../../../seed/core/constants';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
-const PAGE_SIZE = 50;
-const DAYS_OPTIONS = [7, 14, 30, 90];
 
 pageRoutes.get('/media-requests', async (c) => {
   const db = c.env.DB;
   const q = c.req.query();
   const daysRaw = parseInt(String(q.days || '14'), 10);
-  const days = DAYS_OPTIONS.includes(daysRaw) ? daysRaw : 14;
+  const days = ADMIN_DAYS_OPTIONS.includes(daysRaw) ? daysRaw : 14;
   const city = q.city ? String(q.city) : null;
   const userId = q.user ? String(q.user) : null;
   const from = q.from ? String(q.from) : null;
   const to = q.to ? String(q.to) : null;
   const activeOnly = q.active === '1';
   const page = Math.max(1, parseInt(String(q.page || '1'), 10) || 1);
-  const since = Date.now() - days * 86_400_000;
+  const since = Date.now() - days * DAY_MS;
 
   const filter: MediaRequestFilter = {
     days, cityId: city, userId,
     fromMs: from ? Date.parse(`${from}T00:00:00+02:00`) : null,
     toMs: to ? Date.parse(`${to}T23:59:59.999+02:00`) : null,
-    activeOnly, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE,
+    activeOnly, limit: ADMIN_PAGE_SIZE, offset: (page - 1) * ADMIN_PAGE_SIZE,
   };
   const [c14, cToday, cActive, cUsers, topUsers, list, cnt] = await Promise.all([
     db.prepare('SELECT COUNT(*) n FROM media_requests WHERE created_at>=?').bind(since).first<{ n: number }>(),
@@ -51,7 +51,7 @@ pageRoutes.get('/media-requests', async (c) => {
   const rows = await db.prepare(listSql.sql).bind(...listSql.binds).all<any>();
   const cntRow = await db.prepare(countSql.sql).bind(...countSql.binds).first<{ n: number }>();
   const total = cntRow?.n ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
   const results = (rows.results ?? []) as any[];
 
   const allForCities = await db.prepare('SELECT lat, lng FROM media_requests WHERE created_at>=?').bind(since).all<{ lat: number; lng: number }>();
@@ -129,7 +129,7 @@ pageRoutes.get('/media-requests', async (c) => {
   const filterBar = `<form method="get" action="/admin/media-requests" class="card mb-3"><div class="card-body">
     <div class="row g-2 align-items-end">
       <div class="col-6 col-md-2"><label class="form-label">Zakres</label>
-        <select name="days" class="form-select" onchange="this.form.submit()">${DAYS_OPTIONS.map((d) => `<option value="${d}" ${days === d ? 'selected' : ''}>${d} dni</option>`).join('')}</select></div>
+        <select name="days" class="form-select" onchange="this.form.submit()">${ADMIN_DAYS_OPTIONS.map((d) => `<option value="${d}" ${days === d ? 'selected' : ''}>${d} dni</option>`).join('')}</select></div>
       <div class="col-6 col-md-2"><label class="form-label">Miasto</label><select name="city" class="form-select" onchange="this.form.submit()">${cityOpts}</select></div>
       <div class="col-6 col-md-3"><label class="form-label">Użytkownik</label><select name="user" class="form-select" onchange="this.form.submit()">${userOpts}</select></div>
       <div class="col-6 col-md-2"><label class="form-label">Data od</label><input name="from" type="date" class="form-control" value="${esc(from || '')}" onchange="this.form.submit()"></div>

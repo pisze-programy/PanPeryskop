@@ -14,7 +14,7 @@ struct MediaRequest: Codable, Identifiable, Equatable {
         CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
 
-    static let ttlMs: Int64 = 4 * 3_600_000
+    static let ttlMs: Int64 = AppConstants.mediaRequestTTLMs
 
     var isExpired: Bool {
         created_at < Int64(Date().timeIntervalSince1970 * 1000) - Self.ttlMs

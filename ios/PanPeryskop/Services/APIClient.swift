@@ -194,4 +194,19 @@ struct APIClient {
         request.httpBody = httpBody
         _ = try? await URLSession.shared.data(for: request)
     }
+
+    /// Wycieczki — travel events within a bbox + week window. from/to are epoch ms.
+    static func getTravelEvents(swLat: Double, swLng: Double, neLat: Double, neLng: Double, from: Int64, to: Int64, tag: String?) async throws -> TravelEventsResponse {
+        var params = [
+            "sw_lat": String(swLat),
+            "sw_lng": String(swLng),
+            "ne_lat": String(neLat),
+            "ne_lng": String(neLng),
+            "from": String(from),
+            "to": String(to),
+            "limit": "1000",
+        ]
+        if let tag { params["tag"] = tag }
+        return try await get("/travel/events", params: params)
+    }
 }

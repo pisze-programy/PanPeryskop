@@ -8,6 +8,7 @@ import { claimUnit, completeUnit, failUnit, unitDayStatus } from '../seed/pipeli
 import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
 import { getLastSeedDay, seedDue } from '../seed/cadence';
 import { SEED_INTERVAL_DAYS } from '../seed/core/constants';
+import { upsertTravelEvents, sanitizeManifest, TravelManifest, TravelEvent } from '../travel/store';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -402,4 +403,22 @@ adminRoutes.post('/unban', async (c) => {
 
   await db.prepare('DELETE FROM banned_devices WHERE device_id = ?').bind(body.device_id).run();
   return c.json({ ok: true, device_id: body.device_id });
+});
+
+// No moderation/no media — upsert by (provider, external_id), idempotent.
+adminRoutes.post('/travel/ingest', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const manifest = (await c.req.json().catch(() => null)) as TravelManifest | null;
+  if (!manifest || !Array.isArray(manifest.events) || typeof manifest.provider !== 'string') {
+    return c.json({ error: 'Invalid manifest' }, 400);
+  }
+  if (manifest.events.length > 100_000) return c.json({ error: 'Manifest too large' }, 400);
+  let events: TravelEvent[];
+  try {
+    events = sanitizeManifest(manifest);
+  } catch (e) {
+    return c.json({ error: (e as Error).message }, 400);
+  }
+  await upsertTravelEvents(c.env.DB, events);
+  return c.json({ ok: true, provider: manifest.provider, ingested: events.length });
 });

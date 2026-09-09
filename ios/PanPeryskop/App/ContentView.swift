@@ -15,7 +15,6 @@ struct ContentView: View {
         ZStack(alignment: .bottom) {
             if selectedTab == 0 {
                 MapScreen(
-                    viewModel: mapViewModel,
                     showStoryViewer: $showStoryViewer,
                     selectedStoryIndex: $selectedStoryIndex,
                     storyPosts: $storyPosts
@@ -31,7 +30,7 @@ struct ContentView: View {
                     posts: storyPosts,
                     startIndex: selectedStoryIndex,
                     isPresented: $showStoryViewer,
-                    viewModel: mapViewModel
+                    actions: mapViewModel
                 )
                 .zIndex(999)
                 .transition(.opacity)
@@ -94,9 +93,6 @@ struct ContentView: View {
             guard let payload = note.object as? PushPostPayload else { return }
             Task { await openPushPost(payload) }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .didCaptureMedia)) { _ in
-            mapViewModel.selectFeedCategory(.live)
-        }
         .onChange(of: pendingStoryId) { _, newId in
             guard let newId else { return }
             pendingStoryId = nil
@@ -130,7 +126,7 @@ struct ContentView: View {
     @MainActor
     private func openPushPost(_ payload: PushPostPayload) async {
         selectedTab = 0
-        mapViewModel.selectFeedCategory(FeedCategory(rawValue: payload.category) ?? .live)
+        mapViewModel.selectFeedCategory(MapCategory(rawValue: payload.category) ?? .events)
         if let post = await mapViewModel.ensurePost(id: payload.postId) {
             storyPosts = [post]
             selectedStoryIndex = 0

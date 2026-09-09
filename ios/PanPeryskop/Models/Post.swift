@@ -153,6 +153,30 @@ struct Post: Codable, Identifiable, Equatable {
 
     static func == (lhs: Post, rhs: Post) -> Bool { lhs.id == rhs.id }
 
+    /// Rebuild a copy with mutated engagement/flags — single source for the
+    /// otherwise-triplicated field-by-field rebuilds in MapViewModel.
+    func with(
+        watched: Bool? = nil,
+        liked: Bool? = nil,
+        disliked: Bool? = nil,
+        likesCount: Int? = nil,
+        dislikesCount: Int? = nil
+    ) -> Post {
+        Post(
+            id: id, user_id: user_id, type: type,
+            lat: lat, lng: lng, description: description,
+            media_key: media_key, thumb_key: thumb_key, created_at: created_at,
+            likes_count: likesCount ?? likes_count,
+            views_count: views_count, shares_count: shares_count,
+            dislikes_count: dislikesCount ?? dislikes_count,
+            grid_cell_id: grid_cell_id,
+            liked: liked ?? self.liked, disliked: disliked ?? self.disliked, watched: watched ?? self.watched,
+            author_name: author_name, media_url: media_url, thumb_url: thumb_url,
+            author_avatar_url: author_avatar_url,
+            is_sponsored: is_sponsored, category: category, link_url: link_url, is_sold_out: is_sold_out, showtimes: showtimes, showtime_booking: showtime_booking, tags: tags, source: source
+        )
+    }
+
     enum MediaType: String, Codable {
         case photo, video
     }

@@ -1,78 +1,125 @@
 import SwiftUI
 import MapKit
 
+/// Direct camera control for the map shell — replaces the flyToCity NotificationCenter
+/// channel. The shell binds its flyTo handler here; MapScreen calls it on city/airport select.
+@MainActor
+final class MapCameraController: ObservableObject {
+    private var flyTo: ((MKCoordinateRegion) -> Void)?
+
+    func bind(_ handler: @escaping (MKCoordinateRegion) -> Void) {
+        flyTo = handler
+    }
+
+    func fly(to region: MKCoordinateRegion) {
+        flyTo?(region)
+    }
+}
+
 struct MapKitMapView: View {
-    let zoom: Double
-    let posts: [Post]
-    let mediaRequests: [MediaRequest]
+    let overlays: [MapOverlay]
     let previewRequestPin: CLLocationCoordinate2D?
     let currentUserId: String?
     let initialRegion: MKCoordinateRegion
+    let zoom: Double
+    let maxZoomOutDistance: CLLocationDistance
     let onRegionChange: (Double, Double, Double, Double) -> Void
     let onCameraSettled: (MKCoordinateRegion) -> Void
-    let onTapPost: (Post, MapBBox) -> Void
-    let onTapCluster: (PostCluster, MapBBox) -> Void
+    let onTap: (MapOverlay) -> Void
     let onRequestPinDrop: (CLLocationCoordinate2D) -> Void
+    let cameraController: MapCameraController
 
     @State private var camera: MapCameraPosition
     @State private var visibleRegion: MKCoordinateRegion
 
     init(
-        zoom: Double,
-        posts: [Post],
-        mediaRequests: [MediaRequest],
+        overlays: [MapOverlay],
         previewRequestPin: CLLocationCoordinate2D?,
         currentUserId: String?,
         initialRegion: MKCoordinateRegion,
+        zoom: Double,
+        maxZoomOutDistance: CLLocationDistance,
         onRegionChange: @escaping (Double, Double, Double, Double) -> Void,
         onCameraSettled: @escaping (MKCoordinateRegion) -> Void,
-        onTapPost: @escaping (Post, MapBBox) -> Void,
-        onTapCluster: @escaping (PostCluster, MapBBox) -> Void,
-        onRequestPinDrop: @escaping (CLLocationCoordinate2D) -> Void
+        onTap: @escaping (MapOverlay) -> Void,
+        onRequestPinDrop: @escaping (CLLocationCoordinate2D) -> Void,
+        cameraController: MapCameraController
     ) {
-        self.zoom = zoom
-        self.posts = posts
-        self.mediaRequests = mediaRequests
+        self.overlays = overlays
         self.previewRequestPin = previewRequestPin
         self.currentUserId = currentUserId
         self.initialRegion = initialRegion
+        self.zoom = zoom
+        self.maxZoomOutDistance = maxZoomOutDistance
         self.onRegionChange = onRegionChange
         self.onCameraSettled = onCameraSettled
-        self.onTapPost = onTapPost
-        self.onTapCluster = onTapCluster
+        self.onTap = onTap
         self.onRequestPinDrop = onRequestPinDrop
+        self.cameraController = cameraController
         self._camera = State(initialValue: .camera(MapKitMapView.tiltedCamera(center: initialRegion.center, region: initialRegion)))
         self._visibleRegion = State(initialValue: initialRegion)
     }
 
     private static let pitchDegrees: Double = 60
-    /// Max pinch zoom-out distance (~100 km — fits Warsaw + the surrounding region).
-    private static let maxDistance: CLLocationDistance = 100_000
-    /// "Fly to city" framing — moderate so it still shows the city + its region.
+    /// City fly framing distance — the city map's default camera height.
     private static let cityFlyDistance: CLLocationDistance = 60_000
-    /// Cluster radius in screen points — pins within ~this distance on screen group
-    /// together; the value is translated to degrees from the current camera span.
     private static let clusterPixels: Double = 48
 
-    /// Cluster radius for the current zoom (deg) so grouping is screen-constant:
-    /// pins separate when zoomed in, group when zoomed out.
     private var clusterRadiusDegrees: Double {
         let screenHeight = UIScreen.main.bounds.height
         let degreesPerPixel = visibleRegion.span.latitudeDelta / Double(screenHeight)
         return max(degreesPerPixel * Self.clusterPixels, 0.00005)
     }
 
-    /// Pins within the visible region (+ cluster-radius padding) — supercluster-style
-    /// "getClusters(bbox, zoom)": only visible pins are clustered/rendered. Pins cached
-    /// in the ViewModel for other bboxes stay out of the render set, so a stale pin can
-    /// never skew a cluster's count near the screen edge.
-    private var visiblePosts: [Post] {
+    /// Overlays within the visible region (+ cluster padding) — only visible content
+    /// is clustered/rendered, so a stale pin never skews a cluster near the edge.
+    private var visibleOverlays: [MapOverlay] {
         let pad = clusterRadiusDegrees
         let lat0 = visibleRegion.center.latitude - visibleRegion.span.latitudeDelta / 2 - pad
         let lat1 = visibleRegion.center.latitude + visibleRegion.span.latitudeDelta / 2 + pad
         let lng0 = visibleRegion.center.longitude - visibleRegion.span.longitudeDelta / 2 - pad
         let lng1 = visibleRegion.center.longitude + visibleRegion.span.longitudeDelta / 2 + pad
-        return posts.filter { $0.lat >= lat0 && $0.lat <= lat1 && $0.lng >= lng0 && $0.lng <= lng1 }
+        return overlays.filter {
+            switch $0 {
+            case .pin(let p):
+                return p.post.lat >= lat0 && p.post.lat <= lat1 && p.post.lng >= lng0 && p.post.lng <= lng1
+            case .airport(let a):
+                return a.coord.latitude >= lat0 && a.coord.latitude <= lat1 && a.coord.longitude >= lng0 && a.coord.longitude <= lng1
+            case .request(let r):
+                return r.lat >= lat0 && r.lat <= lat1 && r.lng >= lng0 && r.lng <= lng1
+            case .arc:
+                return true
+            }
+        }
+    }
+
+    private var pinClusters: [PostCluster] {
+        let pins = visibleOverlays.compactMap { overlay -> Post? in
+            if case .pin(let p) = overlay { return p.post }
+            return nil
+        }
+        return makeClusters(pins, radiusDegrees: clusterRadiusDegrees)
+    }
+
+    private var airportPins: [AirportPin] {
+        visibleOverlays.compactMap { overlay in
+            if case .airport(let a) = overlay { return a }
+            return nil
+        }
+    }
+
+    private var flightArcs: [FlightArc] {
+        visibleOverlays.compactMap { overlay in
+            if case .arc(let a) = overlay { return a }
+            return nil
+        }
+    }
+
+    private var requestPins: [MediaRequest] {
+        visibleOverlays.compactMap { overlay in
+            if case .request(let r) = overlay { return r }
+            return nil
+        }
     }
 
     private static func cameraDistance(for region: MKCoordinateRegion) -> CLLocationDistance {
@@ -89,7 +136,6 @@ struct MapKitMapView: View {
         )
     }
 
-    // Full zoom-out (max visible area), centered on the given coordinate.
     private static func maxOutCamera(center: CLLocationCoordinate2D) -> MapCamera {
         MapCamera(
             centerCoordinate: center,
@@ -103,29 +149,40 @@ struct MapKitMapView: View {
         MapReader { proxy in
             Map(
                 position: $camera,
-                bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: Self.maxDistance),
+                bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: maxZoomOutDistance),
                 interactionModes: [.pan, .zoom]
             ) {
                 UserAnnotation()
 
-                ForEach(makeClusters(visiblePosts, radiusDegrees: clusterRadiusDegrees)) { cluster in
+                ForEach(flightArcs) { arc in
+                    MapPolyline(arc.polyline)
+                        .stroke(arc.color, lineWidth: 2.5)
+                }
+
+                ForEach(pinClusters) { cluster in
                     Annotation(coordinate: cluster.coord, anchor: .center) {
                         ClusterBadge(
                             cluster: cluster,
                             currentUserId: currentUserId,
                             onTap: {
-                                let bbox = bbox(from: visibleRegion)
-                                if cluster.count == 1, let post = cluster.singlePost {
-                                    onTapPost(post, bbox)
+                                if let post = cluster.singlePost {
+                                    onTap(.pin(MapPin(post: post)))
                                 } else {
-                                    onTapCluster(cluster, bbox)
+                                    onTap(.pin(MapPin(post: cluster.posts[0])))
                                 }
                             }
                         )
                     } label: { EmptyView() }
                 }
 
-                ForEach(mediaRequests) { request in
+                ForEach(airportPins) { pin in
+                    Annotation(coordinate: pin.coord, anchor: .center) {
+                        AirportPinBadge(iata: pin.iata)
+                            .onTapGesture { onTap(.airport(pin)) }
+                    } label: { EmptyView() }
+                }
+
+                ForEach(requestPins) { request in
                     Annotation(coordinate: request.coordinate, anchor: .center) {
                         RequestPinBadge(request: request)
                     } label: { EmptyView() }
@@ -165,9 +222,15 @@ struct MapKitMapView: View {
                 onRegionChange(swLat, swLng, neLat, neLng)
                 onCameraSettled(region)
             }
-            .onReceive(NotificationCenter.default.publisher(for: .flyToCity)) { note in
-                guard let city = note.object as? City else { return }
-                flyTo(city: city)
+            .onAppear {
+                cameraController.bind { region in
+                    withAnimation(.easeInOut(duration: 1.2)) {
+                        camera = .camera(MapKitMapView.tiltedCamera(center: region.center, region: region))
+                    }
+                }
+                if let payload = NotificationDelegate.consumePendingCenter() {
+                    centerOn(payload)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .scrollToPost)) { note in
                 guard let post = note.object as? Post else { return }
@@ -183,11 +246,6 @@ struct MapKitMapView: View {
                 guard let payload = note.object as? MapCenterPayload else { return }
                 centerOn(payload)
             }
-            .onAppear {
-                if let payload = NotificationDelegate.consumePendingCenter() {
-                    centerOn(payload)
-                }
-            }
         }
     }
 
@@ -201,19 +259,28 @@ struct MapKitMapView: View {
             camera = .camera(MapKitMapView.tiltedCamera(center: coordinate, region: region))
         }
     }
+}
 
-    private func flyTo(city: City) {
-        withAnimation(.easeInOut(duration: 1.2)) {
-            camera = .camera(MapKitMapView.maxOutCamera(center: city.center))
-        }
+extension FlightArc {
+    var polyline: MKPolyline {
+        var coords = [from, to]
+        return MKGeodesicPolyline(coordinates: &coords, count: coords.count)
     }
 
-    private func bbox(from region: MKCoordinateRegion) -> MapBBox {
-        MapBBox(
-            swLat: region.center.latitude - region.span.latitudeDelta / 2,
-            swLng: region.center.longitude - region.span.longitudeDelta / 2,
-            neLat: region.center.latitude + region.span.latitudeDelta / 2,
-            neLng: region.center.longitude + region.span.longitudeDelta / 2
+    var color: Color {
+        switch airline {
+        case .ryanair: return Color(hex: 0x0d48bd)
+        case .wizzair: return Color(hex: 0xc6007e)
+        }
+    }
+}
+
+extension Color {
+    init(hex: UInt32) {
+        self.init(
+            red: Double((hex >> 16) & 0xFF) / 255,
+            green: Double((hex >> 8) & 0xFF) / 255,
+            blue: Double(hex & 0xFF) / 255
         )
     }
 }
@@ -229,8 +296,6 @@ struct ClusterBadge: View {
                 SinglePostPin(post: post, currentUserId: currentUserId)
                     .allowsHitTesting(false)
             } else {
-                // onTapGesture (not a Button) so multi-touch map gestures (pinch/pan)
-                // still work even when the touch starts on a pin.
                 SinglePostPin(post: post, currentUserId: currentUserId)
                     .contentShape(Rectangle())
                     .onTapGesture(perform: onTap)
@@ -283,10 +348,8 @@ struct SinglePostPin: View {
                 TimelineView(.periodic(from: .now, by: 30)) { context in
                     let progress = progress(at: context.date)
                     ZStack {
-                        Circle()
-                            .fill(Color.black.opacity(0.25))
-                        Circle()
-                            .stroke(ringColor.opacity(0.25), lineWidth: 3)
+                        Circle().fill(Color.black.opacity(0.25))
+                        Circle().stroke(ringColor.opacity(0.25), lineWidth: 3)
                         Circle()
                             .trim(from: progress, to: 1)
                             .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
@@ -352,8 +415,7 @@ private func iconForType(_ type: Post.MediaType) -> String {
     type == .video ? "video.fill" : "photo.fill"
 }
 
-/// Non-clickable "?" drop pin asking others in the area for a live view. Same shape as the media
-/// pin, TTL 4h, ring colors: white → yellow (>1h) → red (>3h).
+/// Non-clickable "?" drop pin asking others in the area for a live view.
 struct RequestPinBadge: View {
     let request: MediaRequest
 
@@ -375,10 +437,8 @@ struct RequestPinBadge: View {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 let progress = progress(at: context.date)
                 ZStack {
-                    Circle()
-                        .fill(Color.black.opacity(0.25))
-                    Circle()
-                        .stroke(ringColor.opacity(0.25), lineWidth: 3)
+                    Circle().fill(Color.black.opacity(0.25))
+                    Circle().stroke(ringColor.opacity(0.25), lineWidth: 3)
                     Circle()
                         .trim(from: progress, to: 1)
                         .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
@@ -388,8 +448,7 @@ struct RequestPinBadge: View {
             .frame(width: 52, height: 52)
 
             ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.95))
+                Circle().fill(Color.white.opacity(0.95))
                 Image("MediaRequestPin")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -399,12 +458,6 @@ struct RequestPinBadge: View {
             .clipShape(Circle())
         }
     }
-}
-
-private func dist(_ lat1: Double, _ lng1: Double, _ lat2: Double, _ lng2: Double) -> Double {
-    let dlat = lat1 - lat2
-    let dlng = lng1 - lng2
-    return sqrt(dlat * dlat + dlng * dlng)
 }
 
 struct ClusterPin: View {
@@ -436,10 +489,8 @@ struct ClusterPin: View {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 let progress = progress(at: context.date)
                 ZStack {
-                    Circle()
-                        .fill(Color.black.opacity(0.25))
-                    Circle()
-                        .stroke(ringColor.opacity(0.25), lineWidth: 3)
+                    Circle().fill(Color.black.opacity(0.25))
+                    Circle().stroke(ringColor.opacity(0.25), lineWidth: 3)
                     Circle()
                         .trim(from: progress, to: 1)
                         .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
@@ -468,17 +519,15 @@ struct PostCluster: Identifiable {
 }
 
 private func makeClusters(_ posts: [Post], radiusDegrees: Double) -> [PostCluster] {
-    let mediaPosts = posts
     let radius = radiusDegrees
     var used = Set<String>()
     var clusters: [PostCluster] = []
 
-    for post in mediaPosts {
+    for post in posts {
         guard !used.contains(post.id) else { continue }
         var nearby = [post]
-        // Events cluster regardless of seen state (re-viewable); live groups only unseen.
         if !post.watched || post.isEvent {
-            for other in mediaPosts {
+            for other in posts {
                 guard !used.contains(other.id), other.id != post.id, (!other.watched || other.isEvent) else { continue }
                 if dist(post.lat, post.lng, other.lat, other.lng) < radius {
                     nearby.append(other)
@@ -489,9 +538,6 @@ private func makeClusters(_ posts: [Post], radiusDegrees: Double) -> [PostCluste
         let avgLat = nearby.map(\.lat).reduce(0, +) / Double(nearby.count)
         let avgLng = nearby.map(\.lng).reduce(0, +) / Double(nearby.count)
         clusters.append(PostCluster(
-            // Deterministic id (min post id) — iteration order changes as pins are
-            // cached, but the id must stay stable so SwiftUI doesn't recreate the
-            // annotation on every pan/zoom (that caused pin flicker).
             id: nearby.map(\.id).min() ?? post.id,
             coord: CLLocationCoordinate2D(latitude: avgLat, longitude: avgLng),
             count: nearby.count,
@@ -499,12 +545,16 @@ private func makeClusters(_ posts: [Post], radiusDegrees: Double) -> [PostCluste
             posts: nearby
         ))
     }
-    // Render seen (watched) pins first so unseen pins/groups are drawn on top and
-    // never get covered by a non-clickable seen pin at the same location.
     clusters.sort { a, b in
         let aWatched = a.count == 1 && a.singlePost?.watched == true
         let bWatched = b.count == 1 && b.singlePost?.watched == true
         return aWatched && !bWatched
     }
     return clusters
+}
+
+private func dist(_ lat1: Double, _ lng1: Double, _ lat2: Double, _ lng2: Double) -> Double {
+    let dlat = lat1 - lat2
+    let dlng = lng1 - lng2
+    return sqrt(dlat * dlat + dlng * dlng)
 }

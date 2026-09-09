@@ -13,20 +13,44 @@ struct MapBBox {
     }
 }
 
-/// Content category shown on the map. Matches the backend `category` enum.
-enum FeedCategory: String, CaseIterable, Identifiable {
-    case events, live
+/// Map content category. `.events`/`.live` are the city map (backend `posts.category`);
+/// `.trips` is the Wycieczki mode (separate provider, no backend category string).
+enum MapCategory: String, CaseIterable, Identifiable {
+    case events, live, trips
     var id: String { rawValue }
-    var label: String { self == .events ? "Wydarzenia" : "Live" }
+    /// Pills shown in the bottom category capsule — Live stays hidden from the UI.
+    static let visibleCases: [MapCategory] = [.events, .trips]
+    var label: String {
+        switch self {
+        case .events: return "Wydarzenia"
+        case .live: return "Live"
+        case .trips: return "Wycieczki"
+        }
+    }
+    /// Backend `category` param for /stories — nil for `.trips` (different endpoint).
+    var backendCategory: String? {
+        switch self {
+        case .events: return AppConstants.categoryEvents
+        case .live: return AppConstants.categoryLive
+        case .trips: return nil
+        }
+    }
+}
+
+/// Typed cache key for the merged post cache — replaces the old stringly key.
+struct PostsCacheKey: Hashable {
+    let category: MapCategory
+    let day: String?
+    let tag: String?
 }
 
 @MainActor
-class MapViewModel: ObservableObject {
+class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     @Published var posts: [Post] = []
     @Published var mediaRequests: [MediaRequest] = []
     @Published var isLoading = false
     @Published var selectedCity: City = City.all[0]
-    @Published var feedCategory: FeedCategory = .events
+    @Published var feedCategory: MapCategory = .events
     /// Canonical event tags for the map filter chips (backend order).
     @Published var tags: [TagPill] = []
     /// Active tag filter — nil = all approved events. Session-only (never persisted).
@@ -44,10 +68,13 @@ class MapViewModel: ObservableObject {
     private var serverRequests: [MediaRequest] = []
     /// Merged post cache per (category, day, tag) — panning/zooming never drops
     /// already-loaded pins; the 20s polling completes the cache and new pins appear.
-    private var postsCache: [String: [String: Post]] = [:]
-    private var postsCacheKey: String {
-        let day = feedCategory == .events ? dayString(offset: selectedDayOffset) : AppConstants.categoryLive
-        return "\(feedCategory.rawValue)|\(day)|\(selectedTag ?? "")"
+    private var postsCache: [PostsCacheKey: [String: Post]] = [:]
+    private var postsCacheKey: PostsCacheKey {
+        PostsCacheKey(
+            category: feedCategory,
+            day: feedCategory == .events ? dayString(offset: selectedDayOffset) : nil,
+            tag: selectedTag
+        )
     }
     var currentUserId: String? {
         didSet { MediaNearbyNotifier.persistCurrentUserId(currentUserId) }
@@ -175,19 +202,34 @@ class MapViewModel: ObservableObject {
         d.set(region.span.longitudeDelta, forKey: MapPrefs.vpSpanLng)
     }
 
+    func onRegionChange(swLat: Double, swLng: Double, neLat: Double, neLng: Double) {
+        fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
+    }
+
+    func onCameraSettled(_ region: MKCoordinateRegion) {
+        saveViewport(region)
+    }
+
     var allPosts: [Post] {
         // Day browsing (offset>0) skips the TTL/future window — the server already
         // scoped the response to the requested event_date (future days have
         // created_at in the future and would otherwise be dropped client-side).
         let dayBrowse = feedCategory == .events && selectedDayOffset > 0
+        let backendCategory = feedCategory.backendCategory
         return serverPosts.filter {
             (dayBrowse ? true : $0.isStillValid)
-                && ($0.category ?? AppConstants.categoryLive) == feedCategory.rawValue
+                && ($0.category ?? AppConstants.categoryLive) == backendCategory
                 && (feedCategory != .live || !$0.watched)
         }
     }
 
     var defaultZoom: Double { 12 }
+
+    var maxZoomOutDistance: CLLocationDistance { 100_000 }
+
+    var overlays: [MapOverlay] {
+        allPosts.map { .pin(MapPin(post: $0)) } + mediaRequests.map { .request($0) }
+    }
 
     /// YYYY-MM-DD (Europe/Warsaw) for a day offset relative to today.
     func dayString(offset: Int) -> String {
@@ -214,7 +256,7 @@ class MapViewModel: ObservableObject {
         fetchStories(swLat: viewport.swLat, swLng: viewport.swLng, neLat: viewport.neLat, neLng: viewport.neLng)
     }
 
-    func selectFeedCategory(_ category: FeedCategory) {
+    func selectFeedCategory(_ category: MapCategory) {
         guard feedCategory != category else { return }
         feedCategory = category
         refreshCurrentRegion()
@@ -278,8 +320,10 @@ class MapViewModel: ObservableObject {
             "sw_lng": String(swLng),
             "ne_lat": String(neLat),
             "ne_lng": String(neLng),
-            "category": feedCategory.rawValue,
         ]
+        if let backendCategory = feedCategoryForRequest.backendCategory {
+            params["category"] = backendCategory
+        }
         // Day browsing: fetch that day's events (all pins; the map clusters them).
         if feedCategory == .events, selectedDayOffset > 0 {
             params["day"] = dayString(offset: selectedDayOffset)
@@ -368,7 +412,7 @@ class MapViewModel: ObservableObject {
         do {
             try await APIClient.postEmpty("/actions/\(postId)/watched")
             if let idx = serverPosts.firstIndex(where: { $0.id == postId }) {
-                serverPosts[idx] = withWatched(true, serverPosts[idx])
+                serverPosts[idx] = serverPosts[idx].with(watched: true)
                 posts = allPosts
             }
         } catch {
@@ -376,43 +420,15 @@ class MapViewModel: ObservableObject {
         }
     }
 
-    private func withWatched(_ watched: Bool, _ post: Post) -> Post {
-        Post(
-            id: post.id, user_id: post.user_id, type: post.type,
-            lat: post.lat, lng: post.lng, description: post.description,
-            media_key: post.media_key, thumb_key: post.thumb_key,
-            created_at: post.created_at,
-            likes_count: post.likes_count, views_count: post.views_count, shares_count: post.shares_count,
-            dislikes_count: post.dislikes_count,
-            grid_cell_id: post.grid_cell_id,
-            liked: post.liked, disliked: post.disliked, watched: watched,
-            author_name: post.author_name, media_url: post.media_url, thumb_url: post.thumb_url,
-            author_avatar_url: post.author_avatar_url,
-            is_sponsored: post.is_sponsored, category: post.category, link_url: post.link_url, is_sold_out: post.is_sold_out, showtimes: post.showtimes, showtime_booking: post.showtime_booking, tags: post.tags, source: post.source
-        )
-    }
-
     func toggleLike(_ postId: String) async -> Bool {
         do {
             struct LikeResp: Codable { let liked: Bool }
             let resp: LikeResp = try await APIClient.postEmptyBody("/actions/\(postId)/like")
             if let idx = posts.firstIndex(where: { $0.id == postId }) {
-                var updated = posts[idx]
-                updated = Post(
-                    id: updated.id, user_id: updated.user_id, type: updated.type,
-                    lat: updated.lat, lng: updated.lng, description: updated.description,
-                    media_key: updated.media_key, thumb_key: updated.thumb_key,
-                    created_at: updated.created_at,
-                    likes_count: resp.liked ? updated.likes_count + 1 : max(0, updated.likes_count - 1),
-                    views_count: updated.views_count, shares_count: updated.shares_count,
-                    dislikes_count: updated.dislikes_count,
-                    grid_cell_id: updated.grid_cell_id,
-                    liked: resp.liked, disliked: updated.disliked, watched: updated.watched,
-                    author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
-                    author_avatar_url: updated.author_avatar_url,
-                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url, is_sold_out: updated.is_sold_out, showtimes: updated.showtimes, showtime_booking: updated.showtime_booking, tags: updated.tags, source: updated.source
+                posts[idx] = posts[idx].with(
+                    liked: resp.liked,
+                    likesCount: resp.liked ? posts[idx].likes_count + 1 : max(0, posts[idx].likes_count - 1)
                 )
-                posts[idx] = updated
             }
             return resp.liked
         } catch {
@@ -426,21 +442,10 @@ class MapViewModel: ObservableObject {
             struct DislikeResp: Codable { let disliked: Bool }
             let resp: DislikeResp = try await APIClient.postEmptyBody("/actions/\(postId)/dislike")
             if let idx = posts.firstIndex(where: { $0.id == postId }) {
-                var updated = posts[idx]
-                updated = Post(
-                    id: updated.id, user_id: updated.user_id, type: updated.type,
-                    lat: updated.lat, lng: updated.lng, description: updated.description,
-                    media_key: updated.media_key, thumb_key: updated.thumb_key,
-                    created_at: updated.created_at,
-                    likes_count: updated.likes_count, views_count: updated.views_count, shares_count: updated.shares_count,
-                    dislikes_count: resp.disliked ? updated.dislikes_count + 1 : max(0, updated.dislikes_count - 1),
-                    grid_cell_id: updated.grid_cell_id,
-                    liked: updated.liked, disliked: resp.disliked, watched: updated.watched,
-                    author_name: updated.author_name, media_url: updated.media_url, thumb_url: updated.thumb_url,
-                    author_avatar_url: updated.author_avatar_url,
-                    is_sponsored: updated.is_sponsored, category: updated.category, link_url: updated.link_url, is_sold_out: updated.is_sold_out, showtimes: updated.showtimes, showtime_booking: updated.showtime_booking, tags: updated.tags, source: updated.source
+                posts[idx] = posts[idx].with(
+                    disliked: resp.disliked,
+                    dislikesCount: resp.disliked ? posts[idx].dislikes_count + 1 : max(0, posts[idx].dislikes_count - 1)
                 )
-                posts[idx] = updated
             }
             return resp.disliked
         } catch {

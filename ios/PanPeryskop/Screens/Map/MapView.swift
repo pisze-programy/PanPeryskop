@@ -2,13 +2,18 @@ import SwiftUI
 import MapKit
 
 struct MapScreen: View {
-    @ObservedObject var viewModel: MapViewModel
+    @StateObject private var mapViewModel = MapViewModel()
+    @StateObject private var tripsViewModel = TripsViewModel()
+    @StateObject private var cameraController = MapCameraController()
+
     @Binding var showStoryViewer: Bool
     @Binding var selectedStoryIndex: Int
     @Binding var storyPosts: [Post]
     @EnvironmentObject private var authManager: AuthManager
 
+    @State private var activeCategory: MapCategory = .events
     @State private var showCityList = false
+    @State private var showAirportList = false
     @State private var previewRequestPin: CLLocationCoordinate2D?
     @State private var pendingRequestDrop: CLLocationCoordinate2D?
     @State private var showRequestConfirmAlert = false
@@ -20,46 +25,44 @@ struct MapScreen: View {
     var body: some View {
         ZStack {
             MapKitMapView(
-                zoom: viewModel.defaultZoom,
-                posts: viewModel.posts,
-                mediaRequests: viewModel.mediaRequests,
+                overlays: activeProvider.overlays,
                 previewRequestPin: previewRequestPin,
                 currentUserId: authManager.userId,
-                initialRegion: viewModel.initialRegion,
+                initialRegion: activeProvider.initialRegion,
+                zoom: activeProvider.defaultZoom,
+                maxZoomOutDistance: activeProvider.maxZoomOutDistance,
                 onRegionChange: { swLat, swLng, neLat, neLng in
-                    viewModel.fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
+                    activeProvider.onRegionChange(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
                 },
                 onCameraSettled: { region in
-                    viewModel.saveViewport(region)
+                    activeProvider.onCameraSettled(region)
                 },
-                onTapPost: { post, _ in
-                    guard !post.watched || post.isEvent else { return }
-                    Haptics.impact(.medium)
-                    storyPosts = [post]
-                    selectedStoryIndex = 0
-                    showStoryViewer = true
-                },
-                onTapCluster: { cluster, _ in
-                    Haptics.impact(.medium)
-                    storyPosts = cluster.posts
-                    selectedStoryIndex = 0
-                    showStoryViewer = true
-                },
+                onTap: handleTap,
                 onRequestPinDrop: { coordinate in
                     handleRequestPinDrop(coordinate)
-                }
+                },
+                cameraController: cameraController
             )
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        cityButton
-                        if viewModel.feedCategory == .events {
-                            allChip
+                        switch activeCategory {
+                        case .events, .live:
+                            cityButton
+                            if activeCategory == .events {
+                                allChip
+                                    .padding(.leading, 10)
+                                ForEach(mapViewModel.tags) { tag in
+                                    tagChip(tag)
+                                }
+                            }
+                        case .trips:
+                            airportButton
                                 .padding(.leading, 10)
-                            ForEach(viewModel.tags) { tag in
-                                tagChip(tag)
+                            ForEach(TripsViewModel.TravelTag.allCases) { tag in
+                                travelTagChip(tag)
                             }
                         }
                     }
@@ -78,22 +81,16 @@ struct MapScreen: View {
                     .padding(.bottom, 112)
             }
 
-            if viewModel.feedCategory == .events {
-                HStack {
-                    Spacer()
-                    DaySliderView(viewModel: viewModel)
-                        .padding(.trailing, 10)
-                }
-            }
+            rightSlider
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: viewModel.feedCategory)
+        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: activeCategory)
         .onAppear {
-            viewModel.currentUserId = authManager.userId
-            viewModel.startPolling()
-            viewModel.runMediaNearbyCheck()
+            mapViewModel.currentUserId = authManager.userId
+            mapViewModel.startPolling()
+            mapViewModel.runMediaNearbyCheck()
             ProximityMonitor.shared.requestNotificationPermissionIfNeeded()
-            let region = viewModel.initialRegion
-            viewModel.fetchStories(
+            let region = mapViewModel.initialRegion
+            mapViewModel.fetchStories(
                 swLat: region.center.latitude - region.span.latitudeDelta / 2,
                 swLng: region.center.longitude - region.span.longitudeDelta / 2,
                 neLat: region.center.latitude + region.span.latitudeDelta / 2,
@@ -101,22 +98,39 @@ struct MapScreen: View {
             )
         }
         .onDisappear {
-            viewModel.stopPolling()
+            mapViewModel.stopPolling()
         }
         .onChange(of: authManager.userId) { _, newValue in
-            viewModel.currentUserId = newValue
+            mapViewModel.currentUserId = newValue
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                viewModel.startPolling()
+                mapViewModel.startPolling()
             } else {
-                viewModel.stopPolling()
+                mapViewModel.stopPolling()
+            }
+        }
+        .onChange(of: activeCategory) { _, newCategory in
+            // Deterministic fly: events → the selected city (never a stale viewport),
+            // trips → the Europe overview.
+            switch newCategory {
+            case .events, .live:
+                cameraController.fly(to: mapViewModel.selectedCity.region)
+            case .trips:
+                cameraController.fly(to: tripsViewModel.initialRegion)
+                tripsViewModel.refresh()
             }
         }
         .sheet(isPresented: $showCityList) {
-            CityListView(selectedCity: viewModel.selectedCity) { city in
-                viewModel.selectCity(city)
-                NotificationCenter.default.post(name: .flyToCity, object: city)
+            CityListView(selectedCity: mapViewModel.selectedCity) { city in
+                mapViewModel.selectCity(city)
+                cameraController.fly(to: city.region)
+            }
+        }
+        .sheet(isPresented: $showAirportList) {
+            AirportPickerView(selectedAirport: tripsViewModel.selectedAirport) { airport in
+                tripsViewModel.selectAirport(airport)
+                cameraController.fly(to: tripsViewModel.initialRegion)
             }
         }
         .alert("Co tu się dzieje?", isPresented: $showRequestConfirmAlert) {
@@ -132,6 +146,33 @@ struct MapScreen: View {
         }
     }
 
+    private var activeProvider: MapContentProvider {
+        switch activeCategory {
+        case .events, .live: return mapViewModel
+        case .trips: return tripsViewModel
+        }
+    }
+
+    @ViewBuilder
+    private var rightSlider: some View {
+        switch activeCategory {
+        case .events:
+            HStack {
+                Spacer()
+                DaySliderView(viewModel: mapViewModel)
+                    .padding(.trailing, 10)
+            }
+        case .trips:
+            HStack {
+                Spacer()
+                WeekSliderView(viewModel: tripsViewModel)
+                    .padding(.trailing, 10)
+            }
+        case .live:
+            EmptyView()
+        }
+    }
+
     private var cooldownMessage: String {
         if requestCooldownMinutes == 1 {
             return "Dodałeś już pin zapytania. Możesz dodać kolejny za 1 minutę."
@@ -139,14 +180,29 @@ struct MapScreen: View {
         return "Dodałeś już pin zapytania. Możesz dodać kolejny za \(requestCooldownMinutes) min."
     }
 
+    private func handleTap(_ overlay: MapOverlay) {
+        guard case .pin(let pin) = overlay else { return }
+        let post = pin.post
+        if activeCategory == .trips {
+            Haptics.impact(.medium)
+            tripsViewModel.selectTravelEvent(postId: post.id)
+            return
+        }
+        guard !post.watched || post.isEvent else { return }
+        Haptics.impact(.medium)
+        storyPosts = [post]
+        selectedStoryIndex = 0
+        showStoryViewer = true
+    }
+
     private func handleRequestPinDrop(_ coordinate: CLLocationCoordinate2D) {
-        guard viewModel.feedCategory == .live else { return }
+        guard activeCategory == .live else { return }
         guard isSpotsEmpty(at: coordinate) else { return }
         Haptics.explosion()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             previewRequestPin = coordinate
         }
-        let cooldown = viewModel.requestCooldownSeconds()
+        let cooldown = mapViewModel.requestCooldownSeconds()
         if cooldown > 0 {
             requestCooldownMinutes = max(1, Int(ceil(cooldown / 60)))
             showRequestCooldownAlert = true
@@ -164,7 +220,7 @@ struct MapScreen: View {
         pendingRequestDrop = nil
         ProximityMonitor.shared.requestNotificationPermissionIfNeeded()
         Task {
-            let result = await viewModel.submitRequestPin(at: coordinate)
+            let result = await mapViewModel.submitRequestPin(at: coordinate)
             switch result {
             case .success:
                 Haptics.success()
@@ -194,13 +250,11 @@ struct MapScreen: View {
         }
     }
 
-    /// Long-press drops a request pin only on "empty" map — not over a media pin/cluster
-    /// nor over an existing request pin.
     private func isSpotsEmpty(at coordinate: CLLocationCoordinate2D) -> Bool {
-        let tooClose = viewModel.posts.contains { post in
+        let tooClose = mapViewModel.posts.contains { post in
             dist(post.lat, post.lng, coordinate.latitude, coordinate.longitude) < 0.0008
         }
-        let tooCloseRequest = viewModel.mediaRequests.contains { request in
+        let tooCloseRequest = mapViewModel.mediaRequests.contains { request in
             dist(request.lat, request.lng, coordinate.latitude, coordinate.longitude) < 0.0008
         }
         return !tooClose && !tooCloseRequest
@@ -219,7 +273,7 @@ struct MapScreen: View {
             showCityList = true
         } label: {
             HStack(spacing: 6) {
-                Text(viewModel.selectedCity.name)
+                Text(mapViewModel.selectedCity.name)
                     .font(.headline)
                     .fontWeight(.semibold)
                 Image(systemName: "chevron.down")
@@ -234,8 +288,28 @@ struct MapScreen: View {
         .buttonStyle(.plain)
     }
 
-    /// Shared glass chip look (selected = accent tint + stroke). Pure visualization.
-    /// `badgeCount` (when > 0) renders a quantity badge in the top-right corner.
+    /// Airport pill (Wycieczki) — opens the Polish airport picker.
+    private var airportButton: some View {
+        Button {
+            Haptics.selection()
+            showAirportList = true
+        } label: {
+            HStack(spacing: 6) {
+                Text("\(tripsViewModel.selectedAirport.iata) · \(tripsViewModel.selectedAirport.city)")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.semibold))
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.2), lineWidth: 1))
+            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 3)
+        }
+        .buttonStyle(.plain)
+    }
+
     private func chipButton(_ label: String, isSelected: Bool, badgeCount: Int = 0, action: @escaping () -> Void) -> some View {
         Button {
             Haptics.selection()
@@ -270,32 +344,32 @@ struct MapScreen: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: badgeCount)
     }
 
-    /// "Wszystkie" — the no-tag state. Selected when nothing is filtered; cannot be
-    /// deselected by tapping it (already-all → no-op, no refetch). Selecting another
-    /// tag deselects it.
     private var allChip: some View {
-        chipButton("Wszystkie", isSelected: viewModel.selectedTag == nil, badgeCount: viewModel.tagTotalCount) {
-            viewModel.selectAll()
+        chipButton("Wszystkie", isSelected: mapViewModel.selectedTag == nil, badgeCount: mapViewModel.tagTotalCount) {
+            mapViewModel.selectAll()
         }
     }
 
-    /// A single tag chip (events mode only). Selected state keeps the glass look
-    /// but tints with the accent color. Single-select; tapping again returns to
-    /// "all" (no tag selected).
     private func tagChip(_ tag: TagPill) -> some View {
-        chipButton(tag.label, isSelected: viewModel.selectedTag == tag.id, badgeCount: viewModel.tagCounts[tag.id] ?? 0) {
-            viewModel.toggleTag(tag.id)
+        chipButton(tag.label, isSelected: mapViewModel.selectedTag == tag.id, badgeCount: mapViewModel.tagCounts[tag.id] ?? 0) {
+            mapViewModel.toggleTag(tag.id)
+        }
+    }
+
+    private func travelTagChip(_ tag: TripsViewModel.TravelTag) -> some View {
+        chipButton(tag.label, isSelected: tripsViewModel.selectedTag == tag) {
+            tripsViewModel.selectTag(tripsViewModel.selectedTag == tag ? nil : tag)
         }
     }
 
     private var categoryPill: some View {
         HStack(spacing: 4) {
-            ForEach(FeedCategory.allCases) { cat in
+            ForEach(MapCategory.visibleCases) { cat in
                 Button {
-                    guard viewModel.feedCategory != cat else { return }
+                    guard activeCategory != cat else { return }
                     Haptics.selection()
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                        viewModel.selectFeedCategory(cat)
+                        activeCategory = cat
                     }
                 } label: {
                     Text(cat.label)
@@ -304,7 +378,7 @@ struct MapScreen: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background {
-                            if viewModel.feedCategory == cat {
+                            if activeCategory == cat {
                                 Capsule()
                                     .fill(Color(.systemGray5))
                                     .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
@@ -322,7 +396,6 @@ struct MapScreen: View {
 }
 
 extension Notification.Name {
-    static let flyToCity = Notification.Name("flyToCity")
     static let scrollToPost = Notification.Name("scrollToPost")
     static let didCaptureMedia = Notification.Name("didCaptureMedia")
 }

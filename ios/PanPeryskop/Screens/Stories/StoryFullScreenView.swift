@@ -1,10 +1,22 @@
 import SwiftUI
 import AVKit
+
+/// What the story viewer needs from a content provider — narrow, so Trips content can
+/// reuse the viewer later without coupling to MapViewModel.
+@MainActor
+protocol StoryActions {
+    var tags: [TagPill] { get }
+    func toggleLike(_ postId: String) async -> Bool
+    func toggleDislike(_ postId: String) async -> Bool
+    func sharePost(_ postId: String) async
+    func markWatched(_ postId: String) async
+}
+
 struct StoryFullScreenView: View {
     let posts: [Post]
     let startIndex: Int
     @Binding var isPresented: Bool
-    @ObservedObject var viewModel: MapViewModel
+    let actions: StoryActions
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var currentIndex: Int
@@ -43,11 +55,11 @@ struct StoryFullScreenView: View {
     /// Fraction of the screen width the story travels on next/prev — short, snappy.
     private static let slideFraction: CGFloat = 0.35
 
-    init(posts: [Post], startIndex: Int, isPresented: Binding<Bool>, viewModel: MapViewModel) {
+    init(posts: [Post], startIndex: Int, isPresented: Binding<Bool>, actions: StoryActions) {
         self.posts = posts
         self.startIndex = startIndex
         self._isPresented = isPresented
-        self.viewModel = viewModel
+        self.actions = actions
         self._currentIndex = State(initialValue: startIndex)
         self._displayIndex = State(initialValue: startIndex)
     }
@@ -501,7 +513,7 @@ struct StoryFullScreenView: View {
     /// Event tag label from the LIVE /stories/tags catalog (backend = single source
     /// of truth — tags can change there). Unknown tag → nil → badge hidden.
     private func tagBadgeLabel(_ id: String) -> String? {
-        viewModel.tags.first(where: { $0.id == id })?.label
+        actions.tags.first(where: { $0.id == id })?.label
     }
 
     /// Like / Dislike / Share capsule — kept in the hierarchy but hidden until the
@@ -512,7 +524,7 @@ struct StoryFullScreenView: View {
             FaveLikeButton(isLiked: liked) { newValue in
                 if newValue { Haptics.explosion() }
                 Task {
-                    let result = await viewModel.toggleLike(currentPost.id)
+                    let result = await actions.toggleLike(currentPost.id)
                     likedStates[currentPost.id] = result
                 }
             }
@@ -522,7 +534,7 @@ struct StoryFullScreenView: View {
                 Haptics.impact(.light)
                 let base = dislikeCount
                 Task {
-                    let result = await viewModel.toggleDislike(currentPost.id)
+                    let result = await actions.toggleDislike(currentPost.id)
                     dislikedStates[currentPost.id] = result
                     dislikesCounts[currentPost.id] = max(0, base + (result ? 1 : -1))
                 }
@@ -544,7 +556,7 @@ struct StoryFullScreenView: View {
             Button {
                 Haptics.impact(.light)
                 pausePlayback()
-                Task { await viewModel.sharePost(currentPost.id) }
+                Task { await actions.sharePost(currentPost.id) }
                 shareItem = ShareItem(
                     id: currentPost.id,
                     text: "\(DeepLink.scheme)://\(DeepLink.host)/\(currentPost.id)"
@@ -688,7 +700,7 @@ struct StoryFullScreenView: View {
         guard posts.indices.contains(index) else { return }
         let post = posts[index]
         guard loadedIDs.contains(post.id) else { return }
-        Task { await viewModel.markWatched(post.id) }
+        Task { await actions.markWatched(post.id) }
     }
 
     private func advanceOrExit() {

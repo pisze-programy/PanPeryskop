@@ -55,6 +55,7 @@ mkdir -p "$REPO_DIR/backend/dist" "$REPO_DIR/admin/vps" "$REPO_DIR/admin/src"
 install -m 0644 "$SRC_TMP/vps-seed.mjs"    "$REPO_DIR/backend/dist/vps-seed.mjs"
 install -m 0644 "$SRC_TMP/kup-warm.mjs"    "$REPO_DIR/backend/dist/kup-warm.mjs"
 install -m 0644 "$SRC_TMP/awin-warm.mjs"   "$REPO_DIR/backend/dist/awin-warm.mjs"
+install -m 0644 "$SRC_TMP/travel-espn.mjs" "$REPO_DIR/backend/dist/travel-espn.mjs"
 install -m 0755 "$SRC_TMP/orchestrator.sh" "$REPO_DIR/admin/vps/orchestrator.sh"
 install -m 0755 "$SRC_TMP/setup-vps.sh"    "$REPO_DIR/admin/vps/setup-vps.sh"
 install -m 0644 "$SRC_TMP/ipv4-proxy.mjs"  "$REPO_DIR/admin/vps/ipv4-proxy.mjs"
@@ -68,7 +69,7 @@ say "legacy files cleaned"
 
 # ---------- 5. crontab (preserve system + user entries; swap our seed line) ----------
 TMP_CRON=$(mktemp)
-crontab -l 2>/dev/null | grep -vE 'panperyskop.*(watchdog|orchestrator)\.sh|(vps-seed\.mjs --warm-kup|kup-warm\.mjs|awin-warm\.mjs)' > "$TMP_CRON"
+crontab -l 2>/dev/null | grep -vE 'panperyskop.*(watchdog|orchestrator)\.sh|(vps-seed\.mjs --warm-kup|kup-warm\.mjs|awin-warm\.mjs|travel-espn\.mjs)' > "$TMP_CRON"
 printf '%s\n' '*/5 * * * * /opt/panperyskop/admin/vps/orchestrator.sh' >> "$TMP_CRON"
 # Nightly kupbilecik manifest warm — 00:01 Warsaw, CLEAN env (no proxy: the origin
 # needs none and we don't pay residential bandwidth for an 8 MB gzip download).
@@ -82,9 +83,14 @@ printf '%s\n' '1 0 * * * cd /opt/panperyskop && /usr/bin/node --max-old-space-si
 # datafeed (advertiser 19044 / feed 99885), gated by Last Imported; pushes to the
 # Worker endpoint → R2. Failures surface via the morning seed failed-mail.
 printf '%s\n' '3 0 * * * cd /opt/panperyskop && /usr/bin/node --max-old-space-size=128 backend/dist/awin-warm.mjs >> admin/vps/logs/warm-awin.log 2>&1' >> "$TMP_CRON"
+# ESPN travel replenish — Monday 00:10 Warsaw, AFTER the night warms (00:01/00:03)
+# and BEFORE the Worker seed (04:00 PL). The box is idle (orchestrator window
+# 05-22), so the ~10-min run has the full 256 MB. One-off backfill: run
+# `backend/dist/travel-espn.mjs --backfill` manually in the same slot.
+printf '%s\n' '10 0 * * 1 cd /opt/panperyskop && /usr/bin/node --max-old-space-size=128 backend/dist/travel-espn.mjs >> admin/vps/logs/travel-espn.log 2>&1' >> "$TMP_CRON"
 crontab "$TMP_CRON"
 rm -f "$TMP_CRON"
-say "crontab ok: */5 orchestrator.sh + 00:01 kup-warm + 00:03 awin-warm (co 5 min cały dzień, okno 05-22 PL)"
+say "crontab ok: */5 orchestrator.sh + 00:01 kup-warm + 00:03 awin-warm + 00:10 mon travel-espn (co 5 min cały dzień, okno 05-22 PL)"
 
 # ---------- env ----------
 if [ -f "$ENV_FILE" ]; then

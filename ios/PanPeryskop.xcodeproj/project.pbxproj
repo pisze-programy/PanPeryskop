@@ -40,6 +40,7 @@
 		704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 702099485B19214D722CB2AB /* AuthManager.swift */; };
 		71CDADC5D9F533CDA1AF553A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BB22FB100B78A75B51A1E2DA /* PrivacyInfo.xcprivacy */; };
 		72C81E132BE515378AD37C06 /* MapContentProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF8C2DAD1E11FB98C34F13E7 /* MapContentProvider.swift */; };
+		73FC7989A1EBE3A9B5CEA846 /* TripsDaySliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108FBBC6EBD61906217B8CB3 /* TripsDaySliderView.swift */; };
 		8A92D89BDF126E969C43FAE7 /* PermissionCardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */; };
 		8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 063211FB7EC797AEFD489DE6 /* ToastManager.swift */; };
 		8E82AAB2424095D2D1ECDBA7 /* PermissionGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D6796591AD82A922A91F5E /* PermissionGateView.swift */; };
@@ -66,7 +67,6 @@
 		F45978C7EBDE8E545CBADE21 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 09C2BF4C37705D7703C5FD2A /* Localizable.strings */; };
 		F83DB2EE1C81C2E3A19B19B9 /* AppleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */; };
 		F9E3362AAB4E85A2D9D7F76F /* DaySliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B41CE1F1D60CDF1DD025F0C7 /* DaySliderView.swift */; };
-		FE12B1747942390A7C783A86 /* WeekSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E29FE2E0AC49EB6528822373 /* WeekSliderView.swift */; };
 		FF623E777239A2DC2C912B37 /* CityListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F76F226243E1E3B5C14FE6F5 /* CityListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -76,6 +76,7 @@
 		0AF85F0B111F42C315E257A2 /* MediaCompressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCompressor.swift; sourceTree = "<group>"; };
 		0AFF2D3AC0370D62EABBDC9C /* MyPost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPost.swift; sourceTree = "<group>"; };
 		1057374311D0AF3FDAC2B2FF /* MapKitMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapKitMapView.swift; sourceTree = "<group>"; };
+		108FBBC6EBD61906217B8CB3 /* TripsDaySliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsDaySliderView.swift; sourceTree = "<group>"; };
 		11FEA4CA8A5185D280CA5E6B /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		15BEB2645798C6940AB0BA91 /* MapOverlayViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapOverlayViews.swift; sourceTree = "<group>"; };
 		18E2E0B8E35722213CDA24C3 /* AirportPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirportPickerView.swift; sourceTree = "<group>"; };
@@ -125,7 +126,6 @@
 		D9D108F77E19B9CD9251305B /* MediaCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCaptureView.swift; sourceTree = "<group>"; };
 		DA3AD3522E1482DBC267C058 /* pl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pl; path = pl.lproj/Localizable.strings; sourceTree = "<group>"; };
 		DFEE69431EFD18643CDD1516 /* PermissionCardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionCardsView.swift; sourceTree = "<group>"; };
-		E29FE2E0AC49EB6528822373 /* WeekSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekSliderView.swift; sourceTree = "<group>"; };
 		EECEDC5900A4EAD9700FD604 /* EventCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventCardView.swift; sourceTree = "<group>"; };
 		F1660BA1D3400C29F149C24C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F609E660924E15078563CFBC /* TripsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsData.swift; sourceTree = "<group>"; };
@@ -266,8 +266,8 @@
 				CE15F5D35412D0851B813462 /* FlightGrid.swift */,
 				2433BC0AA37CA4FA39A52274 /* FlightScoring.swift */,
 				486F060844E5AF84AB99ADDC /* FlightSection.swift */,
+				108FBBC6EBD61906217B8CB3 /* TripsDaySliderView.swift */,
 				AB9D25478E0F9E11855025AF /* TripsViewModel.swift */,
-				E29FE2E0AC49EB6528822373 /* WeekSliderView.swift */,
 			);
 			path = Trips;
 			sourceTree = "<group>";
@@ -448,9 +448,9 @@
 				8D5C220DCDA28F0BC940D295 /* ToastManager.swift in Sources */,
 				2103FA41F46EB5711A6D39F8 /* TravelEvent.swift in Sources */,
 				0AE6CE7189645D2C0E3C6730 /* TripsData.swift in Sources */,
+				73FC7989A1EBE3A9B5CEA846 /* TripsDaySliderView.swift in Sources */,
 				BD55AD22B0431AF5B5102414 /* TripsViewModel.swift in Sources */,
 				B75E0DBA2194C2670F968BDD /* User.swift in Sources */,
-				FE12B1747942390A7C783A86 /* WeekSliderView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

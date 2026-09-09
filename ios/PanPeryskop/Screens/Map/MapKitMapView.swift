@@ -261,7 +261,7 @@ struct MapKitMapView: View {
                         x: size.width * Self.sheetAvoidFraction.x,
                         y: size.height * Self.sheetAvoidFraction.y
                     )
-                    guard let pinScreen = proxy.convert(coordinate, to: .local) else {
+                    guard let targetCoord = proxy.convert(target, from: .local) else {
                         camera = .camera(MapCamera(
                             centerCoordinate: coordinate,
                             distance: currentCameraDistance,
@@ -270,11 +270,15 @@ struct MapKitMapView: View {
                         ))
                         return
                     }
-                    let delta = CGPoint(x: target.x - pinScreen.x, y: target.y - pinScreen.y)
-                    let newCenter = proxy.convert(
-                        CGPoint(x: size.width / 2 + delta.x, y: size.height / 2 + delta.y),
-                        from: .local
-                    ) ?? coordinate
+                    // Exact for a tilted camera: the projection is translation-
+                    // equivariant in ground space, so shifting the center by the
+                    // ground vector (pin − targetCoord) lands the pin on `target`
+                    // even at 60° pitch. A screen-space translation would not.
+                    let center = visibleRegion.center
+                    let newCenter = CLLocationCoordinate2D(
+                        latitude: center.latitude + coordinate.latitude - targetCoord.latitude,
+                        longitude: center.longitude + coordinate.longitude - targetCoord.longitude
+                    )
                     withAnimation(.easeInOut(duration: 0.6)) {
                         camera = .camera(MapCamera(
                             centerCoordinate: newCenter,

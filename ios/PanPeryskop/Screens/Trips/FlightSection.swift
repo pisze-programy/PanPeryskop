@@ -7,6 +7,8 @@ struct FlightSection: View {
     let origin: Airport
     let destinations: [Destination]
     let destination: Destination?
+    /// IATAs the backend confirmed have flights around the event day; nil = unverified.
+    var reachableAirports: Set<String>? = nil
     let onSelectDestination: (Destination) -> Void
     @ObservedObject var viewModel: TripsViewModel
 
@@ -16,7 +18,8 @@ struct FlightSection: View {
     @State private var windows: [Airline: FlightWindowResponse] = [:]
     @State private var loadFailed = false
 
-    private var airlines: [Airline] { destination?.providers ?? [] }
+    // Ryanair is live; Wizzair stays mocked until integrated — don't surface it.
+    private var airlines: [Airline] { (destination?.providers ?? []).filter { $0 == .ryanair } }
     private var loadKey: String { "\(event.id)|\(destination?.iata ?? "")" }
 
     var body: some View {
@@ -40,7 +43,7 @@ struct FlightSection: View {
                     best: bestPair(window)
                 )
                 buyBar(destination)
-            } else if destination != nil {
+            } else if destination != nil, !airlines.isEmpty {
                 HStack {
                     Spacer()
                     ProgressView()
@@ -75,7 +78,9 @@ struct FlightSection: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(destinations, id: \.iata) { dest in
+                    let reachable = reachableAirports?.contains(dest.iata) ?? true
                     Button {
+                        guard reachable else { return }
                         onSelectDestination(dest)
                     } label: {
                         HStack(spacing: 6) {
@@ -89,8 +94,10 @@ struct FlightSection: View {
                         .padding(.vertical, 8)
                         .background(Capsule().fill(active.iata == dest.iata ? chipColor(dest) : Color(.systemGray5)))
                         .foregroundColor(active.iata == dest.iata ? .white : .primary)
+                        .opacity(reachable ? 1 : 0.4)
                     }
                     .buttonStyle(.plain)
+                    .disabled(!reachable)
                 }
             }
         }

@@ -171,7 +171,7 @@ struct MapScreen: View {
         case .trips:
             HStack {
                 Spacer()
-                WeekSliderView(viewModel: tripsViewModel)
+                TripsDaySliderView(viewModel: tripsViewModel)
                     .padding(.trailing, 10)
             }
         case .live:

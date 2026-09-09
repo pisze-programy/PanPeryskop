@@ -7,7 +7,7 @@ import MapKit
 @MainActor
 final class TripsViewModel: ObservableObject, MapContentProvider {
     @Published var selectedAirport: Airport
-    @Published var selectedWeekOffset: Int = 0
+    @Published var selectedDayOffset: Int = 0
     /// Travel tag filter — nil = all. Matches travel_events.tag.
     @Published var selectedTag: TravelTag?
     @Published var events: [TravelEvent] = []
@@ -47,7 +47,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         let origin = selectedAirport
         var result: [MapOverlay] = []
         if showFlightLayer, let selected = selectedTravelEvent {
-            for dest in nearbyDestinations(for: selected) {
+            for dest in reachableDestinations(for: selected) {
                 result.append(.arc(FlightArc(
                     id: "\(origin.iata)-\(dest.iata)-\(dest.providers.map(\.rawValue).joined(separator: "+"))",
                     from: CLLocationCoordinate2D(latitude: origin.lat, longitude: origin.lng),
@@ -91,6 +91,14 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
                 eventCoord.distance(from: CLLocation(latitude: lhs.lat, longitude: lhs.lng))
                     < eventCoord.distance(from: CLLocation(latitude: rhs.lat, longitude: rhs.lng))
             }
+    }
+
+    /// Nearby airports the backend confirmed have flights from the origin around
+    /// the event day; falls back to all nearby when the backend didn't filter.
+    func reachableDestinations(for event: TravelEvent) -> [Destination] {
+        let nearby = nearbyDestinations(for: event)
+        guard let allowed = event.reachableAirports, !allowed.isEmpty else { return nearby }
+        return nearby.filter { allowed.contains($0.iata) }
     }
 
     /// Select an event pin (by post id, with its tapped cluster group): shows nearby
@@ -153,9 +161,9 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         refresh()
     }
 
-    func commitWeek(_ offset: Int) {
-        guard selectedWeekOffset != offset else { return }
-        selectedWeekOffset = offset
+    func commitDay(_ offset: Int) {
+        guard selectedDayOffset != offset else { return }
+        selectedDayOffset = offset
         clearSelection()
         refresh()
     }
@@ -170,7 +178,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     }
 
     private func loadEvents() async {
-        let (from, to) = weekRange(offset: selectedWeekOffset)
+        let (from, to) = dayRange(offset: selectedDayOffset)
         let region = initialRegion
         let swLat = region.center.latitude - region.span.latitudeDelta / 2
         let swLng = region.center.longitude - region.span.longitudeDelta / 2
@@ -196,32 +204,22 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         cachedPosts = events.compactMap { $0.asPost }
     }
 
-    /// (from, to) epoch ms for a week offset (0..12), Monday-start. Week 0 starts
-    /// today (no history — clamped so the filter is "od dziś", never the past).
-    func weekRange(offset: Int) -> (Int64, Int64) {
+    /// (from, to) epoch ms for a day offset (0..89), 0 = today. Per-day fetch —
+    /// same granularity as the Events day slider, full 90-day trips window.
+    func dayRange(offset: Int) -> (Int64, Int64) {
         let calendar = AppConstants.warsawCalendar
-        let today = calendar.startOfDay(for: Date())
-        let weekday = calendar.component(.weekday, from: today) // 1=Sun
-        let daysToMonday = (weekday + 5) % 7
-        let monday = calendar.date(byAdding: .day, value: -daysToMonday + offset * 7, to: today)!
-        let from = max(monday, today)
-        let sunday = calendar.date(byAdding: .day, value: 6, to: monday)!
-        let endOfSunday = calendar.date(byAdding: .day, value: 1, to: sunday)!
-        return (Int64(from.timeIntervalSince1970 * 1000), Int64(endOfSunday.timeIntervalSince1970 * 1000) - 1)
+        let day = calendar.date(byAdding: .day, value: offset, to: calendar.startOfDay(for: Date()))!
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: day)!
+        return (Int64(day.timeIntervalSince1970 * 1000), Int64(endOfDay.timeIntervalSince1970 * 1000) - 1)
     }
 
     private func dateLabel(_ ms: Int64) -> String {
         AppConstants.shortDayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
     }
 
-    func weekStartLabel(offset: Int) -> String {
-        let (from, _) = weekRange(offset: offset)
-        return "od \(dateLabel(from))"
-    }
-
-    func weekEndLabel(offset: Int) -> String {
-        let (_, to) = weekRange(offset: offset)
-        return "do \(dateLabel(to))"
+    func dayLabel(offset: Int) -> String {
+        let (from, _) = dayRange(offset: offset)
+        return dateLabel(from)
     }
 }
 

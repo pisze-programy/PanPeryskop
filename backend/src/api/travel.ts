@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { TRAVEL_TAGS, TravelTag } from '../travel/constants';
-import { destinationCities, foldCity } from '../travel/airports';
 import { fetchRyanairWindow, fetchWizzairWindow } from '../travel/flightsApi';
+import { reachableEvents, type TravelEventRow } from '../travel/reachability';
 
 export const travelRoutes = new Hono<{ Bindings: Env }>();
 
@@ -54,8 +54,12 @@ travelRoutes.get('/events', async (c) => {
     .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, from, to, ...(tag ? [tag] : []))
     .all<{ city: string }>();
 
-  const events = (results ?? []).filter((e) => !origin || destinationCities(origin).has(foldCity(e.city)));
+  const events = (results ?? []) as TravelEventRow[];
 
+  if (origin) {
+    const reachable = await reachableEvents(origin, events, c.env.DB);
+    return c.json({ events: reachable });
+  }
   return c.json({ events });
 });
 
@@ -84,7 +88,7 @@ async function flightHandler(c: any, airline: 'ryanair' | 'wizzair'): Promise<Re
   if (!params) return c.json({ error: 'origin, destination, eventDay required (IATA, YYYY-MM-DD)' }, 400);
   try {
     const window = airline === 'ryanair'
-      ? await fetchRyanairWindow(params.origin, params.destination, params.eventDay)
+      ? await fetchRyanairWindow(params.origin, params.destination, params.eventDay, c.env.DB)
       : await fetchWizzairWindow(params.origin, params.destination, params.eventDay);
     return c.json(window);
   } catch (e) {

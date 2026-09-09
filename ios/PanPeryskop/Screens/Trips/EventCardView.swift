@@ -16,8 +16,17 @@ struct EventCardView: View {
     private var destinations: [Destination] {
         event.map { viewModel.nearbyDestinations(for: $0) } ?? []
     }
+    /// Airport IATAs the backend confirmed have flights around the event day;
+    /// nil = reachability not computed (treat all nearby airports as eligible).
+    private var reachableAirports: Set<String>? {
+        event.flatMap { $0.reachableAirports.map(Set.init) }
+    }
+    private func isReachable(_ iata: String) -> Bool {
+        reachableAirports?.contains(iata) ?? true
+    }
     private var destination: Destination? {
-        destinations.first { $0.iata == selectedDestinationIata } ?? destinations.first
+        if let selected = destinations.first(where: { $0.iata == selectedDestinationIata }) { return selected }
+        return destinations.first(where: { isReachable($0.iata) }) ?? destinations.first
     }
 
     var body: some View {
@@ -37,6 +46,7 @@ struct EventCardView: View {
                             origin: viewModel.selectedAirport,
                             destinations: destinations,
                             destination: destination,
+                            reachableAirports: reachableAirports,
                             onSelectDestination: { selectedDestinationIata = $0.iata },
                             viewModel: viewModel
                         )

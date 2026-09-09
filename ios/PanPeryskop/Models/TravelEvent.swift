@@ -13,6 +13,9 @@ struct TravelEvent: Codable, Identifiable, Equatable {
     let start_ms: Int64
     let tag: String
     let link: String?
+    /// Nearby airport IATAs (≤200 km) that actually have flights from the chosen
+    /// origin around the event day — computed by the backend; nil = not filtered.
+    let reachableAirports: [String]?
 
     var id: String { "\(provider):\(external_id)" }
 

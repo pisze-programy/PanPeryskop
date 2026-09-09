@@ -14,11 +14,16 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     /// Flight layer (airport pins + arcs) is hidden until an event is selected.
     @Published var showFlightLayer: Bool = false
     @Published var selectedTravelEvent: TravelEvent?
+    /// The tapped pin's group (cluster) shown by the bottom card; nil = no card.
+    @Published var selectedEventGroup: EventGroup?
 
     private var eventsCache: [String: [String: TravelEvent]] = [:]
     private var isLoading = false
+    private var cachedOriginAirlines: [Airline] = []
+    private var cachedPosts: [Post] = []
 
     enum TravelTag: String, CaseIterable, Identifiable {
+        // rawValues must match backend TRAVEL_TAGS (constants.ts).
         case cityBreak = "citybreak"
         case football = "pilka-nozna"
         case runs = "biegi"
@@ -35,49 +40,79 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     init() {
         selectedAirport = TripsData.polishAirports[0]
+        cachedOriginAirlines = Self.airlines(for: destinations)
     }
 
     var overlays: [MapOverlay] {
         let origin = selectedAirport
         var result: [MapOverlay] = []
-        // Flight layer: reachable airports near the selected event + arcs from origin.
         if showFlightLayer, let selected = selectedTravelEvent {
-            for dest in nearbyAirports(of: selected) {
+            for dest in nearbyDestinations(for: selected) {
                 result.append(.arc(FlightArc(
-                    id: "\(origin.iata)-\(dest.iata)-\(dest.providers.joined(separator: "+"))",
+                    id: "\(origin.iata)-\(dest.iata)-\(dest.providers.map(\.rawValue).joined(separator: "+"))",
                     from: CLLocationCoordinate2D(latitude: origin.lat, longitude: origin.lng),
                     to: CLLocationCoordinate2D(latitude: dest.lat, longitude: dest.lng),
-                    airline: dest.providers.contains("wizzair") ? .wizzair : .ryanair
+                    airline: dest.providers.contains(.wizzair) ? .wizzair : .ryanair
                 )))
-                result.append(.airport(AirportPin(iata: dest.iata, coord: CLLocationCoordinate2D(latitude: dest.lat, longitude: dest.lng))))
+                result.append(.airport(AirportPin(iata: dest.iata, coord: CLLocationCoordinate2D(latitude: dest.lat, longitude: dest.lng), airlines: dest.providers)))
             }
-            result.append(.airport(AirportPin(iata: origin.iata, coord: CLLocationCoordinate2D(latitude: origin.lat, longitude: origin.lng))))
         }
-        for event in filteredEvents {
-            result.append(.pin(MapPin(post: event)))
+        // Origin pin is the category anchor — always visible in trips mode.
+        result.append(.airport(AirportPin(
+            iata: origin.iata,
+            coord: CLLocationCoordinate2D(latitude: origin.lat, longitude: origin.lng),
+            isOrigin: true,
+            airlines: cachedOriginAirlines
+        )))
+        for post in cachedPosts {
+            result.append(.pin(MapPin(post: post)))
         }
         return result
     }
 
-    /// Reachable destinations (from origin) within 200 km of the selected event.
-    private func nearbyAirports(of event: TravelEvent) -> [Destination] {
-        let eventCoord = CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
-        return destinations.filter { dest in
-            let d = CLLocation(latitude: dest.lat, longitude: dest.lng)
-            return CLLocation(latitude: eventCoord.latitude, longitude: eventCoord.longitude).distance(from: d) <= 200_000
-        }
+    private static func airlines(for destinations: [Destination]) -> [Airline] {
+        let providers = Set(destinations.flatMap { $0.providers })
+        var airlines: [Airline] = []
+        if providers.contains(.wizzair) { airlines.append(.wizzair) }
+        if providers.contains(.ryanair) { airlines.append(.ryanair) }
+        return airlines
     }
 
-    /// Select an event pin (by post id): shows nearby airports + arcs, no story.
-    func selectTravelEvent(postId: String) {
+    /// Reachable destinations (from origin) within the nearby radius, nearest first.
+    /// THE source for both the map arcs and the card's airport rail — they must agree.
+    func nearbyDestinations(for event: TravelEvent) -> [Destination] {
+        let eventCoord = CLLocation(latitude: event.lat, longitude: event.lng)
+        return destinations
+            .filter { dest in
+                let d = CLLocation(latitude: dest.lat, longitude: dest.lng)
+                return eventCoord.distance(from: d) <= AppConstants.nearbyAirportRadiusMeters
+            }
+            .sorted { lhs, rhs in
+                eventCoord.distance(from: CLLocation(latitude: lhs.lat, longitude: lhs.lng))
+                    < eventCoord.distance(from: CLLocation(latitude: rhs.lat, longitude: rhs.lng))
+            }
+    }
+
+    /// Select an event pin (by post id, with its tapped cluster group): shows nearby
+    /// airports + arcs and opens the bottom card. No story viewer for trips.
+    func selectTravelEvent(postId: String, group: [Post] = []) {
         guard let event = events.first(where: { $0.id == postId }) else { return }
         selectedTravelEvent = event
         showFlightLayer = true
+        let groupEvents = group
+            .compactMap { p in events.first { $0.id == p.id } }
+        selectedEventGroup = EventGroup(events: groupEvents.isEmpty ? [event] : groupEvents)
     }
 
     private func clearSelection() {
         selectedTravelEvent = nil
         showFlightLayer = false
+        selectedEventGroup = nil
+    }
+
+    /// Card dismiss (drag/X) — clears selection so arcs + airports hide.
+    func clearSelectionPublic() {
+        clearSelection()
     }
 
     /// All destinations for the selected origin (hardcoded route data).
@@ -85,20 +120,16 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         TripsData.destinations[selectedAirport.iata] ?? []
     }
 
-    private var filteredEvents: [Post] {
-        events.compactMap { $0.asPost }
-    }
-
     var initialRegion: MKCoordinateRegion {
         MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 52.0, longitude: 14.0),
+            center: CLLocationCoordinate2D(latitude: selectedAirport.lat, longitude: selectedAirport.lng),
             span: MKCoordinateSpan(latitudeDelta: 40, longitudeDelta: 40)
         )
     }
 
     var defaultZoom: Double { 4 }
 
-    var maxZoomOutDistance: CLLocationDistance { 6_000_000 }
+    var maxZoomOutDistance: CLLocationDistance { AppConstants.tripsMaxZoomOutDistance }
 
     func onRegionChange(swLat: Double, swLng: Double, neLat: Double, neLng: Double) {
         // Travel events are fetched per week over the whole window; bbox scoping
@@ -109,7 +140,9 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     func selectAirport(_ airport: Airport) {
         selectedAirport = airport
+        cachedOriginAirlines = Self.airlines(for: destinations)
         eventsCache = [:]
+        cachedPosts = []
         clearSelection()
         refresh()
     }
@@ -143,26 +176,30 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         let swLng = region.center.longitude - region.span.longitudeDelta / 2
         let neLat = region.center.latitude + region.span.latitudeDelta / 2
         let neLng = region.center.longitude + region.span.longitudeDelta / 2
-        let key = "\(from)-\(to)|\(selectedTag?.rawValue ?? "")"
+        let key = "\(selectedAirport.iata)|\(from)-\(to)|\(selectedTag?.rawValue ?? "")"
         if let cached = eventsCache[key], !cached.isEmpty {
-            events = Array(cached.values).sorted { $0.start_ms < $1.start_ms }
+            apply(Array(cached.values))
             return
         }
         guard let resp = try? await APIClient.getTravelEvents(
             swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng,
-            from: from, to: to, tag: selectedTag?.rawValue
+            from: from, to: to, tag: selectedTag?.rawValue, origin: selectedAirport.iata
         ) else { return }
         var bucket: [String: TravelEvent] = [:]
         for e in resp.events { bucket[e.id] = e }
         eventsCache[key] = bucket
-        events = Array(bucket.values).sorted { $0.start_ms < $1.start_ms }
+        apply(Array(bucket.values))
+    }
+
+    private func apply(_ newEvents: [TravelEvent]) {
+        events = newEvents.sorted { $0.start_ms < $1.start_ms }
+        cachedPosts = events.compactMap { $0.asPost }
     }
 
     /// (from, to) epoch ms for a week offset (0..12), Monday-start. Week 0 starts
     /// today (no history — clamped so the filter is "od dziś", never the past).
     func weekRange(offset: Int) -> (Int64, Int64) {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "Europe/Warsaw")!
+        let calendar = AppConstants.warsawCalendar
         let today = calendar.startOfDay(for: Date())
         let weekday = calendar.component(.weekday, from: today) // 1=Sun
         let daysToMonday = (weekday + 5) % 7
@@ -174,11 +211,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     }
 
     private func dateLabel(_ ms: Int64) -> String {
-        let f = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.timeZone = TimeZone(identifier: "Europe/Warsaw")!
-        f.dateFormat = "dd.MM"
-        return f.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
+        AppConstants.shortDayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
     }
 
     func weekStartLabel(offset: Int) -> String {
@@ -203,7 +236,18 @@ extension TravelEvent {
             grid_cell_id: nil, liked: false, disliked: false, watched: false,
             author_name: provider, media_url: nil, thumb_url: nil, author_avatar_url: nil,
             is_sponsored: false, category: nil, link_url: link, is_sold_out: nil,
-            showtimes: nil, showtime_booking: nil, tags: nil, source: provider
+            showtimes: nil, showtime_booking: nil, tags: [tag], source: provider
         )
+    }
+}
+
+extension Post {
+    /// Pin glyph for a travel event, derived from its tag (football vs running vs citybreak).
+    var travelPinSymbol: String? {
+        guard let tags else { return nil }
+        if tags.contains(TripsViewModel.TravelTag.runs.rawValue) { return "figure.run" }
+        if tags.contains(TripsViewModel.TravelTag.football.rawValue) { return "soccerball" }
+        if tags.contains(TripsViewModel.TravelTag.cityBreak.rawValue) { return "building.2.fill" }
+        return "airplane"
     }
 }

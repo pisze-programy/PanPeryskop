@@ -3,7 +3,7 @@ import MapKit
 
 struct MapScreen: View {
     @StateObject private var mapViewModel = MapViewModel()
-    @StateObject private var tripsViewModel = TripsViewModel()
+    @ObservedObject var tripsViewModel: TripsViewModel
     @StateObject private var cameraController = MapCameraController()
 
     @Binding var showStoryViewer: Bool
@@ -14,6 +14,7 @@ struct MapScreen: View {
     @State private var activeCategory: MapCategory = .events
     @State private var showCityList = false
     @State private var showAirportList = false
+    @State private var showTripsEventCard = false
     @State private var previewRequestPin: CLLocationCoordinate2D?
     @State private var pendingRequestDrop: CLLocationCoordinate2D?
     @State private var showRequestConfirmAlert = false
@@ -133,6 +134,11 @@ struct MapScreen: View {
                 cameraController.fly(to: tripsViewModel.initialRegion)
             }
         }
+        .sheet(isPresented: $showTripsEventCard, onDismiss: {
+            tripsViewModel.clearSelectionPublic()
+        }) {
+            EventCardView(viewModel: tripsViewModel)
+        }
         .alert("Co tu się dzieje?", isPresented: $showRequestConfirmAlert) {
             Button("Tak") { confirmRequestDrop() }
             Button("Anuluj", role: .cancel) { clearPreviewRequestPin() }
@@ -185,12 +191,14 @@ struct MapScreen: View {
         let post = pin.post
         if activeCategory == .trips {
             Haptics.impact(.medium)
-            tripsViewModel.selectTravelEvent(postId: post.id)
+            tripsViewModel.selectTravelEvent(postId: post.id, group: pin.group)
+            cameraController.flyToAboveSheet(post.coordinate)
+            showTripsEventCard = true
             return
         }
         guard !post.watched || post.isEvent else { return }
         Haptics.impact(.medium)
-        storyPosts = [post]
+        storyPosts = pin.group.isEmpty ? [post] : pin.group
         selectedStoryIndex = 0
         showStoryViewer = true
     }

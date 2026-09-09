@@ -6,13 +6,27 @@ import MapKit
 @MainActor
 final class MapCameraController: ObservableObject {
     private var flyTo: ((MKCoordinateRegion) -> Void)?
+    private var flyToAvoidingSheet: ((CLLocationCoordinate2D) -> Void)?
 
     func bind(_ handler: @escaping (MKCoordinateRegion) -> Void) {
         flyTo = handler
     }
 
+    /// Deliberate camera shift so a tapped point lands in the upper half of the
+    /// screen instead of the center — keeps it visible above a medium detail
+    /// sheet (which covers the lower ~50%). General: fits any sheet-based layout.
+    func bindAvoidingSheet(_ handler: @escaping (CLLocationCoordinate2D) -> Void) {
+        flyToAvoidingSheet = handler
+    }
+
     func fly(to region: MKCoordinateRegion) {
         flyTo?(region)
+    }
+
+    /// Centers on a coordinate, shifted to stay visible above the medium sheet
+    /// (no zoom change — the current camera distance is kept).
+    func flyToAboveSheet(_ coordinate: CLLocationCoordinate2D) {
+        flyToAvoidingSheet?(coordinate)
     }
 }
 
@@ -31,6 +45,7 @@ struct MapKitMapView: View {
 
     @State private var camera: MapCameraPosition
     @State private var visibleRegion: MKCoordinateRegion
+    @State private var currentCameraDistance: CLLocationDistance
 
     init(
         overlays: [MapOverlay],
@@ -58,9 +73,13 @@ struct MapKitMapView: View {
         self.cameraController = cameraController
         self._camera = State(initialValue: .camera(MapKitMapView.tiltedCamera(center: initialRegion.center, region: initialRegion)))
         self._visibleRegion = State(initialValue: initialRegion)
+        self._currentCameraDistance = State(initialValue: MapKitMapView.cameraDistance(for: initialRegion))
     }
 
     private static let pitchDegrees: Double = 60
+    /// Where a tapped point is placed so it stays visible above a medium detail
+    /// sheet: horizontally centered, vertically in the middle of the upper half.
+    private static let sheetAvoidFraction = CGPoint(x: 0.5, y: 0.25)
     /// City fly framing distance — the city map's default camera height.
     private static let cityFlyDistance: CLLocationDistance = 60_000
     private static let clusterPixels: Double = 48
@@ -146,8 +165,9 @@ struct MapKitMapView: View {
     }
 
     var body: some View {
-        MapReader { proxy in
-            Map(
+        GeometryReader { geo in
+            MapReader { proxy in
+                Map(
                 position: $camera,
                 bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: maxZoomOutDistance),
                 interactionModes: [.pan, .zoom]
@@ -165,21 +185,23 @@ struct MapKitMapView: View {
                             cluster: cluster,
                             currentUserId: currentUserId,
                             onTap: {
-                                if let post = cluster.singlePost {
-                                    onTap(.pin(MapPin(post: post)))
-                                } else {
-                                    onTap(.pin(MapPin(post: cluster.posts[0])))
-                                }
+                                onTap(.pin(MapPin(post: cluster.singlePost ?? cluster.posts[0], group: cluster.posts)))
                             }
                         )
                     } label: { EmptyView() }
                 }
 
                 ForEach(airportPins) { pin in
-                    Annotation(coordinate: pin.coord, anchor: .center) {
-                        AirportPinBadge(iata: pin.iata)
-                            .onTapGesture { onTap(.airport(pin)) }
-                    } label: { EmptyView() }
+                    if pin.isOrigin {
+                        Annotation(coordinate: pin.coord, anchor: .center) {
+                            OriginAirportPin(iata: pin.iata, airlines: pin.airlines)
+                        } label: { EmptyView() }
+                    } else {
+                        Annotation(coordinate: pin.coord, anchor: .center) {
+                            AirportPinBadge(iata: pin.iata, airlines: pin.airlines)
+                                .onTapGesture { onTap(.airport(pin)) }
+                        } label: { EmptyView() }
+                    }
                 }
 
                 ForEach(requestPins) { request in
@@ -215,6 +237,7 @@ struct MapKitMapView: View {
             .onMapCameraChange(frequency: .onEnd) { ctx in
                 let region = ctx.region
                 visibleRegion = region
+                currentCameraDistance = Self.cameraDistance(for: region)
                 let swLat = region.center.latitude - region.span.latitudeDelta / 2
                 let swLng = region.center.longitude - region.span.longitudeDelta / 2
                 let neLat = region.center.latitude + region.span.latitudeDelta / 2
@@ -226,6 +249,39 @@ struct MapKitMapView: View {
                 cameraController.bind { region in
                     withAnimation(.easeInOut(duration: 1.2)) {
                         camera = .camera(MapKitMapView.tiltedCamera(center: region.center, region: region))
+                    }
+                }
+                cameraController.bindAvoidingSheet { coordinate in
+                    let size = geo.size
+                    // The medium detail sheet covers the lower ~50% of the screen.
+                    // This deliberate shift places the tapped point in the upper
+                    // half so pins and arcs stay visible behind the sheet. Applies
+                    // to any medium-sheet layout, not a specific category.
+                    let target = CGPoint(
+                        x: size.width * Self.sheetAvoidFraction.x,
+                        y: size.height * Self.sheetAvoidFraction.y
+                    )
+                    guard let pinScreen = proxy.convert(coordinate, to: .local) else {
+                        camera = .camera(MapCamera(
+                            centerCoordinate: coordinate,
+                            distance: currentCameraDistance,
+                            heading: 0,
+                            pitch: Self.pitchDegrees
+                        ))
+                        return
+                    }
+                    let delta = CGPoint(x: target.x - pinScreen.x, y: target.y - pinScreen.y)
+                    let newCenter = proxy.convert(
+                        CGPoint(x: size.width / 2 + delta.x, y: size.height / 2 + delta.y),
+                        from: .local
+                    ) ?? coordinate
+                    withAnimation(.easeInOut(duration: 0.6)) {
+                        camera = .camera(MapCamera(
+                            centerCoordinate: newCenter,
+                            distance: currentCameraDistance,
+                            heading: 0,
+                            pitch: Self.pitchDegrees
+                        ))
                     }
                 }
                 if let payload = NotificationDelegate.consumePendingCenter() {
@@ -245,6 +301,7 @@ struct MapKitMapView: View {
             .onReceive(NotificationCenter.default.publisher(for: .centerMapOnRequest)) { note in
                 guard let payload = note.object as? MapCenterPayload else { return }
                 centerOn(payload)
+            }
             }
         }
     }
@@ -267,12 +324,7 @@ extension FlightArc {
         return MKGeodesicPolyline(coordinates: &coords, count: coords.count)
     }
 
-    var color: Color {
-        switch airline {
-        case .ryanair: return Color(hex: 0x0d48bd)
-        case .wizzair: return Color(hex: 0xc6007e)
-        }
-    }
+    var color: Color { airline.color }
 }
 
 extension Color {
@@ -396,7 +448,7 @@ struct SinglePostPin: View {
     private var fallbackIcon: some View {
         ZStack {
             Circle().fill(Color.white.opacity(0.9))
-            Image(systemName: iconForType(post.type))
+            Image(systemName: post.travelPinSymbol ?? iconForType(post.type))
                 .font(.body)
                 .foregroundColor(.black.opacity(0.7))
         }

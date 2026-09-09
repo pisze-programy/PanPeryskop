@@ -195,8 +195,9 @@ struct APIClient {
         _ = try? await URLSession.shared.data(for: request)
     }
 
-    /// Wycieczki — travel events within a bbox + week window. from/to are epoch ms.
-    static func getTravelEvents(swLat: Double, swLng: Double, neLat: Double, neLng: Double, from: Int64, to: Int64, tag: String?) async throws -> TravelEventsResponse {
+    /// Wycieczki — travel events within a bbox + week window, optionally reachable
+    /// from an origin airport. from/to are epoch ms.
+    static func getTravelEvents(swLat: Double, swLng: Double, neLat: Double, neLng: Double, from: Int64, to: Int64, tag: String?, origin: String? = nil) async throws -> TravelEventsResponse {
         var params = [
             "sw_lat": String(swLat),
             "sw_lng": String(swLng),
@@ -207,6 +208,14 @@ struct APIClient {
             "limit": "1000",
         ]
         if let tag { params["tag"] = tag }
+        if let origin { params["origin"] = origin }
         return try await get("/travel/events", params: params)
+    }
+
+    /// Flight availability (mock until live proxies land) — shape mirrors backend
+    /// FlightWindow { outbound[], returning[] } of {date, hour, price}.
+    static func getFlights(airline: Airline, origin: String, destination: String, eventDay: String) async throws -> FlightWindowResponse {
+        let path = airline == .ryanair ? "/flights/ryanair" : "/flights/wizzair"
+        return try await get(path, params: ["origin": origin, "destination": destination, "eventDay": eventDay])
     }
 }

@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var showAddContent = false
 
     @StateObject private var mapViewModel = MapViewModel()
+    @StateObject private var tripsViewModel = TripsViewModel()
     @State private var showStoryViewer = false
     @State private var selectedStoryIndex = 0
     @State private var storyPosts: [Post] = []
@@ -15,6 +16,7 @@ struct ContentView: View {
         ZStack(alignment: .bottom) {
             if selectedTab == 0 {
                 MapScreen(
+                    tripsViewModel: tripsViewModel,
                     showStoryViewer: $showStoryViewer,
                     selectedStoryIndex: $selectedStoryIndex,
                     storyPosts: $storyPosts

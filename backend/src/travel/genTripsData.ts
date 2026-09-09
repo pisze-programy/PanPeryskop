@@ -37,7 +37,7 @@ for (const origin of pl) {
   const dests = destinationsFrom(origin.iata).sort((a, b) => a.iata.localeCompare(b.iata));
   out += `        "${origin.iata}": [\n`;
   for (const d of dests) {
-    const provs = Array.from(d.providers).sort().map((p) => `"${p}"`).join(', ');
+    const provs = Array.from(d.providers).sort().map((p) => `.${p}`).join(', ');
     out += `            Destination(iata: "${d.iata}", name: "${esc(d.name)}", city: "${esc(d.city)}", country: "${esc(d.country)}", lat: ${d.lat}, lng: ${d.lng}, providers: [${provs}]),\n`;
   }
   out += `        ],\n`;

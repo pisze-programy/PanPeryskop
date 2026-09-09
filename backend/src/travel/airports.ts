@@ -81,7 +81,7 @@ export function airportCatalog(): Airport[] {
   return [...catalog.values()];
 }
 
-function foldCity(city: string): string {
+export function foldCity(city: string): string {
   return diacriticFold(city).replace(/[^a-z0-9]+/g, ' ');
 }
 
@@ -197,4 +197,9 @@ export function destinationsFrom(origin: string): Destination[] {
   for (const d of ryanairDestinations(origin)) add(d, 'ryanair');
   for (const d of wizzairDestinations(origin)) add(d, 'wizzair');
   return [...byIata.values()].sort((a, b) => a.city.localeCompare(b.city));
+}
+
+/** Folded city names reachable from `origin` — the event-city filter set. */
+export function destinationCities(origin: string): Set<string> {
+  return new Set(destinationsFrom(origin).map((d) => foldCity(d.city)));
 }

@@ -1,10 +1,13 @@
 import { Hono } from 'hono';
 import { TRAVEL_TAGS, TravelTag } from '../travel/constants';
+import { destinationCities, foldCity } from '../travel/airports';
+import { fetchRyanairWindow, fetchWizzairWindow } from '../travel/flightsApi';
 
 export const travelRoutes = new Hono<{ Bindings: Env }>();
 
 const MAX_WINDOW_MS = 370 * 24 * 3_600_000;
 const MAX_LIMIT = 1000;
+const IATA_RE = /^[A-Z]{3}$/;
 
 interface BBox {
   swLat: number;
@@ -35,7 +38,8 @@ travelRoutes.get('/events', async (c) => {
   if (!isFinite(from) || !isFinite(to) || to <= from) return c.json({ error: 'Invalid or missing from/to (epoch ms)' }, 400);
   if (to - from > MAX_WINDOW_MS) return c.json({ error: 'Window too large' }, 400);
   const tag = parseTag(q.tag);
-  const limit = q.limit ? Math.min(Number(q.limit), MAX_LIMIT) : MAX_LIMIT;
+  const limit = parseLimit(q.limit);
+  const origin = q.origin && IATA_RE.test(q.origin) ? q.origin.toUpperCase() : null;
 
   const { results } = await c.env.DB
     .prepare(
@@ -48,9 +52,11 @@ travelRoutes.get('/events', async (c) => {
        LIMIT ${limit}`
     )
     .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, from, to, ...(tag ? [tag] : []))
-    .all();
+    .all<{ city: string }>();
 
-  return c.json({ events: results ?? [] });
+  const events = (results ?? []).filter((e) => !origin || destinationCities(origin).has(foldCity(e.city)));
+
+  return c.json({ events });
 });
 
 function parseTag(raw: string | undefined): TravelTag | null {
@@ -58,3 +64,33 @@ function parseTag(raw: string | undefined): TravelTag | null {
   if (TRAVEL_TAGS.has(raw as TravelTag)) return raw as TravelTag;
   return null;
 }
+
+function parseLimit(raw: string | undefined): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), MAX_LIMIT) : MAX_LIMIT;
+}
+
+function flightParams(q: Record<string, string | undefined>): { origin: string; destination: string; eventDay: string } | null {
+  const origin = q.origin?.toUpperCase() ?? '';
+  const destination = q.destination?.toUpperCase() ?? '';
+  const eventDay = q.eventDay ?? '';
+  if (!IATA_RE.test(origin) || !IATA_RE.test(destination) || !/^\d{4}-\d{2}-\d{2}$/.test(eventDay)) return null;
+  return { origin, destination, eventDay };
+}
+
+async function flightHandler(c: any, airline: 'ryanair' | 'wizzair'): Promise<Response> {
+  const q = c.req.query();
+  const params = flightParams(q);
+  if (!params) return c.json({ error: 'origin, destination, eventDay required (IATA, YYYY-MM-DD)' }, 400);
+  try {
+    const window = airline === 'ryanair'
+      ? await fetchRyanairWindow(params.origin, params.destination, params.eventDay)
+      : await fetchWizzairWindow(params.origin, params.destination, params.eventDay);
+    return c.json(window);
+  } catch (e) {
+    return c.json({ error: (e as Error).message }, 502);
+  }
+}
+
+travelRoutes.get('/flights/ryanair', (c) => flightHandler(c, 'ryanair'));
+travelRoutes.get('/flights/wizzair', (c) => flightHandler(c, 'wizzair'));

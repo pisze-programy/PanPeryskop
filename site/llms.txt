@@ -1,0 +1,29 @@
+# Pan Peryskop
+
+> Pan Peryskop to aplikacja na iOS — mapa wydarzeń i live w całej Polsce: koncerty, kino, teatr, stand-up, sport i wydarzenia darmowe we wszystkich miastach, plus live publikowane przez ludzi w miejscu zdarzenia. Treści są dostępne w aplikacji (App Store), nie na stronie web. Pełny opis: https://panperyskop.app/llms-full.txt
+
+## Categories
+- Koncerty
+- Kino
+- Teatr
+- Stand-up
+- Sport
+- Wydarzenia darmowe
+- Live od ludzi w miejscu zdarzenia
+
+## Pages
+- Strona główna (PL): https://panperyskop.app/
+- Home (EN): https://panperyskop.app/index.en.html
+- Polityka prywatności: https://panperyskop.app/privacy
+- Regulamin: https://panperyskop.app/terms
+- Wsparcie: https://panperyskop.app/support
+- App Store: https://apps.apple.com/pl/app/pan-peryskop/id6803138750
+- Pełny opis (miasta + fakty): https://panperyskop.app/llms-full.txt
+
+## Facts
+- Agregator wydarzeń i biletów online z popularnych źródeł, z datami, miejscami i linkami do biletów.
+- Wydarzenia w całej Polsce — od Warszawy, Krakowa i Poznania po Trójmiasto i Śląsk.
+- W tym wydarzenia darmowe.
+- Live od ludzi — zdjęcia i filmy prosto z miejsca zdarzenia; treści znikają po 24 godzinach.
+- Logowanie przez Sign in with Apple jest wymagane do korzystania z aplikacji.
+- Kontakt: kontakt@panperyskop.app

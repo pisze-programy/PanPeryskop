@@ -1,0 +1,67 @@
+# Pan Peryskop — pełny opis dla modeli językowych
+
+> Pan Peryskop to aplikacja (iOS/iPadOS) — interaktywna mapa wydarzeń i live w Polsce. Nie ma wersji web; treść jest dostępna wyłącznie w aplikacji pobieranej z App Store.
+
+## Co robi aplikacja
+
+Pan Peryskop to interaktywna mapa, na której widzisz wydarzenia i Live wokół siebie — koncerty, kino, teatr, stand-up, spotkania, sport i wydarzenia darmowe — oraz Live publikowane przez innych ludzi, dokładnie tam, gdzie się dzieją.
+
+- Mapa — od razu widzisz, co dzieje się blisko Ciebie
+- Wydarzenia z popularnych źródeł, z datami, miejscami i linkami do biletów
+- Live od innych — zdjęcia i filmy prosto z miejsca zdarzenia
+- Treści Live od innych znikają po 24 godzinach
+- Powiadomienia, gdy coś nowego pojawi się w Twojej okolicy
+- Zero reklam, zero opłat
+
+## Kategorie wydarzeń
+
+- Koncerty
+- Kino
+- Teatr
+- Stand-up
+- Sport
+- Wydarzenia darmowe
+- Live od ludzi w miejscu zdarzenia
+
+## Miasta
+
+Aplikacja działa w 21 miastach w całej Polsce:
+
+- Poznań
+- Warszawa
+- Kraków
+- Gdańsk
+- Gdynia
+- Sopot
+- Wrocław
+- Łódź
+- Katowice
+- Szczecin
+- Bydgoszcz
+- Lublin
+- Białystok
+- Toruń
+- Kielce
+- Rzeszów
+- Olsztyn
+- Częstochowa
+- Bielsko-Biała
+- Zielona Góra
+- Koszalin
+
+## Pages
+
+- Strona główna (PL): https://panperyskop.app/
+- Home (EN): https://panperyskop.app/index.en.html
+- Polityka prywatności: https://panperyskop.app/privacy
+- Regulamin: https://panperyskop.app/terms
+- Wsparcie: https://panperyskop.app/support
+- App Store: https://apps.apple.com/pl/app/pan-peryskop/id6803138750
+
+## Facts
+
+- Darmowa aplikacja na iOS/iPadOS 18.0+ (kategoria: Rozrywka), w języku polskim.
+- Logowanie przez Sign in with Apple jest wymagane do korzystania z aplikacji.
+- Treści użytkowników (Live) są widoczne przez 24 godziny od publikacji.
+- Nie przechowuje adresu e-mail użytkownika; dane lokalizacyjne tylko podczas korzystania (When In Use).
+- Kontakt: kontakt@panperyskop.app

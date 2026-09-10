@@ -13,7 +13,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchKupCatalog, scanKupEvents } from '../../../../src/seed/providers/kupbilecik';
-import { SEED_DAYS_AHEAD } from '../../../../src/seed/core/constants';
+import { SEED_REFILL_AHEAD } from '../../../../src/seed/core/constants';
 import { todayWarsaw, addDaysWarsaw } from '../../../../src/seed/core/dates';
 
 // Repo root — works from BOTH the TS source (deep in backend/src/...) and the
@@ -60,28 +60,31 @@ async function main(): Promise<void> {
   }
   // Seed cadence: the warm only runs on seed (full-window refill) days. On a
   // cadence-check failure default to RUN (a broken gate must not silently freeze
-  // the manifests — the push then fails loudly instead).
-  try {
-    const cad = (await (await fetch(`${base}/admin/seed/cadence`, {
-      headers: { Authorization: `Bearer ${secret}` },
-      signal: AbortSignal.timeout(20_000),
-    })).json().catch(() => ({}))) as { due?: boolean; lastSeedDay?: string | null };
-    if (cad.due === false) {
-      log(`not a seed day (last ${cad.lastSeedDay ?? 'never'}) — skip`);
-      return;
+  // the manifests — the push then fails loudly instead). FORCE=1 bypasses the
+  // gate for manual backfills.
+  if (process.env.FORCE !== '1') {
+    try {
+      const cad = (await (await fetch(`${base}/admin/seed/cadence`, {
+        headers: { Authorization: `Bearer ${secret}` },
+        signal: AbortSignal.timeout(20_000),
+      })).json().catch(() => ({}))) as { due?: boolean; lastSeedDay?: string | null };
+      if (cad.due === false) {
+        log(`not a seed day (last ${cad.lastSeedDay ?? 'never'}) — skip`);
+        return;
+      }
+    } catch (e) {
+      log(`cadence check failed (${(e as Error).message}) — proceeding`);
     }
-  } catch (e) {
-    log(`cadence check failed (${(e as Error).message}) — proceeding`);
   }
   // The origin intermittently 404s (and occasionally returns a corrupt 200) once
   // the ~10/day token budget is being exceeded or a burst trips it. Retry the
   // whole fetch+scan a few times — bounded so a day never burns >3 requests.
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const { byDay, total } = await scanKupEvents(await fetchKupCatalog(token));
+      const { byDay, total } = await scanKupEvents(await fetchKupCatalog(token), SEED_REFILL_AHEAD);
       const today = todayWarsaw();
       let pushed = 0;
-      for (let i = 0; i <= SEED_DAYS_AHEAD; i++) {
+      for (let i = 0; i <= SEED_REFILL_AHEAD; i++) {
         const day = addDaysWarsaw(today, i);
         const list = byDay.get(day) || [];
         const res = await fetch(`${base}/admin/seed/kupbilecik/day`, {
@@ -94,7 +97,7 @@ async function main(): Promise<void> {
         log(`${day} ${list.length} events`);
         pushed++;
       }
-      log(`done: ${pushed}/${SEED_DAYS_AHEAD + 1} days pushed, ${total} catalog events`);
+      log(`done: ${pushed}/${SEED_REFILL_AHEAD + 1} days pushed, ${total} catalog events`);
       return;
     } catch (e) {
       log(`attempt ${attempt}/3 failed: ${(e as Error).message}`);

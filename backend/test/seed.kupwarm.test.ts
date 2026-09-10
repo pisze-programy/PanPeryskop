@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
 import { scanKupEvents, maybeGunzip } from '../src/seed/providers/kupbilecik';
 import { todayWarsaw, addDaysWarsaw } from '../src/seed/core/dates';
+import { SEED_REFILL_AHEAD } from '../src/seed/core/constants';
 import { SourceBlockedError, SourceShapeError } from '../src/seed/core/fetchOnce';
 
 const enc = new TextEncoder();
@@ -39,18 +40,20 @@ function ev(id: number, day: string): string {
 const today = todayWarsaw();
 const d1 = today;
 const d2 = addDaysWarsaw(today, 3);
-const dOutside = addDaysWarsaw(today, 10);
+const dFarEdge = addDaysWarsaw(today, SEED_REFILL_AHEAD);
+const dOutside = addDaysWarsaw(today, SEED_REFILL_AHEAD + 1);
 
 async function scan(text: string, chunkSize = 1_000_000): Promise<Awaited<ReturnType<typeof scanKupEvents>>> {
   return scanKupEvents(streamOf(text, chunkSize));
 }
 
 test('scanKupEvents: buckets in-window days, drops out-of-window + trims heavy fields', async () => {
-  const catalog = `{"events":[${ev(1, d1)},${ev(2, d2)},${ev(3, dOutside)}]}`;
+  const catalog = `{"events":[${ev(1, d1)},${ev(2, d2)},${ev(3, dFarEdge)},${ev(4, dOutside)}]}`;
   const { byDay, total } = await scan(catalog);
-  assert.equal(total, 3);
+  assert.equal(total, 4);
   assert.equal(byDay.get(d1)?.length, 1);
   assert.equal(byDay.get(d2)?.length, 1);
+  assert.equal(byDay.get(dFarEdge)?.length, 1, 'far edge of the refill horizon is covered');
   assert.ok(!byDay.has(dOutside));
 
   const e = byDay.get(d1)![0];

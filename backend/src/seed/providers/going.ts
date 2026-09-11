@@ -32,6 +32,12 @@ interface PlaceInfo {
   city?: { name?: string };
 }
 
+// Per-process place cache: the same venue repeats across many events (and across
+// runs in the long-lived VPS consumer), so this turns one place request per event
+// into one per distinct venue — cutting residential-proxy traffic without any
+// change to data freshness.
+const placeCache = new Map<string, PlaceInfo>();
+
 // Deterministic going tags from the API's own category_slug + title. Canonical
 // ids only; the category is explicit on going's site (as certain as kupbilecik's
 // listing category). `kultura` needs a strong title signal (a film — reż./film/
@@ -57,7 +63,7 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
   if (!appId || !apiKey) throw new Error('going: ALGOLIA_APP_ID/ALGOLIA_API_KEY not configured');
   // TradeDoubler slug→click map (built by the VPS runner, env.GOING_TD_MAP).
   // Absent (e.g. no TD token) → plain links, unchanged behavior.
-  const tdMap = (ctx.env as unknown as Record<string, unknown>).GOING_TD_MAP as Record<string, string> | undefined;
+  const tdMap = ctx.env.GOING_TD_MAP;
   const algoliaUrl = `https://${appId}-dsn.algolia.net/1/indexes/*/queries?x-algolia-api-key=${encodeURIComponent(apiKey)}&x-algolia-application-id=${encodeURIComponent(appId)}`;
 
   // Page over the whole day — Algolia caps hitsPerPage at 100 and busy days
@@ -88,9 +94,18 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
   }
 
   const out: SeedCandidate[] = [];
+  const rejected: string[] = [];
   for (const h of hits) {
     let place: PlaceInfo = {};
-    try { place = await getJson(GOING_PLACE(h.place_slug!)); } catch { /* keep place-less */ }
+    const slug = h.place_slug;
+    if (slug) {
+      const cached = placeCache.get(slug);
+      if (cached) {
+        place = cached;
+      } else {
+        try { place = await getJson(GOING_PLACE(slug)); placeCache.set(slug, place); } catch { /* keep place-less */ }
+      }
+    }
     // Venue upsert is an optimization for future geo reuse — on the VPS executor
     // there is no D1 binding, and the candidate already carries lat/lng from the
     // place API, so this is skipped (worker keeps it).
@@ -98,8 +113,13 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
       await upsertVenue(ctx.env.DB, { name: place.name, lat: place.lat, lng: place.lon, city: place.city?.name || '', provider: ProviderId.GOING });
     }
     const id = String(h.objectID || h.path || '').replace(/^rundates\//, '');
+    // Reject (never substitute): no id, no image, no title, no usable date.
+    if (id === '') { rejected.push('missing id'); continue; }
     const cloudPath = h.thumbnail;
-    if (!cloudPath) continue;
+    if (cloudPath === undefined || cloudPath === '') { rejected.push(`${id}: missing image`); continue; }
+    if (h.name_pl === undefined || h.name_pl === '') { rejected.push(`${id}: missing title`); continue; }
+    const startMs = h.start_date_timestamp;
+    if (typeof startMs !== 'number' || startMs <= 0) { rejected.push(`${id}: missing/invalid date`); continue; }
     const enc = encodeURIComponent(cloudPath).replace(/%2F/g, '/');
     // Affiliate: exact (event-slug, rundate-slug) match against the TD feed map.
     // No match → plain link (today's behavior — no commission to lose). The
@@ -108,27 +128,29 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
     if (h.slug && h.rundate_slug && tdMap) {
       affiliateLink = tdMap[goingSlugKey(h.slug, h.rundate_slug)];
     }
+    const goingTagList = goingTags(h.category_slug, h.name_pl);
     out.push({
       source: ProviderId.GOING,
       externalId: `going-${id}`,
-      title: h.name_pl || '',
-      startMs: h.start_date_timestamp ?? 0,
+      title: h.name_pl,
+      startMs,
       lat: typeof place.lat === 'number' ? place.lat : null,
       lng: typeof place.lon === 'number' ? place.lon : null,
-      city: place?.city?.name || '',
-      venue: place?.name || h.place_name || '',
-      address: place?.address || '',
+      city: place.city === undefined || place.city.name === undefined ? '' : place.city.name,
+      venue: place.name === undefined || place.name === '' ? (h.place_name === undefined ? '' : h.place_name) : place.name,
+      address: place.address === undefined ? '' : place.address,
       link: h.slug && h.rundate_slug
         ? `${GOING_BASE}/wydarzenie/${h.slug}/${h.rundate_slug}`
         : `${GOING_BASE}/${h.path}`,
       affiliateLink,
       mediaUrl: GOING_POSTER(enc, cloudSig),
       thumbUrl: GOING_THUMB(enc, cloudSig),
-      tags: goingTags(h.category_slug, h.name_pl) ?? undefined,
+      tags: goingTagList === null ? undefined : goingTagList,
       partnerId: h.partner_id != null ? String(h.partner_id) : undefined,
-      partnerName: h.partner_name || undefined,
+      partnerName: h.partner_name,
     });
   }
+  if (rejected.length) console.warn(`going: rejected ${rejected.length} malformed hit(s): ${rejected.slice(0, 5).join('; ')}${rejected.length > 5 ? ' …' : ''}`);
   if (tdMap && out.length > 0) {
     const matched = out.filter((c) => c.affiliateLink).length;
     console.log(`going affiliate: ${matched}/${out.length} candidates matched`);

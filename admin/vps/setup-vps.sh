@@ -53,6 +53,7 @@ fi
 SRC_TMP="/tmp"
 mkdir -p "$REPO_DIR/backend/dist" "$REPO_DIR/admin/vps" "$REPO_DIR/admin/src"
 install -m 0644 "$SRC_TMP/vps-seed.mjs"    "$REPO_DIR/backend/dist/vps-seed.mjs"
+install -m 0644 "$SRC_TMP/seed-consumer.mjs" "$REPO_DIR/backend/dist/seed-consumer.mjs"
 install -m 0644 "$SRC_TMP/kup-warm.mjs"    "$REPO_DIR/backend/dist/kup-warm.mjs"
 install -m 0644 "$SRC_TMP/awin-warm.mjs"   "$REPO_DIR/backend/dist/awin-warm.mjs"
 install -m 0644 "$SRC_TMP/travel-espn.mjs" "$REPO_DIR/backend/dist/travel-espn.mjs"

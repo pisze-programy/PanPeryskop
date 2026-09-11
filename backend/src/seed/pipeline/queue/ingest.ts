@@ -15,13 +15,11 @@ import { detectMediaType, extForMediaType } from '../../../core/mediaFormat';
 import { doSavePost } from '../../../api/posts';
 import { STATUS_APPROVED, STATUS_PENDING, POST_TYPE_PHOTO } from '../../../core/models';
 import { findBlacklist, loadBlacklistRules, blacklistReason } from '../../core/blacklist';
+import { configOf } from '../../providers/registry';
 import { eventCreatedAtMs, eventDayEndMs, warsawMidnightMs } from '../../core/dates';
 import { now } from './state';
 
-export interface RawIngestEnv {
-  DB: D1Database;
-  MEDIA: R2Bucket;
-}
+export type RawIngestEnv = Env;
 
 export interface RawWinnerRow {
   id: string;
@@ -138,48 +136,67 @@ export async function ingestWinnerRow(
     const existing = await env.DB.prepare('SELECT id, media_key, thumb_key FROM posts WHERE external_id=?')
       .bind(row.external_id)
       .first<{ id: string; media_key: string | null; thumb_key: string | null }>();
-    const postId = existing?.id || nanoid(24);
+    const postId = existing === null || existing === undefined ? nanoid(24) : existing.id;
+
+    // Required fields — a missing link or image is a hard error (no post), never
+    // a substituted empty value.
+    if (row.link_url === null || row.link_url === '') throw new Error('missing link_url');
+    if (row.media_url === null || row.media_url === '') throw new Error('missing media_url');
+    const mediaUrl = row.media_url;
 
     const ctx = {
-      env: env as unknown as Env, day, dayStart,
+      env, day, dayStart,
       dayEnd: eventDayEndMs(day), createdAt,
       recordBrowserMs: (_ms: number) => {},
     };
-    let link = row.link_url || '';
+    let link = row.link_url;
     if (provider.resolveLink) {
       try {
-        link = await provider.resolveLink(ctx, rowToCandidate(row, dayStart, lat, lng, link));
+        link = await provider.resolveLink(ctx, rowToCandidate(row, dayStart, lat, lng, link, mediaUrl));
       } catch { /* best-effort */ }
     }
 
-    // Idempotent re-seed: reuse stored media when the post already exists.
-    let mediaKey: string | null = existing?.media_key ?? null;
-    if (!mediaKey) {
-      if (!row.media_url) throw new Error('missing media url');
-      const mediaBytes = await provider.fetchBytes(ctx, row.media_url);
-      const mediaType = detectMediaType(mediaBytes);
-      if (!mediaType || !mediaType.startsWith('image/')) throw new Error(`bad media ${mediaType || 'unknown'}`);
-      mediaKey = `posts/${postId}/media.${extForMediaType(mediaType)}`;
-      await env.MEDIA.put(mediaKey, mediaBytes, { httpMetadata: { contentType: mediaType } });
+    // Media mode is required registry config — no silent default.
+    const providerConfig = configOf(provider.id);
+    if (!providerConfig) throw new Error(`no registry config for provider ${provider.id}`);
+    const mediaMode = providerConfig.media;
+    let mediaKey: string | null = existing === null || existing === undefined ? null : existing.media_key;
+    let thumbKey: string | null = existing === null || existing === undefined ? null : existing.thumb_key;
+    let externalMediaUrl: string | null = null;
+    let externalThumbUrl: string | null = null;
+    if (mediaMode === 'hotlink') {
+      // Store the source CDN URLs verbatim; a missing thumb stays NULL (the app
+      // falls back to the full image at render time — that is display, not data).
+      externalMediaUrl = mediaUrl;
+      externalThumbUrl = row.thumb_url;
+    } else {
+      if (mediaKey === null) {
+        const mediaBytes = await provider.fetchBytes(ctx, mediaUrl);
+        const mediaType = detectMediaType(mediaBytes);
+        if (!mediaType || !mediaType.startsWith('image/')) {
+          throw new Error(`bad media ${mediaType === null || mediaType === undefined ? 'unknown' : mediaType}`);
+        }
+        mediaKey = `posts/${postId}/media.${extForMediaType(mediaType)}`;
+        await env.MEDIA.put(mediaKey, mediaBytes, { httpMetadata: { contentType: mediaType } });
+      }
+      if (thumbKey === null && row.thumb_url !== null) {
+        try {
+          const thumbBytes = await provider.fetchBytes(ctx, row.thumb_url);
+          const thumbType = detectMediaType(thumbBytes);
+          if (!thumbType) throw new Error('unknown thumb type');
+          thumbKey = `posts/${postId}/thumb.${extForMediaType(thumbType)}`;
+          await env.MEDIA.put(thumbKey, thumbBytes, { httpMetadata: { contentType: thumbType } });
+        } catch { thumbKey = null; }
+      }
     }
 
-    let thumbKey: string | null = existing?.thumb_key ?? null;
-    if (!thumbKey && row.thumb_url) {
-      try {
-        const thumbBytes = await provider.fetchBytes(ctx, row.thumb_url);
-        const thumbType = detectMediaType(thumbBytes) ?? 'image/webp';
-        thumbKey = `posts/${postId}/thumb.${extForMediaType(thumbType)}`;
-        await env.MEDIA.put(thumbKey, thumbBytes, { httpMetadata: { contentType: thumbType } });
-      } catch { thumbKey = null; }
-    }
-
-    const cand = rowToCandidate(row, dayStart, lat, lng, link);
+    const cand = rowToCandidate(row, dayStart, lat, lng, link, mediaUrl);
     const description = buildDescription(cand);
-    await doSavePost(env as unknown as Env, { id: userId }, postId, POST_TYPE_PHOTO, lat, lng, description,
+    await doSavePost(env, { id: userId }, postId, POST_TYPE_PHOTO, lat, lng, description,
       mediaKey, thumbKey, createdAt, true, link, row.external_id, Boolean(existing), row.is_sold_out === 1,
       showtimesJson(cand), showtimeBookingJson(cand), tagsJson(cand),
       pendingGeo || provider.pendingByDefault ? STATUS_PENDING : STATUS_APPROVED,
-      row.partner_id, row.partner_name, row.price_pln);
+      row.partner_id, row.partner_name, row.price_pln, null, externalMediaUrl, externalThumbUrl);
 
     await env.DB.prepare(`UPDATE seed_raw SET status='done', post_id=?, reason=NULL, updated_at=? WHERE id=?`)
       .bind(postId, now(), row.id)
@@ -194,7 +211,7 @@ export async function ingestWinnerRow(
 }
 
 /** Rebuild the candidate view a row was written from (description + JSON helpers). */
-function rowToCandidate(row: RawWinnerRow, dayStart: number, lat: number, lng: number, link: string): SeedCandidate {
+function rowToCandidate(row: RawWinnerRow, dayStart: number, lat: number, lng: number, link: string, mediaUrl: string): SeedCandidate {
   const times = parseJsonArray<string>(row.showtimes);
   return {
     source: row.provider as SeedCandidate['source'],
@@ -202,19 +219,19 @@ function rowToCandidate(row: RawWinnerRow, dayStart: number, lat: number, lng: n
     title: row.title,
     startMs: dayStart + row.start_min * 60_000,
     lat, lng,
-    city: row.city || '',
+    city: row.city === null ? '' : row.city,
     venue: row.raw_venue,
     address: '',
     link,
-    mediaUrl: row.media_url || '',
+    mediaUrl,
     thumbUrl: row.thumb_url,
     isSoldOut: row.is_sold_out === 1,
     times: times.length > 0 ? times : undefined,
     showtimeBooking: parseJsonArray<ShowtimeBooking>(row.showtime_booking),
     tags: parseJsonArray<string>(row.tags),
-    partnerId: row.partner_id || undefined,
-    partnerName: row.partner_name || undefined,
+    partnerId: row.partner_id === null ? undefined : row.partner_id,
+    partnerName: row.partner_name === null ? undefined : row.partner_name,
     price: row.price_pln,
-    affiliateLink: row.affiliate_link || undefined,
+    affiliateLink: row.affiliate_link === null ? undefined : row.affiliate_link,
   };
 }

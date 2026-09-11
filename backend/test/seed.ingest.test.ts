@@ -14,6 +14,7 @@ const WEBP = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x4
 interface MockPost {
   id: string; external_id: string; status: string; lat: number; lng: number;
   description: string; media_key: string | null; thumb_key: string | null;
+  external_media_url?: string | null; external_thumb_url?: string | null;
   link_url: string | null; showtimes: string | null; showtime_booking: string | null;
   price_pln: number | null;
 }
@@ -59,34 +60,41 @@ class MockIngestDB {
           async run(): Promise<{ meta: { changes: number } }> {
             if (sql.includes('INSERT INTO posts (')) {
               // doSavePost bind order: postId, userId, type, lat, lng, description,
-              // status, mediaKey, thumbKey, createdAt, cellId, sponsored, category,
-              // linkUrl, sourceUrl, externalId, soldOut, eventDate, showtimes,
-              // booking, tags, partnerId, partnerName, price (24 binds).
-              const [id, , , lat, lng, description, status, mediaKey, thumbKey, , , , , linkUrl, , externalId, , , showtimes, booking, , partnerId, partnerName, price] = args as [
+              // status, mediaKey, thumbKey, externalMediaUrl, externalThumbUrl,
+              // createdAt, cellId, sponsored, category, linkUrl, sourceUrl, externalId,
+              // soldOut, eventDate, showtimes, booking, tags, partnerId, partnerName, price.
+              const [id, , , lat, lng, description, status, mediaKey, thumbKey, extMedia, extThumb, , , , , linkUrl, , externalId, , , showtimes, booking, , partnerId, partnerName, price] = args as [
                 string, string, string, number, number, string, string, string | null, string | null,
-                number, string, number, string, string | null, string | null, string, number, string | null,
-                string | null, string | null, string | null, string | null, string | null, number | null,
+                string | null, string | null, number, string, number, string, string | null, string | null, string,
+                number, string | null, string | null, string | null, string | null, string | null, string | null, number | null,
               ];
               db.posts.set(String(externalId), {
                 id, external_id: String(externalId), status, lat, lng, description,
-                media_key: mediaKey, thumb_key: thumbKey, link_url: linkUrl,
-                showtimes, showtime_booking: booking, price_pln: price,
+                media_key: mediaKey, thumb_key: thumbKey,
+                external_media_url: extMedia, external_thumb_url: extThumb,
+                link_url: linkUrl, showtimes, showtime_booking: booking, price_pln: price,
               });
               return { meta: { changes: 1 } };
             }
             if (sql.includes('UPDATE posts')) {
-              // bind: type,lat,lng,description,mediaKey,thumbKey,...,showtimes,booking,...,price,postId
+              // bind: type,lat,lng,description,mediaKey,thumbKey,extMedia,extThumb,
+              // sponsored,category,linkUrl,createdAt,externalId,status,soldOut,eventDate,
+              // showtimes,booking,tags,partnerId,partnerName,price,sourceUrl,postId
               const postId = String(args[args.length - 1]);
               const p = [...db.posts.values()].find((x) => x.id === postId);
               if (!p) return { meta: { changes: 0 } };
-              const [, lat, lng, description, mediaKey, thumbKey] = args as [string, number, number, string, string | null, string | null];
+              const [, lat, lng, description, mediaKey, thumbKey, extMedia, extThumb] = args as
+                [string, number, number, string, string | null, string | null, string | null, string | null];
               p.lat = lat; p.lng = lng; p.description = description;
-              p.media_key = mediaKey; p.thumb_key = thumbKey;
-              p.link_url = args[8] as string | null;
-              p.status = args[11] as string;
-              p.showtimes = args[14] as string | null;
-              p.showtime_booking = args[15] as string | null;
-              p.price_pln = args[19] as number | null;
+              // media_key is COALESCE(new, existing) — never cleared.
+              if (mediaKey !== null) p.media_key = mediaKey;
+              if (thumbKey !== null) p.thumb_key = thumbKey;
+              p.external_media_url = extMedia; p.external_thumb_url = extThumb;
+              p.link_url = args[10] as string | null;
+              p.status = args[13] as string;
+              p.showtimes = args[16] as string | null;
+              p.showtime_booking = args[17] as string | null;
+              p.price_pln = args[21] as number | null;
               return { meta: { changes: 1 } };
             }
             if (sql.includes('INSERT INTO grid_cells')) return { meta: { changes: 1 } };
@@ -162,8 +170,10 @@ test('ingest: canonical venue hit → approved post with merged fields, row done
   assert.equal(res.skipped, false);
   assert.equal(res.pendingGeo, false);
   assert.ok(res.postId);
-  assert.equal(fetches, 1, 'media downloaded once for a new post');
-  assert.deepEqual(puts, [`posts/${res.postId}/media.webp`]);
+  assert.equal(fetches, 0, 'hotlink: media is not downloaded');
+  assert.deepEqual(puts, [], 'hotlink: no R2 copy');
+  assert.equal(db.posts.get('ebilet-1-20260908')!.external_media_url, 'https://www.ebilet.pl/img/x.webp', 'external URL stored');
+  assert.equal(db.posts.get('ebilet-1-20260908')!.external_thumb_url, null, 'no thumb → NULL, not substituted with media');
 
   const post = db.posts.get('ebilet-1-20260908')!;
   assert.equal(post.status, 'approved');
@@ -187,7 +197,7 @@ test('ingest: re-run is a no-op — same post, no second download', async () => 
   const second = await ingestWinnerRow(env, provider, 'u1', DAY, { ...row(), status: 'done' } as RawWinnerRow);
   assert.equal(second.skipped, true);
   assert.equal(second.postId, first.postId, 'same post id, no duplicate');
-  assert.equal(fetches, 1, 'media not re-downloaded');
+  assert.equal(fetches, 0, 'hotlink: no download');
   assert.equal(db.posts.size, 1);
 });
 

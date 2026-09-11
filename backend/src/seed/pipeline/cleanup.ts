@@ -11,6 +11,8 @@ const SEED_RETENTION_MS = 4 * DAY_MS; // 4 days
 export interface PruneResult {
   removedCandidates: number;
   removedScopes: number;
+  removedUnits: number;
+  removedRaw: number;
   removedBatches: number;
   removedRuns: number;
   runType: RunType;
@@ -18,7 +20,13 @@ export interface PruneResult {
 
 export async function pruneSeedData(env: Env, runType: RunType = 'cron'): Promise<PruneResult> {
   const cutoff = Date.now() - SEED_RETENTION_MS;
-  // Delete candidates/scopes older than the cutoff; then batches/runs (no FK to posts).
+  // Delete children BEFORE seed_batches: seed_units/seed_raw/reconciliation_failures
+  // (and the legacy seed_scopes/seed_candidates) all carry a batch FK. Deleting a
+  // batch first would violate the constraint and fail the cron.
+  const delRaw = await env.DB.prepare('DELETE FROM seed_raw WHERE created_at < ?').bind(cutoff).run();
+  const delFail = await env.DB.prepare('DELETE FROM reconciliation_failures WHERE created_at < ?').bind(cutoff).run();
+  const delUnits = await env.DB.prepare('DELETE FROM seed_units WHERE created_at < ?').bind(cutoff).run();
+  await env.DB.prepare('DELETE FROM seed_days WHERE updated_at < ?').bind(cutoff).run();
   const delCands = await env.DB.prepare('DELETE FROM seed_candidates WHERE created_at < ?').bind(cutoff).run();
   const delScopes = await env.DB.prepare('DELETE FROM seed_scopes WHERE created_at < ?').bind(cutoff).run();
   const delBatches = await env.DB.prepare('DELETE FROM seed_batches WHERE created_at < ?').bind(cutoff).run();
@@ -27,6 +35,8 @@ export async function pruneSeedData(env: Env, runType: RunType = 'cron'): Promis
   const result: PruneResult = {
     removedCandidates: delCands.meta.changes,
     removedScopes: delScopes.meta.changes,
+    removedUnits: delUnits.meta.changes,
+    removedRaw: delRaw.meta.changes + delFail.meta.changes,
     removedBatches: delBatches.meta.changes,
     removedRuns: delRuns.meta.changes,
     runType,

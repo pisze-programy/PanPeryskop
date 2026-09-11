@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED, CATEGORY_LIVE, CATEGORY_EVENTS } from '../core/models';
-import { mediaUrl, originFromRequest } from '../core/media';
+import { mediaUrl, originFromRequest, resolvePostMedia } from '../core/media';
 import { tagCatalog, tagIdSet } from '../core/tagCatalog';
 import { cityBbox } from '../admin/cities';
 import { warsawMidnightMs } from '../seed/core/dates';
@@ -131,6 +131,8 @@ export interface StoryJson {
   status: string;
   media_key: string | null;
   thumb_key: string | null;
+  external_media_url?: string | null;
+  external_thumb_url?: string | null;
   duration_ms: number | null;
   created_at: number;
   likes_count: number;
@@ -161,6 +163,7 @@ export interface StoryJson {
 // raw 0/1 integers and we coerce explicitly.
 function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): StoryJson {
   const origin = originFromRequest(c);
+  const media = resolvePostMedia(origin, r);
   return {
     id: r.id,
     user_id: r.user_id,
@@ -192,8 +195,8 @@ function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): StoryJso
     watched: (r.watched ?? 0) === 1,
     author_name: r.author_name || 'unknown',
     author_avatar_url: mediaUrl(origin, r.author_avatar_key),
-    media_url: mediaUrl(origin, r.media_key),
-    thumb_url: mediaUrl(origin, r.thumb_key ?? r.media_key),
+    media_url: media.media_url,
+    thumb_url: media.thumb_url,
   };
 }
 

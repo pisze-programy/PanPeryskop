@@ -2,7 +2,7 @@ name: PanPeryskop
 
 settings:
   MARKETING_VERSION: "1.3.0"
-  CURRENT_PROJECT_VERSION: 18
+  CURRENT_PROJECT_VERSION: 19
   DEVELOPMENT_TEAM: "3UKH2QRFKZ"
   SWIFT_VERSION: "6.0"
   INFOPLIST_KEY_CFBundleDisplayName: "Pan Peryskop"
@@ -70,14 +70,31 @@ targets:
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać treści do miejsc."
         GENERATE_INFOPLIST_FILE: YES
 
+  PanPeryskopTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PanPeryskopTests
+    dependencies:
+      - target: PanPeryskop
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: pl.piszeprogramy.panperyskop.tests
+        GENERATE_INFOPLIST_FILE: YES
+
 # XcodeGen defaults Run to Debug; keep Release so running from Xcode matches the shipped build.
 schemes:
   PanPeryskop:
     build:
       targets:
         PanPeryskop: all
+        PanPeryskopTests: [test]
     run:
       config: Release
+    test:
+      config: Debug
+      targets:
+        - PanPeryskopTests
     profile:
       config: Release
     analyze:

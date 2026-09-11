@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid';
 import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, MAX_EXTERNAL_ID_LEN, POST_TYPE_SET, POST_TYPE_PHOTO, POST_TYPE_VIDEO, STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED, CATEGORY_EVENTS, CATEGORY_LIVE, PostRow } from '../core/models';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { strField, fileField, ParsedForm } from '../core/form';
-import { mediaUrl, originFromRequest } from '../core/media';
+import { mediaUrl, originFromRequest, resolvePostMedia } from '../core/media';
 import { detectMediaType, extForMediaType } from '../core/mediaFormat';
 import { warsawDateOf } from '../seed/core/dates';
 import { loadBlacklistRules, findBlacklist, blacklistReason } from '../seed/core/blacklist';
@@ -146,10 +146,11 @@ postsRoutes.post('/', async (c) => {
     let parsed: unknown;
     try { parsed = JSON.parse(bookingRaw); } catch { return c.json({ error: 'Invalid showtime_booking' }, 400); }
     const entries = Array.isArray(parsed)
-      ? parsed.filter(
-          (b): b is { time: string; kind: string; params: Record<string, string> } =>
-            !!b && typeof b === 'object' && typeof (b as any).time === 'string' && typeof (b as any).kind === 'string' && !!((b as any).params)
-        )
+      ? parsed.filter((b): b is { time: string; kind: string; params: Record<string, string> } => {
+          if (b === null || typeof b !== 'object') return false;
+          const o = b as Record<string, unknown>;
+          return typeof o.time === 'string' && typeof o.kind === 'string' && o.params !== null && typeof o.params === 'object';
+        })
       : null;
     if (!entries || entries.length === 0 || entries.length > 30) {
       return c.json({ error: 'Invalid showtime_booking' }, 400);
@@ -243,7 +244,9 @@ export async function doSavePost(
   partnerId: string | null = null,
   partnerName: string | null = null,
   price: number | null = null,
-  sourceUrl: string | null = null
+  sourceUrl: string | null = null,
+  externalMediaUrl: string | null = null,
+  externalThumbUrl: string | null = null
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
@@ -260,7 +263,8 @@ export async function doSavePost(
          SET type = ?, lat = CASE WHEN geo_locked = 1 THEN lat ELSE ? END,
              lng = CASE WHEN geo_locked = 1 THEN lng ELSE ? END,
              description = CASE WHEN geo_locked = 1 OR time_locked = 1 THEN description ELSE ? END,
-             media_key = ?, thumb_key = ?,
+             media_key = COALESCE(?, media_key), thumb_key = COALESCE(?, thumb_key),
+             external_media_url = ?, external_thumb_url = ?,
              is_sponsored = ?, category = ?, link_url = ?, created_at = ?, external_id = ?,
              status = CASE WHEN status = '${STATUS_REJECTED}' THEN status ELSE ? END,
              is_sold_out = CASE WHEN sold_out_locked = 1 THEN is_sold_out ELSE ? END,
@@ -270,16 +274,16 @@ export async function doSavePost(
              partner_id = ?, partner_name = ?, price_pln = ?, source_url = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price, sourceUrl, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, externalMediaUrl, externalThumbUrl, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price, sourceUrl, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, created_at, grid_cell_id, is_sponsored, category, link_url, source_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name, price_pln)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, external_media_url, external_thumb_url, created_at, grid_cell_id, is_sponsored, category, link_url, source_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name, price_pln)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, createdAt, cellId, sponsored, category, linkUrl, sourceUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price)
+      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, externalMediaUrl, externalThumbUrl, createdAt, cellId, sponsored, category, linkUrl, sourceUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price)
       .run();
     await db
       .prepare(
@@ -298,6 +302,8 @@ export async function doSavePost(
     status,
     media_key: mediaKey,
     thumb_key: thumbKey,
+    external_media_url: externalMediaUrl,
+    external_thumb_url: externalThumbUrl,
     created_at: createdAt,
     is_sponsored: isSponsored,
     category,
@@ -331,7 +337,7 @@ postsRoutes.get('/:id', async (c) => {
   if (!post) return c.json({ error: 'Not found' }, 404);
 
   const origin = originFromRequest(c);
-  const mediaUrlV = mediaUrl(origin, post.media_key);
+  const mediaUrls = resolvePostMedia(origin, post);
 
   return c.json({
     ...post,
@@ -341,8 +347,8 @@ postsRoutes.get('/:id', async (c) => {
     watched: false,
     author_name: post.author_name || 'unknown',
     author_avatar_url: mediaUrl(origin, post.author_avatar_key),
-    media_url: mediaUrlV,
-    thumb_url: mediaUrl(origin, post.thumb_key) ?? mediaUrlV,
+    media_url: mediaUrls.media_url,
+    thumb_url: mediaUrls.thumb_url,
     showtime_booking: post.showtime_booking ? JSON.parse(post.showtime_booking) : null,
     tags: post.tags ? JSON.parse(post.tags) : null,
   });

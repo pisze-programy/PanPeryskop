@@ -30,6 +30,21 @@ export interface ProviderConfig {
   transport: ProviderTransport;
   enabled: boolean;
   priority: number;
+  /**
+   * Fetch granularity for the seed work-list:
+   *   'window' — ONE fetch per (provider, scope) already returns every day of the
+   *              seed window (helios/luma/meetup/multikino/going). Planning one
+   *              unit per day would re-fetch the same payload once per day
+   *              (8x proxy cost), so these get a single window unit.
+   *   'day'    — the API is per-date (cinemacity) or the manifest is per-day
+   *              (kupbilecik/ebilet/eventim): one unit per (provider, scope, day).
+   * Defaults to 'day' when omitted.
+   */
+  scopeKind: 'day' | 'window';
+  /** Media handling at ingest: 'hotlink' stores the provider's CDN URL on the
+   *  post (no download, no R2 copy); 'r2' downloads and stores a copy. UGC is
+   *  always R2. Required — no silent default. */
+  media: 'hotlink' | 'r2';
   executors: {
     /** present → runs in the CF Workers queue pipeline. */
     worker?: true;
@@ -45,7 +60,7 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
   // pushed by an external job (the full catalog is ~60 MB, too big to parse per day).
   // ebilet reads its own external-warmed R2 feed cache.
   {
-    id: ProviderId.KUPBILECIK, transport: 'fetch', enabled: true, priority: 3,
+    id: ProviderId.KUPBILECIK, transport: 'fetch', enabled: true, priority: 3, scopeKind: 'day', media: 'hotlink',
     executors: { worker: true },
   },
   // ebilet.pl via the TradeDoubler feed — public REST API, plain fetch works from
@@ -54,7 +69,7 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
   // has the event. Geo is deferred to ingest (venues store → Nominatim) like
   // kupbilecik — the feed carries venue names, never coordinates.
   {
-    id: ProviderId.EBILET, transport: 'fetch', enabled: true, priority: 7,
+    id: ProviderId.EBILET, transport: 'fetch', enabled: true, priority: 7, scopeKind: 'day', media: 'hotlink',
     executors: { worker: true },
   },
   // Eventim.pl via the Awin affiliate datafeed (advertiser 19044 / feed 99885) —
@@ -63,13 +78,13 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
   // only when nothing else has the event. Geo deferred to ingest (venues → Nominatim)
   // for the rows the feed reports as 0.0.
   {
-    id: ProviderId.EVENTIM, transport: 'fetch', enabled: true, priority: 7,
+    id: ProviderId.EVENTIM, transport: 'fetch', enabled: true, priority: 7, scopeKind: 'day', media: 'hotlink',
     executors: { worker: true },
   },
   // maratonypolskie.pl — ready but NOT yet enabled in production (pending the
   // user's go: logo fix + autoapprove decision). Flip `enabled` + deploy when approved.
   {
-    id: ProviderId.MARATONYPOLSKIE, transport: 'fetch', enabled: false, priority: 7,
+    id: ProviderId.MARATONYPOLSKIE, transport: 'fetch', enabled: false, priority: 7, scopeKind: 'day', media: 'hotlink',
     executors: { worker: true },
   },
   // getyourguide.com — PARKED (disabled). Affiliate application token does NOT
@@ -79,14 +94,14 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
   // proxy with curl). Re-enable only once a working data source exists — see
   // docs/getyourguide.md. Code kept in the repo to avoid rebuilding from scratch.
   {
-    id: ProviderId.GETYOURGUIDE, transport: 'fetch', enabled: false, priority: 8,
+    id: ProviderId.GETYOURGUIDE, transport: 'fetch', enabled: false, priority: 8, scopeKind: 'day', media: 'hotlink',
     executors: { worker: true },
   },
   // ---- VPS executor (residential egress — Cloudflare bot management 403s the
   //      Worker's datacenter IPs; fetched by the VPS runners, uploaded via
   //      seed-ingest). Every provider covers the SAME seed window. --------
   {
-    id: ProviderId.HELIOS, transport: 'fetch', enabled: true, priority: 0,
+    id: ProviderId.HELIOS, transport: 'fetch', enabled: true, priority: 0, scopeKind: 'window', media: 'hotlink',
     executors: {
       vps: {
         output: 'helios.json', mediaDir: 'helios-media',
@@ -95,7 +110,7 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     },
   },
   {
-    id: ProviderId.GOING, transport: 'fetch', enabled: true, priority: 2,
+    id: ProviderId.GOING, transport: 'fetch', enabled: true, priority: 2, scopeKind: 'window', media: 'hotlink',
     executors: {
       vps: {
         output: 'events-going.json', mediaDir: 'events-going-media',
@@ -104,7 +119,7 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     },
   },
   {
-    id: ProviderId.MULTIKINO, transport: 'fetch', enabled: true, priority: 0,
+    id: ProviderId.MULTIKINO, transport: 'fetch', enabled: true, priority: 0, scopeKind: 'window', media: 'hotlink',
     executors: {
       vps: {
         output: 'multikino.json', mediaDir: 'multikino-media',
@@ -113,7 +128,7 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     },
   },
   {
-    id: ProviderId.CINEMACITY, transport: 'fetch', enabled: true, priority: 0,
+    id: ProviderId.CINEMACITY, transport: 'fetch', enabled: true, priority: 0, scopeKind: 'day', media: 'hotlink',
     executors: {
       vps: {
         output: 'cinemacity.json', mediaDir: 'cinemacity-media',
@@ -122,7 +137,7 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     },
   },
   {
-    id: ProviderId.LUMA, transport: 'fetch', enabled: true, priority: 1,
+    id: ProviderId.LUMA, transport: 'fetch', enabled: true, priority: 1, scopeKind: 'window', media: 'hotlink',
     executors: {
       vps: {
         output: 'events-luma.json', mediaDir: 'events-luma-media',
@@ -131,7 +146,7 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     },
   },
   {
-    id: ProviderId.MEETUP, transport: 'fetch', enabled: true, priority: 6,
+    id: ProviderId.MEETUP, transport: 'fetch', enabled: true, priority: 6, scopeKind: 'window', media: 'hotlink',
     executors: {
       vps: {
         output: 'events-meetup.json', mediaDir: 'events-meetup-media',
@@ -144,14 +159,14 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
   //      priority still feeds cross-provider dedupe (facebook events are often
   //      covered by ticket sellers, so it sits below going/kupbilecik).
   {
-    id: ProviderId.FACEBOOK, transport: 'manual', enabled: true, priority: 3.5,
+    id: ProviderId.FACEBOOK, transport: 'manual', enabled: true, priority: 3.5, scopeKind: 'day', media: 'hotlink',
     executors: {},
   },
   // ---- Manual provider: MTP (Targi Poznańskie) annual calendar, one-time backfill
   //      via POST /admin/seed/mtp. Trade fairs rarely overlap ticket providers, but
   //      the low priority means going/kupbilecik win dedupe when they do.
   {
-    id: ProviderId.MTP, transport: 'manual', enabled: true, priority: 7,
+    id: ProviderId.MTP, transport: 'manual', enabled: true, priority: 7, scopeKind: 'day', media: 'hotlink',
     executors: {},
   },
 ];

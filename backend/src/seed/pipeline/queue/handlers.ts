@@ -74,7 +74,7 @@ export async function handleFetch(env: EnvQ, m: Extract<SeedQueueMessage, { type
   const scopeStart = now();
   let browserMs = 0;
   const ctx: SeedContext = {
-    env: env as unknown as Env,
+    env,
     day,
     dayStart,
     dayEnd: eventDayEndMs(day),
@@ -100,7 +100,7 @@ export async function handleFetch(env: EnvQ, m: Extract<SeedQueueMessage, { type
 
   // Log per-scope run (duration + browser ms) to seed_runs so the dashboard and
   // browser budget reflect queue-driven seeds, not just the sync runner.
-  await writeSeedRun(env as unknown as Env, {
+  await writeSeedRun(env, {
     runType: batch.run_type, day, provider: m.provider, transport: provider.transport,
     candidates: candidates.length, ingested: 0, skipped: 0,
     errors: 0, errorDetail: null,
@@ -215,7 +215,7 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     const ingestStart = now();
     let browserMs = 0;
     const ctx: SeedContext = {
-      env: env as unknown as Env, day, dayStart,
+      env, day, dayStart,
       dayEnd: eventDayEndMs(day), createdAt,
       recordBrowserMs: (ms) => { browserMs += ms; },
     };
@@ -268,7 +268,7 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     }
 
     const description = buildDescription(cand);
-    await doSavePost(env as unknown as Env, user, postId, POST_TYPE_PHOTO, cand.lat!, cand.lng!, description,
+    await doSavePost(env, user, postId, POST_TYPE_PHOTO, cand.lat!, cand.lng!, description,
       mediaKey, thumbKey, createdAt, true, cand.link, cand.externalId, Boolean(existing), Boolean(cand.isSoldOut), showtimesJson(cand), showtimeBookingJson(cand), tagsJson(cand),
       (pendingGeo || provider.pendingByDefault) ? STATUS_PENDING : STATUS_APPROVED,
       cand.partnerId || null, cand.partnerName || null, cand.price ?? null);
@@ -276,7 +276,7 @@ export async function handleIngest(env: EnvQ, m: Extract<SeedQueueMessage, { typ
     await env.DB.prepare(`UPDATE seed_candidates SET status='${CandidateStatus.DONE}', post_id=?, reason=NULL, updated_at=? WHERE id=?`)
       .bind(postId, now(), m.candidateId).run();
 
-    await writeSeedRun(env as unknown as Env, {
+    await writeSeedRun(env, {
       runType: batch.run_type, day, provider: row.provider, transport: provider.transport,
       candidates: 0, ingested: 1, skipped: 0, errors: 0, errorDetail: null,
       durationMs: now() - ingestStart, browserMs, batchId: row.batch_id,

@@ -20,6 +20,8 @@ import { ProviderId, ShowtimeBooking } from './core/types';
 import { containment, isCinemaSource, isUkrainian, titleTokens, venuesMatch } from './core/match';
 import { priorityOf } from './providers/registry';
 import { now } from './pipeline/queue/state';
+import { countOpenUnitsForDay } from './pipeline/queue/units';
+import { isCancelled } from './core/filters';
 
 /** Single-time rows merge only within this many minutes (booking_key overrides). */
 export const RECONCILE_TIME_GUARD_MIN = 30;
@@ -193,8 +195,18 @@ function minToHhmm(startMin: number): string {
  *  a crash picks up the remaining ones. Returns a summary for the digest. */
 export async function reconcileDay(db: D1Database, day: string, batchId: string): Promise<ReconcileSummary> {
   const t = now();
-  const rows = await loadRawRows(db, day);
+  const allRows = await loadRawRows(db, day);
   const summary: ReconcileSummary = { day, winners: 0, duplicates: 0, failures: 0, rejectedPosts: 0 };
+  if (allRows.length === 0) return summary;
+
+  // Cancelled titles never form or win a group (same gate as intra-batch dedupe).
+  for (const r of allRows) {
+    if (isCancelled(r.title)) {
+      await db.prepare(`UPDATE seed_raw SET status='duplicate', reason='title: cancelled', updated_at=? WHERE id=?`).bind(t, r.id).run();
+      summary.duplicates += 1;
+    }
+  }
+  const rows = allRows.filter((r) => !isCancelled(r.title));
   if (rows.length === 0) return summary;
 
   const tokens = new Map(rows.map((r) => [r.id, titleTokens(r.title, r.raw_venue)] as const));
@@ -317,4 +329,29 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
     }
   }
   return summary;
+}
+
+/** Reconcile `day` once every fetch unit that can write to it is terminal AND
+ *  there are unprocessed raw rows. The atomic latch on seed_days.reconciling
+ *  makes concurrent completions safe (only one runs). Idempotent; safe to call
+ *  from every unit completion. */
+export async function finalizeIfReady(env: { DB: D1Database }, day: string, batchId: string): Promise<boolean> {
+  const open = await countOpenUnitsForDay(env.DB, day);
+  if (open > 0) return false;
+  const raw = await env.DB
+    .prepare(`SELECT COUNT(*) AS n FROM seed_raw WHERE day=? AND status='raw'`)
+    .bind(day)
+    .first<{ n: number }>();
+  if (!raw || raw.n === 0) return false;
+  const latch = await env.DB
+    .prepare(`UPDATE seed_days SET reconciling=1, updated_at=? WHERE day=? AND reconciling=0`)
+    .bind(now(), day)
+    .run();
+  if (Number(latch?.meta?.changes ?? 0) !== 1) return false; // another completion won the latch
+  try {
+    await reconcileDay(env.DB, day, batchId);
+  } finally {
+    await env.DB.prepare('UPDATE seed_days SET reconciling=0, updated_at=? WHERE day=?').bind(now(), day).run();
+  }
+  return true;
 }

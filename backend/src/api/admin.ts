@@ -5,6 +5,11 @@ import { SEED_DAYS_AHEAD } from '../seed/core/constants';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { recordSeedDigest } from '../seed/digest';
 import { claimUnit, completeUnit, failUnit, unitDayStatus } from '../seed/pipeline/queue/units';
+import { writeRawRows } from '../seed/pipeline/queue/raw';
+import { warsawDateOf } from '../seed/core/dates';
+import { D1_BATCH_STATEMENT_CAP } from '../seed/core/constants';
+import { SeedCandidate } from '../seed/core/types';
+import { parseCandidate, isProviderId } from '../seed/core/candidate';
 import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
 import { getLastSeedDay, seedDue } from '../seed/cadence';
 import { SEED_INTERVAL_DAYS } from '../seed/core/constants';
@@ -15,6 +20,15 @@ export const adminRoutes = new Hono<{ Bindings: Env }>();
 export function adminAuth(c: { env: Env; req: { header: (n: string) => string | undefined } }): boolean {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
   return Boolean(c.env.ADMIN_SECRET) && token === c.env.ADMIN_SECRET;
+}
+
+/** Auth for the seed unit endpoints only: the scoped VPS token OR the admin
+ *  secret (for manual/CLI use). A compromised VPS never gets full admin. */
+export function unitAuth(c: { env: Env; req: { header: (n: string) => string | undefined } }): boolean {
+  const token = c.req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return false;
+  return (Boolean(c.env.SEED_VPS_TOKEN) && token === c.env.SEED_VPS_TOKEN)
+    || (Boolean(c.env.ADMIN_SECRET) && token === c.env.ADMIN_SECRET);
 }
 // Current status of a post by external_id — lets seed-ingest skip entries whose
 // post was manually rejected (never re-approve them).
@@ -218,11 +232,11 @@ adminRoutes.post('/seed/kupbilecik/day', async (c) => {
   return c.json({ ok: true, day, events: events.length });
 });
 
-// Durable unit work-list (queue redesign, shadow): claim exactly one pending unit
-// for an executor. The VPS poller and CF consumers share this; the UPDATE flips
-// only from 'pending', so concurrent claimants get at most one winner.
+// Durable unit work-list (v2 producer/consumer): claim exactly one claimable unit
+// for an executor (pending, or a claimed one whose lease expired). Returns the
+// claim token the caller must present to /raw, /complete or /fail.
 adminRoutes.post('/seed/units/claim', async (c) => {
-  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  if (!unitAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const body = await c.req.json<{ executor?: unknown }>().catch(() => ({} as { executor?: unknown }));
   if (body.executor !== 'worker' && body.executor !== 'vps') {
     return c.json({ error: 'executor must be worker or vps' }, 400);
@@ -231,24 +245,70 @@ adminRoutes.post('/seed/units/claim', async (c) => {
   return c.json({ unit });
 });
 
-// Mark a claimed unit done (rowsWritten = Phase-1 rows staged) or failed with a reason.
-adminRoutes.post('/seed/units/complete', async (c) => {
-  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
-  const body = await c.req.json<{ unitId?: unknown; rowsWritten?: unknown; error?: unknown }>()
-    .catch(() => ({} as { unitId?: unknown; rowsWritten?: unknown; error?: unknown }));
-  if (typeof body.unitId !== 'string' || !body.unitId) return c.json({ error: 'unitId required' }, 400);
-  if (typeof body.error === 'string' && body.error) {
-    await failUnit(c.env.DB, body.unitId, body.error);
-    return c.json({ ok: true, status: 'failed' });
+// Stage fetched candidates for a claimed unit into seed_raw (the VPS has no D1
+// binding). Candidates are grouped by their Warsaw event day; the batch is capped
+// at the D1 statement cap. Only the claim owner (token) may write.
+adminRoutes.post('/seed/units/:id/raw', async (c) => {
+  if (!unitAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const unitId = c.req.param('id');
+  const body = await c.req.json<{ token?: unknown; candidates?: unknown }>()
+    .catch(() => ({} as { token?: unknown; candidates?: unknown }));
+  if (typeof body.token !== 'string' || !body.token) return c.json({ error: 'token required' }, 400);
+  if (!Array.isArray(body.candidates)) return c.json({ error: 'candidates[] required' }, 400);
+  if (body.candidates.length > D1_BATCH_STATEMENT_CAP) return c.json({ error: `too many candidates (max ${D1_BATCH_STATEMENT_CAP})` }, 400);
+
+  const unit = await c.env.DB
+    .prepare('SELECT id, day, batch_id, provider, status, claimed_by FROM seed_units WHERE id=?')
+    .bind(unitId)
+    .first<{ id: string; day: string; batch_id: string; provider: string; status: string; claimed_by: string | null }>();
+  if (!unit) return c.json({ error: 'unit not found' }, 404);
+  if (unit.status !== 'claimed' || unit.claimed_by !== body.token) return c.json({ error: 'unit not claimed by this token' }, 409);
+
+  // Validate every candidate strictly: a malformed hit is rejected with a reason
+  // (returned + logged), never silently dropped or default-filled.
+  const source = unit.provider;
+  if (!isProviderId(source)) return c.json({ error: `unknown provider ${source}` }, 400);
+  const parsed = body.candidates.map((v, i) => parseCandidate(v, source, i));
+  const rejected = parsed.flatMap((r) => (r.ok ? [] : [r.reason]));
+
+  // Group by event day (window units carry candidates for many days).
+  const groups = new Map<string, SeedCandidate[]>();
+  for (const r of parsed) {
+    if (!r.ok) continue;
+    const day = warsawDateOf(r.cand.startMs);
+    const arr = groups.get(day);
+    if (arr) arr.push(r.cand);
+    else groups.set(day, [r.cand]);
   }
-  const rows = typeof body.rowsWritten === 'number' && Number.isFinite(body.rowsWritten) ? Math.max(0, Math.floor(body.rowsWritten)) : 0;
-  const ok = await completeUnit(c.env.DB, body.unitId, rows);
-  return ok ? c.json({ ok: true, status: 'done' }) : c.json({ error: 'unit not found or not claimable' }, 409);
+  let rowsWritten = 0;
+  for (const [day, candidates] of groups) {
+    rowsWritten += await writeRawRows(c.env.DB, { day, batchId: unit.batch_id, unitId, provider: unit.provider, candidates }, D1_BATCH_STATEMENT_CAP);
+  }
+  if (rejected.length) console.warn(`seed unit ${unitId}: rejected ${rejected.length} candidate(s): ${rejected.slice(0, 5).join('; ')}${rejected.length > 5 ? ' …' : ''}`);
+  return c.json({ ok: true, rowsWritten, rejected });
 });
 
-// Counts by unit status for one day — the future reconcile gate and today's debug view.
+// Mark a claimed unit done (rowsWritten = raw rows staged) or failed with a reason.
+// The claim token (returned by /claim) must be presented — only the owner may
+// finish a unit.
+adminRoutes.post('/seed/units/complete', async (c) => {
+  if (!unitAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ unitId?: unknown; token?: unknown; rowsWritten?: unknown; error?: unknown }>()
+    .catch(() => ({} as { unitId?: unknown; token?: unknown; rowsWritten?: unknown; error?: unknown }));
+  if (typeof body.unitId !== 'string' || !body.unitId) return c.json({ error: 'unitId required' }, 400);
+  if (typeof body.token !== 'string' || !body.token) return c.json({ error: 'token required' }, 400);
+  if (typeof body.error === 'string' && body.error) {
+    const ok = await failUnit(c.env.DB, body.unitId, body.token, body.error);
+    return ok ? c.json({ ok: true, status: 'failed' }) : c.json({ error: 'unit not claimed by this token' }, 409);
+  }
+  const rows = typeof body.rowsWritten === 'number' && Number.isFinite(body.rowsWritten) ? Math.max(0, Math.floor(body.rowsWritten)) : 0;
+  const ok = await completeUnit(c.env.DB, body.unitId, body.token, rows);
+  return ok ? c.json({ ok: true, status: 'done' }) : c.json({ error: 'unit not claimed by this token' }, 409);
+});
+
+// Counts by unit status for one day — the reconcile gate and today's debug view.
 adminRoutes.get('/seed/units/status', async (c) => {
-  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  if (!unitAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const day = String(c.req.query('day') ?? '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: 'day=YYYY-MM-DD required' }, 400);
   return c.json({ day, counts: await unitDayStatus(c.env.DB, day) });

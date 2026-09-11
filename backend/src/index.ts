@@ -14,7 +14,7 @@ import {appleEventsRoutes} from './api/appleEvents';
 import {reportsRoutes} from './api/reports';
 import {travelRoutes} from './api/travel';
 import {runSeed, tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
-import {enqueueSeedDay, runQueue, SeedQueueMessage} from './seed/pipeline/queue';
+import {produceSeedWindow, runQueue, SeedQueueMessage, watchdogUnits} from './seed/pipeline/queue';
 import {pruneSeedData, watchdogSeedBatches} from './seed/pipeline/cleanup';
 import {checkDigestIncomplete} from './seed/digest';
 import {getLastSeedDay, setLastSeedDay, seedDue} from './seed/cadence';
@@ -116,8 +116,8 @@ app.post('/admin/seed', async (c) => {
   const target = day ?? tomorrowWarsaw();
   try {
     if (body?.via === 'queue') {
-      const { batchId, created } = await enqueueSeedDay(c.env, target, 'manual');
-      return c.json({ queued: true, day: target, batchId, created }, 202);
+      const { batchId, generation, units } = await produceSeedWindow(c.env, target);
+      return c.json({ planned: true, windowStart: target, batchId, generation, units }, 202);
     }
     const result = await runSeed(c.env, target, 'manual');
     return c.json(result, 200);
@@ -147,16 +147,16 @@ export default {
       ctx.waitUntil(
         (async () => {
           await watchdogSeedBatches(env, 'cron');
+          await watchdogUnits(env.DB);
           await checkDigestIncomplete(env);
         })().catch((e) => console.error(`seed watchdog cron failed: ${(e as Error).message}`))
       );
       return;
     }
-    // Seed (SEED_CRON): refill [today..today+SEED_REFILL_AHEAD] every SEED_INTERVAL_DAYS
-    // (cadence gate via the D1 marker). The refill horizon outruns the app window
-    // (SEED_DAYS_AHEAD) by the days until the next refill, so every browsable day is
-    // always already seeded. Idempotent by external_id; single-flight prevents
-    // duplicate active batches; the queue consumer does the heavy work.
+    // Seed (SEED_CRON): on a seed day, plan the whole window [today..today+SEED_REFILL_AHEAD]
+    // into the durable work-list (seed_units) and wake the CF consumers. The VPS
+    // consumer drains its own units. Cadence gate via the D1 marker keeps it to
+    // every SEED_INTERVAL_DAYS. Idempotent per run (generation + INSERT OR IGNORE).
     ctx.waitUntil(
       (async () => {
         const today = todayWarsaw();
@@ -165,13 +165,10 @@ export default {
           console.log(`seed cron: not due (last ${last ?? 'never'}, interval ${SEED_INTERVAL_DAYS}) — skip`);
           return;
         }
-        for (let i = 0; i <= SEED_REFILL_AHEAD; i++) {
-          const day = addDaysWarsaw(today, i);
-          const { batchId, created } = await enqueueSeedDay(env, day, 'cron');
-          console.log(`seed cron enqueued: day=${day} batch=${batchId} created=${created}`);
-        }
-        // Commit the cadence only after every window day was enqueued — a partial
-        // failure retries on the next cron.
+        const { batchId, generation, units } = await produceSeedWindow(env, today);
+        console.log(`seed cron: window planned day=${today} batch=${batchId} gen=${generation} units=${units}`);
+        // Commit the cadence only after the window was planned — a partial failure
+        // retries on the next cron.
         await setLastSeedDay(env.DB, today);
       })().catch((e) => console.error(`seed cron failed: ${(e as Error).message}`))
     );

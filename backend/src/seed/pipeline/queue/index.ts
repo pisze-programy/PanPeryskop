@@ -3,6 +3,7 @@
 // implementation detail.
 export type { SeedQueueMessage, SeedScopeRow, EnvQ } from './types';
 export { QUEUE_NAMES, REDRIVE_MAX } from './types';
-export { enqueueSeedDay, sendChunked } from './produce';
+export { enqueueSeedDay, produceSeedWindow, sendChunked } from './produce';
 export { runQueue } from './consume';
 export { toCandidate, type CandRow, type BatchRow } from './state';
+export { watchdogUnits } from './units';

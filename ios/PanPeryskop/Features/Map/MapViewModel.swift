@@ -1,48 +1,5 @@
 import SwiftUI
-import CoreLocation
 import MapKit
-
-struct MapBBox {
-    let swLat: Double
-    let swLng: Double
-    let neLat: Double
-    let neLng: Double
-
-    func contains(lat: Double, lng: Double) -> Bool {
-        lat >= swLat && lat <= neLat && lng >= swLng && lng <= neLng
-    }
-}
-
-/// Map content category. `.events`/`.live` are the city map (backend `posts.category`);
-/// `.trips` is the Wycieczki mode (separate provider, no backend category string).
-enum MapCategory: String, CaseIterable, Identifiable {
-    case events, live, trips
-    var id: String { rawValue }
-    /// Pills shown in the bottom category capsule — Live stays hidden from the UI.
-    static let visibleCases: [MapCategory] = [.events, .trips]
-    var label: String {
-        switch self {
-        case .events: return "Wydarzenia"
-        case .live: return "Live"
-        case .trips: return "Wycieczki"
-        }
-    }
-    /// Backend `category` param for /stories — nil for `.trips` (different endpoint).
-    var backendCategory: String? {
-        switch self {
-        case .events: return AppConstants.categoryEvents
-        case .live: return AppConstants.categoryLive
-        case .trips: return nil
-        }
-    }
-}
-
-/// Typed cache key for the merged post cache — replaces the old stringly key.
-struct PostsCacheKey: Hashable {
-    let category: MapCategory
-    let day: String?
-    let tag: String?
-}
 
 @MainActor
 class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
@@ -175,21 +132,9 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         }
     }
 
-    /// Tags ordered by event count (desc), then alphabetically. Exception: the
-    /// "inne" catch-all tag is pushed LAST when it has zero events and more than
-    /// one tag is empty (so the empty list doesn't end with a random catch-all).
+    /// Tags ordered for the filter chips (see `TagSorting` for the rules).
     var sortedTags: [TagPill] {
-        let emptyCount = tags.filter { (tagCounts[$0.id] ?? 0) == 0 }.count
-        return tags.sorted { a, b in
-            let ca = tagCounts[a.id] ?? 0
-            let cb = tagCounts[b.id] ?? 0
-            if ca != cb { return ca > cb }
-            if ca == 0, emptyCount > 1 {
-                if a.id == "inne" { return false }
-                if b.id == "inne" { return true }
-            }
-            return a.label.localizedCaseInsensitiveCompare(b.label) == .orderedAscending
-        }
+        TagSorting.sorted(tags, counts: tagCounts)
     }
 
     var restoredViewport: MKCoordinateRegion? {
@@ -536,11 +481,4 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
             return .failure
         }
     }
-}
-
-/// Result of placing a media-request pin.
-enum RequestDropResult {
-    case success(MediaRequest)
-    case cooldown(remainingMinutes: Int)
-    case failure
 }

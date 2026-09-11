@@ -93,7 +93,7 @@ test('doSavePost: update promotes pending→approved (status bound) but preserve
   await doSavePost(env, user, 'p1', 'photo', 52.4, 16.9, 'Koncert: 20:00', 'm1', 't1', now, true, 'https://x.pl', 'ext-1', true, false, null, null, null, 'approved');
   const upd = calls.find((c) => /UPDATE posts/i.test(c.sql));
   assert.ok(upd, 'UPDATE executed');
-  assert.equal(upd!.binds[11], 'approved', 'status column bound to the new status (pending→approved promotion)');
+  assert.equal(upd!.binds[13], 'approved', 'status column bound to the new status (pending→approved promotion)');
   assert.ok(/status = CASE WHEN status = 'rejected' THEN status ELSE \?/i.test(upd!.sql), 'UPDATE keeps status but preserves admin rejection');
 });
 
@@ -109,5 +109,5 @@ test('doSavePost: update preserves tags when tags_locked=1, applies the new tag 
   assert.ok(upd, 'UPDATE executed');
   // The lock decision lives in SQL: keep current tags when tags_locked=1, else take the bound value.
   assert.ok(/tags = CASE WHEN tags_locked = 1 THEN tags ELSE \?/i.test(upd!.sql), 'UPDATE preserves locked tags');
-  assert.equal(upd!.binds[16], '["sport"]', 'tags JSON bound for the unlocked path');
+  assert.equal(upd!.binds[18], '["sport"]', 'tags JSON bound for the unlocked path');
 });

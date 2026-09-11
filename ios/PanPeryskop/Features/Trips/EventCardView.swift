@@ -30,33 +30,32 @@ struct EventCardView: View {
     }
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 0) {
-                if let event {
-                    MatchCardView(event: event)
-                    if let group, group.isGroup {
-                        EventPagerRail(events: group.events, activeIndex: $activeIndex)
-                    }
-                    Divider()
-                    if destinations.isEmpty {
-                        noAirportHint
-                    } else {
-                        FlightSection(
-                            event: event,
-                            origin: viewModel.selectedAirport,
-                            destinations: destinations,
-                            destination: destination,
-                            reachableAirports: reachableAirports,
-                            onSelectDestination: { selectedDestinationIata = $0.iata },
-                            viewModel: viewModel
-                        )
+        SheetShell {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    if let event {
+                        MatchCardView(event: event)
+                        if let group, group.isGroup {
+                            EventPagerRail(events: group.events, activeIndex: $activeIndex)
+                        }
+                        Divider()
+                        if destinations.isEmpty {
+                            noAirportHint
+                        } else {
+                            FlightSection(
+                                event: event,
+                                origin: viewModel.selectedAirport,
+                                destinations: destinations,
+                                destination: destination,
+                                reachableAirports: reachableAirports,
+                                onSelectDestination: { selectedDestinationIata = $0.iata },
+                                viewModel: viewModel
+                            )
+                        }
                     }
                 }
             }
         }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-        .presentationBackground(.regularMaterial)
         .presentationContentInteraction(.scrolls)
         .onChange(of: viewModel.selectedEventGroup?.id) { _, _ in
             activeIndex = 0

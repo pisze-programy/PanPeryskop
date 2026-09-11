@@ -7,7 +7,10 @@ export type SeedQueueMessage =
   | { type: 'seed-day'; batchId: string; day: string; runType: 'cron' | 'manual' }
   | { type: 'fetch'; batchId: string; provider: string; scope: string }
   | { type: 'finalize'; batchId: string }
-  | { type: 'ingest'; candidateId: string; batchId: string };
+  | { type: 'ingest'; candidateId: string; batchId: string }
+  // v2: a wake-up pointing at the durable work-list (seed_units). The consumer
+  // claims the next pending worker unit; unitId is informational/logging only.
+  | { type: 'unit'; unitId?: string };
 
 export const QUEUE_NAMES = {
   FETCH: 'pp-seed-fetch-jobs',
@@ -27,11 +30,6 @@ export interface SeedScopeRow {
   created_at: number; updated_at: number;
 }
 
-// Queue bindings needed by the seed pipeline (subset of Env).
-export interface EnvQ {
-  DB: D1Database;
-  MEDIA: R2Bucket;
-  SEED_FETCH_QUEUE: Queue<SeedQueueMessage>;
-  SEED_INGEST_QUEUE: Queue<SeedQueueMessage>;
-  SEED_FINALIZE_QUEUE: Queue<SeedQueueMessage>;
-}
+// The seed pipeline runs with the full Worker Env (DB, R2, queues, secrets).
+// Kept as a named alias for readability; no subset casting.
+export type EnvQ = Env;

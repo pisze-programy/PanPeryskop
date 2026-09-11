@@ -21,6 +21,20 @@
                ReferencedContainer = "container:PanPeryskop.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B3E2D03C3A126DF2BC06F538"
+               BuildableName = "PanPeryskopTests.xctest"
+               BlueprintName = "PanPeryskopTests"
+               ReferencedContainer = "container:PanPeryskop.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -39,7 +53,20 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B3E2D03C3A126DF2BC06F538"
+               BuildableName = "PanPeryskopTests.xctest"
+               BlueprintName = "PanPeryskopTests"
+               ReferencedContainer = "container:PanPeryskop.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Release"

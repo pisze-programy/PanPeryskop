@@ -7,6 +7,7 @@ import { QUEUE_CONSUMER_CONCURRENCY, QUEUE_RETRY_DELAY_SECONDS } from '../../cor
 import { EnvQ, QUEUE_NAMES, REDRIVE_MAX, SeedQueueMessage } from './types';
 import { bumpScopeAttempts, getBatch, getScope, now, setScopeStatus } from './state';
 import { handleFinalize, handleFetch, handleIngest, handleSeedDay } from './handlers';
+import { handleUnitWake } from './unitHandler';
 import { reportProviderFailed } from '../../digest';
 
 // Process a batch's messages concurrently (cap ~6 to respect the per-invocation
@@ -39,6 +40,7 @@ async function handleMessage(env: EnvQ, m: SeedQueueMessage): Promise<void> {
     case 'fetch': return handleFetch(env, m);
     case 'finalize': return handleFinalize(env, m);
     case 'ingest': return handleIngest(env, m);
+    case 'unit': return handleUnitWake(env);
   }
 }
 

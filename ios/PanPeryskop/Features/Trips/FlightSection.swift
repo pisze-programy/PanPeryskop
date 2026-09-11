@@ -31,7 +31,10 @@ struct FlightSection: View {
                 }
             }
             if loadFailed {
-                errorState
+                ErrorState(message: "Nie udało się pobrać lotów") {
+                    loadFailed = false
+                    loadPrices()
+                }
             } else if let destination, let window = windows[selectedAirline] {
                 FlightGrid(
                     window: window,
@@ -44,34 +47,14 @@ struct FlightSection: View {
                 )
                 buyBar(destination)
             } else if destination != nil, !airlines.isEmpty {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                }
-                .padding(.vertical, 16)
+                LoadingOverlay()
             }
         }
-        .padding(16)
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, 16)
+        .padding(Theme.Spacing.l)
+        .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
+        .padding(.horizontal, Theme.Spacing.l)
         .onAppear { reset() }
         .onChange(of: loadKey) { _, _ in reset() }
-    }
-
-    private var errorState: some View {
-        VStack(spacing: 8) {
-            Text("Nie udało się pobrać lotów")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            Button("Spróbuj ponownie") {
-                loadFailed = false
-                loadPrices()
-            }
-            .font(.caption.weight(.semibold))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
     }
 
     private func destinationRail(_ active: Destination) -> some View {
@@ -139,23 +122,15 @@ struct FlightSection: View {
     @ViewBuilder
     private func buyBar(_ destination: Destination) -> some View {
         if let outbound = selectedOutbound, let ret = selectedReturn {
-            Button {
+            CapsuleButton(
+                title: "Lecimy ✈",
+                trailingText: "\(Int(outbound.price ?? 0) + Int(ret.price ?? 0)) zł",
+                tint: selectedAirline.color
+            ) {
                 if let url = buyURL(destination: destination.iata, outbound: outbound.date, returning: ret.date) {
                     UIApplication.shared.open(url)
                 }
-            } label: {
-                HStack {
-                    Text("Lecimy ✈")
-                    Spacer()
-                    Text("\(Int(outbound.price ?? 0) + Int(ret.price ?? 0)) zł")
-                }
-                .font(.subheadline.weight(.bold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Capsule().fill(selectedAirline.color))
             }
-            .buttonStyle(.plain)
         }
     }
 

@@ -33,6 +33,7 @@ function build(entry, out) {
 }
 
 build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'index.ts'), join(OUT_DIR, 'vps-seed.mjs'));
+build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'consumer.ts'), join(OUT_DIR, 'seed-consumer.mjs'));
 build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'kupWarmCli.ts'), join(OUT_DIR, 'kup-warm.mjs'));
 build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'awinWarmCli.ts'), join(OUT_DIR, 'awin-warm.mjs'));
 build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'espnCli.ts'), join(OUT_DIR, 'travel-espn.mjs'));

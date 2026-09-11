@@ -6,7 +6,8 @@
   "scripts": {
     "queue": "node src/cli.js queue",
     "approve": "node src/cli.js approve",
-    "reject": "node src/cli.js reject"
+    "reject": "node src/cli.js reject",
+    "test": "node --test 'test/*.test.mjs'"
   },
   "dependencies": {
     "dotenv": "^16.4.0"

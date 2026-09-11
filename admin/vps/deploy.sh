@@ -18,7 +18,7 @@ echo "== build bundle =="
 node "$ROOT/admin/vps/build.mjs"
 
 echo "== push to $HOST =="
-scp -q "$ROOT/backend/dist/vps-seed.mjs" "$ROOT/backend/dist/kup-warm.mjs" "$ROOT/backend/dist/awin-warm.mjs" "$ROOT/backend/dist/travel-espn.mjs" "$ROOT/admin/vps/orchestrator.sh" "$ROOT/admin/vps/setup-vps.sh" "$ROOT/admin/vps/ipv4-proxy.mjs" "$ROOT/admin/src/seed-ingest.mjs" "$HOST:/tmp/"
+scp -r -q "$ROOT/backend/dist/vps-seed.mjs" "$ROOT/backend/dist/kup-warm.mjs" "$ROOT/backend/dist/awin-warm.mjs" "$ROOT/backend/dist/travel-espn.mjs" "$ROOT/admin/vps/orchestrator.sh" "$ROOT/admin/vps/setup-vps.sh" "$ROOT/admin/vps/ipv4-proxy.mjs" "$ROOT/admin/src/seed-ingest.mjs" "$ROOT/admin/src/seed" "$HOST:/tmp/"
 echo "pushed"
 
 echo "== run bootstrap on $HOST (root) =="

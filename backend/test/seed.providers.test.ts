@@ -424,10 +424,10 @@ test('vps runners: going = single "all" scope, helios = full cinema catalog with
   assert.ok(geo && typeof geo.lat === 'number' && typeof geo.lng === 'number', 'helios scopeGeo anchors a cinema');
 });
 
-test('goingTags: category_slug maps to canonical tags (koncert/teatr/sport/inne)', () => {
+test('goingTags: category_slug maps to canonical tags (koncert/teatr/inne)', () => {
   assert.deepEqual(goingTags('koncert', 'Anything'), ['muzyka'], 'koncert → muzyka');
   assert.deepEqual(goingTags('teatr', 'Anything'), ['teatr'], 'teatr → teatr');
-  assert.deepEqual(goingTags('sport', 'Wyścigi konne na Torze Służewiec'), ['sport'], 'sport → sport');
+  assert.deepEqual(goingTags('sport', 'Wyścigi konne na Torze Służewiec'), ['inne'], 'sport → inne');
   assert.deepEqual(goingTags('inne', 'Targi dla Zwierzaków | Gdańsk'), ['inne'], 'inne → inne');
   // Category wins even if the title would suggest something else.
   assert.deepEqual(goingTags('koncert', 'Kabaret w operze'), ['muzyka'], 'koncert wins over "kabaret" in title');
@@ -452,7 +452,7 @@ test('goingTags: empty/ambiguous leaves untagged (null) — never guesses', () =
   // rozrywka has no canonical tag → null.
   assert.equal(goingTags('rozrywka', 'Pub Quiz w The Beer Spot'), null, 'rozrywka → null');
   assert.equal(goingTags('rozrywka', 'Silent Disco na dachu'), null, 'rozrywka → null');
-  assert.deepEqual(goingTags('sport', 'TURNIEJ O PUCHAR PREZYDENTA STAROGARDU GDAŃSKIEGO'), ['sport'], 'sport tagged (canonical now)');
+  assert.deepEqual(goingTags('sport', 'TURNIEJ O PUCHAR PREZYDENTA STAROGARDU GDAŃSKIEGO'), ['inne'], 'sport → inne');
   // Unknown / missing inputs.
   assert.equal(goingTags(undefined, 'X'), null, 'no slug → null');
   assert.equal(goingTags('', 'X'), null, 'empty slug → null');

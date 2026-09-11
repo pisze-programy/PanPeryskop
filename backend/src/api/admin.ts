@@ -183,7 +183,7 @@ adminRoutes.post('/seed/awin/feed', async (c) => {
 
 // Manual MTP (Targi Poznańskie) backfill — the annual calendar is pulled once a
 // year by backend/scripts/mtp-backfill.mjs and posted here as a JSON batch of
-// per-day fair events (geo fixed to the MTP complex; each starts 10:00 Warsaw).
+// per-day fair events (geo fixed to the MTP complex; each starts 00:00 Warsaw).
 adminRoutes.post('/seed/mtp', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const body = await c.req.json<MtpEventInput[]>().catch(() => null);

@@ -42,7 +42,7 @@ export function goingTags(categorySlug: string | undefined, title: string | unde
   if (categorySlug === 'koncert') return ['muzyka'];
   if (categorySlug === 'teatr') return ['teatr'];
   if (categorySlug === 'inne') return ['inne'];
-  if (categorySlug === 'sport') return ['sport'];
+  if (categorySlug === 'sport') return ['inne'];
   if (categorySlug === 'kultura') {
     if (GOING_FILM_KW.test(title || '')) return ['filmy'];
     return null;

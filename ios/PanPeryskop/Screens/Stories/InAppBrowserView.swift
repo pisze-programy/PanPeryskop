@@ -107,7 +107,35 @@ private struct BrowserWebView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        let configuration = WKWebViewConfiguration()
+        // Block pages from triggering system permission prompts (location, push
+        // notifications, geolocation-permissions query) — providers in the
+        // allow-list often request them and the user wants none of that in-app.
+        let permissionStub = """
+        (function () {
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition = function (_ok, err) { if (err) err({ code: 1, message: 'denied' }); };
+            navigator.geolocation.watchPosition = function (_ok, err) { if (err) err({ code: 1, message: 'denied' }); };
+            navigator.geolocation.clearWatch = function () {};
+          }
+          if (window.Notification && Notification.requestPermission) {
+            Notification.requestPermission = function () { return Promise.resolve('denied'); };
+          }
+          if (navigator.permissions && navigator.permissions.query) {
+            var q = navigator.permissions.query.bind(navigator.permissions);
+            navigator.permissions.query = function (desc) {
+              if (desc && (desc.name === 'geolocation' || desc.name === 'notifications')) {
+                return Promise.resolve({ state: 'denied', onchange: null });
+              }
+              return q(desc);
+            };
+          }
+        })();
+        """
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: permissionStub, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        )
+        let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.uiDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
@@ -191,6 +219,17 @@ private struct BrowserWebView: UIViewRepresentable {
                 }
             }
             return nil
+        }
+
+        /// Never grant camera/mic/screen access — the in-app browser is read-only.
+        func webView(
+            _ webView: WKWebView,
+            requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+            initiatedByFrame frame: WKFrameInfo,
+            type: WKMediaCaptureType,
+            decisionHandler: @escaping (WKPermissionDecision) -> Void
+        ) {
+            decisionHandler(.deny)
         }
     }
 }

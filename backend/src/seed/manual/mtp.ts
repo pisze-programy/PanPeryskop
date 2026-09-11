@@ -1,7 +1,7 @@
 // Manual MTP (Targi Poznańskie) ingest — the annual calendar is pulled once a year
 // by hand (backend/scripts/mtp-backfill.mjs) and each day of each Poznań fair is
 // posted via POST /admin/seed/mtp. Geo is FIXED (the MTP complex in Poznań — the
-// user provided the coordinates); no geocoding. Every event starts 10:00 Warsaw.
+// user provided the coordinates); no geocoding. Every event is all-day (00:00).
 import { nanoid } from 'nanoid';
 import { ProviderId } from '../core/types';
 import { eventCreatedAtMs, warsawMidnightMs } from '../core/dates';
@@ -19,7 +19,7 @@ export const MTP_GEO = { lat: 52.40348664284927, lng: 16.91105358308765 };
 export interface MtpEventInput {
   externalId: string;
   title: string;
-  /** YYYY-MM-DD (start 10:00 Warsaw). */
+  /** YYYY-MM-DD (all-day, starts 00:00 Warsaw). */
   day: string;
   link: string;
   imageUrl: string;
@@ -43,7 +43,7 @@ export interface MtpIngestResult {
 export async function ingestMtpEvent(env: Env, input: MtpEventInput): Promise<MtpIngestResult> {
   const t0 = Date.now();
   const day = input.day;
-  const startMs = warsawMidnightMs(day) + 10 * 3600 * 1000; // 10:00 Warsaw
+  const startMs = warsawMidnightMs(day); // all-day (00:00 Warsaw)
   const existing = await loadDayEvents(env.DB, day);
   const cand = {
     source: ProviderId.MTP,
@@ -111,7 +111,7 @@ export async function ingestMtpEvent(env: Env, input: MtpEventInput): Promise<Mt
     link: input.link,
     mediaUrl: '',
     thumbUrl: null,
-    times: ['10:00'],
+    times: ['00:00'],
     tags: ['inne'],
   };
   const createdAt = eventCreatedAtMs(day);

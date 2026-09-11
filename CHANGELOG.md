@@ -4,6 +4,29 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — 2026-09-11
+
+### Added
+- Wycieczki (Trips) category on the map: pick a Polish origin airport, browse
+  European soccer + running events per day (0–89 day slider), native bottom
+  sheet with a Ryanair-style flight calendar (outbound before / return after the
+  event), multi-airport rail with best-pair pre-selection and "Lecimy ✈" booking.
+- Live Ryanair flight prices: backend fetches the open farefinder endpoints
+  (`availabilities` + `cheapestPerDay`, no bot-wall), cached in D1
+  (`flight_cache`); events are filtered to only those reachable by air from the
+  chosen origin (geo ≤200 km + strict before/after flight window), each tagged
+  with its `reachableAirports`.
+- In-app browser now blocks geolocation / push-notification prompts from
+  providers (JS stubs + camera/mic capture denied).
+
+### Changed
+- Story card badges (SPONSOROWANE / tags / source) moved to the bottom so they
+  no longer crowd the title.
+- Event tag chips always show their count (zero included); chips sort by count
+  (desc, then alphabet), with "Inne" pushed last when empty.
+- Sport + Sztuka tags retired — their events are reassigned to "Inne".
+- MTP (Targi Poznańskie) events are now all-day (start 00:00 instead of 10:00).
+
 ## [1.2.1] — 2026-09-08
 
 ### Added

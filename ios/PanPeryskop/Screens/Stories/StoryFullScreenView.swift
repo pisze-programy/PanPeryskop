@@ -240,8 +240,6 @@ struct StoryFullScreenView: View {
     /// right = venue + link (events) or avatar + nickname (live).
     private var bottomInfoCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            badgesRow
-
             if currentPost.isEvent {
                 Text(currentPost.eventInfo.title)
                     .font(.headline)
@@ -291,6 +289,9 @@ struct StoryFullScreenView: View {
 
                 Spacer(minLength: 0)
             }
+
+            // Badges sit at the bottom so they never crowd the title.
+            badgesRow
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .topLeading)

@@ -55,7 +55,7 @@ struct MapScreen: View {
                             if activeCategory == .events {
                                 allChip
                                     .padding(.leading, 10)
-                                ForEach(mapViewModel.tags) { tag in
+                                ForEach(mapViewModel.sortedTags) { tag in
                                     tagChip(tag)
                                 }
                             }
@@ -318,7 +318,7 @@ struct MapScreen: View {
         .buttonStyle(.plain)
     }
 
-    private func chipButton(_ label: String, isSelected: Bool, badgeCount: Int = 0, action: @escaping () -> Void) -> some View {
+    private func chipButton(_ label: String, isSelected: Bool, badgeCount: Int = 0, showEmptyBadge: Bool = false, action: @escaping () -> Void) -> some View {
         Button {
             Haptics.selection()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
@@ -335,7 +335,7 @@ struct MapScreen: View {
                 .overlay(Capsule().stroke(isSelected ? Color.accentColor : Color.white.opacity(0.2), lineWidth: isSelected ? 1.5 : 1))
                 .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 3)
                 .overlay(alignment: .topTrailing) {
-                    if badgeCount > 0 {
+                    if badgeCount > 0 || showEmptyBadge {
                         Text("\(badgeCount)")
                             .font(.caption2.bold())
                             .foregroundColor(.white)
@@ -353,13 +353,13 @@ struct MapScreen: View {
     }
 
     private var allChip: some View {
-        chipButton("Wszystkie", isSelected: mapViewModel.selectedTag == nil, badgeCount: mapViewModel.tagTotalCount) {
+        chipButton("Wszystkie", isSelected: mapViewModel.selectedTag == nil, badgeCount: mapViewModel.tagTotalCount, showEmptyBadge: true) {
             mapViewModel.selectAll()
         }
     }
 
     private func tagChip(_ tag: TagPill) -> some View {
-        chipButton(tag.label, isSelected: mapViewModel.selectedTag == tag.id, badgeCount: mapViewModel.tagCounts[tag.id] ?? 0) {
+        chipButton(tag.label, isSelected: mapViewModel.selectedTag == tag.id, badgeCount: mapViewModel.tagCounts[tag.id] ?? 0, showEmptyBadge: true) {
             mapViewModel.toggleTag(tag.id)
         }
     }

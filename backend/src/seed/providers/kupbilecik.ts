@@ -50,7 +50,7 @@ export function decodeHtmlEntities(s: string): string {
 
 /** Category → canonical tag (reviewed with the user):
  *  safe: muzyka→muzyka, teatr→teatr (teatr_widowisko EXCLUDED → inne), standup+kabaret→
- *  komedia, film→filmy, sport→sport; decided ambiguous: impro→komedia, dzieci→inne,
+ *  komedia, film→filmy, sport→inne; decided ambiguous: impro→komedia, dzieci→inne,
  *  festiwal→inne, teatr_widowisko→inne; inne→inne (catch-all). Unknown → null. */
 export function kupTagsFor(cat: KupCategory | null | undefined): string[] | null {
   const type = cat?.Type;
@@ -58,7 +58,7 @@ export function kupTagsFor(cat: KupCategory | null | undefined): string[] | null
   if (type === 'muzyka') return ['muzyka'];
   if (type === 'standup' || type === 'kabaret' || type === 'impro') return ['komedia'];
   if (type === 'film') return ['filmy'];
-  if (type === 'sport') return ['sport'];
+  if (type === 'sport') return ['inne'];
   if (type === 'teatr') {
     if (sub === 'teatr_widowisko') return ['inne'];
     return ['teatr'];

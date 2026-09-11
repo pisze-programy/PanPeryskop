@@ -49,7 +49,7 @@ export function eventimTags(genre: string | null): string | null {
   if (!g) return null;
   if (/(kabaret|stand-?up|komedia)/.test(g)) return 'komedia';
   if (/(koncert|muzyka|festiwal|opera|filharmoni|klasyka)/.test(g)) return 'muzyka';
-  if (/(sport|mecz|bieg|maraton|siatkówka|piłka)/.test(g)) return 'sport';
+  if (/(sport|mecz|bieg|maraton|siatkówka|piłka)/.test(g)) return 'inne';
   if (/(teatr|spektakl)/.test(g)) return 'teatr';
   if (/(dzieci|rodzin)/.test(g)) return 'inne';
   return null;
@@ -67,8 +67,8 @@ export const EVENTIM_CATEGORY_TAGS: Record<string, string> = {
   '1F': 'muzyka', '1G': 'muzyka', '1I': 'muzyka', '1J': 'muzyka', '1L': 'muzyka',
   // Kultura
   '2A': 'muzyka', '2B': 'teatr', '2E': 'inne', '2H': 'inne',
-  // Sport
-  '3C': 'sport', '3D': 'sport', '3F': 'sport', '3G': 'sport', '3I': 'sport',
+  // Sport → Inne (Sport tag retired)
+  '3C': 'inne', '3D': 'inne', '3F': 'inne', '3G': 'inne', '3I': 'inne',
   // Rozrywka
   '4A': 'inne', '4B': 'komedia', '4D': 'inne', '4F': 'inne',
 };
@@ -90,7 +90,7 @@ export function eventimTitleTag(title: string): string | null {
   if (!t) return null;
   if (/(kabaret|stand-?up)/.test(t)) return 'komedia';
   if (/(koncert|muzyka|opera|filharmoni|klasyka|jazz|festiwal)/.test(t)) return 'muzyka';
-  if (/(sport|mecz|liga|siatkówka|piłka|koszykówka)/.test(t)) return 'sport';
+  if (/(sport|mecz|liga|siatkówka|piłka|koszykówka)/.test(t)) return 'inne';
   if (/(dzieci|rodzin|bajka)/.test(t)) return 'inne';
   if (/(spektakl|teatr)/.test(t)) return 'teatr';
   return null;

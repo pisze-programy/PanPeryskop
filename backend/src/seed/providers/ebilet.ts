@@ -161,7 +161,7 @@ export function ebiletTags(category: string | null): string | null {
   // Normalize the pipe spacing the feed sometimes emits ("Rodzina/Warsztaty | Edukacja").
   const path = category.replace(/\s*\|\s*/g, '|').trim();
   if (path.startsWith('Muzyka/')) return 'muzyka';
-  if (path.startsWith('Sport/')) return 'sport';
+  if (path.startsWith('Sport/')) return 'inne';
   if (path.startsWith('Teatr/') || path === 'Rodzina/Teatr dla dzieci') return 'teatr';
   if (path === 'Widowiska/Stand-up' || path === 'Widowiska/Kabarety') return 'komedia';
   if (path.startsWith('Zwiedzanie/') || path === 'Rodzina/Atrakcje dla rodziny' || path === 'Rodzina/Rekreacja') return 'inne';

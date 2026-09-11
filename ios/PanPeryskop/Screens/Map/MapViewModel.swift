@@ -175,6 +175,23 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         }
     }
 
+    /// Tags ordered by event count (desc), then alphabetically. Exception: the
+    /// "inne" catch-all tag is pushed LAST when it has zero events and more than
+    /// one tag is empty (so the empty list doesn't end with a random catch-all).
+    var sortedTags: [TagPill] {
+        let emptyCount = tags.filter { (tagCounts[$0.id] ?? 0) == 0 }.count
+        return tags.sorted { a, b in
+            let ca = tagCounts[a.id] ?? 0
+            let cb = tagCounts[b.id] ?? 0
+            if ca != cb { return ca > cb }
+            if ca == 0, emptyCount > 1 {
+                if a.id == "inne" { return false }
+                if b.id == "inne" { return true }
+            }
+            return a.label.localizedCaseInsensitiveCompare(b.label) == .orderedAscending
+        }
+    }
+
     var restoredViewport: MKCoordinateRegion? {
         let d = UserDefaults.standard
         guard d.object(forKey: MapPrefs.vpLat) != nil else { return nil }

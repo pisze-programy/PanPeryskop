@@ -150,7 +150,7 @@ test('ebiletTags: safe prefixes map to their obvious tag', () => {
   assert.equal(ebiletTags('Rodzina/Teatr dla dzieci'), 'teatr');
   assert.equal(ebiletTags('Widowiska/Stand-up'), 'komedia');
   assert.equal(ebiletTags('Widowiska/Kabarety'), 'komedia');
-  assert.equal(ebiletTags('Sport/Sporty walki'), 'sport');
+  assert.equal(ebiletTags('Sport/Sporty walki'), 'inne');
   assert.equal(ebiletTags('Zwiedzanie/ZOO'), 'inne');
   assert.equal(ebiletTags('Zwiedzanie/Wycieczki'), 'inne');
   assert.equal(ebiletTags('Rodzina/Atrakcje dla rodziny'), 'inne');

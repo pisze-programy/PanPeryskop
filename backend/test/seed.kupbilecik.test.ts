@@ -60,7 +60,7 @@ test('kupTagsFor: safe types + reviewed ambiguous map', () => {
   assert.deepEqual(tag('kabaret'), ['komedia']);
   assert.deepEqual(tag('impro'), ['komedia'], 'impro → komedia (comedy improv shows)');
   assert.deepEqual(tag('film'), ['filmy']);
-  assert.deepEqual(tag('sport'), ['sport']);
+  assert.deepEqual(tag('sport'), ['inne']);
   assert.deepEqual(tag('inne'), ['inne'], 'catch-all bag');
   // Reviewed ambiguous:
   assert.deepEqual(tag('teatr', 'teatr_widowisko'), ['inne'], 'rewia/widowisko → inne');

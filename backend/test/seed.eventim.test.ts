@@ -68,7 +68,7 @@ test('eventimCity: strips postal code + PL suffix', () => {
 test('eventimTags: genre mapping, unknown → null', () => {
   assert.equal(eventimTags('Koncert'), 'muzyka');
   assert.equal(eventimTags('Kabaret'), 'komedia');
-  assert.equal(eventimTags('Sport'), 'sport');
+  assert.equal(eventimTags('Sport'), 'inne');
   assert.equal(eventimTags('Teatr'), 'teatr');
   assert.equal(eventimTags('Wydarzenie rodzinne'), 'inne');
   assert.equal(eventimTags(''), null);
@@ -79,8 +79,8 @@ test('eventimCategoryTag: merchant_category code → canonical tag, unknown → 
   assert.equal(eventimCategoryTag('1B'), 'muzyka');
   assert.equal(eventimCategoryTag('1G'), 'muzyka');
   assert.equal(eventimCategoryTag('2B'), 'teatr');
-  assert.equal(eventimCategoryTag('3G'), 'sport');
-  assert.equal(eventimCategoryTag('3I'), 'sport');
+  assert.equal(eventimCategoryTag('3G'), 'inne');
+  assert.equal(eventimCategoryTag('3I'), 'inne');
   assert.equal(eventimCategoryTag('4B'), 'komedia');
   assert.equal(eventimCategoryTag('2E'), 'inne');
   assert.equal(eventimCategoryTag('2H'), 'inne');
@@ -105,7 +105,7 @@ test('eventimTitleTag: title fallback, unknown → null', () => {
   assert.equal(eventimTitleTag('Koncert Chopinowski'), 'muzyka');
   assert.equal(eventimTitleTag('Kabaret Hrabi'), 'komedia');
   assert.equal(eventimTitleTag('Spektakl: Genialny pomysł'), 'teatr');
-  assert.equal(eventimTitleTag('Mecz piłki ręcznej'), 'sport');
+  assert.equal(eventimTitleTag('Mecz piłki ręcznej'), 'inne');
   assert.equal(eventimTitleTag('Teatr dla dzieci'), 'inne');
   assert.equal(eventimTitleTag('MUZEUM BANKSY'), null);
   assert.equal(eventimTitleTag(''), null);

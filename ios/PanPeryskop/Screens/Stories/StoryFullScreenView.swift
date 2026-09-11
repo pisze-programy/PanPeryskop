@@ -876,7 +876,8 @@ struct StoryVideoPlayer: View {
     @State private var didReportStarted = false
 
     var body: some View {
-        VideoPlayer(player: player)
+        PlayerLayerView(player: player)
+            .allowsHitTesting(false)
             .onAppear {
                 guard player == nil else { return }
                 let p = AVPlayer(url: url)
@@ -944,6 +945,30 @@ struct StoryVideoPlayer: View {
         didReportReady = false
         didReportStarted = false
     }
+}
+
+/// Bare video layer — no playback controls, no gesture capture. The story's own
+/// tap zones (next/prev) keep working and the video just plays in the background.
+/// (SwiftUI `VideoPlayer` installs AVKit controls that swallow the taps.)
+private struct PlayerLayerView: UIViewRepresentable {
+    let player: AVPlayer?
+
+    func makeUIView(context: Context) -> PlayerContainerView {
+        let view = PlayerContainerView()
+        view.backgroundColor = .clear
+        view.playerLayer.videoGravity = .resizeAspect
+        view.playerLayer.player = player
+        return view
+    }
+
+    func updateUIView(_ view: PlayerContainerView, context: Context) {
+        view.playerLayer.player = player
+    }
+}
+
+private final class PlayerContainerView: UIView {
+    override static var layerClass: AnyClass { AVPlayerLayer.self }
+    var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
 }
 
 struct ProgressBar: View {

@@ -1,12 +1,8 @@
-// Ingest winners from seed_raw (queue redesign, step 7): turn a reconciled
-// winner row into a post. Mirrors handleIngest step for step (blacklist gate,
-// deferred geo, media reuse, doSavePost upsert) so behavior is identical — the
-// only difference is the source of the candidate (a seed_raw row instead of a
-// seed_candidates row).
+// Ingest winners from seed_raw: turn a reconciled winner row into a post
+// (blacklist gate, deferred geo, media reuse, doSavePost upsert).
 //
 // Idempotent re-run: posts upsert by external_id (see doSavePost), and an
 // already-done row short-circuits to its post without touching media or geo.
-// Shadow mode: nothing calls this in production yet (wiring comes later).
 import { nanoid } from 'nanoid';
 import { SeedCandidate, SeedProvider, ShowtimeBooking } from '../../core/types';
 import { buildDescription, showtimesJson, showtimeBookingJson, tagsJson } from '../../core/eventFormat';
@@ -31,6 +27,8 @@ export interface RawWinnerRow {
   raw_venue: string;
   city: string | null;
   canonical_venue_id: string | null;
+  lat: number | null;
+  lng: number | null;
   start_min: number;
   showtimes: string | null;
   showtime_booking: string | null;
@@ -43,6 +41,7 @@ export interface RawWinnerRow {
   affiliate_link: string | null;
   partner_id: string | null;
   partner_name: string | null;
+  pending_reason: string | null;
   status: string;
 }
 
@@ -99,12 +98,12 @@ export async function ingestWinnerRow(
       return { postId: null, skipped: true, pendingGeo: false };
     }
 
-    // Geo: canonical venue row first (covers provider-supplied coords and every
-    // previously healed venue — no geo API call); then the shared deferred path
-    // (store → Nominatim, survivors only); finally the default pin + PENDING.
-    let lat: number | null = null;
-    let lng: number | null = null;
-    if (row.canonical_venue_id) {
+    // Geo: source coords (exact) → canonical venue → deferred resolver (store →
+    // Nominatim) → CITY-CENTER fallback when the city is known. If we do not even
+    // know the city, pin 0,0 and PENDING (never shown until the admin fixes it).
+    let lat: number | null = typeof row.lat === 'number' ? row.lat : null;
+    let lng: number | null = typeof row.lng === 'number' ? row.lng : null;
+    if ((lat === null || lng === null) && row.canonical_venue_id) {
       const hit = await env.DB.prepare('SELECT lat, lng FROM venues WHERE id = ?')
         .bind(row.canonical_venue_id)
         .first<{ lat: number | null; lng: number | null }>();
@@ -113,11 +112,10 @@ export async function ingestWinnerRow(
         lng = hit.lng;
       }
     }
-    let pendingGeo = false;
     if (lat === null || lng === null) {
       const geo = await resolveGeo({
         name: row.raw_venue,
-        city: row.city || undefined,
+        city: row.city === null ? undefined : row.city,
         db: env.DB,
         provider: row.provider,
       });
@@ -126,11 +124,18 @@ export async function ingestWinnerRow(
         lng = geo.lng;
       }
     }
+    const cityKnown = row.city !== null && row.city !== '';
+    let geoPending = false;
     if (lat === null || lng === null) {
-      const fb = fallbackSeedGeo(row.city);
-      lat = fb.lat;
-      lng = fb.lng;
-      pendingGeo = true;
+      if (cityKnown) {
+        const fb = fallbackSeedGeo(row.city); // city center — exact venue unknown
+        lat = fb.lat;
+        lng = fb.lng;
+      } else {
+        lat = 0;
+        lng = 0; // unknown city — PENDING, never shown
+        geoPending = true;
+      }
     }
 
     const existing = await env.DB.prepare('SELECT id, media_key, thumb_key FROM posts WHERE external_id=?')
@@ -138,18 +143,16 @@ export async function ingestWinnerRow(
       .first<{ id: string; media_key: string | null; thumb_key: string | null }>();
     const postId = existing === null || existing === undefined ? nanoid(24) : existing.id;
 
-    // Required fields — a missing link or image is a hard error (no post), never
-    // a substituted empty value.
-    if (row.link_url === null || row.link_url === '') throw new Error('missing link_url');
-    if (row.media_url === null || row.media_url === '') throw new Error('missing media_url');
-    const mediaUrl = row.media_url;
+    // Missing link/image is NOT an error — it makes the post PENDING (kept).
+    const mediaUrl = row.media_url === null ? '' : row.media_url;
+    const link0 = row.link_url === null ? '' : row.link_url;
 
     const ctx = {
       env, day, dayStart,
       dayEnd: eventDayEndMs(day), createdAt,
       recordBrowserMs: (_ms: number) => {},
     };
-    let link = row.link_url;
+    let link = link0;
     if (provider.resolveLink) {
       try {
         link = await provider.resolveLink(ctx, rowToCandidate(row, dayStart, lat, lng, link, mediaUrl));
@@ -165,13 +168,14 @@ export async function ingestWinnerRow(
     let externalMediaUrl: string | null = null;
     let externalThumbUrl: string | null = null;
     if (mediaMode === 'hotlink') {
-      // Store the source CDN URLs verbatim; a missing thumb stays NULL (the app
-      // falls back to the full image at render time — that is display, not data).
-      externalMediaUrl = mediaUrl;
+      // Store the source CDN URLs verbatim. A missing thumb stays NULL (the app
+      // falls back to the full image at render time — that is display, not data);
+      // a missing image is fine here — pending_reason already forces PENDING.
+      externalMediaUrl = row.media_url;
       externalThumbUrl = row.thumb_url;
     } else {
-      if (mediaKey === null) {
-        const mediaBytes = await provider.fetchBytes(ctx, mediaUrl);
+      if (mediaKey === null && row.media_url !== null && row.media_url !== '') {
+        const mediaBytes = await provider.fetchBytes(ctx, row.media_url);
         const mediaType = detectMediaType(mediaBytes);
         if (!mediaType || !mediaType.startsWith('image/')) {
           throw new Error(`bad media ${mediaType === null || mediaType === undefined ? 'unknown' : mediaType}`);
@@ -190,18 +194,22 @@ export async function ingestWinnerRow(
       }
     }
 
+    // PENDING when content is incomplete, geo/city is unknown, or the provider
+    // opts in. Missing price/thumb never affect it. All else is APPROVED.
+    const contentPending = row.pending_reason !== null && row.pending_reason !== undefined && row.pending_reason !== '';
+    const status = contentPending || geoPending || provider.pendingByDefault ? STATUS_PENDING : STATUS_APPROVED;
+
     const cand = rowToCandidate(row, dayStart, lat, lng, link, mediaUrl);
     const description = buildDescription(cand);
     await doSavePost(env, { id: userId }, postId, POST_TYPE_PHOTO, lat, lng, description,
       mediaKey, thumbKey, createdAt, true, link, row.external_id, Boolean(existing), row.is_sold_out === 1,
       showtimesJson(cand), showtimeBookingJson(cand), tagsJson(cand),
-      pendingGeo || provider.pendingByDefault ? STATUS_PENDING : STATUS_APPROVED,
-      row.partner_id, row.partner_name, row.price_pln, null, externalMediaUrl, externalThumbUrl);
+      status, row.partner_id, row.partner_name, row.price_pln, null, externalMediaUrl, externalThumbUrl);
 
     await env.DB.prepare(`UPDATE seed_raw SET status='done', post_id=?, reason=NULL, updated_at=? WHERE id=?`)
       .bind(postId, now(), row.id)
       .run();
-    return { postId, skipped: false, pendingGeo };
+    return { postId, skipped: false, pendingGeo: contentPending || geoPending };
   } catch (e) {
     await env.DB.prepare(`UPDATE seed_raw SET status='error', reason=?, updated_at=? WHERE id=?`)
       .bind((e as Error).message, now(), row.id)

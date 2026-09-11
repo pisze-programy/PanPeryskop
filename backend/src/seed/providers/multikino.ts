@@ -5,13 +5,11 @@
 // every request in a run; refetched when a call starts returning 401.
 //
 // Granularity: ONE candidate per film×cinema×day (startMs = first session of the
-// target day). Geo + address are parsed from the cinema's SSR repertuar page and
-// upserted into the shared venues store, so only the first-ever seed pays for a
-// page fetch per cinema; later days resolve from the store.
+// target day). Coordinates + city come from the STATIC MK_CINEMAS catalog — fixed
+// cinema locations, never resolved at run time.
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId, ShowtimeBooking } from '../core/types';
-import { getBytes, getText, UA_HEADERS } from './http';
-import { MK_BASE, MK_API, MK_AUTH, MK_EMBARGO, MK_CINEMAS, MK_THUMB_QUERY, MK_TOKEN_TTL_MS, PROVIDER_FETCH_TIMEOUT_MS, mkScopes } from '../core/constants';
-import { resolveVenueGeo, upsertVenue } from '../venues/venueStore';
+import { getBytes, UA_HEADERS } from './http';
+import { MK_BASE, MK_API, MK_AUTH, MK_EMBARGO, MK_CINEMAS, MK_THUMB_QUERY, MK_TOKEN_TTL_MS, PROVIDER_FETCH_TIMEOUT_MS, mkScopes, mkCinemaById } from '../core/constants';
 
 // Module-level token cache — valid across multiple scopes in one invocation;
 // between invocations a fresh fetch is cheap (and idempotent).
@@ -37,19 +35,11 @@ export interface MkTokenStore {
   load(): Promise<{ token: string | null; exp: number }>;
   save(token: string, exp: number): Promise<void>;
 }
-export interface MkGeoStore {
-  get(cinemaId: string): Promise<{ lat: number; lng: number; address: string } | null>;
-  set(cinemaId: string, geo: { lat: number; lng: number; address: string }): Promise<void>;
-}
 export interface MkFetchOptions {
   /** Seed-window days to produce candidates for (one per film×cinema×day). */
   days: string[];
   /** D1 token cache (Worker). Omit for local — module-level cache only. */
   tokenStore?: MkTokenStore;
-  /** D1 venues store (Worker). Omit for local — geo goes to geoStore. */
-  db?: D1Database;
-  /** Checkpoint geo cache (local runner). Omit for the Worker. */
-  geoStore?: MkGeoStore;
 }
 
 function d1TokenStore(db: D1Database): MkTokenStore {
@@ -137,8 +127,8 @@ export function parseMkFilms(data: unknown, cinemaId: string, days: string[]): S
     if (!poster) continue;
     const filmSlug = (f.filmUrl || '').split('/filmy/')[1]?.split(/[?#]/)[0]?.replace(/\/$/, '') || '';
     const cinema = cinemaById(cinemaId);
-    const link = cinema?.slug && filmSlug
-      ? `${MK_BASE}/repertuar/${cinema.slug}/filmy/${filmSlug}`
+    const link = cinema?.urlCinemaSlug && filmSlug
+      ? `${MK_BASE}/repertuar/${cinema.urlCinemaSlug}/filmy/${filmSlug}`
       : (f.filmUrl || `${MK_BASE}/filmy`);
     for (const day of days) {
       const groups = (f.showingGroups || []).filter((g) => (g.date || '').slice(0, 10) === day);
@@ -202,50 +192,6 @@ function cinemaCity(id: string): string {
   return cinemaById(id)?.city || '';
 }
 
-// Resolve lat/lng (+ address) for one cinema. Store-first (fast on later days);
-// on miss, fetch the cinema's SSR repertuar page once and persist (venues store
-// in the Worker, geoStore in the local runner).
-export async function resolveMkGeo(
-  cinemaId: string, venueName: string, city: string,
-  opts?: { db?: D1Database; geoStore?: MkGeoStore }
-): Promise<{ lat: number | null; lng: number | null; address: string }> {
-  if (opts?.geoStore) {
-    const hit = await opts.geoStore.get(cinemaId);
-    if (hit) return hit;
-  } else if (opts?.db && venueName) {
-    const hit = await resolveVenueGeo(opts.db, venueName, city);
-    if (hit) return { lat: hit.lat, lng: hit.lng, address: '' };
-  }
-  const cinema = cinemaById(cinemaId);
-  if (!cinema) return { lat: null, lng: null, address: '' };
-  try {
-    const html = await getText(`${MK_BASE}/repertuar/${cinema.slug}/teraz-gramy`);
-    const geoM = html.match(/maps\/embed[^"]*q=(-?[\d.]+), ?(-?[\d.]+)/);
-    const addrM = html.match(/<address class="cinema-location__address">([\s\S]*?)<\/address>/);
-    if (!geoM) return { lat: null, lng: null, address: '' };
-    const lat = parseFloat(geoM[1]), lng = parseFloat(geoM[2]);
-    const address = addrM ? decodeAddress(addrM[1]) : '';
-    if (opts?.geoStore) await opts.geoStore.set(cinemaId, { lat, lng, address });
-    else if (opts?.db) await upsertVenue(opts.db, { name: venueName, lat, lng, city, provider: ProviderId.MULTIKINO, ref: cinemaId });
-    console.log(`multikino cinema ${cinemaId} geo (${lat},${lng}) -> stored`);
-    return { lat, lng, address };
-  } catch (e) {
-    console.error(`multikino cinema ${cinemaId} geo failed: ${(e as Error).message}`);
-    return { lat: null, lng: null, address: '' };
-  }
-}
-
-// "<br/>ul. Półwiejska 42\r\n<br/>61-888 Poznań" -> "ul. Półwiejska 42, 61-888 Poznań"
-function decodeAddress(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, ', ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 // Fetch one cinema (a queue fetch scope = cinemaId). ONE request WITHOUT the
 // showingDate param returns the WHOLE programme (all days), so the seed window is
 // covered in a single call per cinema. Retries once with a fresh token on 401.
@@ -265,13 +211,14 @@ export async function fetchMkCinema(opts: MkFetchOptions, cinemaId: string): Pro
   if (!res.ok) throw new Error(`multikino ${cinemaId} -> ${res.status}`);
   const out = parseMkFilms(await res.json(), cinemaId, opts.days);
 
-  // Resolve cinema geo once; fill lat/lng/address on every candidate.
-  const venueName = `Multikino ${cinemaName(cinemaId)}`;
-  const city = cinemaCity(cinemaId);
-  const geo = await resolveMkGeo(cinemaId, venueName, city, { db: opts.db, geoStore: opts.geoStore });
+  // Static coordinates from the catalog — fixed cinema locations, never resolved
+  // at run time (no venue cache, no Nominatim). Unknown id → no coords → the
+  // ingest city-center fallback / PENDING path.
+  const cinema = mkCinemaById(cinemaId);
   for (const c of out) {
-    if (geo.lat != null && geo.lng != null) { c.lat = geo.lat; c.lng = geo.lng; }
-    if (geo.address) c.address = geo.address;
+    if (cinema?.lat !== undefined && cinema?.lng !== undefined) { c.lat = cinema.lat; c.lng = cinema.lng; }
+    if (cinema?.city) c.city = cinema.city;
+    c.venueId = `multikino-${cinemaId}`;
   }
   console.log(`multikino cinema ${cinemaId} -> ${out.length} candidates (${opts.days.length} days)`);
   return out;
@@ -285,7 +232,7 @@ const MK_SCOPE_DELAY_MS = 1000;
 
 export async function fetchMultikino(ctx: SeedContext): Promise<SeedCandidate[]> {
   const out: SeedCandidate[] = [];
-  const opts: MkFetchOptions = { days: [ctx.day], tokenStore: d1TokenStore(ctx.env.DB), db: ctx.env.DB };
+  const opts: MkFetchOptions = { days: [ctx.day], tokenStore: d1TokenStore(ctx.env.DB) };
   for (const id of mkScopes()) {
     try { out.push(...await fetchMkCinema(opts, id)); }
     catch (e) { console.error(`multikino scope ${id} failed: ${(e as Error).message}`); }
@@ -303,6 +250,8 @@ export const multikinoProvider: SeedProvider = {
   // the reliable source, uploaded via seed-ingest.
   fetchCandidates: fetchMultikino,
   fetchBytes: (ctx, url) => getBytes(url),
-  scopes: ['all'],
-  fetchScope: (ctx, _scope) => fetchMultikino(ctx),
+  // One v2 work unit per cinema (window granularity): the VPS runner fetches one
+  // cinema per unit. Must match the runner's scope ids (mkScopes()).
+  scopes: mkScopes(),
+  fetchScope: (ctx, scope) => fetchMkCinema({ days: [ctx.day], tokenStore: d1TokenStore(ctx.env.DB) }, scope),
 };

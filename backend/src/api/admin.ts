@@ -4,12 +4,13 @@ import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
 import { SEED_DAYS_AHEAD } from '../seed/core/constants';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { recordSeedDigest } from '../seed/digest';
-import { claimUnit, completeUnit, failUnit, unitDayStatus } from '../seed/pipeline/queue/units';
+import { claimUnit, completeUnit, failUnit, unitDayStatus, unitWindowDays } from '../seed/pipeline/queue/units';
 import { writeRawRows } from '../seed/pipeline/queue/raw';
 import { warsawDateOf } from '../seed/core/dates';
-import { D1_BATCH_STATEMENT_CAP } from '../seed/core/constants';
+import { D1_BATCH_STATEMENT_CAP, SEED_REFILL_AHEAD } from '../seed/core/constants';
 import { SeedCandidate } from '../seed/core/types';
 import { parseCandidate, isProviderId } from '../seed/core/candidate';
+import { finalizeIfReady, ingestWinnersForDay } from '../seed/reconcile';
 import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
 import { getLastSeedDay, seedDue } from '../seed/cadence';
 import { SEED_INTERVAL_DAYS } from '../seed/core/constants';
@@ -258,34 +259,41 @@ adminRoutes.post('/seed/units/:id/raw', async (c) => {
   if (body.candidates.length > D1_BATCH_STATEMENT_CAP) return c.json({ error: `too many candidates (max ${D1_BATCH_STATEMENT_CAP})` }, 400);
 
   const unit = await c.env.DB
-    .prepare('SELECT id, day, batch_id, provider, status, claimed_by FROM seed_units WHERE id=?')
+    .prepare('SELECT id, day, kind, batch_id, provider, status, claimed_by FROM seed_units WHERE id=?')
     .bind(unitId)
-    .first<{ id: string; day: string; batch_id: string; provider: string; status: string; claimed_by: string | null }>();
+    .first<{ id: string; day: string; kind: string; batch_id: string; provider: string; status: string; claimed_by: string | null }>();
   if (!unit) return c.json({ error: 'unit not found' }, 404);
   if (unit.status !== 'claimed' || unit.claimed_by !== body.token) return c.json({ error: 'unit not claimed by this token' }, 409);
 
-  // Validate every candidate strictly: a malformed hit is rejected with a reason
-  // (returned + logged), never silently dropped or default-filled.
+  // Validate each candidate; a malformed hit is rejected with a reason (returned),
+  // never silently dropped. Missing title/image/link/date is NOT a reject — it is
+  // carried as a pending reason and the post is created PENDING.
   const source = unit.provider;
   if (!isProviderId(source)) return c.json({ error: `unknown provider ${source}` }, 400);
   const parsed = body.candidates.map((v, i) => parseCandidate(v, source, i));
   const rejected = parsed.flatMap((r) => (r.ok ? [] : [r.reason]));
 
-  // Group by event day (window units carry candidates for many days).
+  // Keep only the unit's window days (window providers return extra days). A
+  // candidate with no date is filed under the unit's day as PENDING.
+  const allowed = new Set(unitWindowDays({ day: unit.day, kind: unit.kind === 'window' ? 'window' : 'day' }));
   const groups = new Map<string, SeedCandidate[]>();
+  let outOfWindow = 0;
   for (const r of parsed) {
     if (!r.ok) continue;
-    const day = warsawDateOf(r.cand.startMs);
+    const cand = r.cand;
+    const day = cand.startMs > 0 ? warsawDateOf(cand.startMs) : unit.day;
+    if (!allowed.has(day)) { outOfWindow += 1; continue; }
     const arr = groups.get(day);
-    if (arr) arr.push(r.cand);
-    else groups.set(day, [r.cand]);
+    if (arr) arr.push(cand);
+    else groups.set(day, [cand]);
   }
   let rowsWritten = 0;
   for (const [day, candidates] of groups) {
     rowsWritten += await writeRawRows(c.env.DB, { day, batchId: unit.batch_id, unitId, provider: unit.provider, candidates }, D1_BATCH_STATEMENT_CAP);
   }
   if (rejected.length) console.warn(`seed unit ${unitId}: rejected ${rejected.length} candidate(s): ${rejected.slice(0, 5).join('; ')}${rejected.length > 5 ? ' …' : ''}`);
-  return c.json({ ok: true, rowsWritten, rejected });
+  if (outOfWindow) console.warn(`seed unit ${unitId}: dropped ${outOfWindow} out-of-window candidate(s)`);
+  return c.json({ ok: true, rowsWritten, rejected, outOfWindow });
 });
 
 // Mark a claimed unit done (rowsWritten = raw rows staged) or failed with a reason.
@@ -303,7 +311,52 @@ adminRoutes.post('/seed/units/complete', async (c) => {
   }
   const rows = typeof body.rowsWritten === 'number' && Number.isFinite(body.rowsWritten) ? Math.max(0, Math.floor(body.rowsWritten)) : 0;
   const ok = await completeUnit(c.env.DB, body.unitId, body.token, rows);
-  return ok ? c.json({ ok: true, status: 'done' }) : c.json({ error: 'unit not claimed by this token' }, 409);
+  if (!ok) return c.json({ error: 'unit not claimed by this token' }, 409);
+  // Trigger reconcile+ingest for every event day this unit could have written.
+  const unit = await c.env.DB
+    .prepare('SELECT day, kind, batch_id FROM seed_units WHERE id=?')
+    .bind(body.unitId)
+    .first<{ day: string; kind: string; batch_id: string }>();
+  if (unit) {
+    const days = unit.kind === 'window'
+      ? Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(unit.day, i))
+      : [unit.day];
+    for (const d of days) {
+      try { await finalizeIfReady(c.env, d, unit.batch_id); } catch (e) { console.error(`finalize ${d} failed: ${(e as Error).message}`); }
+    }
+  }
+  return c.json({ ok: true, status: 'done' });
+});
+
+// Manual finalize sweep: reconcile+ingest every window day (or one ?day=).
+// The repair path when a completion happened before the deploy that wired the
+// trigger, or for a watchdog sweep.
+adminRoutes.post('/seed/finalize', async (c) => {
+  if (!unitAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ day?: unknown }>().catch(() => ({} as { day?: unknown }));
+  const one = typeof body.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day) ? body.day : null;
+  const today = todayWarsaw();
+  const days = one === null ? Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i)) : [one];
+  const done: string[] = [];
+  for (const d of days) {
+    // batchId is only used for reconciliation_failures provenance; use the day's
+    // latest unit's batch if present.
+    const u = await c.env.DB.prepare('SELECT batch_id FROM seed_units WHERE day IN (?, ?) ORDER BY created_at DESC LIMIT 1')
+      .bind(d, today).first<{ batch_id: string }>();
+    if (!u) continue;
+    if (await finalizeIfReady(c.env, d, u.batch_id)) done.push(d);
+  }
+  return c.json({ ok: true, reconciled: done });
+});
+
+// Bounded winner-ingest batch: turns up to `limit` reconciled winners of a day
+// into posts. Call repeatedly until remaining=0 (keeps each request short).
+adminRoutes.post('/seed/ingest', async (c) => {
+  if (!unitAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ day?: unknown; limit?: unknown }>().catch(() => ({} as { day?: unknown; limit?: unknown }));
+  if (typeof body.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.day)) return c.json({ error: 'day=YYYY-MM-DD required' }, 400);
+  const limit = typeof body.limit === 'number' && Number.isFinite(body.limit) ? Math.min(Math.max(Math.floor(body.limit), 1), 200) : 50;
+  return c.json(await ingestWinnersForDay(c.env, body.day, limit));
 });
 
 // Counts by unit status for one day — the reconcile gate and today's debug view.

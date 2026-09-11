@@ -5,8 +5,6 @@ interface Env {
   MEDIA: R2Bucket;
   BROWSER: BrowserRun;
   SEED_FETCH_QUEUE: Queue<SeedQueueMessage>;
-  SEED_INGEST_QUEUE: Queue<SeedQueueMessage>;
-  SEED_FINALIZE_QUEUE: Queue<SeedQueueMessage>;
   // Admin (Bearer for CLI/seed + password hash + cookie signing for dashboard).
   ADMIN_SECRET?: string;
   // Scoped Bearer for the VPS seed consumer: ONLY the /seed/units/* endpoints.

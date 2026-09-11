@@ -201,20 +201,33 @@ test('ingest: re-run is a no-op — same post, no second download', async () => 
   assert.equal(db.posts.size, 1);
 });
 
-test('ingest: no venue anywhere → city-center pin, PENDING, never shown', async () => {
+test('ingest: no venue but a known city → city-center fallback, APPROVED', async () => {
   const db = new MockIngestDB();
-  let fetches = 0;
-  const provider = providerStub(async () => { fetches += 1; return WEBP; });
+  const provider = providerStub(async () => WEBP);
   const res = await ingestWinnerRow(
     envOf(db, []), provider, 'u1', DAY,
-    row({ raw_venue: '', canonical_venue_id: null }),
+    row({ raw_venue: '', canonical_venue_id: null, city: 'Warszawa' }),
   );
   const fb = fallbackSeedGeo('Warszawa');
   const post = db.posts.get('ebilet-1-20260908')!;
-  assert.equal(res.pendingGeo, true);
-  assert.equal(post.status, 'pending');
+  assert.equal(res.pendingGeo, false);
+  assert.equal(post.status, 'approved');
   assert.equal(post.lat, fb.lat);
   assert.equal(post.lng, fb.lng);
+});
+
+test('ingest: unknown city → 0,0 pin, PENDING, never shown', async () => {
+  const db = new MockIngestDB();
+  const provider = providerStub(async () => WEBP);
+  const res = await ingestWinnerRow(
+    envOf(db, []), provider, 'u1', DAY,
+    row({ raw_venue: '', canonical_venue_id: null, city: null }),
+  );
+  const post = db.posts.get('ebilet-1-20260908')!;
+  assert.equal(res.pendingGeo, true);
+  assert.equal(post.status, 'pending');
+  assert.equal(post.lat, 0);
+  assert.equal(post.lng, 0);
 });
 
 test('ingest: blacklist match drops the row before any download', async () => {

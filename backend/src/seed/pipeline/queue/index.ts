@@ -1,9 +1,7 @@
 // Seed queue pipeline — public surface. index.ts / cron / dashboard import from
-// here so the folder layout (types / state / produce / consume / handlers) is an
+// here so the folder layout (types / state / produce / consume) is an
 // implementation detail.
-export type { SeedQueueMessage, SeedScopeRow, EnvQ } from './types';
-export { QUEUE_NAMES, REDRIVE_MAX } from './types';
-export { enqueueSeedDay, produceSeedWindow, sendChunked } from './produce';
+export type { SeedQueueMessage, EnvQ } from './types';
+export { produceSeedWindow, sendChunked } from './produce';
 export { runQueue } from './consume';
-export { toCandidate, type CandRow, type BatchRow } from './state';
 export { watchdogUnits } from './units';

@@ -2,10 +2,10 @@
 // Build the VPS executables into self-contained bundles.
 //   node admin/vps/build.mjs
 // Outputs:
-//   backend/dist/vps-seed.mjs — the orchestrator (all providers).
-//   backend/dist/kup-warm.mjs — the standalone kupbilecik warm (tiny footprint:
-//     imports only the kupbilecik module, NOT the whole orchestrator — the 256 MB
-//     box OOM'd when the full bundle ran the warm).
+//   backend/dist/seed-consumer.mjs — the v2 producer/consumer drain consumer.
+//   backend/dist/kup-warm.mjs — the standalone kupbilecik warm.
+//   backend/dist/awin-warm.mjs — the standalone Awin (eventim) feed warm.
+//   backend/dist/travel-espn.mjs — the ESPN travel replenish.
 // ONE node process each, no tsx/esbuild at runtime (that blew the 256 MB box).
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -32,7 +32,6 @@ function build(entry, out) {
   console.log(`built ${out}`);
 }
 
-build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'index.ts'), join(OUT_DIR, 'vps-seed.mjs'));
 build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'consumer.ts'), join(OUT_DIR, 'seed-consumer.mjs'));
 build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'kupWarmCli.ts'), join(OUT_DIR, 'kup-warm.mjs'));
 build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'awinWarmCli.ts'), join(OUT_DIR, 'awin-warm.mjs'));

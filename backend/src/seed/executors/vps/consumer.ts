@@ -139,6 +139,8 @@ async function run(api: Api, unit: Unit): Promise<void> {
   const rows = await api.raw(unit, candidates);
   await api.complete(unit, rows);
   logLoad('unit:done', `${unit.provider}/${unit.slice} ${unit.kind} rows=${rows}`);
+  // Cumulative proxy transfer per source (residential proxy is billed by bytes).
+  logLoad('net', JSON.stringify(netSnapshot()));
 }
 
 async function main(): Promise<void> {
@@ -182,9 +184,6 @@ async function main(): Promise<void> {
       await api.fail(unit, msg);
     }
   }
-
-  // Unreachable; netSnapshot() is used by the launcher for the transfer report.
-  void netSnapshot;
 }
 
 process.on('uncaughtException', (e) => { console.error(`uncaughtException: ${e instanceof Error ? e.message : String(e)}`); });

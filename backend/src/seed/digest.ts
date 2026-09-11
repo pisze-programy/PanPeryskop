@@ -127,56 +127,6 @@ export async function recordSeedDigest(env: DigestEnv, input: DigestInput): Prom
   await maybeDayDone(env, input.day, providers.length);
 }
 
-/** Report a Worker-batch provider once the batch reached a terminal state. A
- *  permanently failed scope marks the whole provider as failed (with the reason);
- *  otherwise aggregate the per-scope seed_runs into ok/partial. */
-export async function reportBatchDigest(env: DigestEnv, batchId: string): Promise<void> {
-  const batch = await env.DB.prepare('SELECT day FROM seed_batches WHERE id = ?').bind(batchId).first<{ day: string }>();
-  if (!batch) return;
-  const scopes = await env.DB.prepare(
-    'SELECT provider, status, error FROM seed_scopes WHERE batch_id = ?'
-  ).bind(batchId).all<{ provider: string; status: string; error: string | null }>();
-  const byProvider = new Map<string, { failed: boolean; reason: string | null }>();
-  for (const s of scopes?.results ?? []) {
-    const cur = byProvider.get(s.provider) ?? { failed: false, reason: null };
-    if (s.status === 'failed') { cur.failed = true; cur.reason = cur.reason || s.error; }
-    byProvider.set(s.provider, cur);
-  }
-  const runs = await env.DB.prepare(
-    'SELECT provider, SUM(candidates) AS candidates, SUM(ingested) AS ingested, SUM(errors) AS errors FROM seed_runs WHERE batch_id = ? GROUP BY provider'
-  ).bind(batchId).all<{ provider: string; candidates: number; ingested: number; errors: number }>();
-  for (const r of runs?.results ?? []) {
-    const scopeState = byProvider.get(r.provider);
-    await postDigestSelf(env, {
-      day: batch.day,
-      provider: r.provider,
-      status: scopeState?.failed ? 'failed' : (r.errors > 0 ? 'partial' : 'ok'),
-      candidates: r.candidates ?? 0,
-      ingested: r.ingested ?? 0,
-      errors: r.errors ?? 0,
-      message: scopeState?.failed ? (scopeState.reason || 'scope failed') : undefined,
-    });
-  }
-  // A provider whose scopes ALL failed has no seed_runs — still report it failed.
-  for (const [provider, state] of byProvider) {
-    if (!state.failed) continue;
-    const already = await env.DB.prepare('SELECT 1 AS x FROM seed_digest WHERE day = ? AND provider = ?').bind(batch.day, provider).first<{ x: number }>();
-    if (!already) {
-      await postDigestSelf(env, {
-        day: batch.day, provider, status: 'failed', candidates: 0, ingested: 0, errors: 0,
-        message: state.reason || 'scope failed',
-      });
-    }
-  }
-}
-
-/** Report a provider as failed the moment a scope dies permanently (DLQ). */
-export async function reportProviderFailed(env: DigestEnv, batchId: string, provider: string, message: string): Promise<void> {
-  const batch = await env.DB.prepare('SELECT day FROM seed_batches WHERE id = ?').bind(batchId).first<{ day: string }>();
-  if (!batch) return;
-  await postDigestSelf(env, { day: batch.day, provider, status: 'failed', candidates: 0, ingested: 0, errors: 0, message });
-}
-
 /** When every active provider reported for the day, email the summary once.
  *  Only the CURRENT far edge (today+SEED_DAYS_AHEAD) triggers it — the full-window
  *  refill completes 6 days per seed run; a day-done email for each would spam. */

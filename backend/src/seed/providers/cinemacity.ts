@@ -11,7 +11,7 @@ import { warsawMidnightMs } from '../core/dates';
 import { CC_CINEMAS, CC_FILM_EVENTS, CC_FILM_URL, CC_TIMEOUT_MS, ccScopes } from '../core/constants';
 
 function cinemaById(code: string) {
-  return CC_CINEMAS.find((c) => c.code === code);
+  return CC_CINEMAS.find((c) => c.id === code);
 }
 
 // One cinema's films+events for the target day → candidates. Wall-clock showtimes
@@ -58,7 +58,7 @@ export function parseCcScope(data: unknown, code: string, day: string): SeedCand
       lat: cinema?.lat ?? null, lng: cinema?.lng ?? null,
       city: cinema?.city || '',
       venue: `Cinema City ${cinema?.name || code}`,
-      address: cinema?.address || '',
+      venueId: `cinemacity-${code}`,
       link: f.link || CC_FILM_URL(f.id),
       mediaUrl: poster,
       thumbUrl: null,

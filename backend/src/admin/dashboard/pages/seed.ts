@@ -100,13 +100,7 @@ pageRoutes.get('/seed', async (c) => {
   const doneProviders = new Map<string, number>();
   if (ids.length) {
     const ph = ids.map(() => '?').join(',');
-    const [sc, ru, dp] = await Promise.all([
-      db.prepare(`SELECT * FROM seed_scopes WHERE batch_id IN (${ph})`).bind(...ids).all<any>(),
-      db.prepare(`SELECT * FROM seed_runs WHERE batch_id IN (${ph})`).bind(...ids).all<any>(),
-      db.prepare(`SELECT batch_id, COUNT(DISTINCT provider) n FROM seed_scopes WHERE status='done' AND batch_id IN (${ph}) GROUP BY batch_id`).bind(...ids).all<{ batch_id: string; n: number }>(),
-    ]);
-    for (const r of (dp.results ?? [])) doneProviders.set(r.batch_id, r.n);
-    for (const s of (sc.results ?? [])) { (byBatch.get(s.batch_id) ?? byBatch.set(s.batch_id, []).get(s.batch_id)!).push({ kind: 'scope', ...s }); }
+    const ru = await db.prepare(`SELECT * FROM seed_runs WHERE batch_id IN (${ph})`).bind(...ids).all<any>();
     for (const r of (ru.results ?? [])) { (byBatch.get(r.batch_id) ?? byBatch.set(r.batch_id, []).get(r.batch_id)!).push({ kind: 'run', ...r }); }
   }
 

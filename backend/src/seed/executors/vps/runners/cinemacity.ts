@@ -13,8 +13,9 @@ export const cinemacitySource: ScopeSource = {
   source: ProviderId.CINEMACITY,
   scopes: () => ccScopes(),
   scopeGeo: (scope) => {
-    const c = CC_CINEMAS.find((x) => x.code === scope);
-    return c ? { lat: c.lat, lng: c.lng } : null;
+    const c = CC_CINEMAS.find((x) => x.id === scope);
+    if (!c || c.lat === undefined || c.lng === undefined) return null;
+    return { lat: c.lat, lng: c.lng };
   },
   fetchScope: async (scope, ctx) => {
     const out: SeedCandidate[] = [];

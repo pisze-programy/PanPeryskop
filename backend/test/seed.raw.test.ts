@@ -95,9 +95,9 @@ class MockRawDB {
               const row: RawRow = {
                 id, day, provider, external_id, title,
                 title_tokens: title_tokens as string,
-                start_min: a[11] as number,
-                booking_key: a[19] as string | null,
-                price_pln: a[15] as number | null,
+                start_min: a[13] as number,
+                booking_key: a[21] as string | null,
+                price_pln: a[17] as number | null,
                 canonical_venue_id: a[10] as string | null,
                 status: 'raw',
               };

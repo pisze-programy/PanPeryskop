@@ -246,20 +246,20 @@ test('dedupe: two distinct films at the same hour in the same cinema stay separa
   assert.equal(out.length, 2);
 });
 
-test('buildDescription: strips postal code, keeps venue + street', () => {
-  const c = cand({ title: 'SKOLIM', startMs: 1_782_765_000_000, venue: 'Klub', address: 'ul. Towarowa 39, 00-123' });
+test('buildDescription: uses venue + city, drops street address', () => {
+  const c = cand({ title: 'SKOLIM', startMs: 1_782_765_000_000, venue: 'Klub', city: 'Poznań', address: 'ul. Towarowa 39, 00-123' });
   const d = buildDescription(c);
   assert.ok(d.startsWith('SKOLIM: '));
-  assert.ok(d.includes('Klub'));
-  assert.ok(d.includes('ul. Towarowa 39'));
-  assert.ok(!d.includes('00-123'), 'postal code must be stripped');
+  assert.ok(d.includes('Klub, Poznań'));
+  assert.ok(!d.includes('Towarowa'), 'street address must be dropped');
   assert.ok(d.length <= 130);
 });
 
-test('buildDescription: going address format (city, street) keeps street only', () => {
-  const c = cand({ venue: 'Klub Schron', address: 'Poznań, Tadeusza Kościuszki 68' });
+test('buildDescription: does not duplicate the city when the venue already contains it', () => {
+  const c = cand({ venue: 'Multikino Poznań Stary Browar', city: 'Poznań' });
   const d = buildDescription(c);
-  assert.ok(d.includes('Tadeusza Kościuszki 68'));
+  assert.ok(d.includes('Multikino Poznań Stary Browar'));
+  assert.ok(!d.includes('Browar, Poznań'), 'city not appended twice');
 });
 
 test('warsawMidnightMs: returns 00:00 Europe/Warsaw', () => {

@@ -2,11 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { enabledProviders, SEED_PROVIDERS } from '../src/seed';
 import { ProviderId, SeedContext } from '../src/seed/core/types';
-import { parseMkFilms, extractToken, resolveMkGeo } from '../src/seed/providers/multikino';
+import { parseMkFilms, extractToken } from '../src/seed/providers/multikino';
 import { parseHeliosPayload } from '../src/seed/providers/helios';
 import { parseCcScope } from '../src/seed/providers/cinemacity';
 import { goingTags } from '../src/seed/providers/going';
-import { mkScopes, MK_CINEMAS, MK_ALL_CINEMAS } from '../src/seed/core/constants';
+import { mkScopes, MK_CINEMAS } from '../src/seed/core/constants';
 import { PROVIDER_CONFIGS, enabledForExecutor, configOf, priorityOf, EXECUTOR } from '../src/seed/providers/registry';
 import { workerExecutor } from '../src/seed/executors/worker';
 
@@ -194,45 +194,12 @@ test('multikino: extractToken pulls microservicesToken out of Set-Cookie lines',
   assert.equal(extractToken(['no-token-here']), null);
 });
 
-test('multikino: resolveMkGeo parses SSR repertuar page (geo regex + address)', async () => {
-  const html = '<iframe src="https://www.google.com/maps/embed/v1/place?key=k&q=52.40276672871932, 16.9306668234985"></iframe>' +
-    '<div class="cinema-location__address-holder"><address class="cinema-location__address">ul. Półwiejska 42<br/>61-888 Poznań</address></div>';
-  const calls: { sql: string; binds: unknown[] }[] = [];
-  const db = {
-    prepare: (sql: string) => ({
-      bind: (...binds: unknown[]) => ({
-        run: async () => { calls.push({ sql, binds }); },
-        first: async () => null,
-        all: async () => ({ results: [] }),
-      }),
-      all: async () => ({ results: [] }),
-    }),
-  } as unknown as D1Database;
-  const env = { DB: db, BROWSER: {} } as unknown as Env;
-  const realFetch = globalThis.fetch;
-  const mockFetch: typeof fetch = async (url: string | URL | Request, init?: RequestInit) => {
-    assert.match(String(url), /\/repertuar\/poznan-stary-browar\/teraz-gramy/);
-    return new Response(html, { status: 200 });
-  };
-  globalThis.fetch = mockFetch;
-  try {
-    const ctx = { env, day: '2026-08-22', dayStart: 0, dayEnd: 0, createdAt: 0, recordBrowserMs: () => {} } as SeedContext;
-    const geo = await resolveMkGeo('0011', 'Multikino Poznań Stary Browar', 'Poznań', { db: ctx.env.DB });
-    assert.ok(geo.lat != null && geo.lng != null);
-    assert.ok(Math.abs(geo.lat! - 52.40276672871932) < 1e-6);
-    assert.ok(geo.address.includes('Półwiejska 42'));
-    assert.ok(calls.some((c) => c.sql.startsWith('INSERT INTO venues')), 'cinema upserted into venues store');
-  } finally {
-    globalThis.fetch = realFetch;
-  }
-});
-
-test('multikino: scopes cover the 18 cinemas in app cities (38 total)', () => {
+test('multikino: scopes cover the 18 enabled cinemas (38 total)', () => {
   assert.equal(MK_CINEMAS.length, 38);
-  assert.equal(MK_ALL_CINEMAS, false);
+  assert.equal(MK_CINEMAS.filter((c) => c.enabled).length, 18);
   const scopes = mkScopes();
   assert.equal(scopes.length, 18);
-  // Poznań, Warszawa, Kraków, Gdańsk present; Radom / Zabrze excluded while MK_ALL_CINEMAS=false.
+  // Poznań, Warszawa, Kraków, Gdańsk present; Radom / Zabrze disabled.
   assert.ok(scopes.includes('0011'));
   assert.ok(scopes.includes('0013'));
   assert.ok(scopes.includes('0005'));
@@ -267,7 +234,7 @@ test('helios: link and booking come from the embedded movie, not the stale event
       },
     },
   };
-  const out = parseHeliosPayload(payload as any, 25, '2026-08-22');
+  const out = parseHeliosPayload(payload as any, '25', '2026-08-22');
   assert.equal(out.length, 2);
 
   const film = out.find((c) => c.externalId.includes('ksiega-pustyni'))!;

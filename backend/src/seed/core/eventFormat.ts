@@ -9,18 +9,15 @@ import { toWarsawIso } from './dates';
 // postToCandidate, liveness fallback).
 const EVENT_DESCRIPTION_RE = /^(.+?):\s*(\d{2}:\d{2}),\s*(.*)$/;
 
-/** Build the description for a candidate: "Tytuł: HH:MM, Lokalizacja". */
+/** Build the description for a candidate: "Tytuł: HH:MM, Lokalizacja". Location
+ *  is the place name + city (no street address). */
 export function buildDescription(c: SeedCandidate): string {
   const hm = toWarsawIso(c.startMs).slice(11, 16); // HH:MM
-  const cityNorm = (c.city || '').trim().toLowerCase();
-  const street = (c.address || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
-    .filter((s) => !/^\d{2}-\d{3}$/.test(s))
-    .filter((s) => s.toLowerCase() !== cityNorm)
-    .join(', ');
-  const loc = [c.venue, street].filter(Boolean).join(', ');
+  const venue = (c.venue || '').trim();
+  const city = (c.city || '').trim();
+  const loc = venue && city && !venue.toLowerCase().includes(city.toLowerCase())
+    ? `${venue}, ${city}`
+    : (venue || city);
   return `${c.title}: ${hm}, ${loc}`.slice(0, 130);
 }
 

@@ -1,17 +1,14 @@
-// Durable unit work-list (the "Kafka-like" list) for the queue redesign.
+// Durable unit work-list (the source of truth for seed work).
 // One row per (day, provider, slice). CF consumers claim via queue wake-ups;
 // the VPS poller claims via POST /seed/units/claim. Exactly one winner per unit:
-// the claim UPDATE flips status only from 'pending', and ownership is verified
-// by the claim token. A stuck claim (lease expiry) goes back to pending via the
-// watchdog path (step 6+; lease is recorded here already).
-//
-// Shadow mode: the producer writes these rows next to seed_scopes, but nothing
-// routes through them yet. All writes here are best-effort and must never break
-// the existing pipeline.
+// the claim UPDATE flips status only while it is claimable, and ownership is
+// verified by the claim token. A stuck claim (lease expiry) goes back to pending
+// via the watchdog.
 import { nanoid } from 'nanoid';
 import { SEED_PROVIDERS } from '../../providers';
 import { configOf } from '../../providers/registry';
 import { SEED_REFILL_AHEAD } from '../../core/constants';
+import { addDaysWarsaw } from '../../core/dates';
 import { now } from './state';
 
 // How long a claim lives before the unit may be re-claimed by someone else.
@@ -19,6 +16,15 @@ export const UNIT_LEASE_MS = 30 * 60_000;
 
 // A unit that fails this many times is terminal — never re-opened by a refresh.
 export const MAX_UNIT_ATTEMPTS = 3;
+
+/** The event days a unit is allowed to write: [day] for a day unit,
+ *  [day..day+SEED_REFILL_AHEAD] for a window unit. Candidates outside this set
+ *  are dropped at the sink (never staged as out-of-window rows). */
+export function unitWindowDays(unit: Pick<UnitRow, 'day' | 'kind'>): string[] {
+  return unit.kind === 'window'
+    ? Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(unit.day, i))
+    : [unit.day];
+}
 
 export interface UnitRow {
   id: string;
@@ -71,7 +77,7 @@ export function planSeedUnits(opts: {
 }
 
 /** Persist planned units. INSERT OR IGNORE: re-enqueueing the same day must not
- *  explode on the UNIQUE(day, provider, slice) index. Chunked like seed_scopes. */
+ *  explode on the UNIQUE(day, provider, slice) index. Chunked under the D1 cap. */
 export async function writeDayUnits(
   db: D1Database,
   units: UnitRow[],

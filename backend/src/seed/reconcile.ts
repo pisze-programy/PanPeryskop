@@ -1,6 +1,6 @@
 // Post-cron reconciliation (queue redesign, step 6): merge cross-source duplicates
 // for one day AFTER all its units are terminal, then absorb losers into winners.
-// Runs gated (see reconcileReady): never mid-write, and fully re-runnable —
+// Runs gated (see finalizeIfReady / countOpenUnitsForDay): never mid-write, and fully re-runnable —
 // re-running recomputes the same groups deterministically, so a crash mid-run
 // just resumes where it stopped (rows already marked winner/duplicate/failure
 // are skipped, only 'raw' rows are grouped).
@@ -19,12 +19,19 @@ import { nanoid } from 'nanoid';
 import { ProviderId, ShowtimeBooking } from './core/types';
 import { containment, isCinemaSource, isUkrainian, titleTokens, venuesMatch } from './core/match';
 import { priorityOf } from './providers/registry';
-import { now } from './pipeline/queue/state';
+import { now, getOrCreateSeedUser } from './pipeline/queue/state';
 import { countOpenUnitsForDay } from './pipeline/queue/units';
 import { isCancelled } from './core/filters';
+import { ingestWinnerRow, RawWinnerRow } from './pipeline/queue/ingest';
+import { SEED_PROVIDERS } from './providers';
 
 /** Single-time rows merge only within this many minutes (booking_key overrides). */
 export const RECONCILE_TIME_GUARD_MIN = 30;
+
+// A reconcile latch older than this is considered dead (the Worker invocation was
+// killed mid-reconcile) and may be taken over by a later finalize — otherwise a
+// stuck `reconciling=1` blocks that day forever.
+export const RECONCILE_STALE_MS = 10 * 60_000;
 
 export interface RawRow {
   id: string;
@@ -59,16 +66,6 @@ function safeJsonArray<T>(s: string | null | undefined): T[] {
   } catch {
     return [];
   }
-}
-
-/** True when every unit for the day is terminal (none pending/claimed). */
-export async function reconcileReady(db: D1Database, day: string): Promise<{ ready: boolean; open: number }> {
-  const row = await db
-    .prepare(`SELECT COUNT(*) AS n FROM seed_units WHERE day=? AND status IN ('pending','claimed')`)
-    .bind(day)
-    .first<{ n: number }>();
-  const open = row?.n ?? 0;
-  return { ready: open === 0, open };
 }
 
 async function loadRawRows(db: D1Database, day: string): Promise<RawRow[]> {
@@ -331,11 +328,44 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
   return summary;
 }
 
+/** Ingest the day's reconciled winners into posts (idempotent upsert by
+ *  external_id). Bounded by `limit` so a request never runs past the CPU limit;
+ *  callers repeat until `remaining` is 0. */
+export async function ingestWinnersForDay(env: Env, day: string, limit = 200): Promise<{ ingested: number; remaining: number }> {
+  const { results } = await env.DB
+    .prepare(`SELECT * FROM seed_raw WHERE day=? AND status='winner' LIMIT ?`)
+    .bind(day, limit)
+    .all<RawWinnerRow>();
+  const rows = results || [];
+  if (rows.length === 0) return { ingested: 0, remaining: 0 };
+  const user = await getOrCreateSeedUser(env.DB);
+  let n = 0;
+  for (const row of rows) {
+    const provider = SEED_PROVIDERS.find((p) => p.id === row.provider);
+    if (!provider) {
+      await env.DB.prepare(`UPDATE seed_raw SET status='error', reason=?, updated_at=? WHERE id=?`)
+        .bind(`unknown provider ${row.provider}`, now(), row.id).run();
+      continue;
+    }
+    try {
+      await ingestWinnerRow(env, provider, user.id, day, row);
+      n += 1;
+    } catch (e) {
+      console.error(`ingest ${row.provider}/${row.external_id} failed: ${(e as Error).message}`);
+    }
+  }
+  const rem = await env.DB
+    .prepare(`SELECT COUNT(*) AS n FROM seed_raw WHERE day=? AND status='winner'`)
+    .bind(day)
+    .first<{ n: number }>();
+  return { ingested: n, remaining: rem?.n ?? 0 };
+}
+
 /** Reconcile `day` once every fetch unit that can write to it is terminal AND
- *  there are unprocessed raw rows. The atomic latch on seed_days.reconciling
- *  makes concurrent completions safe (only one runs). Idempotent; safe to call
- *  from every unit completion. */
-export async function finalizeIfReady(env: { DB: D1Database }, day: string, batchId: string): Promise<boolean> {
+ *  there are unprocessed raw rows, then ingest the winners. The atomic latch on
+ *  seed_days.reconciling makes concurrent completions safe (only one runs).
+ *  Idempotent; safe to call from every unit completion. */
+export async function finalizeIfReady(env: Env, day: string, batchId: string): Promise<boolean> {
   const open = await countOpenUnitsForDay(env.DB, day);
   if (open > 0) return false;
   const raw = await env.DB
@@ -344,12 +374,13 @@ export async function finalizeIfReady(env: { DB: D1Database }, day: string, batc
     .first<{ n: number }>();
   if (!raw || raw.n === 0) return false;
   const latch = await env.DB
-    .prepare(`UPDATE seed_days SET reconciling=1, updated_at=? WHERE day=? AND reconciling=0`)
-    .bind(now(), day)
+    .prepare(`UPDATE seed_days SET reconciling=1, updated_at=? WHERE day=? AND (reconciling=0 OR updated_at < ?)`)
+    .bind(now(), day, now() - RECONCILE_STALE_MS)
     .run();
   if (Number(latch?.meta?.changes ?? 0) !== 1) return false; // another completion won the latch
   try {
     await reconcileDay(env.DB, day, batchId);
+    await ingestWinnersForDay(env, day);
   } finally {
     await env.DB.prepare('UPDATE seed_days SET reconciling=0, updated_at=? WHERE day=?').bind(now(), day).run();
   }

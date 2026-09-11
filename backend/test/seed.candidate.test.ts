@@ -21,18 +21,32 @@ test('parseCandidate: accepts a minimal valid candidate and keeps nulls null', (
   assert.equal(r.cand.partnerId, undefined);
 });
 
-test('parseCandidate: rejects each missing required field with a reason', () => {
-  for (const field of ['externalId', 'title', 'startMs', 'link', 'mediaUrl'] as const) {
-    const r = parseCandidate({ ...base, [field]: undefined }, ProviderId.GOING, 3);
-    assert.equal(r.ok, false, `${field} must be rejected`);
-    if (!r.ok) assert.match(r.reason, new RegExp(`#3: missing`));
+test('parseCandidate: only a missing externalId is rejected', () => {
+  const r = parseCandidate({ ...base, externalId: undefined }, ProviderId.GOING, 3);
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.match(r.reason, /#3: missing externalId/);
+});
+
+test('parseCandidate: missing title/image/link/date → pendingReason (not a reject)', () => {
+  const cases: Array<[keyof typeof base, string]> = [
+    ['title', 'missing title'],
+    ['mediaUrl', 'missing image'],
+    ['link', 'missing link'],
+    ['startMs', 'missing date'],
+  ];
+  for (const [field, reason] of cases) {
+    const r = parseCandidate({ ...base, [field]: undefined }, ProviderId.GOING, 0);
+    assert.equal(r.ok, true, `${field} must not be rejected`);
+    if (r.ok) assert.equal(r.pendingReason, reason);
   }
 });
 
-test('parseCandidate: rejects a non-positive or non-finite date (no epoch)', () => {
-  assert.equal(parseCandidate({ ...base, startMs: 0 }, ProviderId.GOING, 0).ok, false);
-  assert.equal(parseCandidate({ ...base, startMs: -1 }, ProviderId.GOING, 0).ok, false);
-  assert.equal(parseCandidate({ ...base, startMs: NaN }, ProviderId.GOING, 0).ok, false);
+test('parseCandidate: non-positive date → pendingReason missing date (no epoch)', () => {
+  for (const startMs of [0, -1, NaN]) {
+    const r = parseCandidate({ ...base, startMs }, ProviderId.GOING, 0);
+    assert.equal(r.ok, true);
+    if (r.ok) assert.equal(r.pendingReason, 'missing date');
+  }
 });
 
 test('parseCandidate: rejects malformed optional arrays instead of guessing', () => {

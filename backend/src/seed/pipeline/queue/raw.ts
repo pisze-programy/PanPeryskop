@@ -28,6 +28,8 @@ async function contentHash(s: string): Promise<string> {
 }
 
 function startMin(startMs: number): number {
+  // 00:00 is the explicit "unknown hour" marker (UNKNOWN_TIME in core/constants):
+  // an event with a known day but no time is accepted and shown all-day.
   const hm = toWarsawIso(startMs).slice(11, 16); // "HH:MM"
   const [h, m] = hm.split(':').map(Number);
   return h * 60 + m;
@@ -63,6 +65,7 @@ export function normHashInput(c: SeedCandidate): string {
     bookings: [...bookings].sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0)),
     tags: [...tags].sort(),
     partner,
+    pending: c.pendingReason === undefined ? null : c.pendingReason,
   });
 }
 
@@ -75,6 +78,9 @@ export async function writeRawRows(db: D1Database, input: RawWriteInput, chunkSi
   // so this turns N lookups into 1).
   const venueCache = new Map<string, string | null>();
   const resolveVenue = async (c: SeedCandidate): Promise<string | null> => {
+    // Fixed venues (cinemas) carry a deterministic id — NO venue cache, NO fuzzy
+    // match, NO Nominatim. The id is just used as the canonical key.
+    if (c.venueId !== undefined && c.venueId !== '') return c.venueId;
     const key = `${venueKey(c.venue)}|${venueKey(c.city)}`;
     if (venueCache.has(key)) return venueCache.get(key)!;
     const lat = typeof c.lat === 'number' ? c.lat : null;
@@ -97,24 +103,30 @@ export async function writeRawRows(db: D1Database, input: RawWriteInput, chunkSi
       db.prepare(
         `INSERT INTO seed_raw
           (id, day, batch_id, unit_id, provider, external_id, title, title_tokens, raw_venue, city,
-           canonical_venue_id, start_min, showtimes, showtime_booking, tags, price_pln, media_url, thumb_url,
+           canonical_venue_id, lat, lng, start_min, showtimes, showtime_booking, tags, price_pln, media_url, thumb_url,
            link_url, booking_key, affiliate_link, partner_id, partner_name, is_sold_out, content_hash,
-           status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'raw', ?, ?)
+           pending_reason, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'raw', ?, ?)
          ON CONFLICT(day, provider, external_id) DO UPDATE SET
            title=excluded.title, title_tokens=excluded.title_tokens, raw_venue=excluded.raw_venue,
-           city=excluded.city, canonical_venue_id=excluded.canonical_venue_id, start_min=excluded.start_min,
+           city=excluded.city, canonical_venue_id=excluded.canonical_venue_id, lat=excluded.lat, lng=excluded.lng,
+           start_min=excluded.start_min,
            showtimes=excluded.showtimes, showtime_booking=excluded.showtime_booking, tags=excluded.tags,
            price_pln=excluded.price_pln, media_url=excluded.media_url, thumb_url=excluded.thumb_url,
            link_url=excluded.link_url, booking_key=excluded.booking_key, affiliate_link=excluded.affiliate_link,
            partner_id=excluded.partner_id, partner_name=excluded.partner_name,
            is_sold_out=excluded.is_sold_out, content_hash=excluded.content_hash,
+           pending_reason=excluded.pending_reason,
            status=CASE WHEN seed_raw.content_hash <> excluded.content_hash THEN 'raw' ELSE seed_raw.status END,
            reason=CASE WHEN seed_raw.content_hash <> excluded.content_hash THEN NULL ELSE seed_raw.reason END,
            updated_at=excluded.updated_at`,
       ).bind(
         nanoid(24), input.day, input.batchId, input.unitId, input.provider, c.externalId, c.title,
-        JSON.stringify([...titleTokens(c.title, c.venue)]), c.venue, c.city === '' ? null : c.city, canonicalVenue, startMin(c.startMs),
+        JSON.stringify([...titleTokens(c.title, c.venue)]), c.venue, c.city === '' ? null : c.city,
+        canonicalVenue,
+        typeof c.lat === 'number' ? c.lat : null,
+        typeof c.lng === 'number' ? c.lng : null,
+        startMin(c.startMs),
         showtimesJson(c), showtimeBookingJson(c), tagsJson(c),
         c.price === undefined ? null : c.price,
         c.mediaUrl,
@@ -123,14 +135,16 @@ export async function writeRawRows(db: D1Database, input: RawWriteInput, chunkSi
         c.affiliateLink === undefined ? null : c.affiliateLink,
         c.partnerId === undefined ? null : c.partnerId,
         c.partnerName === undefined ? null : c.partnerName,
-        c.isSoldOut ? 1 : 0, hash, t, t,
+        c.isSoldOut ? 1 : 0, hash,
+        c.pendingReason === undefined || c.pendingReason === null ? null : c.pendingReason,
+        t, t,
       ),
     );
   }
   let n = 0;
   for (let i = 0; i < stmts.length; i += chunkSize) {
     const res = await db.batch(stmts.slice(i, i + chunkSize));
-    n += res.length;
+    for (const r of res) n += r.meta.changes;
   }
   return n;
 }

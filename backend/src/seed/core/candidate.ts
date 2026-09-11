@@ -1,11 +1,16 @@
 // Strict validation for candidates crossing the VPS→Worker trust boundary.
-// The VPS is our own process, but the payload is untrusted input: a malformed
-// hit must be REJECTED with a reason (never substituted with a default value).
-// Required: externalId, title, startMs (>0), link, mediaUrl. Everything else is
-// optional and stored as null/absent when missing.
+// Only the IDENTITY (externalId) is required; a missing title/image/link/date is
+// NOT a reject — it is carried as `pendingReason` so the post is created PENDING
+// (kept for the admin to fix, never shown until then). Malformed optional arrays
+// (present but wrong shape) are still rejected — those are data errors, not gaps.
 import { ProviderId, SeedCandidate, ShowtimeBooking } from './types';
 
-export type ParseResult = { ok: true; cand: SeedCandidate } | { ok: false; reason: string };
+export interface ParseResult {
+  ok: true;
+  cand: SeedCandidate;
+  pendingReason: string | null;
+}
+export type ParseOutcome = ParseResult | { ok: false; reason: string };
 
 const BOOKING_KINDS: ShowtimeBooking['kind'][] = ['helios', 'cinemacity', 'multikino', 'link'];
 
@@ -47,18 +52,15 @@ function optBookings(v: unknown): ShowtimeBooking[] | undefined | null {
   return out;
 }
 
-/** Validate + build a SeedCandidate. Returns a reason instead of guessing. */
-export function parseCandidate(raw: unknown, source: ProviderId, index: number): ParseResult {
+/** Validate + build a SeedCandidate. Returns a reason only when the row is
+ *  unusable (not an object, no externalId) or has malformed optional arrays. */
+export function parseCandidate(raw: unknown, source: ProviderId, index: number): ParseOutcome {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
     return { ok: false, reason: `#${index}: not an object` };
   }
   const c = raw as Record<string, unknown>;
 
   if (!isStr(c.externalId) || c.externalId === '') return { ok: false, reason: `#${index}: missing externalId` };
-  if (!isStr(c.title) || c.title === '') return { ok: false, reason: `#${index}: missing title` };
-  if (!isFiniteNum(c.startMs) || c.startMs <= 0) return { ok: false, reason: `#${index}: missing/invalid startMs` };
-  if (!isStr(c.link) || c.link === '') return { ok: false, reason: `#${index}: missing link` };
-  if (!isStr(c.mediaUrl) || c.mediaUrl === '') return { ok: false, reason: `#${index}: missing mediaUrl` };
 
   const times = optStrArray(c.times);
   if (times === null) return { ok: false, reason: `#${index}: malformed times` };
@@ -67,21 +69,33 @@ export function parseCandidate(raw: unknown, source: ProviderId, index: number):
   const bookings = optBookings(c.showtimeBooking);
   if (bookings === null) return { ok: false, reason: `#${index}: malformed showtimeBooking` };
 
+  // Missing content -> PENDING (not a reject). First missing field wins.
+  const title = isStr(c.title) ? c.title : '';
+  const mediaUrl = isStr(c.mediaUrl) ? c.mediaUrl : '';
+  const link = isStr(c.link) ? c.link : '';
+  const hasDate = isFiniteNum(c.startMs) && c.startMs > 0;
+  let pendingReason: string | null = null;
+  if (title === '') pendingReason = 'missing title';
+  else if (mediaUrl === '') pendingReason = 'missing image';
+  else if (link === '') pendingReason = 'missing link';
+  else if (!hasDate) pendingReason = 'missing date';
+
   const geoRef = optStr(c.geoRef);
   return {
     ok: true,
+    pendingReason,
     cand: {
       source,
       externalId: c.externalId,
-      title: c.title,
-      startMs: c.startMs,
+      title,
+      startMs: hasDate ? (c.startMs as number) : 0,
       lat: isFiniteNum(c.lat) ? c.lat : null,
       lng: isFiniteNum(c.lng) ? c.lng : null,
       city: isStr(c.city) ? c.city : '',
       venue: isStr(c.venue) ? c.venue : '',
       address: isStr(c.address) ? c.address : '',
-      link: c.link,
-      mediaUrl: c.mediaUrl,
+      link,
+      mediaUrl,
       thumbUrl: isStr(c.thumbUrl) ? c.thumbUrl : null,
       isSoldOut: c.isSoldOut === true,
       geoRef: geoRef === undefined ? null : geoRef,
@@ -92,6 +106,8 @@ export function parseCandidate(raw: unknown, source: ProviderId, index: number):
       partnerName: isStr(c.partnerName) ? c.partnerName : undefined,
       price: isFiniteNum(c.price) ? c.price : null,
       affiliateLink: isStr(c.affiliateLink) ? c.affiliateLink : undefined,
+      venueId: isStr(c.venueId) ? c.venueId : undefined,
+      pendingReason,
     },
   };
 }

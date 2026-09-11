@@ -11,7 +11,7 @@ import { getBytes } from './http';
 import { warsawMidnightMs } from '../core/dates';
 import { HELIOS_CINEMAS, HELIOS_FILM, HELIOS_SCREENINGS, HELIOS_TIMEOUT_MS, heliosScopes } from '../core/constants';
 
-function cinemaById(id: number) {
+function cinemaById(id: string) {
   return HELIOS_CINEMAS.find((c) => c.id === id);
 }
 
@@ -63,7 +63,7 @@ function startMsFor(day: string, entries: HeliosDayEntry): number | null {
 }
 
 // One cinema's full repertoire → candidates for the target day.
-export function parseHeliosPayload(payload: HeliosPayload, cinemaId: number, day: string): SeedCandidate[] {
+export function parseHeliosPayload(payload: HeliosPayload, cinemaId: string, day: string): SeedCandidate[] {
   const cinema = cinemaById(cinemaId);
   if (!cinema) throw new Error(`helios: unknown cinema ${cinemaId}`);
   const dayMap = payload?.screenings?.[day];
@@ -103,16 +103,17 @@ export function parseHeliosPayload(payload: HeliosPayload, cinemaId: number, day
     }
     out.push({
       source: ProviderId.HELIOS,
-      externalId: `helios-${cinema.citySlug}-${cinema.slug}-${filmId}-${day}`,
+      externalId: `helios-${cinema.urlCitySlug}-${cinema.urlCinemaSlug}-${filmId}-${day}`,
       title,
       startMs,
       times,
       showtimeBooking,
       tags: ['filmy'],
-      lat: cinema.lat, lng: cinema.lng,
+      lat: cinema.lat === undefined ? null : cinema.lat,
+      lng: cinema.lng === undefined ? null : cinema.lng,
       city: cinema.city,
       venue: cinema.name,
-      address: cinema.address,
+      venueId: `helios-${cinema.id}`,
       link: HELIOS_FILM(cinema, slug, filmIdNum),
       mediaUrl: poster,
       thumbUrl: null,
@@ -122,8 +123,8 @@ export function parseHeliosPayload(payload: HeliosPayload, cinemaId: number, day
 }
 
 // Fetch one cinema (queue scope = numeric cinema id).
-export async function fetchHeliosCinema(day: string, cinemaId: number): Promise<SeedCandidate[]> {
-  const res = await fetch(HELIOS_SCREENINGS(cinemaId), {
+export async function fetchHeliosCinema(day: string, cinemaId: string): Promise<SeedCandidate[]> {
+  const res = await fetch(HELIOS_SCREENINGS(Number(cinemaId)), {
     headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'pl', Accept: 'application/json' },
     signal: AbortSignal.timeout(HELIOS_TIMEOUT_MS),
   });
@@ -138,12 +139,12 @@ export const heliosProvider: SeedProvider = {
   fetchCandidates: async (ctx) => {
     const out: SeedCandidate[] = [];
     for (const id of heliosScopes()) {
-      try { out.push(...await fetchHeliosCinema(ctx.day, Number(id))); }
+      try { out.push(...await fetchHeliosCinema(ctx.day, id)); }
       catch (e) { console.error(`helios scope ${id} failed: ${(e as Error).message}`); }
     }
     return out;
   },
   fetchBytes: (_ctx, url) => getBytes(url),
   scopes: heliosScopes(),
-  fetchScope: (ctx, scope) => fetchHeliosCinema(ctx.day, Number(scope)),
+  fetchScope: (ctx, scope) => fetchHeliosCinema(ctx.day, scope),
 };

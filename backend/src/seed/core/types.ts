@@ -5,7 +5,7 @@
 export type ProviderTransport = 'fetch' | 'browser' | 'manual';
 export type RunType = 'manual' | 'cron';
 
-/** Seed providers — the string values persist to D1 (seed_candidates.provider, posts.external_id prefix). */
+/** Seed providers — the string values persist to D1 (seed_raw.provider, posts.external_id prefix). */
 export const ProviderId = {
   GOING: 'going',
   KUPBILECIK: 'kupbilecik',
@@ -22,18 +22,6 @@ export const ProviderId = {
   FACEBOOK: 'facebook',
 } as const;
 export type ProviderId = (typeof ProviderId)[keyof typeof ProviderId];
-
-/** Candidate lifecycle through the queue (seed_candidates.status). */
-export const CandidateStatus = {
-  PENDING: 'pending',
-  NO_MEDIA: 'no_media',
-  NO_COORDS: 'no_coords',
-  DUPLICATE: 'duplicate',
-  INGESTING: 'ingesting',
-  DONE: 'done',
-  ERROR: 'error',
-} as const;
-export type CandidateStatus = (typeof CandidateStatus)[keyof typeof CandidateStatus];
 
 /** Per-showtime booking identity for a cinema event. The provider kind lets the
  *  client compose the deep booking URL on the fly (no links are stored).
@@ -56,7 +44,7 @@ export interface SeedCandidate {
   lng: number | null;
   city: string;
   venue: string;
-  address: string;
+  address?: string;
   link: string;
   mediaUrl: string;
   thumbUrl: string | null;
@@ -82,6 +70,13 @@ export interface SeedCandidate {
    *  `link` because the dedupe-facing link must be per-event unique, while the
    *  affiliate tracker is a shared redirect host. Replaces `link` at ingest. */
   affiliateLink?: string;
+  /** Why this event must be created as PENDING (never a reject): a missing
+   *  title/image/link/date. Set by the trust-boundary parser; null = not pending
+   *  for a content reason (geo/city pending is decided at ingest). */
+  pendingReason?: string | null;
+  /** Deterministic venue id for FIXED venues (cinemas): `<provider>-<id>`. When
+   *  set, the raw write uses it directly and skips the venue store entirely. */
+  venueId?: string;
 }
 
 export interface SeedProviderResult {

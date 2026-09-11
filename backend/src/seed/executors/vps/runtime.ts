@@ -29,7 +29,6 @@ import { UA_HEADERS } from '../../../../src/seed/providers/http';
 import { configOf } from '../../../../src/seed/providers/registry';
 import type { SeedCandidate, ProviderId } from '../../../../src/seed/core/types';
 import type { VpsSpec } from '../../../../src/seed/providers/registry';
-import type { MkGeoStore } from '../../../../src/seed/providers/multikino';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Repo root — works from BOTH the TS source (deep in backend/src/...) AND the
@@ -177,7 +176,6 @@ export interface Checkpoint {
   /** Per-scope progress (city or cinema id) within the window. */
   scopes?: Record<string, 'done'>;
   geo?: Record<string, CpGeo>;
-  venueGeo?: Record<string, CpGeo>;
 }
 export function loadCp(path: string): Checkpoint {
   if (!existsSync(path)) return { target: '', completed: false, completedAt: 0 };
@@ -198,17 +196,6 @@ export function checkpointGeoStore(cp: Checkpoint): GeoStore {
     set: async (name, city, geo) => {
       cp.geo = cp.geo ?? {};
       cp.geo[`${name}@${city || ''}`] = geo;
-    },
-  };
-}
-// Multikino's geo cache is keyed by cinema id (MkGeoStore), persisted in the
-// checkpoint's venueGeo map — the SSR page is fetched once per cinema ever.
-export function checkpointMkGeoStore(cp: Checkpoint): MkGeoStore {
-  return {
-    get: async (cinemaId) => cp.venueGeo?.[`mk:${cinemaId}`] ?? null,
-    set: async (cinemaId, geo) => {
-      cp.venueGeo = cp.venueGeo ?? {};
-      cp.venueGeo[`mk:${cinemaId}`] = geo;
     },
   };
 }
@@ -357,7 +344,7 @@ export function entryFor(c: SeedCandidate & { lat: number; lng: number }, mediaR
     description: buildDescription(c),
     created_at: `${day}T${String(EVENT_VISIBLE_OFFSET_MS / HOUR_MS).padStart(2, '0')}:00:00+02:00`,
     venue: c.venue,
-    address: c.address,
+    address: c.address === undefined ? '' : c.address,
     city: c.city,
     lat: c.lat,
     lng: c.lng,

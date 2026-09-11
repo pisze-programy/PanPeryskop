@@ -4,10 +4,11 @@
 // The unit row (D1) is the source of truth; the queue message is only a wake-up.
 import { enabledProviders } from '../../providers';
 import { SeedContext, SeedCandidate } from '../../core/types';
-import { warsawMidnightMs, warsawDateOf, eventCreatedAtMs, eventDayEndMs } from '../../core/dates';
-import { D1_BATCH_STATEMENT_CAP } from '../../core/constants';
-import { ClaimedUnit, claimUnit, completeUnit, failUnit } from './units';
+import { warsawMidnightMs, warsawDateOf, eventCreatedAtMs, eventDayEndMs, addDaysWarsaw } from '../../core/dates';
+import { D1_BATCH_STATEMENT_CAP, SEED_REFILL_AHEAD } from '../../core/constants';
+import { ClaimedUnit, claimUnit, completeUnit, failUnit, unitWindowDays } from './units';
 import { writeRawRows } from './raw';
+import { parseCandidate } from '../../core/candidate';
 import { finalizeIfReady } from '../../reconcile';
 
 // Bound the work per invocation (CF CPU). If more remain, one extra wake-up is
@@ -53,14 +54,25 @@ async function runUnit(env: Env, unit: ClaimedUnit): Promise<void> {
 
   const candidates = await provider.fetchScope(ctx, unit.slice);
 
-  // Group by event day: window units carry candidates for many days; day units
-  // carry one. Each group upserts into seed_raw under its own day.
+  // Validate + group by event day. Keep ONLY the unit's window days (window
+  // providers return extra days — those would otherwise never finalize). A
+  // candidate with no date is filed under the unit's day as PENDING.
+  const allowed = new Set(unitWindowDays(unit));
   const byDay = new Map<string, SeedCandidate[]>();
-  for (const c of candidates) {
-    const d = warsawDateOf(c.startMs);
+  let rejected = 0;
+  let outOfWindow = 0;
+  for (let i = 0; i < candidates.length; i++) {
+    const r = parseCandidate(candidates[i], provider.id, i);
+    if (!r.ok) { rejected += 1; continue; }
+    const c = r.cand;
+    const d = c.startMs > 0 ? warsawDateOf(c.startMs) : unit.day;
+    if (!allowed.has(d)) { outOfWindow += 1; continue; }
     const arr = byDay.get(d);
     if (arr) arr.push(c);
     else byDay.set(d, [c]);
+  }
+  if (rejected || outOfWindow) {
+    console.log(`unit ${unit.provider}/${unit.slice}: rejected=${rejected} outOfWindow=${outOfWindow}`);
   }
 
   let rowsWritten = 0;

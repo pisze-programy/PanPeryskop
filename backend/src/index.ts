@@ -14,7 +14,7 @@ import {reportsRoutes} from './api/reports';
 import {travelRoutes} from './api/travel';
 import {runSeed, tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
 import {produceSeedWindow, runQueue, SeedQueueMessage, watchdogUnits} from './seed/pipeline/queue';
-import {pruneSeedData, watchdogSeedBatches} from './seed/pipeline/cleanup';
+import {pruneSeedData, pruneSeedManifests} from './seed/pipeline/cleanup';
 import {checkDigestIncomplete} from './seed/digest';
 import {getLastSeedDay, setLastSeedDay, seedDue} from './seed/cadence';
 import {SEED_DAYS_AHEAD, SEED_INTERVAL_DAYS, SEED_REFILL_AHEAD} from './seed/core/constants';
@@ -134,6 +134,7 @@ export default {
       // Daily audit cleanup: drop seed audit older than 4 days (venues kept).
       ctx.waitUntil(
         pruneSeedData(env, 'cron')
+          .then(() => pruneSeedManifests(env))
           .then(() => console.log('seed cleanup cron done'))
           .catch((e) => console.error(`seed cleanup cron failed: ${(e as Error).message}`))
       );
@@ -144,7 +145,6 @@ export default {
       // and email which seed providers did not report their daily job by 14:00.
       ctx.waitUntil(
         (async () => {
-          await watchdogSeedBatches(env, 'cron');
           await watchdogUnits(env.DB);
           await checkDigestIncomplete(env);
         })().catch((e) => console.error(`seed watchdog cron failed: ${(e as Error).message}`))

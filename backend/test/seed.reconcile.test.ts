@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reconcileDay, reconcileReady, RECONCILE_TIME_GUARD_MIN } from '../src/seed/reconcile';
+import { reconcileDay, RECONCILE_TIME_GUARD_MIN } from '../src/seed/reconcile';
 
 interface RawRow {
   id: string; provider: string; external_id: string; title: string;
@@ -110,14 +110,6 @@ const DAY = '2026-09-08';
 function row(over: Partial<RawRow> & { id: string; provider: string; external_id: string }): Partial<RawRow> & { id: string; provider: string; external_id: string } {
   return over;
 }
-
-test('reconcileReady: gate opens only when no unit is pending/claimed', async () => {
-  const db = new MockReconDB() as unknown as D1Database;
-  db.openUnits = 2;
-  assert.deepEqual(await reconcileReady(db, DAY), { ready: false, open: 2 });
-  db.openUnits = 0;
-  assert.deepEqual(await reconcileReady(db, DAY), { ready: true, open: 0 });
-});
 
 test('reconcile: solo row becomes winner, empty day is a no-op', async () => {
   const db = new MockReconDB() as unknown as D1Database;

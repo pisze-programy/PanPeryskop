@@ -12,13 +12,11 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { SEED_PROVIDERS } from '../src/seed/providers';
 import { PROVIDER_CONFIGS } from '../src/seed/providers/registry';
-import { enqueueSeedDay, runQueue, QUEUE_NAMES } from '../src/seed/pipeline/queue';
 import { storiesRoutes } from '../src/api/stories';
 import { parseStoriesLimit } from '../src/api/stories';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs } from '../src/seed/core/dates';
 import { SEED_DAYS_AHEAD, HOUR_MS } from '../src/seed/core/constants';
 import { entryFor } from '../src/seed/executors/vps/runtime';
-import type { SeedQueueMessage } from '../src/seed/pipeline/queue';
 import type { SeedProvider } from '../src/seed/core/types';
 
 // Pipeline tests seed a WINDOW day. Must stay date-relative: handleSeedDay rejects
@@ -180,125 +178,6 @@ function makeEnv() {
     },
   };
 }
-
-test('integration: seed pipeline completes end-to-end and catches provider/ingest exceptions', async () => {
-  const realFetch = globalThis.fetch;
-  // Venue-cache build in handleSeedDay is best-effort — stub the network so the
-  // test is hermetic (buildVenueCache swallows its own errors anyway).
-  globalThis.fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch;
-
-  const boomCand = candidate({ externalId: 'fake-boom', title: 'Boom', mediaUrl: 'https://x.pl/boom.jpg' });
-  const okCand = candidate({ externalId: 'fake-ok', title: 'Koncert', startMs: DAY_START });
-  const okCand2 = candidate({ externalId: 'fake-ok2', title: 'Standup', startMs: DAY_START + HOUR_MS });
-
-  const restore = swapFakes([
-    fakeProvider('fakea', ['city1', 'city2'], async (scope) => {
-      if (scope === 'city2') throw new Error('scope city2 boom'); // poison scope → DLQ → failed
-      return [okCand, boomCand]; // boom candidate fails at media download
-    }),
-    fakeProvider('fakeb', ['city3'], async () => [okCand2]),
-  ]);
-
-  try {
-    const { sqlite, env } = makeEnv();
-    await enqueueSeedDay(env as never, DAY, 'manual');
-    await runPipeline(env);
-
-    const batch = sqlite.prepare(`SELECT status, scopes_total, scopes_done FROM seed_batches WHERE day='${DAY}'`).get() as any;
-    assert.equal(batch.status, 'done', 'batch must reach done despite a poison scope + a failing candidate');
-
-    const scopes = sqlite.prepare('SELECT provider, scope, status FROM seed_scopes ORDER BY scope').all() as any[];
-    assert.deepEqual(
-      scopes.map((s) => `${s.scope}:${s.status}`).sort(),
-      ['city1:done', 'city2:failed', 'city3:done'],
-      'poison scope is terminal failed, others done',
-    );
-
-    const cands = sqlite.prepare('SELECT external_id, status FROM seed_candidates').all() as any[];
-    assert.deepEqual(
-      cands.map((c) => `${c.external_id}:${c.status}`).sort(),
-      ['fake-boom:error', 'fake-ok2:done', 'fake-ok:done'],
-      'failing candidate is terminal error, survivors done',
-    );
-
-    // Only the two survivors created posts (the boom candidate never got media).
-    const posts = sqlite.prepare("SELECT COUNT(*) AS n FROM posts WHERE category='events'").get() as any;
-    assert.equal(posts.n, 2, 'posts created only for successfully ingested candidates');
-
-    // No dead letter should be left behind: everything was re-driven to terminal.
-    const dlq = env.SEED_DLQ as FakeQueue;
-    assert.equal(dlq.msgs.length, 0, 'DLQ drained (bounded re-drive, no infinite loop)');
-  } finally {
-    restore();
-    globalThis.fetch = realFetch;
-  }
-});
-
-test('integration: runQueue catches handler exceptions (retry→DLQ, never uncaught)', async () => {
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch;
-  const restore = swapFakes([fakeProvider('fakethrow', ['only'], async () => { throw new Error('always throws'); })]);
-
-  try {
-    const { sqlite, env } = makeEnv();
-    await enqueueSeedDay(env as never, DAY, 'manual');
-
-    // Drive the pipeline; it must NOT reject even though every fetch throws —
-    // the poison scope is exhausted via bounded DLQ re-drive and the batch fails.
-    await runPipeline(env);
-
-    const batch = sqliteRow(sqlite, `SELECT status FROM seed_batches WHERE day='${DAY}'`);
-    assert.ok(['failed', 'done'].includes(batch.status), `batch terminal (got ${batch.status})`);
-    const scope = sqliteRow(sqlite, "SELECT status FROM seed_scopes WHERE scope='only'");
-    assert.equal(scope.status, 'failed', 'poison scope marked failed after bounded re-drive');
-  } finally {
-    restore();
-    globalThis.fetch = realFetch;
-  }
-});
-
-test('integration: dedupe pipeline drops cancelled, rescues same-source shows, merges cross-provider dups', async () => {
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch;
-  const day = DAY;
-  const hm = (h: string) => Date.parse(`${DAY}T${h}:00+02:00`);
-  const mk = (source: string, externalId: string, title: string, start: number, venue: string) =>
-    candidate({ source: source as never, externalId, title, startMs: start, venue });
-
-  const restore = swapFakes([
-    fakeProvider('kupbilecik', ['waw'], async () => [
-      mk('kupbilecik', 'kup-skolim-17', 'SKOLIM', hm('17:00'), 'Amfiteatr'),
-      mk('kupbilecik', 'kup-skolim-20', 'SKOLIM', hm('20:00'), 'Amfiteatr'),
-      mk('kupbilecik', 'kup-swiece', 'Koncert Przy Świecach', hm('21:00'), 'Sala Koncertowa Fryderyk'),
-      mk('kupbilecik', 'kup-cancelled', '*CANCELLED* Missio', hm('22:00'), 'Niebo'),
-    ]),
-    fakeProvider('going', ['waw'], async () => [
-      mk('going', 'going-swiece', 'Koncert Przy Świecach', hm('20:45'), 'Sala Koncertowa Fryderyk'),
-    ]),
-  ]);
-
-  try {
-    const { sqlite, env } = makeEnv();
-    await enqueueSeedDay(env as never, day, 'manual');
-    await runPipeline(env);
-
-    const cands = sqlite.prepare('SELECT external_id, status, reason FROM seed_candidates ORDER BY external_id').all() as any[];
-    const byId = new Map(cands.map((c) => [c.external_id, c]));
-
-    assert.equal(byId.get('kup-cancelled').status, 'duplicate', 'cancelled must be dropped pre-dedupe');
-    assert.equal(byId.get('kup-cancelled').reason, 'title: cancelled');
-    assert.equal(byId.get('kup-skolim-17').status, 'done', 'SKOLIM 17:00 survives');
-    assert.equal(byId.get('kup-skolim-20').status, 'done', 'SKOLIM 20:00 survives via same-source rescue');
-    assert.equal(byId.get('going-swiece').status, 'done', 'going wins the cross-provider duplicate');
-    assert.equal(byId.get('kup-swiece').status, 'duplicate', 'kupbilecik copy of the same event is removed');
-
-    const posts = sqlite.prepare("SELECT COUNT(*) AS n FROM posts WHERE category='events'").get() as any;
-    assert.equal(posts.n, 3, 'posts: SKOLIM x2 + going Przy Świecach');
-  } finally {
-    restore();
-    globalThis.fetch = realFetch;
-  }
-});
 
 function sqliteRow(sqlite: DatabaseSync, sql: string): any {
   return sqlite.prepare(sql).get();

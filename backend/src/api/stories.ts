@@ -98,8 +98,21 @@ storiesRoutes.get('/tag-counts', async (c) => {
     }
   }
 
+  const liveRow = await db
+    .prepare(
+      `SELECT COUNT(*) as n FROM posts
+       WHERE lat BETWEEN ? AND ?
+       AND lng BETWEEN ? AND ?
+       AND status = '${STATUS_APPROVED}'
+       AND category = '${CATEGORY_LIVE}'
+       AND created_at >= ?`
+    )
+    .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, Date.now() - TTL_MS)
+    .first<{ n: number }>();
+
   return c.json({
     total,
+    live: liveRow?.n ?? 0,
     counts: Array.from(counts.entries()).map(([tag, count]) => ({ tag, count })),
   });
 });

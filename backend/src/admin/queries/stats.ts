@@ -13,7 +13,6 @@ export const STAT_METRICS: Record<string, MetricDef> = {
   likes: { label: 'Like', table: 'likes', col: 'created_at' },
   shares: { label: 'Share', table: 'shares', col: 'created_at' },
   errors: { label: 'Błędy', table: 'client_errors', col: 'created_at' },
-  media_requests: { label: 'Media Req.', table: 'media_requests', col: 'created_at' },
 };
 export type StatsMetric = keyof typeof STAT_METRICS;
 

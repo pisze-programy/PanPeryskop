@@ -24,7 +24,6 @@ export const NAV = [
   { href: '/admin/seed', label: 'Seed', icon: 'refresh' },
   { href: '/admin/stats', label: 'Statystyki', icon: 'chart-line' },
   { href: '/admin/errors', label: 'Błędy', icon: 'alert-triangle' },
-  { href: '/admin/media-requests', label: 'Media Requests', icon: 'map-pin' },
   { href: '/admin/reports', label: 'Raporty', icon: 'flag' },
 ];
 

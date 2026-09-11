@@ -1,5 +1,14 @@
 import SwiftUI
 
+private extension Airline {
+    var label: String {
+        switch self {
+        case .ryanair: return "Ryanair"
+        case .wizzair: return "Wizzair"
+        }
+    }
+}
+
 /// Soccer flight section: destination-airport rail, the single flight timeline and
 /// the "Lecimy" buy bar. Ryanair is the only live provider, so there is no airline
 /// pill — the brand shows on the CTA only.
@@ -22,7 +31,7 @@ struct SoccerFlightSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-            if destinations.count > 1, let destination {
+            if let destination, !reachableDestinations.isEmpty {
                 destinationRail(destination)
             }
             if loadFailed {
@@ -50,27 +59,30 @@ struct SoccerFlightSection: View {
         .onChange(of: loadKey) { _, _ in reset() }
     }
 
+    private var reachableDestinations: [Destination] {
+        destinations.filter { reachableAirports?.contains($0.iata) ?? true }
+    }
+
     private func destinationRail(_ active: Destination) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Theme.Spacing.s) {
-                ForEach(destinations, id: \.iata) { dest in
-                    let reachable = reachableAirports?.contains(dest.iata) ?? true
+                ForEach(reachableDestinations, id: \.iata) { dest in
                     Button {
-                        guard reachable else { return }
                         onSelectDestination(dest)
                     } label: {
-                        HStack(spacing: 6) {
-                            Text(dest.iata).font(.caption.weight(.bold))
-                            Text(dest.city).font(.caption).lineLimit(1)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("\(origin.iata) → \(dest.iata)")
+                                .font(.caption.weight(.bold))
+                            Text(dest.city)
+                                .font(.caption2)
+                                .lineLimit(1)
                         }
                         .padding(.horizontal, Theme.Spacing.m)
                         .padding(.vertical, Theme.Spacing.s)
                         .background(Capsule().fill(active.iata == dest.iata ? airline.color : Theme.Palette.surfaceRaised))
                         .foregroundColor(active.iata == dest.iata ? .white : .primary)
-                        .opacity(reachable ? 1 : 0.4)
                     }
                     .buttonStyle(.plain)
-                    .disabled(!reachable)
                 }
             }
         }
@@ -88,7 +100,7 @@ struct SoccerFlightSection: View {
     private func buyBar(_ destination: Destination) -> some View {
         if let outbound = selectedOutbound, let ret = selectedReturn {
             CapsuleButton(
-                title: "Lecimy ✈",
+                title: "\(airline.label) ✈ Lecimy",
                 trailingText: "\(Int(outbound.price ?? 0) + Int(ret.price ?? 0)) zł",
                 tint: airline.color
             ) {
@@ -100,7 +112,22 @@ struct SoccerFlightSection: View {
     }
 
     private func buyURL(destination: String, outbound: String, returning: String) -> URL? {
-        URL(string: "https://www.ryanair.com/pl/pl/trip/flights/select?originIata=\(origin.iata)&destinationIata=\(destination)&dateOut=\(outbound)&dateIn=\(returning)")
+        var components = URLComponents(string: "https://www.ryanair.com/pl/pl/trip/flights/select")!
+        components.queryItems = [
+            URLQueryItem(name: "adults", value: "1"),
+            URLQueryItem(name: "teens", value: "0"),
+            URLQueryItem(name: "children", value: "0"),
+            URLQueryItem(name: "infants", value: "0"),
+            URLQueryItem(name: "dateOut", value: outbound),
+            URLQueryItem(name: "dateIn", value: returning),
+            URLQueryItem(name: "isConnectedFlight", value: "false"),
+            URLQueryItem(name: "discount", value: "0"),
+            URLQueryItem(name: "promoCode", value: ""),
+            URLQueryItem(name: "isReturn", value: "false"),
+            URLQueryItem(name: "originIata", value: origin.iata),
+            URLQueryItem(name: "destinationIata", value: destination),
+        ]
+        return components.url
     }
 
     private func reset() {
@@ -119,9 +146,18 @@ struct SoccerFlightSection: View {
         Task {
             if let w = await FlightPricesService.shared.flights(airline: airline, origin: originIata, destination: destIata, eventDay: day) {
                 window = w
+                // Recommend the best pair up front — no tap needed.
+                if let best = bestPair(w) {
+                    selectedOutbound = w.outbound.first { $0.date == Self.dayKey(best.outbound.date) }
+                    selectedReturn = w.returning.first { $0.date == Self.dayKey(best.returning.date) }
+                }
             } else {
                 loadFailed = true
             }
         }
+    }
+
+    private static func dayKey(_ date: Date) -> String {
+        AppConstants.isoDayFormatter.string(from: date)
     }
 }

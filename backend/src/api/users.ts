@@ -109,7 +109,6 @@ export async function deleteUserAccount(
   await db.prepare('DELETE FROM dislikes WHERE user_id = ?').bind(userId).run();
   await db.prepare('DELETE FROM views WHERE user_id = ?').bind(userId).run();
   await db.prepare('DELETE FROM shares WHERE user_id = ?').bind(userId).run();
-  await db.prepare('DELETE FROM media_requests WHERE user_id = ?').bind(userId).run();
   await db.prepare('DELETE FROM auth_events WHERE user_id = ?').bind(userId).run();
   await db.prepare('DELETE FROM client_errors WHERE device_id = ?').bind(deviceId).run();
 

@@ -27,7 +27,6 @@ export interface OverviewData {
   errors7d: number;
   reportsOpen: number;
   banned: number;
-  mediaRequests: number;
   lastSeed: {
     batch: Record<string, unknown> | null;
     runs: { cands: number; ingested: number; errors: number; dur: number; browser: number } | null;
@@ -41,7 +40,7 @@ export async function overviewData(env: Env, seedDaysAhead: number): Promise<Ove
   const now = Date.now();
   const today = todayWarsaw();
   const windowEnd = addDaysWarsaw(today, seedDaysAhead);
-  const [users, active7d, status, views14, media14, logins14, seedSeries, batchCounts, failedLogins7d, errors7d, reportsOpen, banned, mediaReq, lastSeed, cron, budget, windowRows] = await Promise.all([
+  const [users, active7d, status, views14, media14, logins14, seedSeries, batchCounts, failedLogins7d, errors7d, reportsOpen, banned, lastSeed, cron, budget, windowRows] = await Promise.all([
     db.prepare('SELECT COUNT(*) n FROM users').first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM users WHERE last_seen>=?').bind(now - 7 * DAY_MS).first<{ n: number }>(),
     eventStatusBreakdown(db),
@@ -54,7 +53,6 @@ export async function overviewData(env: Env, seedDaysAhead: number): Promise<Ove
     db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(now - 7 * DAY_MS).first<{ n: number }>(),
     db.prepare("SELECT COUNT(*) n FROM reports WHERE status='open'").first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM banned_devices').first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM media_requests').first<{ n: number }>(),
     db.prepare('SELECT * FROM seed_batches ORDER BY created_at DESC LIMIT 1').first<Record<string, unknown>>(),
     cronInfo(env, db),
     env.BROWSER ? browserBudget(env) : null,
@@ -98,7 +96,6 @@ export async function overviewData(env: Env, seedDaysAhead: number): Promise<Ove
     errors7d: errors7d?.n ?? 0,
     reportsOpen: reportsOpen?.n ?? 0,
     banned: banned?.n ?? 0,
-    mediaRequests: mediaReq?.n ?? 0,
     lastSeed: { batch: lastSeed ?? null, runs },
     budget,
     cron,

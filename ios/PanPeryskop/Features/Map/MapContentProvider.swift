@@ -7,14 +7,12 @@ enum MapOverlay: Identifiable {
     case pin(MapPin)
     case airport(AirportPin)
     case arc(FlightArc)
-    case request(MediaRequest)
 
     var id: String {
         switch self {
         case .pin(let p): return "pin:\(p.post.id)"
         case .airport(let a): return "airport:\(a.iata)"
         case .arc(let a): return "arc:\(a.id)"
-        case .request(let r): return "request:\(r.id)"
         }
     }
 }

@@ -9,7 +9,6 @@ import { registerPosts } from './posts';
 import { registerSeed } from './seed';
 import { registerStats } from './stats';
 import { registerErrors } from './errors';
-import { registerMediaRequests } from './mediaRequests';
 import { registerReports } from './reports';
 import { registerBlacklist } from './blacklist';
 
@@ -23,6 +22,5 @@ registerPosts(pageRoutes);
 registerSeed(pageRoutes);
 registerStats(pageRoutes);
 registerErrors(pageRoutes);
-registerMediaRequests(pageRoutes);
 registerReports(pageRoutes);
 registerBlacklist(pageRoutes);

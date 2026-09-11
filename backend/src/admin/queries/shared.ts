@@ -50,19 +50,18 @@ export async function statsRange(
 
 // All-time totals across the main tables (stats page + overview strip).
 export async function dashboardTotals(db: D1Database): Promise<Record<string, number>> {
-  const [users, posts, views, likes, shares, mediaReq, errs, seedRuns] = await Promise.all([
+  const [users, posts, views, likes, shares, errs, seedRuns] = await Promise.all([
     db.prepare('SELECT COUNT(*) n FROM users').first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM posts').first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM views').first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM likes').first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM shares').first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM media_requests').first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM client_errors').first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM seed_runs').first<{ n: number }>(),
   ]);
   return {
     users: users?.n ?? 0, posts: posts?.n ?? 0, views: views?.n ?? 0, likes: likes?.n ?? 0,
-    shares: shares?.n ?? 0, mediaRequests: mediaReq?.n ?? 0, clientErrors: errs?.n ?? 0, seedRuns: seedRuns?.n ?? 0,
+    shares: shares?.n ?? 0, clientErrors: errs?.n ?? 0, seedRuns: seedRuns?.n ?? 0,
   };
 }
 

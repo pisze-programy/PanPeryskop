@@ -23,7 +23,11 @@ final class AppRouter {
     /// category (so its pin is visible), center + zoom, then open the story preview.
     func openPushPost(_ payload: PushPostPayload, map: MapViewModel) async {
         selectedTab = 0
-        map.selectFeedCategory(MapCategory(rawValue: payload.category) ?? .events)
+        if payload.category == AppConstants.categoryLive {
+            map.selectLive()
+        } else {
+            map.selectFeedCategory(.events)
+        }
         guard let post = await map.ensurePost(id: payload.postId) else {
             ToastManager.shared.show("Błąd: Spróbuj ponownie")
             return

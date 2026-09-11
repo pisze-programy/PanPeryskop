@@ -12,10 +12,6 @@ enum AppConstants {
     static let postTTLHours: TimeInterval = 24
     static let postTTLMs: Int64 = 24 * hourMs
 
-    /// Media request pin lifetime — mirrors backend `MEDIA_REQUEST_TTL_MS` (4h).
-    static let mediaRequestTTLHours: TimeInterval = 4
-    static let mediaRequestTTLMs: Int64 = 4 * hourMs
-
     /// Showtime marker for an UNKNOWN start time — mirrors backend `UNKNOWN_TIME`
     /// ("00:00" = all-day events, never time-filtered).
     static let unknownTime = "00:00"

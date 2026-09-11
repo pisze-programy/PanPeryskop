@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 /// Soccer match board — the hero of the Wycieczki sheet. Two teams with generated
 /// crests on the sides, kickoff time in the middle, venue below.
@@ -16,6 +17,8 @@ struct SoccerMatchBoard: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
+            SoccerVenueMap(coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng))
+                .padding(.horizontal, Theme.Spacing.l)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, Theme.Spacing.s)
@@ -31,7 +34,8 @@ struct SoccerMatchBoard: View {
                     .font(.subheadline.weight(.semibold))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity)
             }
         } else {
@@ -68,7 +72,16 @@ struct TeamCrest: View {
         ZStack {
             Image(systemName: "shield.fill")
                 .font(.system(size: size))
-                .foregroundStyle(Self.color(for: name).gradient)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Self.color(for: name).opacity(0.85), Self.color(for: name)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+            Image(systemName: "shield")
+                .font(.system(size: size))
+                .foregroundStyle(Color.gray.opacity(0.55))
             Text(Self.initials(name))
                 .font(.system(size: size * 0.32, weight: .heavy))
                 .foregroundColor(.white)

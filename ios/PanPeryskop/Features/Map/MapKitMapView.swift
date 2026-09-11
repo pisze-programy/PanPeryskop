@@ -3,7 +3,6 @@ import MapKit
 
 struct MapKitMapView: View {
     let overlays: [MapOverlay]
-    let previewRequestPin: CLLocationCoordinate2D?
     let currentUserId: String?
     let initialRegion: MKCoordinateRegion
     let zoom: Double
@@ -11,7 +10,6 @@ struct MapKitMapView: View {
     let onRegionChange: (Double, Double, Double, Double) -> Void
     let onCameraSettled: (MKCoordinateRegion) -> Void
     let onTap: (MapOverlay) -> Void
-    let onRequestPinDrop: (CLLocationCoordinate2D) -> Void
     let cameraController: MapCameraController
 
     @State private var camera: MapCameraPosition
@@ -20,7 +18,6 @@ struct MapKitMapView: View {
 
     init(
         overlays: [MapOverlay],
-        previewRequestPin: CLLocationCoordinate2D?,
         currentUserId: String?,
         initialRegion: MKCoordinateRegion,
         zoom: Double,
@@ -28,11 +25,9 @@ struct MapKitMapView: View {
         onRegionChange: @escaping (Double, Double, Double, Double) -> Void,
         onCameraSettled: @escaping (MKCoordinateRegion) -> Void,
         onTap: @escaping (MapOverlay) -> Void,
-        onRequestPinDrop: @escaping (CLLocationCoordinate2D) -> Void,
         cameraController: MapCameraController
     ) {
         self.overlays = overlays
-        self.previewRequestPin = previewRequestPin
         self.currentUserId = currentUserId
         self.initialRegion = initialRegion
         self.zoom = zoom
@@ -40,7 +35,6 @@ struct MapKitMapView: View {
         self.onRegionChange = onRegionChange
         self.onCameraSettled = onCameraSettled
         self.onTap = onTap
-        self.onRequestPinDrop = onRequestPinDrop
         self.cameraController = cameraController
         self._camera = State(initialValue: .camera(MapKitMapView.tiltedCamera(center: initialRegion.center, region: initialRegion)))
         self._visibleRegion = State(initialValue: initialRegion)
@@ -74,8 +68,6 @@ struct MapKitMapView: View {
                 return p.post.lat >= lat0 && p.post.lat <= lat1 && p.post.lng >= lng0 && p.post.lng <= lng1
             case .airport(let a):
                 return a.coord.latitude >= lat0 && a.coord.latitude <= lat1 && a.coord.longitude >= lng0 && a.coord.longitude <= lng1
-            case .request(let r):
-                return r.lat >= lat0 && r.lat <= lat1 && r.lng >= lng0 && r.lng <= lng1
             case .arc:
                 return true
             }
@@ -100,13 +92,6 @@ struct MapKitMapView: View {
     private var flightArcs: [FlightArc] {
         visibleOverlays.compactMap { overlay in
             if case .arc(let a) = overlay { return a }
-            return nil
-        }
-    }
-
-    private var requestPins: [MediaRequest] {
-        visibleOverlays.compactMap { overlay in
-            if case .request(let r) = overlay { return r }
             return nil
         }
     }
@@ -173,37 +158,8 @@ struct MapKitMapView: View {
                         } label: { EmptyView() }
                     }
                 }
-
-                ForEach(requestPins) { request in
-                    Annotation(coordinate: request.coordinate, anchor: .center) {
-                        RequestPinBadge(request: request)
-                    } label: { EmptyView() }
-                }
-
-                if let preview = previewRequestPin {
-                    Annotation(coordinate: preview, anchor: .center) {
-                        RequestPinBadge(
-                            request: MediaRequest(
-                                id: "preview",
-                                user_id: "",
-                                lat: preview.latitude,
-                                lng: preview.longitude,
-                                created_at: Int64(Date().timeIntervalSince1970 * 1000)
-                            )
-                        )
-                    } label: { EmptyView() }
-                }
             }
             .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.5)
-                    .sequenced(before: DragGesture(minimumDistance: 0))
-                    .onEnded { value in
-                        guard case .second(true, let drag?) = value else { return }
-                        guard let coordinate = proxy.convert(drag.startLocation, from: .local) else { return }
-                        onRequestPinDrop(coordinate)
-                    }
-            )
             .onMapCameraChange(frequency: .onEnd) { ctx in
                 let region = ctx.region
                 visibleRegion = region
@@ -254,9 +210,6 @@ struct MapKitMapView: View {
                         ))
                     }
                 }
-                if let payload = NotificationDelegate.consumePendingCenter() {
-                    centerOn(payload)
-                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .scrollToPost)) { note in
                 guard let post = note.object as? Post else { return }
@@ -268,22 +221,18 @@ struct MapKitMapView: View {
                     camera = .camera(MapKitMapView.tiltedCamera(center: post.coordinate, region: region))
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .centerMapOnRequest)) { note in
+            .onReceive(NotificationCenter.default.publisher(for: .centerMapOnCoordinate)) { note in
                 guard let payload = note.object as? MapCenterPayload else { return }
-                centerOn(payload)
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    camera = .camera(MapCamera(
+                        centerCoordinate: CLLocationCoordinate2D(latitude: payload.lat, longitude: payload.lng),
+                        distance: currentCameraDistance,
+                        heading: 0,
+                        pitch: Self.pitchDegrees
+                    ))
+                }
             }
             }
-        }
-    }
-
-    private func centerOn(_ payload: MapCenterPayload) {
-        let coordinate = CLLocationCoordinate2D(latitude: payload.lat, longitude: payload.lng)
-        withAnimation(.easeInOut(duration: 0.6)) {
-            let region = MKCoordinateRegion(
-                center: coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-            )
-            camera = .camera(MapKitMapView.tiltedCamera(center: coordinate, region: region))
         }
     }
 }
@@ -304,12 +253,10 @@ private func makeClusters(_ posts: [Post], radiusDegrees: Double) -> [PostCluste
     for post in posts {
         guard !used.contains(post.id) else { continue }
         var nearby = [post]
-        if !post.watched || post.isEvent {
-            for other in posts {
-                guard !used.contains(other.id), other.id != post.id, (!other.watched || other.isEvent) else { continue }
-                if dist(post.lat, post.lng, other.lat, other.lng) < radius {
-                    nearby.append(other)
-                }
+        for other in posts {
+            guard !used.contains(other.id), other.id != post.id else { continue }
+            if dist(post.lat, post.lng, other.lat, other.lng) < radius {
+                nearby.append(other)
             }
         }
         nearby.forEach { used.insert($0.id) }
@@ -322,11 +269,6 @@ private func makeClusters(_ posts: [Post], radiusDegrees: Double) -> [PostCluste
             singlePost: nearby.count == 1 ? nearby.first : nil,
             posts: nearby
         ))
-    }
-    clusters.sort { a, b in
-        let aWatched = a.count == 1 && a.singlePost?.watched == true
-        let bWatched = b.count == 1 && b.singlePost?.watched == true
-        return aWatched && !bWatched
     }
     return clusters
 }

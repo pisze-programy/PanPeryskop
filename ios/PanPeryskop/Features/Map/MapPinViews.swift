@@ -8,14 +8,9 @@ struct ClusterBadge: View {
 
     var body: some View {
         if cluster.count == 1, let post = cluster.singlePost {
-            if post.watched && !post.isEvent {
-                SinglePostPin(post: post, currentUserId: currentUserId)
-                    .allowsHitTesting(false)
-            } else {
-                SinglePostPin(post: post, currentUserId: currentUserId)
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: onTap)
-            }
+            SinglePostPin(post: post, currentUserId: currentUserId)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onTap)
         } else {
             ClusterPin(cluster: cluster)
                 .contentShape(Rectangle())
@@ -33,7 +28,7 @@ struct SinglePostPin: View {
     private static let ttlHours: TimeInterval = AppConstants.postTTLHours
 
     private var isMine: Bool { currentUserId != nil && post.user_id == currentUserId }
-    private var isHighlighted: Bool { !isMine && !post.watched }
+    private var isHighlighted: Bool { !isMine }
 
     private var ageHours: Double {
         Double(Date().timeIntervalSince1970 - TimeInterval(post.created_at) / 1000) / AppConstants.secondsPerHour
@@ -103,8 +98,6 @@ struct SinglePostPin: View {
                         .clipShape(Circle())
                 }
             }
-            .opacity(post.watched ? 0.4 : 1)
-            .saturation(post.watched ? 0.3 : 1)
             .offset(y: bounceOffset)
         }
     }
@@ -131,50 +124,6 @@ private func iconForType(_ type: Post.MediaType) -> String {
     type == .video ? "video.fill" : "photo.fill"
 }
 
-/// Non-clickable "?" drop pin asking others in the area for a live view.
-struct RequestPinBadge: View {
-    let request: MediaRequest
-
-    private static let ttlHours: TimeInterval = AppConstants.mediaRequestTTLHours
-
-    private var ringColor: Color {
-        if request.ageHours > 3 { return .red }
-        if request.ageHours > 1 { return .yellow }
-        return .white
-    }
-
-    private func progress(at date: Date) -> Double {
-        let elapsed = date.timeIntervalSince1970 - TimeInterval(request.created_at) / 1000
-        return min(max(elapsed / (Self.ttlHours * AppConstants.secondsPerHour), 0), 1)
-    }
-
-    var body: some View {
-        ZStack {
-            TimelineView(.periodic(from: .now, by: 30)) { context in
-                let progress = progress(at: context.date)
-                ZStack {
-                    Circle().fill(Color.black.opacity(0.25))
-                    Circle().stroke(ringColor.opacity(0.25), lineWidth: 3)
-                    Circle()
-                        .trim(from: progress, to: 1)
-                        .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                }
-            }
-            .frame(width: 52, height: 52)
-
-            ZStack {
-                Circle().fill(Color.white.opacity(0.95))
-                Image("MediaRequestPin")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 34, height: 34)
-            }
-            .frame(width: 44, height: 44)
-            .clipShape(Circle())
-        }
-    }
-}
 
 struct ClusterPin: View {
     let cluster: PostCluster

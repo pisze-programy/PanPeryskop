@@ -107,7 +107,7 @@ final class PostUploader: @unchecked Sendable {
         let lat = post.lat
         let lng = post.lng
         await MainActor.run {
-            NotificationCenter.default.post(name: .centerMapOnRequest, object: MapCenterPayload(lat: lat, lng: lng))
+            NotificationCenter.default.post(name: .centerMapOnCoordinate, object: MapCenterPayload(lat: lat, lng: lng))
         }
     }
 

@@ -4,10 +4,11 @@ import MapKit
 @MainActor
 class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     @Published var posts: [Post] = []
-    @Published var mediaRequests: [MediaRequest] = []
     @Published var isLoading = false
     @Published var selectedCity: City = City.all[0]
     @Published var feedCategory: MapCategory = .events
+    /// Live filter — shows UGC recordings (posts.category=live) instead of events.
+    @Published var isLive = false
     /// Canonical event tags for the map filter chips (backend order).
     @Published var tags: [TagPill] = []
     /// Active tag filter — nil = all approved events. Session-only (never persisted).
@@ -20,16 +21,18 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     @Published var tagCounts: [String: Int] = [:]
     /// Total approved events for the selected day+city ("Wszystkie" badge).
     @Published var tagTotalCount: Int = 0
+    /// Approved live posts in the city (Live chip badge) — TTL window, not day-scoped.
+    @Published var liveCount: Int = 0
 
     private var serverPosts: [Post] = []
-    private var serverRequests: [MediaRequest] = []
     /// Merged post cache per (category, day, tag) — panning/zooming never drops
     /// already-loaded pins; the 20s polling completes the cache and new pins appear.
     private var postsCache: [PostsCacheKey: [String: Post]] = [:]
     private var postsCacheKey: PostsCacheKey {
         PostsCacheKey(
             category: feedCategory,
-            day: feedCategory == .events ? dayString(offset: selectedDayOffset) : nil,
+            isLive: isLive,
+            day: isLive ? nil : dayString(offset: selectedDayOffset),
             tag: selectedTag
         )
     }
@@ -38,7 +41,6 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     }
     private var viewport: MapBBox?
     private var knownPostIds: Set<String> = []
-    private var knownRequestIds: Set<String> = []
     private var pollingTask: Task<Void, Never>?
     private var isFetchingStories = false
     private var isRegionFetchPending = false
@@ -94,15 +96,25 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     /// Toggle a tag on/off — selecting the active tag returns to "all" (nil).
     /// Session-only; survives category switches, profile/story navigation.
     func toggleTag(_ id: String) {
+        isLive = false
         selectedTag = (selectedTag == id) ? nil : id
         refreshCurrentRegion()
         loadTagCounts()
     }
 
-    /// Back to "Wszystkie" (no tag filter). Already "all" → no-op (no refetch);
-    /// otherwise clears the selection and refetches so all approved pins return.
+    /// Back to "Wszystkie" (no tag, no Live). Already "all" → no-op.
     func selectAll() {
-        guard selectedTag != nil else { return }
+        guard isLive || selectedTag != nil else { return }
+        isLive = false
+        selectedTag = nil
+        refreshCurrentRegion()
+        loadTagCounts()
+    }
+
+    /// Live filter — show UGC recordings instead of events.
+    func selectLive() {
+        guard !isLive else { return }
+        isLive = true
         selectedTag = nil
         refreshCurrentRegion()
         loadTagCounts()
@@ -115,20 +127,16 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     /// app-start and city/day/category/tag changes.
     @MainActor
     func loadTagCounts() {
-        guard feedCategory == .events else {
-            tagCounts = [:]
-            tagTotalCount = 0
-            return
-        }
         Task {
             struct TagCount: Decodable { let tag: String; let count: Int }
-            struct TagCountsResponse: Decodable { let total: Int; let counts: [TagCount] }
+            struct TagCountsResponse: Decodable { let total: Int; let counts: [TagCount]; let live: Int? }
             guard let resp: TagCountsResponse = try? await APIClient.get(
                 "/stories/tag-counts",
                 params: ["city": selectedCity.id, "day": dayString(offset: selectedDayOffset)]
             ) else { return }
             tagTotalCount = resp.total
             tagCounts = Dictionary(uniqueKeysWithValues: resp.counts.map { ($0.tag, $0.count) })
+            liveCount = resp.live ?? 0
         }
     }
 
@@ -176,12 +184,11 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         // Day browsing (offset>0) skips the TTL/future window — the server already
         // scoped the response to the requested event_date (future days have
         // created_at in the future and would otherwise be dropped client-side).
-        let dayBrowse = feedCategory == .events && selectedDayOffset > 0
-        let backendCategory = feedCategory.backendCategory
+        let dayBrowse = !isLive && selectedDayOffset > 0
+        let backendCategory = isLive ? AppConstants.categoryLive : AppConstants.categoryEvents
         return serverPosts.filter {
             (dayBrowse ? true : $0.isStillValid)
-                && ($0.category ?? AppConstants.categoryLive) == backendCategory
-                && (feedCategory != .live || !$0.watched)
+                && ($0.category ?? AppConstants.categoryEvents) == backendCategory
         }
     }
 
@@ -190,7 +197,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     var maxZoomOutDistance: CLLocationDistance { 100_000 }
 
     var overlays: [MapOverlay] {
-        allPosts.map { .pin(MapPin(post: $0)) } + mediaRequests.map { .request($0) }
+        allPosts.map { .pin(MapPin(post: $0)) }
     }
 
     /// YYYY-MM-DD (Europe/Warsaw) for a day offset relative to today.
@@ -219,8 +226,8 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     }
 
     func selectFeedCategory(_ category: MapCategory) {
-        guard feedCategory != category else { return }
         feedCategory = category
+        isLive = false
         refreshCurrentRegion()
         loadTagCounts()
     }
@@ -276,24 +283,27 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         // must NOT land in the current cache bucket (that leaked tomorrow/+2 pins
         // into "today"). Compare after the await and drop if the state changed.
         let key = postsCacheKey
-        let feedCategoryForRequest = feedCategory
+        let isLiveForRequest = isLive
         var params = [
             "sw_lat": String(swLat),
             "sw_lng": String(swLng),
             "ne_lat": String(neLat),
             "ne_lng": String(neLng),
         ]
-        if let backendCategory = feedCategoryForRequest.backendCategory {
-            params["category"] = backendCategory
-        }
-        // Day browsing: fetch that day's events (all pins; the map clusters them).
-        if feedCategory == .events, selectedDayOffset > 0 {
-            params["day"] = dayString(offset: selectedDayOffset)
+        if isLiveForRequest {
+            params["category"] = AppConstants.categoryLive
             params["limit"] = "1000"
-        }
-        // Tag filter — events only; the backend validates the tag + keeps status=approved.
-        if feedCategory == .events, let selectedTag {
-            params["tag"] = selectedTag
+        } else {
+            params["category"] = AppConstants.categoryEvents
+            // Day browsing: fetch that day's events (all pins; the map clusters them).
+            if selectedDayOffset > 0 {
+                params["day"] = dayString(offset: selectedDayOffset)
+                params["limit"] = "1000"
+            }
+            // Tag filter — events only; the backend validates the tag + keeps status=approved.
+            if let selectedTag {
+                params["tag"] = selectedTag
+            }
         }
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)
@@ -303,19 +313,6 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
             postsCache[postsCacheKey] = bucket
             serverPosts = Array(bucket.values)
             posts = allPosts
-            // Request pins ("?") are a Live-category feature — not shown in Wydarzenia.
-            if feedCategoryForRequest == .live,
-               let requestsResp = try? await APIClient.getMediaRequests(
-                   swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng
-               ) {
-                serverRequests = requestsResp.requests
-                mediaRequests = serverRequests.filter { $0.isStillValid }
-                knownRequestIds = Set(mediaRequests.map(\.id))
-                ProximityMonitor.shared.sync(requests: mediaRequests, currentUserId: currentUserId)
-            } else {
-                mediaRequests = []
-                ProximityMonitor.shared.sync(requests: [], currentUserId: currentUserId)
-            }
             return resp.stories
         } catch {
             print("Failed to load stories:", error)
@@ -442,43 +439,4 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         }
     }
 
-    // MARK: - Media request pins
-
-    private static let requestCooldown: TimeInterval = 30 * 60
-    private static let requestCooldownKey = "mediaRequest.last_created_at"
-
-    /// Server-authoritative timestamp (ms) of the user's last placed pin (cache of POST /media-requests).
-    private var lastRequestCreatedAt: Int64? {
-        UserDefaults.standard.object(forKey: Self.requestCooldownKey) as? Int64
-    }
-
-    /// Seconds until the user may place another pin, based on the local cache. 0 = allowed.
-    func requestCooldownSeconds() -> TimeInterval {
-        guard let last = lastRequestCreatedAt else { return 0 }
-        let elapsed = Date().timeIntervalSince1970 - TimeInterval(last) / 1000
-        return max(0, Self.requestCooldown - elapsed)
-    }
-
-    /// Places a pin via the backend. On 429 the returned cooldown is stored in the local cache
-    /// (so the next long-press shows the informational alert without a round-trip).
-    func submitRequestPin(at coordinate: CLLocationCoordinate2D) async -> RequestDropResult {
-        do {
-            let request = try await APIClient.createMediaRequest(lat: coordinate.latitude, lng: coordinate.longitude)
-            UserDefaults.standard.set(request.created_at, forKey: Self.requestCooldownKey)
-            serverRequests.append(request)
-            mediaRequests = serverRequests.filter { $0.isStillValid }
-            ProximityMonitor.shared.sync(requests: mediaRequests, currentUserId: currentUserId)
-            return .success(request)
-        } catch APIError.cooldown(let minutes) {
-            let remaining = TimeInterval((minutes ?? 30) * 60)
-            // Encode the server-reported remaining time into the local cache:
-            // remaining = lastCreatedAt + 30min - now  →  lastCreatedAt = now - (30min - remaining)
-            let lastTs = Int64(Date().timeIntervalSince1970 * 1000) - Int64((Self.requestCooldown - remaining) * 1000)
-            UserDefaults.standard.set(lastTs, forKey: Self.requestCooldownKey)
-            return .cooldown(remainingMinutes: minutes ?? 30)
-        } catch {
-            print("Failed to place media request pin:", error)
-            return .failure
-        }
-    }
 }

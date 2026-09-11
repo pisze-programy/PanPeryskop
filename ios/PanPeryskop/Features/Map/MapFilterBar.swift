@@ -12,17 +12,18 @@ struct MapFilterBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Theme.Spacing.s) {
                 switch category {
-                case .events, .live:
+                case .events:
                     MapPickerPill(title: mapViewModel.selectedCity.name, action: onCityTap)
-                    if category == .events {
-                        eventChip("Wszystkie", selected: mapViewModel.selectedTag == nil, badge: mapViewModel.tagTotalCount) {
-                            mapViewModel.selectAll()
-                        }
-                        .padding(.leading, 10)
-                        ForEach(mapViewModel.sortedTags) { tag in
-                            eventChip(tag.label, selected: mapViewModel.selectedTag == tag.id, badge: mapViewModel.tagCounts[tag.id] ?? 0) {
-                                mapViewModel.toggleTag(tag.id)
-                            }
+                    eventChip("Wszystkie", selected: !mapViewModel.isLive && mapViewModel.selectedTag == nil, badge: mapViewModel.tagTotalCount) {
+                        mapViewModel.selectAll()
+                    }
+                    .padding(.leading, 10)
+                    eventChip("Live", selected: mapViewModel.isLive, badge: mapViewModel.liveCount) {
+                        mapViewModel.selectLive()
+                    }
+                    ForEach(mapViewModel.sortedTags) { tag in
+                        eventChip(tag.label, selected: !mapViewModel.isLive && mapViewModel.selectedTag == tag.id, badge: mapViewModel.tagCounts[tag.id] ?? 0) {
+                            mapViewModel.toggleTag(tag.id)
                         }
                     }
                 case .trips:

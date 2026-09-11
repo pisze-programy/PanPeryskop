@@ -9,7 +9,6 @@ import { USERS_JS } from './static/pages/users.js';
 import { POSTS_JS } from './static/pages/posts.js';
 import { SEED_JS } from './static/pages/seed.js';
 import { STATS_JS } from './static/pages/stats.js';
-import { MEDIA_REQUESTS_JS } from './static/pages/media-requests.js';
 import { REPORTS_JS } from './static/pages/reports.js';
 import { BLACKLIST_JS } from './static/pages/blacklist.js';
 
@@ -26,7 +25,6 @@ const FILES: Record<string, { type: string; body: string }> = {
   'js/pages/posts.js': { type: JS, body: POSTS_JS },
   'js/pages/seed.js': { type: JS, body: SEED_JS },
   'js/pages/stats.js': { type: JS, body: STATS_JS },
-  'js/pages/media-requests.js': { type: JS, body: MEDIA_REQUESTS_JS },
   'js/pages/reports.js': { type: JS, body: REPORTS_JS },
   'js/pages/blacklist.js': { type: JS, body: BLACKLIST_JS },
 };

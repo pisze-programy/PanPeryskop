@@ -11,20 +11,28 @@ struct SoccerFlightTimeline: View {
     let best: FlightPair?
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(window.outbound, id: \.date) { cell in
-                    dayCell(cell, isOutbound: true)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(window.outbound, id: \.date) { cell in
+                        dayCell(cell, isOutbound: true)
+                    }
+                    eventMarker.id(Self.markerId)
+                    ForEach(window.returning, id: \.date) { cell in
+                        dayCell(cell, isOutbound: false)
+                    }
                 }
-                eventMarker
-                ForEach(window.returning, id: \.date) { cell in
-                    dayCell(cell, isOutbound: false)
-                }
+                .padding(.horizontal, Theme.Spacing.xs)
+                .padding(.vertical, Theme.Spacing.xs)
             }
-            .padding(.horizontal, Theme.Spacing.xs)
-            .padding(.vertical, Theme.Spacing.xs)
+            .onAppear { proxy.scrollTo(Self.markerId, anchor: .center) }
+            .onChange(of: window.outbound.first?.date) { _, _ in
+                proxy.scrollTo(Self.markerId, anchor: .center)
+            }
         }
     }
+
+    private static let markerId = "flight-event-marker"
 
     private func dayCell(_ cell: FlightWindowCell, isOutbound: Bool) -> some View {
         let disabled = cell.price == nil
@@ -47,6 +55,7 @@ struct SoccerFlightTimeline: View {
                     .font(.caption2.weight(.bold))
                     .foregroundColor(cell.price == nil ? .secondary : .primary)
             }
+            .padding(.top, 7)
             .frame(width: 56, height: 66)
             .background(selected ? Color.accentColor.opacity(0.18) : Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(selected ? Color.accentColor : (best ? Color.orange : Color.clear), lineWidth: selected || best ? 2 : 0))
@@ -103,6 +112,6 @@ struct SoccerFlightTimeline: View {
 
     static func weekday(_ dateStr: String) -> String {
         guard let d = date(from: dateStr) else { return "" }
-        return AppConstants.weekdayFormatter.string(from: d)
+        return AppConstants.weekdayFullFormatter.string(from: d)
     }
 }

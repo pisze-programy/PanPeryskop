@@ -15,7 +15,6 @@ struct MapScreen: View {
     @State private var showCityList = false
     @State private var showAirportList = false
     @State private var showTripsEventCard = false
-    @State private var screenModel = MapScreenModel()
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -23,7 +22,6 @@ struct MapScreen: View {
         ZStack {
             MapKitMapView(
                 overlays: activeProvider.overlays,
-                previewRequestPin: screenModel.previewRequestPin,
                 currentUserId: authManager.userId,
                 initialRegion: activeProvider.initialRegion,
                 zoom: activeProvider.defaultZoom,
@@ -35,14 +33,6 @@ struct MapScreen: View {
                     activeProvider.onCameraSettled(region)
                 },
                 onTap: handleTap,
-                onRequestPinDrop: { coordinate in
-                    screenModel.requestDrop(
-                        at: coordinate,
-                        isLive: activeCategory == .live,
-                        spotsEmpty: screenModel.spotsEmpty(at: coordinate, posts: mapViewModel.posts, requests: mapViewModel.mediaRequests),
-                        cooldownSeconds: Int(mapViewModel.requestCooldownSeconds())
-                    )
-                },
                 cameraController: cameraController
             )
             .ignoresSafeArea()
@@ -97,7 +87,7 @@ struct MapScreen: View {
             // Deterministic fly: events → the selected city (never a stale viewport),
             // trips → the Europe overview.
             switch newCategory {
-            case .events, .live:
+            case .events:
                 cameraController.fly(to: mapViewModel.selectedCity.region)
             case .trips:
                 cameraController.fly(to: tripsViewModel.initialRegion)
@@ -121,22 +111,11 @@ struct MapScreen: View {
         }) {
             SoccerEventSheet(viewModel: tripsViewModel)
         }
-        .alert("Co tu się dzieje?", isPresented: $screenModel.showConfirmAlert) {
-            Button("Tak") { screenModel.confirm { await mapViewModel.submitRequestPin(at: $0) } }
-            Button("Anuluj", role: .cancel) { screenModel.clear() }
-        } message: {
-            Text("Chcesz poprosić innych o udostępnienie Live w okolicy?")
-        }
-        .alert("Następny pin za chwilę", isPresented: $screenModel.showCooldownAlert) {
-            Button("OK", role: .cancel) { screenModel.clear() }
-        } message: {
-            Text(screenModel.cooldownMessage)
-        }
     }
 
     private var activeProvider: MapContentProvider {
         switch activeCategory {
-        case .events, .live: return mapViewModel
+        case .events: return mapViewModel
         case .trips: return tripsViewModel
         }
     }
@@ -145,10 +124,12 @@ struct MapScreen: View {
     private var rightSlider: some View {
         switch activeCategory {
         case .events:
-            HStack {
-                Spacer()
-                DaySliderView(viewModel: mapViewModel)
-                    .padding(.trailing, 10)
+            if !mapViewModel.isLive {
+                HStack {
+                    Spacer()
+                    DaySliderView(viewModel: mapViewModel)
+                        .padding(.trailing, 10)
+                }
             }
         case .trips:
             HStack {
@@ -156,8 +137,6 @@ struct MapScreen: View {
                 TripsDaySliderView(viewModel: tripsViewModel)
                     .padding(.trailing, 10)
             }
-        case .live:
-            EmptyView()
         }
     }
 
@@ -172,7 +151,6 @@ struct MapScreen: View {
             showTripsEventCard = true
             return
         }
-        guard !post.watched || post.isEvent else { return }
         Haptics.impact(.medium)
         storyPosts = pin.group.isEmpty ? [post] : pin.group
         selectedStoryIndex = 0

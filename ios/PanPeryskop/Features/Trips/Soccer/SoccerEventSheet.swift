@@ -13,6 +13,7 @@ struct SoccerEventSheet: View {
             VStack(spacing: 0) {
                 if events.count > 1 {
                     PageDots(count: events.count, index: activeIndex)
+                        .padding(.top, 22)
                 }
                 TabView(selection: $activeIndex) {
                     ForEach(Array(events.enumerated()), id: \.element.id) { index, event in

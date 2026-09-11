@@ -15,13 +15,7 @@ struct MapBBox {
 /// Typed cache key for the merged post cache — replaces the old stringly key.
 struct PostsCacheKey: Hashable {
     let category: MapCategory
+    let isLive: Bool
     let day: String?
     let tag: String?
-}
-
-/// Result of placing a media-request pin.
-enum RequestDropResult {
-    case success(MediaRequest)
-    case cooldown(remainingMinutes: Int)
-    case failure
 }

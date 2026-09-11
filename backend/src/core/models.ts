@@ -109,14 +109,6 @@ export interface HeatmapCell {
   heat: number;
 }
 
-export interface MediaRequestRow {
-  id: string;
-  user_id: string;
-  lat: number;
-  lng: number;
-  created_at: number;
-}
-
 export function gridCellId(lat: number, lng: number, cellSize: number = 0.002): string {
   const latIx = Math.floor(lat / cellSize);
   const lngIx = Math.floor(lng / cellSize);

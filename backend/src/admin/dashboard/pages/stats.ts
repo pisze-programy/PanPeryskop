@@ -87,7 +87,6 @@ pageRoutes.get('/stats', async (c) => {
     { label: 'Views', value: initial.totals.views },
     { label: 'Like', value: initial.totals.likes },
     { label: 'Share', value: initial.totals.shares },
-    { label: 'Media Requests', value: initial.totals.mediaRequests },
     { label: 'Błędy klienta', value: initial.totals.clientErrors, color: initial.totals.clientErrors ? 'danger' : '' },
     { label: 'Seed runs', value: initial.totals.seedRuns },
   ]);

@@ -25,6 +25,15 @@ extension AppConstants {
         return f
     }()
 
+    /// Full weekday name in Polish (e.g. "sobota") — no trailing dot.
+    static let weekdayFullFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = warsawCalendar
+        f.locale = Locale(identifier: "pl_PL")
+        f.dateFormat = "EEEE"
+        return f
+    }()
+
     static let fullDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.calendar = warsawCalendar

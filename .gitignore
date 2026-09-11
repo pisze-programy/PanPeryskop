@@ -54,3 +54,4 @@ wrangler.toml
 # temp
 tmp/
 .wrangler/
+admin/vps/consumer.sh

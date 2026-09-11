@@ -1,52 +1,45 @@
 import SwiftUI
 
-/// Flight section — TransportSlider pattern: destination-airport rail (== map arcs),
-/// airline pills scoped to the destination's providers, then the two-row day grid + buy bar.
-struct FlightSection: View {
+/// Soccer flight section: destination-airport rail, the single flight timeline and
+/// the "Lecimy" buy bar. Ryanair is the only live provider, so there is no airline
+/// pill — the brand shows on the CTA only.
+struct SoccerFlightSection: View {
     let event: TravelEvent
     let origin: Airport
     let destinations: [Destination]
     let destination: Destination?
-    /// IATAs the backend confirmed have flights around the event day; nil = unverified.
     var reachableAirports: Set<String>? = nil
     let onSelectDestination: (Destination) -> Void
     @ObservedObject var viewModel: TripsViewModel
 
-    @State private var selectedAirline: Airline = .ryanair
     @State private var selectedOutbound: FlightWindowCell?
     @State private var selectedReturn: FlightWindowCell?
-    @State private var windows: [Airline: FlightWindowResponse] = [:]
+    @State private var window: FlightWindowResponse?
     @State private var loadFailed = false
 
-    // Ryanair is live; Wizzair stays mocked until integrated — don't surface it.
-    private var airlines: [Airline] { (destination?.providers ?? []).filter { $0 == .ryanair } }
+    private let airline: Airline = .ryanair
     private var loadKey: String { "\(event.id)|\(destination?.iata ?? "")" }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let destination {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            if destinations.count > 1, let destination {
                 destinationRail(destination)
-                if !airlines.isEmpty {
-                    airlineRail
-                }
             }
             if loadFailed {
                 ErrorState(message: "Nie udało się pobrać lotów") {
                     loadFailed = false
                     loadPrices()
                 }
-            } else if let destination, let window = windows[selectedAirline] {
-                FlightGrid(
+            } else if let destination, let window {
+                SoccerFlightTimeline(
                     window: window,
                     eventDay: event.start_ms,
-                    originName: origin.city,
-                    destinationName: destination.city,
                     selectedOutbound: $selectedOutbound,
                     selectedReturn: $selectedReturn,
                     best: bestPair(window)
                 )
                 buyBar(destination)
-            } else if destination != nil, !airlines.isEmpty {
+            } else if destination != nil {
                 LoadingOverlay()
             }
         }
@@ -59,7 +52,7 @@ struct FlightSection: View {
 
     private func destinationRail(_ active: Destination) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: Theme.Spacing.s) {
                 ForEach(destinations, id: \.iata) { dest in
                     let reachable = reachableAirports?.contains(dest.iata) ?? true
                     Button {
@@ -67,15 +60,12 @@ struct FlightSection: View {
                         onSelectDestination(dest)
                     } label: {
                         HStack(spacing: 6) {
-                            Text(dest.iata)
-                                .font(.caption.weight(.bold))
-                            Text(dest.city)
-                                .font(.caption)
-                                .lineLimit(1)
+                            Text(dest.iata).font(.caption.weight(.bold))
+                            Text(dest.city).font(.caption).lineLimit(1)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Capsule().fill(active.iata == dest.iata ? chipColor(dest) : Color(.systemGray5)))
+                        .padding(.horizontal, Theme.Spacing.m)
+                        .padding(.vertical, Theme.Spacing.s)
+                        .background(Capsule().fill(active.iata == dest.iata ? airline.color : Theme.Palette.surfaceRaised))
                         .foregroundColor(active.iata == dest.iata ? .white : .primary)
                         .opacity(reachable ? 1 : 0.4)
                     }
@@ -83,31 +73,6 @@ struct FlightSection: View {
                     .disabled(!reachable)
                 }
             }
-        }
-    }
-
-    private func chipColor(_ dest: Destination) -> Color {
-        dest.providers.contains(.wizzair) ? Airline.wizzair.color : Airline.ryanair.color
-    }
-
-    private var airlineRail: some View {
-        HStack(spacing: 8) {
-            ForEach(airlines, id: \.self) { airline in
-                Button {
-                    selectedAirline = airline
-                    selectedOutbound = nil
-                    selectedReturn = nil
-                } label: {
-                    Text(airline.label)
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Capsule().fill(selectedAirline == airline ? airline.color : Color(.systemGray5)))
-                        .foregroundColor(selectedAirline == airline ? .white : .primary)
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
         }
     }
 
@@ -125,7 +90,7 @@ struct FlightSection: View {
             CapsuleButton(
                 title: "Lecimy ✈",
                 trailingText: "\(Int(outbound.price ?? 0) + Int(ret.price ?? 0)) zł",
-                tint: selectedAirline.color
+                tint: airline.color
             ) {
                 if let url = buyURL(destination: destination.iata, outbound: outbound.date, returning: ret.date) {
                     UIApplication.shared.open(url)
@@ -135,39 +100,27 @@ struct FlightSection: View {
     }
 
     private func buyURL(destination: String, outbound: String, returning: String) -> URL? {
-        switch selectedAirline {
-        case .ryanair:
-            return URL(string: "https://www.ryanair.com/pl/pl/trip/flights/select?originIata=\(origin.iata)&destinationIata=\(destination)&dateOut=\(outbound)&dateIn=\(returning)")
-        case .wizzair:
-            return URL(string: "https://www.wizzair.com/en-gb/booking/select-flight/\(origin.iata)/\(destination)/\(outbound)/\(returning)/1/0/0/null")
-        }
+        URL(string: "https://www.ryanair.com/pl/pl/trip/flights/select?originIata=\(origin.iata)&destinationIata=\(destination)&dateOut=\(outbound)&dateIn=\(returning)")
     }
 
     private func reset() {
-        selectedAirline = airlines.first ?? .ryanair
         selectedOutbound = nil
         selectedReturn = nil
-        windows = [:]
+        window = nil
         loadFailed = false
         loadPrices()
     }
 
     private func loadPrices() {
-        guard let destination, !airlines.isEmpty else { return }
+        guard let destination else { return }
         let day = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
         let originIata = origin.iata
         let destIata = destination.iata
         Task {
-            var result: [Airline: FlightWindowResponse] = [:]
-            for airline in airlines {
-                if let w = await FlightPricesService.shared.flights(airline: airline, origin: originIata, destination: destIata, eventDay: day) {
-                    result[airline] = w
-                }
-            }
-            if result[selectedAirline] == nil {
-                loadFailed = true
+            if let w = await FlightPricesService.shared.flights(airline: airline, origin: originIata, destination: destIata, eventDay: day) {
+                window = w
             } else {
-                windows = result
+                loadFailed = true
             }
         }
     }

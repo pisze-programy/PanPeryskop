@@ -84,3 +84,11 @@ struct FlightWindowCell: Codable {
     let hour: String?
     let price: Double?
 }
+
+extension FlightWindowCell {
+    /// Bridge to the scoring cell — nil when there is no price or the date is unparsable.
+    var cell: FlightCell? {
+        guard let price, let date = AppConstants.isoDayFormatter.date(from: date) else { return nil }
+        return FlightCell(date: date, hour: hour, price: price)
+    }
+}

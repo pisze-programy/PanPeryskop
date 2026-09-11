@@ -119,7 +119,7 @@ struct MapScreen: View {
         .sheet(isPresented: $showTripsEventCard, onDismiss: {
             tripsViewModel.clearSelectionPublic()
         }) {
-            EventCardView(viewModel: tripsViewModel)
+            SoccerEventSheet(viewModel: tripsViewModel)
         }
         .alert("Co tu się dzieje?", isPresented: $screenModel.showConfirmAlert) {
             Button("Tak") { screenModel.confirm { await mapViewModel.submitRequestPin(at: $0) } }

@@ -210,6 +210,10 @@ struct MapKitMapView: View {
                         ))
                     }
                 }
+                // Cold-launch push: the tap arrived before this view existed.
+                if let payload = NotificationDelegate.consumePendingCenter() {
+                    centerOnCoordinate(payload)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .scrollToPost)) { note in
                 guard let post = note.object as? Post else { return }
@@ -223,15 +227,26 @@ struct MapKitMapView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .centerMapOnCoordinate)) { note in
                 guard let payload = note.object as? MapCenterPayload else { return }
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    camera = .camera(MapCamera(
-                        centerCoordinate: CLLocationCoordinate2D(latitude: payload.lat, longitude: payload.lng),
-                        distance: currentCameraDistance,
-                        heading: 0,
-                        pitch: Self.pitchDegrees
-                    ))
-                }
+                _ = NotificationDelegate.consumePendingCenter() // warm path: clear the cold-launch fallback
+                centerOnCoordinate(payload)
             }
+            }
+        }
+    }
+
+    private func centerOnCoordinate(_ payload: MapCenterPayload) {
+        let coordinate = CLLocationCoordinate2D(latitude: payload.lat, longitude: payload.lng)
+        withAnimation(.easeInOut(duration: 0.6)) {
+            if payload.zoomIn {
+                let region = MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+                camera = .camera(MapKitMapView.tiltedCamera(center: coordinate, region: region))
+            } else {
+                camera = .camera(MapCamera(
+                    centerCoordinate: coordinate,
+                    distance: currentCameraDistance,
+                    heading: 0,
+                    pitch: Self.pitchDegrees
+                ))
             }
         }
     }

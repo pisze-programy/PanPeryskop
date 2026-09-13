@@ -11,9 +11,12 @@ extension Notification.Name {
 final class MapCenterPayload: NSObject {
     let lat: Double
     let lng: Double
-    init(lat: Double, lng: Double) {
+    /// When true the map zooms in on the coordinate; otherwise it keeps the current zoom.
+    let zoomIn: Bool
+    init(lat: Double, lng: Double, zoomIn: Bool = false) {
         self.lat = lat
         self.lng = lng
+        self.zoomIn = zoomIn
         super.init()
     }
 }

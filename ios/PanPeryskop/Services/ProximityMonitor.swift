@@ -110,14 +110,18 @@ extension Notification.Name {
     static let openPushPost = Notification.Name("openPushPost")
 }
 
-/// Payload for `.openPushPost` — a media push tap: open the story for this post after switching
-/// the map to the correct category (Live / Wydarzenia).
+/// Payload for `.openPushPost` — a media push tap: switch the map to the Live feed
+/// and zoom to the post location (no story).
 final class PushPostPayload: NSObject {
     let postId: String
     let category: String
-    init(postId: String, category: String) {
+    let lat: Double
+    let lng: Double
+    init(postId: String, category: String, lat: Double, lng: Double) {
         self.postId = postId
         self.category = category
+        self.lat = lat
+        self.lng = lng
         super.init()
     }
 }
@@ -128,10 +132,17 @@ final class PushPostPayload: NSObject {
 final class NotificationDelegate: NSObject, @preconcurrency UNUserNotificationCenterDelegate {
     static let shared = NotificationDelegate()
     private(set) static var pendingPushPost: PushPostPayload?
+    private(set) static var pendingCenter: MapCenterPayload?
 
     static func consumePendingPushPost() -> PushPostPayload? {
         let payload = pendingPushPost
         pendingPushPost = nil
+        return payload
+    }
+
+    static func consumePendingCenter() -> MapCenterPayload? {
+        let payload = pendingCenter
+        pendingCenter = nil
         return payload
     }
 
@@ -142,11 +153,14 @@ final class NotificationDelegate: NSObject, @preconcurrency UNUserNotificationCe
     ) {
         let info = response.notification.request.content.userInfo
         if info["type"] as? String == "media", let postId = info["post_id"] as? String {
-            let payload = PushPostPayload(
-                postId: postId,
-                category: info["category"] as? String ?? AppConstants.categoryLive
-            )
+            let lat = info["lat"] as? Double ?? 0
+            let lng = info["lng"] as? Double ?? 0
+            let category = info["category"] as? String ?? AppConstants.categoryLive
+            let payload = PushPostPayload(postId: postId, category: category, lat: lat, lng: lng)
             Self.pendingPushPost = payload
+            // Cold-launch fallback: the map view may not exist yet, so keep the target
+            // coordinate for `onAppear` to consume.
+            Self.pendingCenter = MapCenterPayload(lat: lat, lng: lng, zoomIn: true)
             NotificationCenter.default.post(name: .openPushPost, object: payload)
         }
         completionHandler()

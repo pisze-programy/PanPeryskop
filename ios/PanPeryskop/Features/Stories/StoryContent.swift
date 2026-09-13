@@ -43,14 +43,15 @@ struct StoryContent: View {
                 }
             }
         } else if let url = post.resolvedMediaURL {
-                // Thumb preview renders immediately (pixelated, no background, no
-                // spinner); the full image + its background fade in once loaded.
+                // Thumb preview renders immediately with the SAME composition as the
+                // full image (band + blurred cover background) so nothing pops in size
+                // when the full-res fades in — only sharpness changes.
                 ZStack(alignment: .center) {
                     if post.hasThumb, let thumbURL = post.resolvedThumbURL {
                         AsyncImage(url: thumbURL) { tp in
                             switch tp {
                             case .success(let thumb):
-                                photoLayout(thumb, withBg: false)
+                                photoLayout(thumb, withBg: true)
                                     .blur(radius: 3)
                             default:
                                 Color.clear

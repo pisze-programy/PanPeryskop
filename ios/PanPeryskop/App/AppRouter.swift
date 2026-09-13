@@ -19,8 +19,8 @@ final class AppRouter {
         await present([post], map: map)
     }
 
-    /// Opens a post from a "new media nearby" push tap: switch the map to the post's
-    /// category (so its pin is visible), center + zoom, then open the story preview.
+    /// A "new media nearby" push tap: switch the map to the Live feed and zoom to the
+    /// post location — no story, no fetch (the coordinate comes from the notification).
     func openPushPost(_ payload: PushPostPayload, map: MapViewModel) async {
         selectedTab = 0
         if payload.category == AppConstants.categoryLive {
@@ -28,11 +28,10 @@ final class AppRouter {
         } else {
             map.selectFeedCategory(.events)
         }
-        guard let post = await map.ensurePost(id: payload.postId) else {
-            ToastManager.shared.show("Błąd: Spróbuj ponownie")
-            return
-        }
-        await present([post], map: map)
+        NotificationCenter.default.post(
+            name: .centerMapOnCoordinate,
+            object: MapCenterPayload(lat: payload.lat, lng: payload.lng, zoomIn: true)
+        )
     }
 
     private func present(_ posts: [Post], map: MapViewModel) async {

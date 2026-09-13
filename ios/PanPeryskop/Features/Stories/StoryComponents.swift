@@ -154,14 +154,30 @@ struct ShowtimesPager: View {
                     }
             )
 
-            HStack(spacing: 6) {
-                ForEach(times.indices, id: \.self) { i in
-                    Circle()
-                        .fill(i == (page ?? 0) ? Color.blue : Color.secondary.opacity(0.3))
-                        .frame(width: 9, height: 9)
+            // Story-style indicator: few showtimes → equal wide bars; many → the active
+            // bar is wide and the rest are thin notches, so the row always fits.
+            GeometryReader { geo in
+                let spacing: CGFloat = 4
+                let n = max(times.count, 1)
+                let many = n > 8
+                let inactiveW: CGFloat = many
+                    ? max(1.5, min(6, (geo.size.width / 2 - spacing * CGFloat(n - 1)) / CGFloat(max(1, n - 1))))
+                    : 0
+                let activeW: CGFloat = many
+                    ? geo.size.width - spacing * CGFloat(n - 1) - inactiveW * CGFloat(n - 1)
+                    : 0
+                HStack(spacing: spacing) {
+                    ForEach(times.indices, id: \.self) { i in
+                        let active = i == (page ?? 0)
+                        Capsule()
+                            .fill(active ? Color.blue : Color.secondary.opacity(0.3))
+                            .frame(width: many ? (active ? activeW : inactiveW) : nil)
+                            .frame(maxWidth: many ? nil : .infinity)
+                    }
                 }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity, alignment: .center)
+            .frame(height: 4)
         }
         .onChange(of: page) { old, new in
             if old != new { Haptics.impact(.light) }

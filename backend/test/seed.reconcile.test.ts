@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reconcileDay, RECONCILE_TIME_GUARD_MIN, sweepStuckRaw, MAX_RAW_ATTEMPTS } from '../src/seed/reconcile';
+import { reconcileDay, RECONCILE_TIME_GUARD_MIN, sweepStuckRaw, daysReadyToReconcile, MAX_RAW_ATTEMPTS } from '../src/seed/reconcile';
 
 interface RawRow {
   id: string; provider: string; external_id: string; title: string;
@@ -286,3 +286,36 @@ test('sweepStuckRaw: reopens dead ingesting + retryable error, leaves fresh/at-c
   assert.equal(mock.raw.get('e1')!.status, 'winner', 'retryable error reopened');
   assert.equal(mock.raw.get('e2')!.status, 'error', 'at-cap error stays terminal');
 });
+
+test('daysReadyToReconcile: a winner-only day is scheduled (E2)', async () => {
+  // Minimal D1: seed_raw returns one day with a stranded winner; no open units;
+  // no reconcile latch.
+  const db = {
+    prepare: (sql: string) => ({
+      bind: () => ({
+        all: async () => (sql.includes('FROM seed_raw') ? { results: [{ day: '2026-09-13', batch_id: 'b1' }] } : { results: [] }),
+        first: async () => (sql.includes('FROM seed_units') ? { n: 0 } : null),
+      }),
+    }),
+  } as unknown as D1Database;
+  const out = await daysReadyToReconcile({ DB: db } as unknown as Env, '2026-09-12');
+  assert.deepEqual(out, [{ day: '2026-09-13', batchId: 'b1' }], 'winner-only day is enqueued for finalize');
+});
+
+test('daysReadyToReconcile: stale reconciling latch stays eligible, fresh latch is skipped', async () => {
+  const mk = (updatedAt: number) => ({
+    prepare: (sql: string) => ({
+      bind: () => ({
+        all: async () => (sql.includes('FROM seed_raw') ? { results: [{ day: '2026-09-15', batch_id: 'b1' }] } : { results: [] }),
+        first: async () => (sql.includes('FROM seed_units') ? { n: 0 }
+          : sql.includes('FROM seed_days') ? { reconciling: 1, updated_at: updatedAt } : null),
+      }),
+    }),
+  } as unknown as D1Database);
+  const stale = await daysReadyToReconcile({ DB: mk(0) } as unknown as Env, '2026-09-12');
+  assert.deepEqual(stale, [{ day: '2026-09-15', batchId: 'b1' }], 'stale latch (killed invocation) is re-scheduled');
+  const fresh = await daysReadyToReconcile({ DB: mk(Date.now()) } as unknown as Env, '2026-09-12');
+  assert.deepEqual(fresh, [], 'live latch is left alone');
+});
+
+

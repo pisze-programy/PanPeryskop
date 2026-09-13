@@ -15,8 +15,9 @@ export async function handleFinalizeWake(env: EnvQ, day: string, batchId: string
   await sweepStuckRaw(env.DB);
   await reconcileIfReady(env, day, batchId);
   const { processed, remaining } = await ingestWinnersForDay(env, day, INGEST_CHUNK);
-  // Chain only while the last step actually made progress. A chunk that processed
-  // nothing (e.g. every row errored before leaving the winner shelf) must not
-  // re-enqueue forever — the watchdog/backoff retries those rows instead.
+  // Chain while winners remain AND this chunk picked some up. Every processed
+  // row leaves the winner shelf (done/duplicate/error) or was claimed by a
+  // concurrent finalize, so `remaining` trends down; the `processed > 0` guard
+  // only stops a degenerate no-op re-enqueue.
   if (remaining > 0 && processed > 0) await env.SEED_FETCH_QUEUE.send({ type: 'finalize', day, batchId });
 }

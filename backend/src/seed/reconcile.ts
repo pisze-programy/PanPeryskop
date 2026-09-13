@@ -451,12 +451,13 @@ export async function reconcileIfReady(env: Env, day: string, batchId: string): 
   return true;
 }
 
-/** Days that have unreconciled raw rows but no open fetch unit and no live
- *  reconcile latch — i.e. a completion's finalize wake was lost. The watchdog
- *  enqueues these so a day can never strand unreconciled. */
+/** Days that have unreconciled raw rows OR un-ingested winners but no open fetch
+ *  unit and no live reconcile latch — i.e. a completion's finalize wake was lost.
+ *  The watchdog enqueues these so a day can never strand work: `raw` rows get
+ *  reconciled, `winner` rows get ingested (handleFinalizeWake does both). */
 export async function daysReadyToReconcile(env: Env, sinceDay: string): Promise<{ day: string; batchId: string }[]> {
   const { results } = await env.DB
-    .prepare(`SELECT day, MAX(batch_id) AS batch_id FROM seed_raw WHERE status='raw' AND day >= ? GROUP BY day ORDER BY day LIMIT 20`)
+    .prepare(`SELECT day, MAX(batch_id) AS batch_id FROM seed_raw WHERE status IN ('raw','winner') AND day >= ? GROUP BY day ORDER BY day LIMIT 20`)
     .bind(sinceDay)
     .all<{ day: string; batch_id: string }>();
   const out: { day: string; batchId: string }[] = [];

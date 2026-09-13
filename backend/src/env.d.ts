@@ -1,4 +1,4 @@
-type SeedQueueMessage = import('./seed/queue').SeedQueueMessage;
+type SeedQueueMessage = import('./seed').SeedQueueMessage;
 
 interface Env {
   DB: D1Database;

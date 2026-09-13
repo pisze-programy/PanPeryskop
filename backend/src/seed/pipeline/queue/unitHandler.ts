@@ -9,7 +9,6 @@ import { D1_BATCH_STATEMENT_CAP, SEED_REFILL_AHEAD } from '../../core/constants'
 import { ClaimedUnit, claimUnit, completeUnit, failUnit, unitWindowDays } from './units';
 import { writeRawRows } from './raw';
 import { parseCandidate } from '../../core/candidate';
-import { finalizeIfReady } from '../../reconcile';
 
 // Bound the work per invocation (CF CPU). If more remain, one extra wake-up is
 // enqueued so the next invocation continues; the watchdog also retries stragglers.
@@ -83,8 +82,16 @@ async function runUnit(env: Env, unit: ClaimedUnit): Promise<void> {
   const ok = await completeUnit(env.DB, unit.id, unit.token, rowsWritten);
   if (!ok) throw new Error('completeUnit failed (lost lease?)');
 
-  // Each day this unit wrote is now possibly complete → reconcile it.
-  for (const eventDay of byDay.keys()) {
-    await finalizeIfReady(env, eventDay, unit.batch_id);
+  // Wake the finalize consumer for every day this unit can write. The day that
+  // was already terminal re-checks the gate and is a no-op; the day that just
+  // became complete reconciles + ingests. Enqueue for ALL window days (not just
+  // the ones written) — a unit that produced nothing must still let the day finalize.
+  // Best-effort: the unit is done; if the wake is lost the watchdog re-enqueues it.
+  try {
+    for (const eventDay of unitWindowDays(unit)) {
+      await env.SEED_FETCH_QUEUE.send({ type: 'finalize', day: eventDay, batchId: unit.batch_id });
+    }
+  } catch (e) {
+    console.error(`finalize wake failed for unit ${unit.id}: ${(e as Error).message}`);
   }
 }

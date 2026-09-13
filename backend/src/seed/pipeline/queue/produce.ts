@@ -3,8 +3,9 @@
 // chunker used whenever a phase enqueues a batch of messages.
 import { nanoid } from 'nanoid';
 import { EnvQ, SeedQueueMessage } from './types';
+import { RunType } from '../../core/types';
 import { now } from './state';
-import { planSeedUnits, writeDayUnits, MAX_UNIT_ATTEMPTS } from './units';
+import { planSeedUnits, writeDayUnits, MAX_UNIT_STRIKES } from './units';
 import { D1_BATCH_STATEMENT_CAP, QUEUE_SEND_BATCH_CAP, SEED_REFILL_AHEAD } from '../../core/constants';
 import { addDaysWarsaw } from '../../core/dates';
 
@@ -16,6 +17,7 @@ import { addDaysWarsaw } from '../../core/dates';
 export async function produceSeedWindow(
   env: EnvQ,
   today: string,
+  runType: RunType = 'cron',
 ): Promise<{ batchId: string; generation: number; units: number }> {
   const days = Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i));
   const windowStart = days[0];
@@ -36,9 +38,9 @@ export async function produceSeedWindow(
   await env.DB
     .prepare(
       `INSERT INTO seed_batches (id, day, run_type, status, providers_total, providers_done, scopes_total, scopes_done, created_at, updated_at)
-       VALUES (?, ?, 'cron', 'created', ?, 0, ?, 0, ?, ?)`,
+       VALUES (?, ?, ?, 'created', ?, 0, ?, 0, ?, ?)`,
     )
-    .bind(batchId, today, providerCount, units.length, t, t)
+    .bind(batchId, today, runType, providerCount, units.length, t, t)
     .run();
 
   // Mark the generation on every window day.
@@ -53,18 +55,21 @@ export async function produceSeedWindow(
   for (let i = 0; i < dayStmts.length; i += D1_BATCH_STATEMENT_CAP) await env.DB.batch(dayStmts.slice(i, i + D1_BATCH_STATEMENT_CAP));
 
   // Refresh: reset older-generation units in the window so their data is re-fetched.
-  // Never touch a claimed unit (in-flight); a done unit starts fresh (attempts=0),
-  // a failed unit keeps its attempts so a poison unit eventually stays terminal.
+  // Never touch a claimed unit (in-flight). A done unit starts clean. A failed unit
+  // gets a fresh attempt budget AND a strike; once strikes reach MAX_UNIT_STRIKES it
+  // is left terminal, so a permanently broken scope stops costing proxy every refill.
   await env.DB
     .prepare(
       `UPDATE seed_units
-          SET status='pending', generation=?, claimed_by=NULL, claimed_at=NULL, lease_expires_at=NULL, error=NULL,
-              attempts = CASE WHEN status='done' THEN 0 ELSE attempts END, updated_at=?
+          SET status = CASE WHEN status='failed' AND strikes + 1 >= ? THEN 'failed' ELSE 'pending' END,
+              strikes = CASE WHEN status='failed' THEN strikes + 1 ELSE 0 END,
+              generation=?, claimed_by=NULL, claimed_at=NULL, lease_expires_at=NULL, error=NULL,
+              attempts=0, updated_at=?
         WHERE generation < ?
-          AND (status='done' OR (status='failed' AND attempts < ?))
+          AND status IN ('done','failed')
           AND day IN (${placeholders})`,
     )
-    .bind(generation, t, generation, MAX_UNIT_ATTEMPTS, ...days)
+    .bind(MAX_UNIT_STRIKES, generation, t, generation, ...days)
     .run();
 
   // Insert new units. UNIQUE(day, provider, slice, kind) keeps re-runs idempotent.

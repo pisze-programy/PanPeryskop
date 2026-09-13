@@ -12,10 +12,10 @@ import {clientErrorRoutes} from './api/clientErrors';
 import {appleEventsRoutes} from './api/appleEvents';
 import {reportsRoutes} from './api/reports';
 import {travelRoutes} from './api/travel';
-import {runSeed, tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
+import {tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
 import {produceSeedWindow, runQueue, SeedQueueMessage, watchdogUnits} from './seed/pipeline/queue';
 import {pruneSeedData, pruneSeedManifests} from './seed/pipeline/cleanup';
-import {checkDigestIncomplete} from './seed/digest';
+import {alertFailedUnits, daysReadyToReconcile, sweepStuckRaw} from './seed/reconcile';
 import {getLastSeedDay, setLastSeedDay, seedDue} from './seed/cadence';
 import {SEED_DAYS_AHEAD, SEED_INTERVAL_DAYS, SEED_REFILL_AHEAD} from './seed/core/constants';
 // Nominatim pace per executor: the Worker egresses from Cloudflare's shared
@@ -100,25 +100,20 @@ app.all('/media/*', async (c) => {
 app.get('/health', (c) => c.json({ ok: true, ts: Date.now() }));
 
 // Manual seed trigger (admin-only). day = YYYY-MM-DD (default: tomorrow).
-// Runs synchronously (blocking) so the caller sees the full result; the cron path
-// uses the async queue (see `queue` + `scheduled` below). Pass via:"queue" to run
-// through the queue pipeline instead (useful for testing).
+// Plans the durable work-list for the whole window and wakes the consumers; the
+// drain is asynchronous (same path as the cron). Admin-only.
 app.post('/admin/seed', async (c) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
   if (!c.env.ADMIN_SECRET || token !== c.env.ADMIN_SECRET) return c.json({ error: 'Forbidden' }, 403);
-  const body = (await c.req.json<{ day?: string; via?: string }>().catch(() => ({}))) as { day?: string; via?: string };
+  const body = (await c.req.json<{ day?: string }>().catch(() => ({}))) as { day?: string };
   const day = body?.day;
   if (day !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
     return c.json({ error: 'Invalid day' }, 400);
   }
   const target = day ?? tomorrowWarsaw();
   try {
-    if (body?.via === 'queue') {
-      const { batchId, generation, units } = await produceSeedWindow(c.env, target);
-      return c.json({ planned: true, windowStart: target, batchId, generation, units }, 202);
-    }
-    const result = await runSeed(c.env, target, 'manual');
-    return c.json(result, 200);
+    const { batchId, generation, units } = await produceSeedWindow(c.env, target, 'manual');
+    return c.json({ planned: true, windowStart: target, batchId, generation, units }, 202);
   } catch (e) {
     return c.json({ error: (e as Error).message }, 500);
   }
@@ -141,12 +136,26 @@ export default {
       return;
     }
     if (controller.cron === WATCHDOG_CRON) {
-      // Hourly liveness: mark batches stuck in created/fetching/ingesting failed,
-      // and email which seed providers did not report their daily job by 14:00.
+      // Hourly liveness + self-heal: requeue stuck units/raw rows, wake the
+      // consumers whenever ANY worker unit is waiting (a lost wake must never
+      // strand a run), enqueue finalize for days whose completion wake was lost,
+      // and email when units are terminally failed.
       ctx.waitUntil(
         (async () => {
-          await watchdogUnits(env.DB);
-          await checkDigestIncomplete(env);
+          const { requeued } = await watchdogUnits(env.DB);
+          const sweep = await sweepStuckRaw(env.DB);
+          const pending = await env.DB
+            .prepare(`SELECT COUNT(*) AS n FROM seed_units WHERE executor='worker' AND status='pending'`)
+            .first<{ n: number }>();
+          if ((pending?.n ?? 0) > 0 || requeued > 0 || sweep.reopened > 0) {
+            await env.SEED_FETCH_QUEUE.send({ type: 'unit' });
+          }
+          const today = todayWarsaw();
+          const ready = await daysReadyToReconcile(env, addDaysWarsaw(today, -1));
+          for (const d of ready) {
+            await env.SEED_FETCH_QUEUE.send({ type: 'finalize', day: d.day, batchId: d.batchId });
+          }
+          await alertFailedUnits(env);
         })().catch((e) => console.error(`seed watchdog cron failed: ${(e as Error).message}`))
       );
       return;

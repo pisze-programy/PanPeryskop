@@ -1,5 +1,4 @@
 // Shared query helpers: Warsaw-day bucketing, series, totals, cron info.
-import { browserBudget } from '../../seed/core/log';
 import { todayWarsaw, addDaysWarsaw, warsawOffset } from '../../seed/core/dates';
 import { DAY_MS } from '../../seed/core/constants';
 import { cronSchedules, nextCronRunMs, cronSummary, CronInfo } from '../cron';
@@ -57,7 +56,7 @@ export async function dashboardTotals(db: D1Database): Promise<Record<string, nu
     db.prepare('SELECT COUNT(*) n FROM likes').first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM shares').first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM client_errors').first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM seed_runs').first<{ n: number }>(),
+    db.prepare('SELECT COUNT(*) n FROM seed_batches').first<{ n: number }>(),
   ]);
   return {
     users: users?.n ?? 0, posts: posts?.n ?? 0, views: views?.n ?? 0, likes: likes?.n ?? 0,
@@ -65,10 +64,11 @@ export async function dashboardTotals(db: D1Database): Promise<Record<string, nu
   };
 }
 
-// last cron run + next run + summary.
+// last cron run + next run + summary. v2 writes one seed_batches row per run
+// (seed_runs is only written by the manual facebook/mtp paths now).
 export async function cronInfo(env: Env, db: D1Database): Promise<CronInfo> {
   const last = await db
-    .prepare("SELECT MAX(created_at) AS m FROM seed_runs WHERE run_type='cron'")
+    .prepare("SELECT MAX(created_at) AS m FROM seed_batches WHERE run_type='cron'")
     .first<{ m: number | null }>();
   const schedules = cronSchedules(env);
   return {
@@ -78,5 +78,3 @@ export async function cronInfo(env: Env, db: D1Database): Promise<CronInfo> {
     lastCronRunMs: last?.m ?? null,
   };
 }
-
-export { browserBudget };

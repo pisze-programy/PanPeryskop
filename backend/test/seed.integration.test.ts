@@ -1,35 +1,20 @@
-// Integration test for the seed queue pipeline: real schema (all migrations applied
-// to an in-memory SQLite via node:sqlite) + a D1 adapter + fake providers/queues.
-// Verifies the WHOLE flow seed-day → fetch → finalize → ingest → done, including
-// exception paths that must be caught and driven to terminal states:
-//   - a scope whose fetchScope throws  → bounded DLQ re-drive → scope failed → batch STILL completes
-//   - a candidate whose media download throws → candidate error → batch STILL completes
-//   - runQueue must never leak a handler exception (per-message retry → DLQ).
+// Integration tests for the stories API and the VPS candidate mapper against the
+// real schema (all migrations applied to an in-memory SQLite via node:sqlite).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { SEED_PROVIDERS } from '../src/seed/providers';
-import { PROVIDER_CONFIGS } from '../src/seed/providers/registry';
 import { storiesRoutes } from '../src/api/stories';
 import { parseStoriesLimit } from '../src/api/stories';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs } from '../src/seed/core/dates';
-import { SEED_DAYS_AHEAD, HOUR_MS } from '../src/seed/core/constants';
+import { HOUR_MS } from '../src/seed/core/constants';
 import { entryFor } from '../src/seed/executors/vps/runtime';
-import type { SeedProvider } from '../src/seed/core/types';
-
-// Pipeline tests seed a WINDOW day. Must stay date-relative: handleSeedDay rejects
-// created_at older than TTL_MS (24h), so a hardcoded past day makes every seed-day
-// throw → infinite DLQ re-drive → "pipeline did not drain". The far edge
-// (today+SEED_DAYS_AHEAD) is always inside the window and never in the past.
-const DAY = addDaysWarsaw(todayWarsaw(), SEED_DAYS_AHEAD);
-const DAY_START = Date.parse(`${DAY}T06:00:00+02:00`);
 
 // ---------- D1 adapter over node:sqlite ----------
 function d1(sqlite: DatabaseSync): D1Database {
   const bound = (ps: ReturnType<DatabaseSync['prepare']>, args: unknown[]) => {
-    const clean = args.map((a) => (a === undefined ? null : a));
+    const clean = args.map((a) => (a === undefined ? null : a)) as never[];
     return {
       run: async () => {
         const r = ps.run(...clean);
@@ -71,116 +56,11 @@ function d1(sqlite: DatabaseSync): D1Database {
   } as unknown as D1Database;
 }
 
-// ---------- In-memory queue (captures message bodies) ----------
-class FakeQueue {
-  name: string;
-  msgs: SeedQueueMessage[] = [];
-  constructor(name: string) { this.name = name; }
-  send(b: SeedQueueMessage) { this.msgs.push(b); }
-  sendBatch(reqs: MessageSendRequest<SeedQueueMessage>[]) { for (const r of reqs) this.msgs.push(r.body); }
-}
-
-// ---------- Fake providers ----------
-const WEBP = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0, 0, 0, 0]);
-
-function fakeProvider(
-  id: string,
-  scopes: string[],
-  fetchScope: (scope: string) => Promise<import('../src/seed/core/types').SeedCandidate[]>,
-): SeedProvider {
-  return {
-    id: id as never,
-    transport: 'fetch',
-    fetchCandidates: async () => [],
-    fetchBytes: async (ctx, url) => {
-      if (String(url).includes('boom')) throw new Error(`media boom: ${url}`);
-      return WEBP;
-    },
-    scopes,
-    fetchScope: (ctx, scope) => fetchScope(scope),
-  };
-}
-
-// The registry is the single source of truth for enabled providers, so a fake
-// provider is wired in by BOTH adding the implementation (SEED_PROVIDERS) and a
-// worker executor config (PROVIDER_CONFIGS) — exactly how a real provider is added.
-function fakeConfig(id: string) {
-  return { id: id as never, transport: 'fetch' as const, enabled: true, priority: 99, executors: { worker: true } };
-}
-function swapFakes(providers: SeedProvider[]) {
-  const origP = [...SEED_PROVIDERS];
-  const origC = [...PROVIDER_CONFIGS];
-  SEED_PROVIDERS.splice(0, SEED_PROVIDERS.length, ...providers);
-  PROVIDER_CONFIGS.splice(0, PROVIDER_CONFIGS.length, ...providers.map((p) => fakeConfig(String(p.id))));
-  return () => {
-    SEED_PROVIDERS.splice(0, SEED_PROVIDERS.length, ...origP);
-    PROVIDER_CONFIGS.splice(0, PROVIDER_CONFIGS.length, ...origC);
-  };
-}
-
-function candidate(over: Partial<import('../src/seed/core/types').SeedCandidate>) {
-  return {
-    source: 'fakea',
-    externalId: `fake-${over.title ?? 'x'}`,
-    title: over.title ?? 'Event',
-    startMs: over.startMs ?? DAY_START,
-    lat: 52.2, lng: 21.0,
-    city: 'Warszawa', venue: 'Venue', address: 'ul. X',
-    link: `https://x.pl/${over.externalId ?? 'x'}`, mediaUrl: 'https://x.pl/m.webp', thumbUrl: null,
-    ...over,
-  } as never;
-}
-
 function applyMigrations(sqlite: DatabaseSync) {
   const dir = join(import.meta.dirname, '..', 'migrations');
   for (const f of readdirSync(dir).sort()) {
     if (f.endsWith('.sql')) sqlite.exec(readFileSync(join(dir, f), 'utf8'));
   }
-}
-
-// ---------- Pipeline harness: drains phase queues via runQueue; handler retries
-// are routed to the DLQ (approximating Cloudflare retry-exhaustion). ----------
-async function runPipeline(env: Record<string, unknown>) {
-  const queues = {
-    fetch: env.SEED_FETCH_QUEUE as FakeQueue,
-    ingest: env.SEED_INGEST_QUEUE as FakeQueue,
-    finalize: env.SEED_FINALIZE_QUEUE as FakeQueue,
-    dlq: env.SEED_DLQ as FakeQueue,
-  };
-  let guard = 0;
-  while (guard++ < 500) {
-    const q = [queues.fetch, queues.ingest, queues.finalize, queues.dlq].find((x) => x.msgs.length > 0);
-    if (!q) break;
-    const body = q.msgs.shift()!;
-    const messages = [{ body, ack() {}, retry() { queues.dlq.send(body); }, attempts: 0 }];
-    await runQueue(env as never, {
-      queue: q.name,
-      messages: messages as never,
-      retryAll() {}, ackAll() {}, batchId: 't',
-    } as never);
-  }
-  if (guard >= 500) throw new Error('pipeline did not drain (possible infinite retry loop)');
-}
-
-function makeEnv() {
-  const sqlite = new DatabaseSync(':memory:');
-  applyMigrations(sqlite);
-  const media = { put: async () => {}, get: async () => null, delete: async () => {} };
-  return {
-    sqlite,
-    env: {
-      DB: d1(sqlite),
-      MEDIA: media,
-      SEED_FETCH_QUEUE: new FakeQueue(QUEUE_NAMES.FETCH),
-      SEED_INGEST_QUEUE: new FakeQueue(QUEUE_NAMES.INGEST),
-      SEED_FINALIZE_QUEUE: new FakeQueue(QUEUE_NAMES.FINALIZE),
-      SEED_DLQ: new FakeQueue(QUEUE_NAMES.DLQ),
-    },
-  };
-}
-
-function sqliteRow(sqlite: DatabaseSync, sql: string): any {
-  return sqlite.prepare(sql).get();
 }
 
 test('integration: /stories?day= browses that day even outside the live TTL window', async () => {

@@ -22,8 +22,8 @@ enabled = true
 # Daily event seed: load next day's events early morning Europe/Warsaw.
 # 02:00 UTC = 04:00 CEST (summer) / 03:00 CET (winter).
 # CRON_SCHEDULE is the single source of truth — mirrored into the dashboard via env.
-# 02:00 daily seed; 04:00 daily audit cleanup (window + 6 days retention);
-# hourly liveness watchdog (requeues stuck units/raw rows, finalizes ready days).
+# 02:00 daily seed; 04:00 daily audit cleanup (4-day retention); hourly liveness
+# watchdog (marks batches stuck in created/fetching/ingesting as failed).
 [triggers]
 crons = [ "0 2 * * *", "0 4 * * *", "0 * * * *" ]
 
@@ -59,12 +59,10 @@ max_concurrency = 1
 binding = "BROWSER"
 remote = true
 
-# D1 database id is account-specific. Copy this file to wrangler.toml and fill in
-# your real database_id.
 [[d1_databases]]
 binding = "DB"
 database_name = "panperyskop-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "c9fed854-29bc-4ea7-9242-d0a7bc6abee0"
 
 [[r2_buckets]]
 binding = "MEDIA"
@@ -80,6 +78,11 @@ CRON_SCHEDULE = "0 2 * * *"
 # goingapp scraping. Public Algolia app id; API key + Cloudinary sig are secrets
 # (wrangler secret put ALGOLIA_API_KEY / CLOUDINARY_SIG)
 ALGOLIA_APP_ID = "FAFFKUSLK0"
+# Eventim affiliate (Awin datafeed, advertiser 19044 / feed 99885). The feed API
+# key is a secret (wrangler secret put AWIN_FEED_KEY); these three are public ids.
+AWIN_PUBLISHER_ID = "3071193"
+AWIN_ADVERTISER_ID = "19044"
+AWIN_FEED_ID = "99885"
 # GOOGLE_CLIENT_ID = ""  # removed with Google Sign-In (Apple-only login)
 
 # Production entrypoint — single worker served on the custom domain. Media URLs are

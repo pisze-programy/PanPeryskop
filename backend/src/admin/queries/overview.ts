@@ -1,7 +1,7 @@
 // Overview page: full data assembly + chart payloads (SSR + refresh API).
-import { batchStatusCounts, seedDaySeries, failedAdminLogins } from './seed';
+import { runStatusCounts, seedIngestSeries, failedAdminLogins } from './seed';
 import { eventStatusBreakdown } from './events';
-import { daySeries, statsRange, cronInfo, browserBudget } from './shared';
+import { daySeries, statsRange, cronInfo } from './shared';
 import { DAY_MS } from '../../seed/core/constants';
 import { CATEGORY_EVENTS, STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED } from '../../core/models';
 import { addDaysWarsaw, todayWarsaw } from '../../seed/core/dates';
@@ -13,6 +13,13 @@ export interface OverviewWindowRow {
   pending: number;
   rejected: number;
 }
+export interface SeedUnitRollup {
+  total: number;
+  done: number;
+  failed: number;
+  active: number;
+  rows: number;
+}
 export interface OverviewData {
   users: number;
   active7d: number;
@@ -21,7 +28,7 @@ export interface OverviewData {
   logins14: { d: string; n: number }[];
   status: { approved: number; pending: number; rejected: number };
   window: OverviewWindowRow[];
-  seedSeries: { day: string; ingested: number; errors: number }[];
+  seedSeries: { d: string; ingested: number; errors: number }[];
   batchCounts: { status: string; n: number }[];
   failedLogins7d: number;
   errors7d: number;
@@ -29,9 +36,8 @@ export interface OverviewData {
   banned: number;
   lastSeed: {
     batch: Record<string, unknown> | null;
-    runs: { cands: number; ingested: number; errors: number; dur: number; browser: number } | null;
+    units: SeedUnitRollup | null;
   };
-  budget: { monthMs: number; limitMs: number; exceeded: boolean } | null;
   cron: CronInfo;
 }
 
@@ -40,22 +46,21 @@ export async function overviewData(env: Env, seedDaysAhead: number): Promise<Ove
   const now = Date.now();
   const today = todayWarsaw();
   const windowEnd = addDaysWarsaw(today, seedDaysAhead);
-  const [users, active7d, status, views14, media14, logins14, seedSeries, batchCounts, failedLogins7d, errors7d, reportsOpen, banned, lastSeed, cron, budget, windowRows] = await Promise.all([
+  const [users, active7d, status, views14, media14, logins14, seedSeries, batchCounts, failedLogins7d, errors7d, reportsOpen, banned, lastSeed, cron, windowRows] = await Promise.all([
     db.prepare('SELECT COUNT(*) n FROM users').first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM users WHERE last_seen>=?').bind(now - 7 * DAY_MS).first<{ n: number }>(),
     eventStatusBreakdown(db),
     statsRange(db, 'views', 'created_at', 14),
     statsRange(db, 'posts', 'created_at', 14),
     statsRange(db, 'auth_events', 'created_at', 14, " AND event='login'"),
-    seedDaySeries(db, now - 8 * DAY_MS),
-    batchStatusCounts(db),
+    seedIngestSeries(db, now - 8 * DAY_MS),
+    runStatusCounts(db),
     failedAdminLogins(db, now - 7 * DAY_MS),
     db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(now - 7 * DAY_MS).first<{ n: number }>(),
     db.prepare("SELECT COUNT(*) n FROM reports WHERE status='open'").first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM banned_devices').first<{ n: number }>(),
     db.prepare('SELECT * FROM seed_batches ORDER BY created_at DESC LIMIT 1').first<Record<string, unknown>>(),
     cronInfo(env, db),
-    env.BROWSER ? browserBudget(env) : null,
     db.prepare(`SELECT event_date, status, COUNT(*) n FROM posts
                 WHERE category='${CATEGORY_EVENTS}' AND event_date BETWEEN ? AND ? GROUP BY event_date, status`)
       .bind(today, windowEnd).all<{ event_date: string; status: string; n: number }>(),
@@ -75,14 +80,17 @@ export async function overviewData(env: Env, seedDaysAhead: number): Promise<Ove
     windowList.push(perDay.get(day) ?? { day, approved: 0, pending: 0, rejected: 0 });
   }
 
-  let runs: OverviewData['lastSeed']['runs'] = null;
+  let units: SeedUnitRollup | null = null;
   if (lastSeed) {
     const agg = await db.prepare(
-      `SELECT COALESCE(SUM(candidates),0) cands, COALESCE(SUM(ingested),0) ingested,
-              COALESCE(SUM(errors),0) errors, COALESCE(SUM(duration_ms),0) dur, COALESCE(SUM(browser_ms),0) browser
-       FROM seed_runs WHERE batch_id=?`
-    ).bind((lastSeed as any).id).first<{ cands: number; ingested: number; errors: number; dur: number; browser: number }>();
-    runs = agg;
+      `SELECT COUNT(*) total,
+              COALESCE(SUM(CASE WHEN status='done' THEN 1 ELSE 0 END),0) done,
+              COALESCE(SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END),0) failed,
+              COALESCE(SUM(CASE WHEN status IN ('pending','claimed') THEN 1 ELSE 0 END),0) active,
+              COALESCE(SUM(rows_written),0) rows
+         FROM seed_units WHERE batch_id=?`,
+    ).bind((lastSeed as { id: string }).id).first<SeedUnitRollup>();
+    units = agg;
   }
 
   return {
@@ -96,8 +104,7 @@ export async function overviewData(env: Env, seedDaysAhead: number): Promise<Ove
     errors7d: errors7d?.n ?? 0,
     reportsOpen: reportsOpen?.n ?? 0,
     banned: banned?.n ?? 0,
-    lastSeed: { batch: lastSeed ?? null, runs },
-    budget,
+    lastSeed: { batch: lastSeed ?? null, units },
     cron,
   };
 }
@@ -129,7 +136,7 @@ export function overviewCharts(d: OverviewData) {
         pending: d.window.map((w) => w.pending),
         rejected: d.window.map((w) => w.rejected),
       },
-      seed: { days: d.seedSeries.map((s) => s.day), ingested: d.seedSeries.map((s) => s.ingested) },
+      seed: { days: d.seedSeries.map((s) => s.d), ingested: d.seedSeries.map((s) => s.ingested) },
       nextCronMs: d.cron.nextRunMs,
       lastCronMs: d.cron.lastCronRunMs,
     },

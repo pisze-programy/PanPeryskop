@@ -8,32 +8,22 @@ document.addEventListener('DOMContentLoaded', function () {
   window.ppChart('pp-chart-ingest', {
     chart: { type: 'area', height: 300, fontFamily: 'inherit', toolbar: { show: false }, zoom: { type: 'x' } },
     series: [
-      { name: 'candidates', data: d.ingest.map(function (p) { return [ts(p.d), p.candidates]; }) },
-      { name: 'ingested', data: d.ingest.map(function (p) { return [ts(p.d), p.ingested]; }) }
+      { name: 'ingested', data: d.ingest.map(function (p) { return [ts(p.d), p.ingested]; }) },
+      { name: 'errors', data: d.ingest.map(function (p) { return [ts(p.d), p.errors]; }) }
     ],
-    colors: ['#8d99ab', '#206bc4'], stroke: { width: 2, curve: 'smooth' }, fill: { opacity: 0.08 },
+    colors: ['#206bc4', '#d63939'], stroke: { width: 2, curve: 'smooth' }, fill: { opacity: 0.08 },
     dataLabels: { enabled: false }, grid: { strokeDashArray: 4 },
     xaxis: { type: 'datetime', labels: { format: 'dd.MM' } }, tooltip: { theme: 'dark' }
   });
-  window.ppChart('pp-chart-batches', {
+  window.ppChart('pp-chart-runs', {
     chart: { type: 'bar', height: 300, fontFamily: 'inherit', toolbar: { show: false }, stacked: true },
     series: [
-      { name: 'done', data: d.batches.done },
-      { name: 'failed', data: d.batches.failed },
-      { name: 'active', data: d.batches.active }
+      { name: 'done', data: d.runs.done },
+      { name: 'failed', data: d.runs.failed },
+      { name: 'running', data: d.runs.running }
     ],
     colors: ['#2fb344', '#d63939', '#f59f00'], dataLabels: { enabled: false }, grid: { strokeDashArray: 4 },
-    xaxis: { categories: d.batches.days }, tooltip: { theme: 'dark' }
-  });
-  var annot = {};
-  if (d.budget.limitMs) annot = { yaxis: [{ y: d.budget.limitMs, strokeColor: '#d63939', label: { text: 'limit' } }] };
-  window.ppChart('pp-chart-budget', {
-    chart: { type: 'bar', height: 300, fontFamily: 'inherit', toolbar: { show: false } },
-    series: [{ name: 'browser ms', data: d.budget.ms }],
-    colors: ['#206bc4'], dataLabels: { enabled: false }, grid: { strokeDashArray: 4 },
-    xaxis: { categories: d.budget.days, labels: { format: 'dd.MM' } }, tooltip: { theme: 'dark' },
-    yaxis: { labels: { formatter: function (v) { return Math.round(v / 60000) + 'min'; } } },
-    annotations: annot
+    xaxis: { categories: d.runs.days }, tooltip: { theme: 'dark' }
   });
 });
 `;

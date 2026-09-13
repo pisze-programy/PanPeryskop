@@ -5,6 +5,7 @@
 import { QUEUE_CONSUMER_CONCURRENCY, QUEUE_RETRY_DELAY_SECONDS } from '../../core/constants';
 import { EnvQ, SeedQueueMessage } from './types';
 import { handleUnitWake } from './unitHandler';
+import { handleFinalizeWake } from './finalize';
 
 export async function runQueue(env: EnvQ, batch: MessageBatch<SeedQueueMessage>): Promise<void> {
   const CONCURRENCY = QUEUE_CONSUMER_CONCURRENCY;
@@ -15,6 +16,7 @@ export async function runQueue(env: EnvQ, batch: MessageBatch<SeedQueueMessage>)
       const msg = msgs[cursor++];
       try {
         if (msg.body.type === 'unit') await handleUnitWake(env);
+        else if (msg.body.type === 'finalize') await handleFinalizeWake(env, msg.body.day, msg.body.batchId);
         msg.ack();
       } catch (e) {
         console.error(`queue unit wake attempt ${msg.attempts} failed: ${(e as Error).message}`);

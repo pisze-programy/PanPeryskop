@@ -9,7 +9,7 @@ const DAY = '2026-09-08';
 const DAY_MS = 1_725_753_600_000; // arbitrary anchor — assertions compare offsets
 
 type Field = { name: string; value: string };
-interface Offer { productUrl?: string; sourceProductId?: string; priceHistory?: Array<{ price?: { value?: string } }> }
+interface Offer { productUrl?: string; sourceProductId?: string; priceHistory?: Array<{ price?: { value?: string; currency?: string } }> }
 interface Product { name?: string; fields?: Field[]; offers?: Offer[]; categories?: Array<{ tdCategoryName?: string; name?: string }>; productImage?: { url?: string } | null }
 
 function seg(name: string, value: string): Field {

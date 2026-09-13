@@ -1,6 +1,6 @@
 // Post-cron reconciliation (queue redesign, step 6): merge cross-source duplicates
 // for one day AFTER all its units are terminal, then absorb losers into winners.
-// Runs gated (see finalizeIfReady / countOpenUnitsForDay): never mid-write, and fully re-runnable —
+// Runs gated (see reconcileIfReady / countOpenUnitsForDay): never mid-write, and fully re-runnable —
 // re-running recomputes the same groups deterministically, so a crash mid-run
 // just resumes where it stopped (rows already marked winner/duplicate/failure
 // are skipped, only 'raw' rows are grouped).
@@ -15,23 +15,47 @@
 // Cinema sources are never grouped (same as dedupe).
 // A loser that maps to a locked or facebook-curated post is NOT auto-demoted —
 // it goes to reconciliation_failures for manual review instead.
-import { nanoid } from 'nanoid';
 import { ProviderId, ShowtimeBooking } from './core/types';
-import { containment, isCinemaSource, isUkrainian, titleTokens, venuesMatch } from './core/match';
+import { containment, isCinemaSource, isUkrainian, titleTokens, venuesMatch, flatNorm, isTba } from './core/match';
 import { priorityOf } from './providers/registry';
 import { now, getOrCreateSeedUser } from './pipeline/queue/state';
-import { countOpenUnitsForDay } from './pipeline/queue/units';
+import { countOpenUnitsForDay, MAX_UNIT_ATTEMPTS } from './pipeline/queue/units';
 import { isCancelled } from './core/filters';
 import { ingestWinnerRow, RawWinnerRow } from './pipeline/queue/ingest';
 import { SEED_PROVIDERS } from './providers';
+import { addDaysWarsaw, warsawDateOf } from './core/dates';
+import { snitchReport } from './alert';
 
 /** Single-time rows merge only within this many minutes (booking_key overrides). */
 export const RECONCILE_TIME_GUARD_MIN = 30;
 
 // A reconcile latch older than this is considered dead (the Worker invocation was
 // killed mid-reconcile) and may be taken over by a later finalize — otherwise a
-// stuck `reconciling=1` blocks that day forever.
-export const RECONCILE_STALE_MS = 10 * 60_000;
+// stuck `reconciling=1` blocks that day forever. Kept comfortably above the
+// 5-minute CPU cap so a slow O(n²) reconcile is never taken over mid-run; failure
+// rows are keyed deterministically anyway, so even a takeover cannot duplicate.
+export const RECONCILE_STALE_MS = 30 * 60_000;
+
+// A raw row left in 'ingesting' this long means the worker died mid-ingest; it is
+// returned to 'winner' for a retry. 'error' rows are retried while under this cap.
+export const RAW_INGEST_STALE_MS = 10 * 60_000;
+export const MAX_RAW_ATTEMPTS = 5;
+
+/** Self-heal the ingest shelf: stale 'ingesting' rows (dead worker) and 'error'
+ *  rows still under the attempt cap go back to 'winner' so a later finalize
+ *  retries them instead of silently dropping the event. Returns how many opened. */
+export async function sweepStuckRaw(db: D1Database): Promise<{ reopened: number }> {
+  const t = now();
+  const stale = await db
+    .prepare(`UPDATE seed_raw SET status='winner', updated_at=? WHERE status='ingesting' AND updated_at < ? AND attempts < ?`)
+    .bind(t, t - RAW_INGEST_STALE_MS, MAX_RAW_ATTEMPTS)
+    .run();
+  const errored = await db
+    .prepare(`UPDATE seed_raw SET status='winner', updated_at=? WHERE status='error' AND attempts < ?`)
+    .bind(t, MAX_RAW_ATTEMPTS)
+    .run();
+  return { reopened: Number(stale?.meta?.changes ?? 0) + Number(errored?.meta?.changes ?? 0) };
+}
 
 export interface RawRow {
   id: string;
@@ -163,14 +187,17 @@ async function existingPosts(db: D1Database, externalIds: string[]): Promise<Map
 async function recordFailure(
   db: D1Database, day: string, batchId: string, loser: RawRow, reason: string, t: number,
 ): Promise<void> {
+  // Deterministic id: a stale-latch takeover running reconcile twice must not
+  // duplicate the same failure row. INSERT OR IGNORE keeps the first reason.
+  const id = `${day}:${loser.provider}:${loser.external_id}`;
   await db
     .prepare(
-      `INSERT INTO reconciliation_failures
+      `INSERT OR IGNORE INTO reconciliation_failures
         (id, day, batch_id, provider, external_id, title, reason, snapshot, reviewed, retry_flag, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?)`,
     )
     .bind(
-      nanoid(24), day, batchId, loser.provider, loser.external_id, loser.title, reason,
+      id, day, batchId, loser.provider, loser.external_id, loser.title, reason,
       JSON.stringify({ id: loser.id, title: loser.title, venue: loser.raw_venue, start_min: loser.start_min }),
       t,
     )
@@ -221,13 +248,43 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
   const ambiguities: Array<[RawRow, RawRow]> = [];
   const cinema = new Set<string>();
   for (const r of rows) if (isCinemaSource(r.provider as ProviderId)) cinema.add(r.id);
-  for (let i = 0; i < rows.length; i++) {
-    for (let j = i + 1; j < rows.length; j++) {
-      const a = rows[i], b = rows[j];
-      if (cinema.has(a.id) || cinema.has(b.id)) continue;
-      if (find(a.id) === find(b.id)) continue;
-      if (sameEvent(a, tokens.get(a.id)!, b, tokens.get(b.id)!)) union(a.id, b.id);
-      else if (ambiguousPair(a, tokens.get(a.id)!, b, tokens.get(b.id)!)) ambiguities.push([a, b]);
+
+  // Candidate pairs only, instead of every pair (O(n²)). Two rows can match only
+  // if they share a canonical venue id, share a venue-string trigram (venuesMatch
+  // needs a high LCS / char overlap, so a shared trigram is implied), or one of
+  // them is TBA/empty (venuesMatch then falls back to geo — those go in a shared
+  // bucket). ponytail: trigram-overlap prefilter; if a real fuzzy-venue miss is
+  // ever observed, replace with a proper n-gram/geo index.
+  const byId = new Map(rows.map((r) => [r.id, r] as const));
+  const buckets = new Map<string, string[]>();
+  const addTo = (key: string, id: string) => {
+    const arr = buckets.get(key);
+    if (arr) arr.push(id); else buckets.set(key, [id]);
+  };
+  for (const r of rows) {
+    if (cinema.has(r.id)) continue; // cinema rows never group
+    if (r.canonical_venue_id) addTo(`id:${r.canonical_venue_id}`, r.id);
+    const v = flatNorm(r.raw_venue).trim();
+    if (!isTba(r.raw_venue) && v.length >= 3) {
+      const seenTg = new Set<string>();
+      for (let i = 0; i + 3 <= v.length; i++) seenTg.add(v.slice(i, i + 3));
+      for (const tg of seenTg) addTo(`t:${tg}`, r.id);
+    } else {
+      addTo('shared', r.id);
+    }
+  }
+  const seenPair = new Set<string>();
+  for (const ids of buckets.values()) {
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const a = byId.get(ids[i])!, b = byId.get(ids[j])!;
+        if (find(a.id) === find(b.id)) continue;
+        const pk = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
+        if (seenPair.has(pk)) continue;
+        seenPair.add(pk);
+        if (sameEvent(a, tokens.get(a.id)!, b, tokens.get(b.id)!)) union(a.id, b.id);
+        else if (ambiguousPair(a, tokens.get(a.id)!, b, tokens.get(b.id)!)) ambiguities.push([a, b]);
+      }
     }
   }
   const groups = new Map<string, RawRow[]>();
@@ -330,21 +387,25 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
 
 /** Ingest the day's reconciled winners into posts (idempotent upsert by
  *  external_id). Bounded by `limit` so a request never runs past the CPU limit;
- *  callers repeat until `remaining` is 0. */
-export async function ingestWinnersForDay(env: Env, day: string, limit = 200): Promise<{ ingested: number; remaining: number }> {
+ *  callers repeat while `remaining` > 0. `processed` counts rows that left the
+ *  winner shelf this call (success, unknown provider or error) — the signal the
+ *  finalize chain uses to know it is still making progress. */
+export async function ingestWinnersForDay(env: Env, day: string, limit = 200): Promise<{ ingested: number; processed: number; remaining: number }> {
   const { results } = await env.DB
     .prepare(`SELECT * FROM seed_raw WHERE day=? AND status='winner' LIMIT ?`)
     .bind(day, limit)
     .all<RawWinnerRow>();
   const rows = results || [];
-  if (rows.length === 0) return { ingested: 0, remaining: 0 };
+  if (rows.length === 0) return { ingested: 0, processed: 0, remaining: 0 };
   const user = await getOrCreateSeedUser(env.DB);
   let n = 0;
+  let processed = 0;
   for (const row of rows) {
     const provider = SEED_PROVIDERS.find((p) => p.id === row.provider);
     if (!provider) {
       await env.DB.prepare(`UPDATE seed_raw SET status='error', reason=?, updated_at=? WHERE id=?`)
         .bind(`unknown provider ${row.provider}`, now(), row.id).run();
+      processed += 1;
       continue;
     }
     try {
@@ -353,19 +414,23 @@ export async function ingestWinnersForDay(env: Env, day: string, limit = 200): P
     } catch (e) {
       console.error(`ingest ${row.provider}/${row.external_id} failed: ${(e as Error).message}`);
     }
+    processed += 1;
   }
   const rem = await env.DB
     .prepare(`SELECT COUNT(*) AS n FROM seed_raw WHERE day=? AND status='winner'`)
     .bind(day)
     .first<{ n: number }>();
-  return { ingested: n, remaining: rem?.n ?? 0 };
+  return { ingested: n, processed, remaining: rem?.n ?? 0 };
 }
 
 /** Reconcile `day` once every fetch unit that can write to it is terminal AND
- *  there are unprocessed raw rows, then ingest the winners. The atomic latch on
- *  seed_days.reconciling makes concurrent completions safe (only one runs).
- *  Idempotent; safe to call from every unit completion. */
-export async function finalizeIfReady(env: Env, day: string, batchId: string): Promise<boolean> {
+ *  there are unprocessed raw rows. The atomic latch on seed_days.reconciling
+ *  makes concurrent callers safe (only one runs); a stale latch is taken over
+ *  after RECONCILE_STALE_MS. Idempotent; returns true when it actually ran.
+ *
+ *  It stops at reconcile — ingest is a separate bounded step driven by
+ *  handleFinalizeWake — so neither phase can blow a request's budget. */
+export async function reconcileIfReady(env: Env, day: string, batchId: string): Promise<boolean> {
   const open = await countOpenUnitsForDay(env.DB, day);
   if (open > 0) return false;
   const raw = await env.DB
@@ -380,9 +445,59 @@ export async function finalizeIfReady(env: Env, day: string, batchId: string): P
   if (Number(latch?.meta?.changes ?? 0) !== 1) return false; // another completion won the latch
   try {
     await reconcileDay(env.DB, day, batchId);
-    await ingestWinnersForDay(env, day);
   } finally {
     await env.DB.prepare('UPDATE seed_days SET reconciling=0, updated_at=? WHERE day=?').bind(now(), day).run();
   }
   return true;
+}
+
+/** Days that have unreconciled raw rows but no open fetch unit and no live
+ *  reconcile latch — i.e. a completion's finalize wake was lost. The watchdog
+ *  enqueues these so a day can never strand unreconciled. */
+export async function daysReadyToReconcile(env: Env, sinceDay: string): Promise<{ day: string; batchId: string }[]> {
+  const { results } = await env.DB
+    .prepare(`SELECT day, MAX(batch_id) AS batch_id FROM seed_raw WHERE status='raw' AND day >= ? GROUP BY day ORDER BY day LIMIT 20`)
+    .bind(sinceDay)
+    .all<{ day: string; batch_id: string }>();
+  const out: { day: string; batchId: string }[] = [];
+  for (const r of results || []) {
+    if ((await countOpenUnitsForDay(env.DB, r.day)) > 0) continue;
+    const latch = await env.DB.prepare('SELECT reconciling FROM seed_days WHERE day=?').bind(r.day).first<{ reconciling: number }>();
+    if (latch?.reconciling === 1) continue;
+    out.push({ day: r.day, batchId: r.batch_id });
+  }
+  return out;
+}
+
+/** Watchdog alert: email (once per day) which provider scopes are terminally
+ *  failed for the current window. Reuses the seed_digest_incomplete guard table
+ *  (one row per day) now that the old per-provider digest watchdog is gone. */
+export async function alertFailedUnits(env: Env, nowMs: number = Date.now()): Promise<void> {
+  const windowStart = addDaysWarsaw(warsawDateOf(nowMs), -1);
+  const { results } = await env.DB
+    .prepare(
+      `SELECT day, provider, COUNT(*) n FROM seed_units
+        WHERE status='failed' AND attempts >= ? AND day >= ?
+        GROUP BY day, provider ORDER BY day`,
+    )
+    .bind(MAX_UNIT_ATTEMPTS, windowStart)
+    .all<{ day: string; provider: string; n: number }>();
+  if (!results || results.length === 0) return;
+  const byDay = new Map<string, string[]>();
+  for (const r of results) {
+    const arr = byDay.get(r.day) ?? [];
+    arr.push(`${r.provider}×${r.n}`);
+    byDay.set(r.day, arr);
+  }
+  for (const [day, providers] of byDay) {
+    const guard = await env.DB
+      .prepare('INSERT OR IGNORE INTO seed_digest_incomplete (day, sent_at) VALUES (?, ?)')
+      .bind(day, nowMs)
+      .run();
+    if (Number(guard?.meta?.changes ?? 0) === 0) continue; // already alerted for this day
+    await snitchReport(env, 'panperyskop/seed/unit-failed', 'failed', {
+      data: { day, failed: providers.join(', ') },
+      message: `Seed units terminally failed for ${day}: ${providers.join(', ')}`,
+    });
+  }
 }

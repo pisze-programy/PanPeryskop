@@ -1,5 +1,4 @@
-// Re-export of the seed pipeline. index.ts imports runSeed/seedTomorrow from here.
-export { runSeed, seedTomorrow } from './seed/pipeline/runner';
+// Re-export of the seed pipeline surface used by index.ts and tests.
 export { enabledProviders, SEED_PROVIDERS } from './seed/providers';
 export { todayWarsaw, tomorrowWarsaw, warsawMidnightMs, toWarsawIso, addDaysWarsaw, warsawDateOf } from './seed/core/dates';
 export { dedupe } from './seed/core/dedupe';

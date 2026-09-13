@@ -91,9 +91,10 @@ test('venueMatch: generic name must not match a different-city venue', () => {
 });
 
 // In-memory D1 mock with a `venues` table (minimal, only what venueStore needs).
+type MockVenue = { id: string; name: string; aliases: string; lat: number; lng: number; city: string | null; sources: string; hit_count: number; first_seen: number; last_seen: number; created_at: number };
 function mockDb() {
   const db = {
-    _venues: [] as { id: string; name: string; aliases: string; lat: number; lng: number; city: string | null; sources: string; hit_count: number; first_seen: number; last_seen: number; created_at: number }[],
+    _venues: [] as MockVenue[],
     prepare: (sql: string) => {
       const norm = (v: unknown) => (v === undefined ? null : v);
       return {
@@ -140,7 +141,7 @@ function mockDb() {
         },
       };
     },
-  } as unknown as D1Database & { _venues: typeof db._venues };
+  } as unknown as D1Database & { _venues: MockVenue[] };
   return db;
 }
 

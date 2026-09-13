@@ -4,7 +4,7 @@ import { dedupe, buildDescription, todayWarsaw, tomorrowWarsaw, warsawMidnightMs
 import { ProviderId } from '../src/seed/core/types';
 import { HOUR_MS } from '../src/seed/core/constants';
 
-function cand(over: Partial<{ source: ProviderId; externalId: string; title: string; startMs: number; venue: string; address: string; city: string; link: string }>) {
+function cand(over: Partial<{ source: ProviderId; externalId: string; title: string; startMs: number; venue: string; address: string; city: string; link: string; lat: number; lng: number }>) {
   const externalId = over.externalId ?? 'x-1';
   return {
     source: over.source ?? ProviderId.GOING,
@@ -48,7 +48,7 @@ test('dedupe: canonical source wins regardless of input order', () => {
 
 test('dedupe: unknown source keeps the already-seen candidate', () => {
   const mk = (source: ProviderId, ext: string) => cand({ source, externalId: ext, title: 'Koncert', startMs: 1_782_765_000_000, venue: 'Venue' });
-  const out = dedupe([mk('future-provider', 'f'), mk(ProviderId.GOING, 'g')]);
+  const out = dedupe([mk('future-provider' as ProviderId, 'f'), mk(ProviderId.GOING, 'g')]);
   assert.equal(out.length, 1);
   assert.equal(out[0].externalId, 'g', 'known source must win over unknown');
 });
@@ -211,7 +211,7 @@ test('dedupe: all-day getyourguide collapses into timed going duplicate', () => 
 });
 
 test('dedupe: distinct all-day events stay separate', () => {
-  const mk = (source: string, ext: string, title: string, startMs: number, venue: string) => ({
+  const mk = (source: ProviderId, ext: string, title: string, startMs: number, venue: string) => ({
     source, externalId: ext, title, startMs, lat: 52.4, lng: 16.9, city: 'Poznań',
     venue, address: '', link: '', mediaUrl: '', thumbUrl: null,
   });

@@ -104,7 +104,12 @@ class MockIngestDB {
               // tracker lazily so status transitions stay assertable.
               if (!db.raws.has(id)) db.raws.set(id, { status: 'winner', post_id: null, reason: null, attempts: 0 });
               const r = db.raws.get(id)!;
-              if (sql.includes("status='ingesting'")) r.attempts += 1;
+              if (sql.includes("status='ingesting'")) {
+                // Atomic claim: only 'winner' rows move; a lost claim is changes=0.
+                if (sql.includes("AND status='winner'") && r.status !== 'winner') return { meta: { changes: 0 } };
+                r.status = 'ingesting';
+                r.attempts += 1;
+              }
               if (sql.includes("status='duplicate'")) { r.status = 'duplicate'; r.reason = String(args[0]); }
               if (sql.includes("status='done'")) { r.status = 'done'; r.post_id = String(args[0]); }
               if (sql.includes("status='error'")) { r.status = 'error'; r.reason = String(args[0]); }
@@ -142,7 +147,7 @@ function row(over: Partial<RawWinnerRow> = {}): RawWinnerRow {
     link_url: 'https://www.ebilet.pl/muzyka/berek', affiliate_link: null,
     partner_id: null, partner_name: null, status: 'winner',
     ...over,
-  };
+  } as RawWinnerRow;
 }
 
 function providerStub(fetchBytes: (url: string) => Promise<Uint8Array>): SeedProvider {
@@ -152,12 +157,25 @@ function providerStub(fetchBytes: (url: string) => Promise<Uint8Array>): SeedPro
   } as unknown as SeedProvider;
 }
 
-function envOf(db: MockIngestDB, puts: string[]) {
+function envOf(db: MockIngestDB, puts: string[]): Env {
   return {
     DB: db as unknown as D1Database,
     MEDIA: { put: async (key: string) => { puts.push(key); } } as unknown as R2Bucket,
-  };
+  } as unknown as Env;
 }
+
+test('ingest: a winner already claimed by another worker is skipped (no double post)', async () => {
+  const db = new MockIngestDB();
+  db.venues.set('scenarelax', { lat: 52.23, lng: 21.01 });
+  // Another finalize worker already moved the row to 'ingesting'.
+  db.raws.set('raw1', { status: 'ingesting', post_id: null, reason: null, attempts: 1 });
+  const provider = providerStub(async () => WEBP);
+  const res = await ingestWinnerRow(envOf(db, []), provider, 'u1', DAY, row());
+  assert.equal(res.skipped, true, 'lost the claim → skip');
+  assert.equal(res.postId, null);
+  assert.equal(db.posts.size, 0, 'no post when the claim is lost');
+  assert.equal(db.raws.get('raw1')!.status, 'ingesting', 'owner keeps the row');
+});
 
 test('ingest: canonical venue hit → approved post with merged fields, row done', async () => {
   const db = new MockIngestDB();

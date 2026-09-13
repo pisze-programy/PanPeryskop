@@ -101,8 +101,8 @@ test('postToMatchable: reconstructs a matchable from a post row', () => {
 
 test('matchesExisting: same title + venue matches, different venue does not', () => {
   const candM = matchable('facebook', 'Koncert', 'Klub Tama');
-  assert.equal(matchesExisting(candM, existing({ title: 'Koncert', venue: 'Klub Tama' })), true);
-  assert.equal(matchesExisting(candM, existing({ title: 'Koncert', venue: 'Stary Browar' })), false);
+  assert.equal(matchesExisting(candM, existing({ title: 'Koncert', venue: 'Klub Tama' }).m), true);
+  assert.equal(matchesExisting(candM, existing({ title: 'Koncert', venue: 'Stary Browar' }).m), false);
 });
 
 test('findWinner: higher-priority provider beats facebook', () => {
@@ -128,7 +128,7 @@ const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 
 
 function d1(sqlite: DatabaseSync): D1Database {
   const bound = (ps: ReturnType<DatabaseSync['prepare']>, args: unknown[]) => {
-    const clean = args.map((a) => (a === undefined ? null : a));
+    const clean = args.map((a) => (a === undefined ? null : a)) as never[];
     return {
       run: async () => ({ success: true, meta: { changes: ps.run(...clean).changes, last_row_id: 1 }, results: [] }),
       first: async () => { const row = ps.get(...clean); return row ? { ...row } : null; },

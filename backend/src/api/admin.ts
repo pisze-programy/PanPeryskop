@@ -3,14 +3,13 @@ import { STATUS_APPROVED, STATUS_REJECTED, CATEGORY_EVENTS } from '../core/model
 import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
 import { SEED_DAYS_AHEAD } from '../seed/core/constants';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
-import { recordSeedDigest } from '../seed/digest';
 import { claimUnit, completeUnit, failUnit, unitDayStatus, unitWindowDays } from '../seed/pipeline/queue/units';
 import { writeRawRows } from '../seed/pipeline/queue/raw';
 import { warsawDateOf } from '../seed/core/dates';
 import { D1_BATCH_STATEMENT_CAP, SEED_REFILL_AHEAD } from '../seed/core/constants';
 import { SeedCandidate } from '../seed/core/types';
 import { parseCandidate, isProviderId } from '../seed/core/candidate';
-import { finalizeIfReady, ingestWinnersForDay } from '../seed/reconcile';
+import { ingestWinnersForDay } from '../seed/reconcile';
 import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
 import { getLastSeedDay, seedDue } from '../seed/cadence';
 import { SEED_INTERVAL_DAYS } from '../seed/core/constants';
@@ -123,27 +122,6 @@ adminRoutes.post('/seed/affiliate', async (c) => {
 });
 
 // Per-source per-day approved-event counts over the seed window — the VPS
-adminRoutes.post('/seed/digest', async (c) => {
-  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
-  const body = await c.req
-    .json<{ day?: unknown; provider?: unknown; status?: unknown; candidates?: unknown; ingested?: unknown; errors?: unknown; message?: unknown }>()
-    .catch(() => ({}) as Record<string, unknown>);
-  const day = typeof body.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day) ? body.day : null;
-  const provider = typeof body.provider === 'string' && body.provider ? body.provider : null;
-  const status = body.status === 'ok' || body.status === 'partial' || body.status === 'failed' ? body.status : null;
-  if (!day || !provider || !status) return c.json({ error: 'Invalid day/provider/status' }, 400);
-  const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
-  const message = typeof body.message === 'string' && body.message.trim() ? body.message : undefined;
-  await recordSeedDigest(c.env, {
-    day, provider, status,
-    candidates: num(body.candidates), ingested: num(body.ingested), errors: num(body.errors), message,
-  });
-  return c.json({ ok: true });
-});
-
-// Per-source per-day approved-event counts over the seed window — the VPS
-// orchestrator uses it to detect window gaps (a provider that missed a day) and
-// self-heal with a backfill.
 adminRoutes.get('/seed/coverage', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const today = todayWarsaw();
@@ -312,7 +290,9 @@ adminRoutes.post('/seed/units/complete', async (c) => {
   const rows = typeof body.rowsWritten === 'number' && Number.isFinite(body.rowsWritten) ? Math.max(0, Math.floor(body.rowsWritten)) : 0;
   const ok = await completeUnit(c.env.DB, body.unitId, body.token, rows);
   if (!ok) return c.json({ error: 'unit not claimed by this token' }, 409);
-  // Trigger reconcile+ingest for every event day this unit could have written.
+  // Wake the finalize consumer for every day this unit can write. Reconcile +
+  // ingest run there (queue, retryable) — never in this request, so a slow
+  // reconcile cannot block the executor or blow the request's budget.
   const unit = await c.env.DB
     .prepare('SELECT day, kind, batch_id FROM seed_units WHERE id=?')
     .bind(body.unitId)
@@ -321,32 +301,39 @@ adminRoutes.post('/seed/units/complete', async (c) => {
     const days = unit.kind === 'window'
       ? Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(unit.day, i))
       : [unit.day];
-    for (const d of days) {
-      try { await finalizeIfReady(c.env, d, unit.batch_id); } catch (e) { console.error(`finalize ${d} failed: ${(e as Error).message}`); }
+    // Best-effort: the unit is already done; if the wake is lost the hourly
+    // watchdog re-enqueues finalize for ready days.
+    try {
+      for (const d of days) {
+        await c.env.SEED_FETCH_QUEUE.send({ type: 'finalize', day: d, batchId: unit.batch_id });
+      }
+    } catch (e) {
+      console.error(`finalize wake failed for unit ${body.unitId}: ${(e as Error).message}`);
     }
   }
   return c.json({ ok: true, status: 'done' });
 });
 
-// Manual finalize sweep: reconcile+ingest every window day (or one ?day=).
-// The repair path when a completion happened before the deploy that wired the
-// trigger, or for a watchdog sweep.
+// Manual finalize sweep: enqueue the finalize consumer for every window day
+// (or one ?day=). The repair path when a completion happened before the deploy
+// that wired the trigger, or for a watchdog sweep. Non-blocking.
 adminRoutes.post('/seed/finalize', async (c) => {
   if (!unitAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const body = await c.req.json<{ day?: unknown }>().catch(() => ({} as { day?: unknown }));
   const one = typeof body.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day) ? body.day : null;
   const today = todayWarsaw();
   const days = one === null ? Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i)) : [one];
-  const done: string[] = [];
+  const queued: string[] = [];
   for (const d of days) {
     // batchId is only used for reconciliation_failures provenance; use the day's
     // latest unit's batch if present.
     const u = await c.env.DB.prepare('SELECT batch_id FROM seed_units WHERE day IN (?, ?) ORDER BY created_at DESC LIMIT 1')
       .bind(d, today).first<{ batch_id: string }>();
     if (!u) continue;
-    if (await finalizeIfReady(c.env, d, u.batch_id)) done.push(d);
+    await c.env.SEED_FETCH_QUEUE.send({ type: 'finalize', day: d, batchId: u.batch_id });
+    queued.push(d);
   }
-  return c.json({ ok: true, reconciled: done });
+  return c.json({ ok: true, queued });
 });
 
 // Bounded winner-ingest batch: turns up to `limit` reconciled winners of a day

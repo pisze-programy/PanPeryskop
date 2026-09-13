@@ -79,7 +79,6 @@ test('produceSeedWindow: bumps generation, marks every window day, resets old un
   const env = {
     DB: db as unknown as D1Database,
     SEED_FETCH_QUEUE: { sendBatch: async (msgs: unknown[]) => { sent += msgs.length; } },
-    SEED_INGEST_QUEUE: {}, SEED_FINALIZE_QUEUE: {},
   } as unknown as Parameters<typeof produceSeedWindow>[0];
 
   const res = await produceSeedWindow(env, '2026-09-08');

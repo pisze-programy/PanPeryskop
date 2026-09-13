@@ -3,12 +3,11 @@
 
 import { Hono } from 'hono';
 import {
-  APEXCHARTS_SRC, card, cardHeader, esc, fmtDate, fmtDur, fmtPct, icon, listGroup,
-  pageHeader, pill, relAgo, safeJson, staticFilePath, timeline, timelineItem,
+  APEXCHARTS_SRC, card, cardHeader, esc, fmtDate, icon, listGroup,
+  pageHeader, pill, safeJson, staticFilePath, timeline, timelineItem,
 } from '../../ui';
 import { overviewData, overviewCharts } from '../../queries';
 import { DAY_MS, HOUR_MS } from '../../../seed/core/constants';
-import { fmtPctNum } from '../common';
 import { todayWarsaw, addDaysWarsaw } from '../../../seed/core/dates';
 import { SEED_DAYS_AHEAD } from '../../../seed/core/constants';
 import { renderPage } from './shared';
@@ -28,8 +27,8 @@ function dayLabel(dateStr: string): string {
 function batchStatusPill(s: string): string {
   return s === 'done' ? pill('done', 'ok') :
     s === 'failed' ? pill('failed', 'err') :
-    s === 'ingesting' || s === 'fetching' || s === 'fetch_done' ? pill(s, 'warn') :
-    pill(esc(s), 'muted');
+    s === 'running' ? pill('running', 'warn') :
+    s === 'created' ? pill('created', 'muted') : pill(esc(s), 'muted');
 }
 
 pageRoutes.get('/', async (c) => {
@@ -39,6 +38,8 @@ pageRoutes.get('/', async (c) => {
   const windowEnd = addDaysWarsaw(today, SEED_DAYS_AHEAD);
   const d = await overviewData(c.env, SEED_DAYS_AHEAD);
   const charts = overviewCharts(d);
+  const lastUnits = d.lastSeed.units;
+  const lastRunStatus = !lastUnits ? 'created' : lastUnits.failed > 0 ? 'failed' : lastUnits.active > 0 ? 'running' : 'done';
 
   // ---- Health strip ----
   const totalBatches = d.batchCounts.reduce((s, b) => s + b.n, 0);
@@ -47,7 +48,6 @@ pageRoutes.get('/', async (c) => {
   if (seedFailed > 0) failures.push(`${seedFailed}/${totalBatches} batchy seeda <strong>failed</strong>`);
   if (d.status.pending > 0) failures.push(`${d.status.pending} event <strong>pending</strong>`);
   if (d.failedLogins7d > 0) failures.push(`${d.failedLogins7d} prób logowania do admina`);
-  if (d.budget?.exceeded) failures.push('budget Browser <strong>przekroczony</strong>');
   if (d.cron.lastCronRunMs && now - d.cron.lastCronRunMs > 30 * HOUR_MS) failures.push('cron nie uruchomił się od <strong>30 h</strong>');
   const healthHtml = failures.length
     ? `<div class="alert alert-danger mb-3" role="alert">
@@ -109,16 +109,16 @@ pageRoutes.get('/', async (c) => {
       <a class="card card-sm text-reset text-decoration-none" href="/admin/seed">
         <div class="card-body">
           <div class="d-flex align-items-center mb-2">
-            <div class="subheader">Ostatni seed${d.lastSeed.batch ? ` · ${esc(String((d.lastSeed.batch as any).day ?? ''))}` : ''}</div>
-            <div class="ms-auto">${d.lastSeed.batch ? batchStatusPill(String((d.lastSeed.batch as any).status ?? '')) : ''}</div>
+            <div class="subheader">Ostatni seed${d.lastSeed.batch ? ` · ${esc(String(d.lastSeed.batch.day ?? ''))}` : ''}</div>
+            <div class="ms-auto">${d.lastSeed.batch ? batchStatusPill(lastRunStatus) : ''}</div>
           </div>
           <div class="d-flex align-items-baseline">
-            <div class="h1 mb-2 me-2">${d.lastSeed.runs ? d.lastSeed.runs.ingested : '—'}</div>
-            <span class="text-secondary">ingest / ${d.lastSeed.runs ? d.lastSeed.runs.cands : '—'} cand</span>
+            <div class="h1 mb-2 me-2">${d.lastSeed.units ? d.lastSeed.units.done : '—'}</div>
+            <span class="text-secondary">unitów / ${d.lastSeed.units ? d.lastSeed.units.total : '—'}</span>
           </div>
           <div class="d-flex mb-1 text-secondary flex-wrap">
-            <span class="me-3">Błędy <strong class="${(d.lastSeed.runs?.errors ?? 0) > 0 ? 'text-danger' : 'text-green'}">${d.lastSeed.runs?.errors ?? 0}</strong></span>
-            <span class="me-3">Czas <strong>${d.lastSeed.runs ? fmtDur(d.lastSeed.runs.dur) : '—'}</strong></span>
+            <span class="me-3">Failed <strong class="${(d.lastSeed.units?.failed ?? 0) > 0 ? 'text-danger' : 'text-green'}">${d.lastSeed.units?.failed ?? 0}</strong></span>
+            <span class="me-3">Wiersze <strong>${d.lastSeed.units?.rows ?? 0}</strong></span>
           </div>
         </div>
       </a>
@@ -166,50 +166,31 @@ pageRoutes.get('/', async (c) => {
   const batch = d.lastSeed.batch as any;
   let seedItems = '';
   if (batch) {
-    const r = d.lastSeed.runs;
-    const ingestPct = r && r.cands > 0 ? Math.round((r.ingested / r.cands) * 100) : 0;
-    const scopePct = batch.scopes_total > 0 ? Math.round((batch.scopes_done / batch.scopes_total) * 100) : 0;
+    const donePct = lastUnits && lastUnits.total > 0 ? Math.round((lastUnits.done / lastUnits.total) * 100) : 0;
     seedItems += `<div class="list-group-item">
       <div class="row align-items-center">
-        <div class="col"><strong>${esc(batch.day)}</strong> ${batchStatusPill(batch.status)} ${pill(batch.run_type === 'cron' ? 'cron' : 'manual', batch.run_type === 'cron' ? 'ok' : 'muted')}</div>
-        <div class="col-auto text-secondary">zakończono ${relAgo(batch.updated_at)}</div>
+        <div class="col"><strong>${esc(batch.day)}</strong> ${batchStatusPill(lastRunStatus)} ${pill(batch.run_type === 'cron' ? 'cron' : 'manual', batch.run_type === 'cron' ? 'ok' : 'muted')}</div>
+        <div class="col-auto text-secondary">${fmtDate(batch.created_at)}</div>
       </div></div>
       <div class="list-group-item">
         <div class="row align-items-center">
-          <div class="col">Scopy (${batch.scopes_done}/${batch.scopes_total})</div>
-          <div class="col-6"><div class="progress progress-sm"><div class="progress-bar bg-success" style="width:${scopePct}%"></div></div></div>
-          <div class="col-auto"><span class="text-secondary">${scopePct}%</span></div>
-        </div></div>
-      <div class="list-group-item">
-        <div class="row align-items-center">
-          <div class="col">Ingest (${r?.ingested ?? 0}/${r?.cands ?? 0})</div>
-          <div class="col-6"><div class="progress progress-sm"><div class="progress-bar bg-primary" style="width:${ingestPct}%"></div></div></div>
-          <div class="col-auto"><span class="text-secondary">${ingestPct}%</span></div>
+          <div class="col">Unity (${lastUnits?.done ?? 0}/${lastUnits?.total ?? 0})</div>
+          <div class="col-6"><div class="progress progress-sm"><div class="progress-bar bg-success" style="width:${donePct}%"></div></div></div>
+          <div class="col-auto"><span class="text-secondary">${donePct}%</span></div>
         </div></div>
       <div class="list-group-item">
         <div class="row">
-          <div class="col-3 text-secondary">Błędy</div><div class="col-3 ${(r?.errors ?? 0) > 0 ? 'text-danger fw-bold' : 'text-green fw-bold'}">${r?.errors ?? 0}</div>
-          <div class="col-3 text-secondary">Browser</div><div class="col-3">${r ? fmtDur(r.browser) : '—'}</div>
-          <div class="col-3 text-secondary">Aktualizacja</div><div class="col-3">${fmtDate(batch.updated_at)}</div>
+          <div class="col-3 text-secondary">Failed</div><div class="col-3 ${(lastUnits?.failed ?? 0) > 0 ? 'text-danger fw-bold' : 'text-green fw-bold'}">${lastUnits?.failed ?? 0}</div>
+          <div class="col-3 text-secondary">Active</div><div class="col-3">${lastUnits?.active ?? 0}</div>
+          <div class="col-3 text-secondary">Wiersze</div><div class="col-3">${lastUnits?.rows ?? 0}</div>
         </div></div>`;
-    if (batch.reason) seedItems += `<div class="list-group-item"><div class="alert alert-danger mb-0 py-2">Powód: <span class="text-red">${esc(String(batch.reason))}</span></div></div>`;
   } else {
     seedItems = `<div class="list-group-item"><span class="text-secondary">Brak uruchomień seeda.</span></div>`;
-  }
-  let budgetFooter = '';
-  if (d.budget) {
-    const pct = fmtPctNum(d.budget.monthMs, d.budget.limitMs);
-    budgetFooter = `<div class="card-footer">
-      <div class="d-flex align-items-center">
-        <span class="text-secondary me-2">Budget Browser Run</span>
-        <div class="progress flex-grow-1 progress-sm me-2"><div class="progress-bar ${d.budget.exceeded ? 'bg-danger' : 'bg-primary'}" style="width:${Math.min(100, pct)}%"></div></div>
-        <span class="${d.budget.exceeded ? 'text-danger fw-bold' : ''}">${fmtPct(d.budget.monthMs, d.budget.limitMs)} (${fmtDur(d.budget.monthMs)} / ${fmtDur(d.budget.limitMs)})</span>
-      </div></div>`;
   }
   const seedBadges = `<span class="badge bg-success-lt">${charts.kpis.seedDone} done</span><span class="badge bg-danger-lt">${charts.kpis.seedFailed} failed</span>`;
   const seedRow = `<div class="row row-cards mb-3">
     <div class="col-12 col-xl-8">
-      ${card({ class: 'h-100', header: cardHeader({ title: 'Ostatni seed', actions: '<a class="btn btn-sm btn-outline-secondary" href="/admin/seed">Logi seed</a>' }), body: listGroup(seedItems, 'list-group-flush'), footer: budgetFooter })}
+      ${card({ class: 'h-100', header: cardHeader({ title: 'Ostatni seed', actions: '<a class="btn btn-sm btn-outline-secondary" href="/admin/seed">Logi seed</a>' }), body: listGroup(seedItems, 'list-group-flush') })}
     </div>
     <div class="col-12 col-xl-4">
       ${card({ class: 'h-100', header: cardHeader({ title: 'Seed · ingest dziennie', actions: seedBadges }), body: '<div class="pt-0"><div id="pp-chart-seed" class="chart-sm mb-2"></div></div>' })}

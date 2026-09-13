@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reconcileDay, RECONCILE_TIME_GUARD_MIN } from '../src/seed/reconcile';
+import { reconcileDay, RECONCILE_TIME_GUARD_MIN, sweepStuckRaw, MAX_RAW_ATTEMPTS } from '../src/seed/reconcile';
 
 interface RawRow {
   id: string; provider: string; external_id: string; title: string;
@@ -8,6 +8,7 @@ interface RawRow {
   start_min: number; showtimes: string; showtime_booking: string;
   price_pln: number | null; is_sold_out: number; link_url: string | null;
   booking_key: string | null; status: string; winner_raw_id: string | null;
+  updated_at?: number; attempts?: number;
 }
 interface PostRow { id: string; external_id: string; status: string; locked: boolean }
 
@@ -24,6 +25,7 @@ class MockReconDB {
       title: '', raw_venue: '', city: null, canonical_venue_id: null, start_min: 0,
       showtimes: '[]', showtime_booking: '[]', price_pln: null, is_sold_out: 0,
       link_url: null, booking_key: null, status: 'raw', winner_raw_id: null,
+      updated_at: 0, attempts: 0,
       ...r,
     } as RawRow);
   }
@@ -58,9 +60,26 @@ class MockReconDB {
             return { results: [] as T[] };
           },
           async run(): Promise<{ meta: { changes: number } }> {
-            if (sql.includes('INSERT INTO reconciliation_failures')) {
+            if (sql.includes('INTO reconciliation_failures')) {
               db.failures.push({ args });
               return { meta: { changes: 1 } };
+            }
+            if (sql.includes("SET status='winner'") && sql.includes("status='ingesting'")) {
+              const cutoff = Number(args[1]);
+              const cap = Number(args[2]);
+              let n = 0;
+              for (const r of db.raw.values()) {
+                if (r.status === 'ingesting' && (r.updated_at ?? 0) < cutoff && (r.attempts ?? 0) < cap) { r.status = 'winner'; n++; }
+              }
+              return { meta: { changes: n } };
+            }
+            if (sql.includes("SET status='winner'") && sql.includes("status='error'")) {
+              const cap = Number(args[1]);
+              let n = 0;
+              for (const r of db.raw.values()) {
+                if (r.status === 'error' && (r.attempts ?? 0) < cap) { r.status = 'winner'; n++; }
+              }
+              return { meta: { changes: n } };
             }
             if (sql.includes("SET status='winner'")) {
               const row = db.raw.get(String(args[args.length - 1]));
@@ -112,7 +131,7 @@ function row(over: Partial<RawRow> & { id: string; provider: string; external_id
 }
 
 test('reconcile: solo row becomes winner, empty day is a no-op', async () => {
-  const db = new MockReconDB() as unknown as D1Database;
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
   assert.deepEqual(await reconcileDay(db, DAY, 'b1'), { day: DAY, winners: 0, duplicates: 0, failures: 0, rejectedPosts: 0 });
   db.seedRaw(row({ id: 'r1', provider: 'kupbilecik', external_id: 'kupbilecik-1-20260908', title: 'Solo koncert', raw_venue: 'Klub X', canonical_venue_id: 'klubx', start_min: 1200, showtimes: '["20:00"]' }));
   const s = await reconcileDay(db, DAY, 'b1');
@@ -121,7 +140,7 @@ test('reconcile: solo row becomes winner, empty day is a no-op', async () => {
 });
 
 test('reconcile: kup+ebilet same event merge, winner absorbs times/booking/price', async () => {
-  const db = new MockReconDB() as unknown as D1Database;
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
   db.seedRaw(row({
     id: 'rk', provider: 'kupbilecik', external_id: 'kupbilecik-1-20260908',
     title: 'Berek, czyli Upiór w Moherze', raw_venue: 'Scena Relax', canonical_venue_id: 'scenarelax',
@@ -156,7 +175,7 @@ test('reconcile: kup+ebilet same event merge, winner absorbs times/booking/price
 });
 
 test('reconcile: time guard keeps 14:00 vs 16:00 apart; booking_key forces a merge', async () => {
-  const db = new MockReconDB() as unknown as D1Database;
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
   const mk = (id: string, start: number, key: string | null) => row({
     id, provider: 'kupbilecik', external_id: `kupbilecik-${id}-20260908`,
     title: 'Ten sam tytuł', raw_venue: 'Sala Y', canonical_venue_id: 'salay',
@@ -168,7 +187,7 @@ test('reconcile: time guard keeps 14:00 vs 16:00 apart; booking_key forces a mer
   assert.equal(s.winners, 2, 'two hours apart stay separate');
   assert.equal(s.duplicates, 0);
 
-  const db2 = new MockReconDB() as unknown as D1Database;
+  const db2 = new MockReconDB() as unknown as D1Database & MockReconDB;
   db2.seedRaw(mk('a', 14 * 60, 'kupbilecik.pl/imprezy/1/'));
   db2.seedRaw(mk('b', 16 * 60, 'kupbilecik.pl/imprezy/1/'));
   const s2 = await reconcileDay(db2, DAY, 'b1');
@@ -177,7 +196,7 @@ test('reconcile: time guard keeps 14:00 vs 16:00 apart; booking_key forces a mer
 });
 
 test('reconcile: ambiguous same-source pair goes to failures, nothing merges', async () => {
-  const db = new MockReconDB() as unknown as D1Database;
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
   // The documented 0.8-containment trap: two REAL concerts, same venue.
   db.seedRaw(row({
     id: 'g1', provider: 'going', external_id: 'going-1-20260908',
@@ -199,7 +218,7 @@ test('reconcile: ambiguous same-source pair goes to failures, nothing merges', a
 });
 
 test('reconcile: locked existing post is never auto-demoted', async () => {
-  const db = new MockReconDB() as unknown as D1Database;
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
   db.seedRaw(row({
     id: 'rk', provider: 'kupbilecik', external_id: 'kupbilecik-1-20260908',
     title: 'Berek, czyli Upiór w Moherze', raw_venue: 'Scena Relax',
@@ -220,7 +239,7 @@ test('reconcile: locked existing post is never auto-demoted', async () => {
 });
 
 test('reconcile: idempotent re-run finds nothing left to do', async () => {
-  const db = new MockReconDB() as unknown as D1Database;
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
   db.seedRaw(row({
     id: 'r1', provider: 'kupbilecik', external_id: 'kupbilecik-1-20260908',
     title: 'Solo koncert', raw_venue: 'Klub X', canonical_venue_id: 'klubx', start_min: 1200,
@@ -230,6 +249,40 @@ test('reconcile: idempotent re-run finds nothing left to do', async () => {
   assert.deepEqual(s2, { day: DAY, winners: 0, duplicates: 0, failures: 0, rejectedPosts: 0 });
 });
 
+test('reconcile: fuzzy venue strings still merge (candidate bucketing preserves matches)', async () => {
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
+  // flatNorm differs ("kino muza" vs "kino muza 2") but seqRatio = 0.9 ≥ 0.8.
+  db.seedRaw(row({ id: 'a', provider: 'kupbilecik', external_id: 'kup-a', title: 'Koncert Muzyczny', raw_venue: 'Kino Muza', start_min: 1200 }));
+  db.seedRaw(row({ id: 'b', provider: 'ebilet', external_id: 'eb-b', title: 'Koncert Muzyczny', raw_venue: 'Kino Muza 2', start_min: 1200 }));
+  const s = await reconcileDay(db, DAY, 'b1');
+  assert.equal(s.winners, 1, 'fuzzy venue match survived bucketing');
+  assert.equal(s.duplicates, 1);
+});
+
+test('reconcile: same canonical venue id merges even with different venue strings', async () => {
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
+  db.seedRaw(row({ id: 'a', provider: 'kupbilecik', external_id: 'kup-a', title: 'Koncert Muzyczny', raw_venue: 'Sala A', canonical_venue_id: 'same', start_min: 1200 }));
+  db.seedRaw(row({ id: 'b', provider: 'ebilet', external_id: 'eb-b', title: 'Koncert Muzyczny', raw_venue: 'Zupelnie Inna Nazwa', canonical_venue_id: 'same', start_min: 1200 }));
+  const s = await reconcileDay(db, DAY, 'b1');
+  assert.equal(s.winners, 1, 'canonical id is enough');
+  assert.equal(s.duplicates, 1);
+});
+
 test('reconcile: time guard constant is 30 minutes', () => {
   assert.equal(RECONCILE_TIME_GUARD_MIN, 30);
+});
+
+test('sweepStuckRaw: reopens dead ingesting + retryable error, leaves fresh/at-cap alone', async () => {
+  const mock = new MockReconDB();
+  const db = mock as unknown as D1Database;
+  mock.seedRaw({ id: 'i1', provider: 'ebilet', external_id: 'i1', status: 'ingesting', updated_at: 1, attempts: 1 });
+  mock.seedRaw({ id: 'i2', provider: 'ebilet', external_id: 'i2', status: 'ingesting', updated_at: Date.now(), attempts: 1 });
+  mock.seedRaw({ id: 'e1', provider: 'ebilet', external_id: 'e1', status: 'error', attempts: 1 });
+  mock.seedRaw({ id: 'e2', provider: 'ebilet', external_id: 'e2', status: 'error', attempts: MAX_RAW_ATTEMPTS });
+  const res = await sweepStuckRaw(db);
+  assert.equal(res.reopened, 2);
+  assert.equal(mock.raw.get('i1')!.status, 'winner', 'dead worker reopened');
+  assert.equal(mock.raw.get('i2')!.status, 'ingesting', 'live ingesting untouched');
+  assert.equal(mock.raw.get('e1')!.status, 'winner', 'retryable error reopened');
+  assert.equal(mock.raw.get('e2')!.status, 'error', 'at-cap error stays terminal');
 });

@@ -142,7 +142,7 @@ function cand(over: Partial<SeedCandidate> = {}): SeedCandidate {
 const INPUT = { day: '2026-09-08', batchId: 'b1', unitId: 'u1', provider: 'ebilet', candidates: [] as SeedCandidate[] };
 
 test('sink: ebilet-like venue stamps a stub id, tokens/start/booking derived', async () => {
-  const db = new MockRawDB() as unknown as D1Database;
+  const db = new MockRawDB() as unknown as D1Database & MockRawDB;
   const n = await writeRawRows(db, { ...INPUT, candidates: [cand()] }, 90);
   assert.equal(n, 1);
   const row = db.raw.get('2026-09-08|ebilet|ebilet-1-20260908')!;
@@ -159,7 +159,7 @@ test('sink: ebilet-like venue stamps a stub id, tokens/start/booking derived', a
 });
 
 test('sink: same venue twice → one stub; other city → separate id', async () => {
-  const db = new MockRawDB() as unknown as D1Database;
+  const db = new MockRawDB() as unknown as D1Database & MockRawDB;
   await writeRawRows(db, { ...INPUT, candidates: [cand(), cand({ externalId: 'ebilet-2-20260908', title: 'Inny tytuł' })] }, 90);
   assert.equal(db.venues.size, 1, 'one stub for one venue');
   await writeRawRows(db, { ...INPUT, candidates: [cand({ externalId: 'ebilet-3-20260908', city: 'Kraków' })] }, 90);
@@ -168,7 +168,7 @@ test('sink: same venue twice → one stub; other city → separate id', async ()
 });
 
 test('sink: existing geo venue wins over stub; empty venue → null', async () => {
-  const db = new MockRawDB() as unknown as D1Database;
+  const db = new MockRawDB() as unknown as D1Database & MockRawDB;
   db.venues.set('scenarelax', { id: 'scenarelax', name: 'Scena Relax', city: 'warszawa', lat: 52.23, lng: 21.01 });
   await writeRawRows(db, { ...INPUT, candidates: [cand()] }, 90);
   assert.equal(db.venues.size, 1, 'no stub created when the venue is known');
@@ -178,7 +178,7 @@ test('sink: existing geo venue wins over stub; empty venue → null', async () =
 });
 
 test('sink: re-run keeps row id, refreshes content (idempotent re-seed)', async () => {
-  const db = new MockRawDB() as unknown as D1Database;
+  const db = new MockRawDB() as unknown as D1Database & MockRawDB;
   await writeRawRows(db, { ...INPUT, candidates: [cand({ price: 120 })] }, 90);
   const first = db.raw.get('2026-09-08|ebilet|ebilet-1-20260908')!;
   await writeRawRows(db, { ...INPUT, candidates: [cand({ price: 99, title: 'Berek, czyli upiór w moherze!' })] }, 90);
@@ -189,7 +189,7 @@ test('sink: re-run keeps row id, refreshes content (idempotent re-seed)', async 
 });
 
 test('resolveVenueGeo: coordinate-less stubs never resolve', async () => {
-  const db = new MockRawDB() as unknown as D1Database;
+  const db = new MockRawDB() as unknown as D1Database & MockRawDB;
   await writeRawRows(db, { ...INPUT, candidates: [cand()] }, 90); // creates stub only
   const hit = await resolveVenueGeo(db, 'Scena Relax', 'Warszawa');
   assert.equal(hit, null, 'stub must not resolve to null coordinates');
@@ -199,7 +199,7 @@ test('resolveVenueGeo: coordinate-less stubs never resolve', async () => {
 });
 
 test('sink: geo candidate reuses the known venue (cheap, no geo API call)', async () => {
-  const db = new MockRawDB() as unknown as D1Database;
+  const db = new MockRawDB() as unknown as D1Database & MockRawDB;
   db.venues.set('scenarelax', { id: 'scenarelax', name: 'Scena Relax', city: 'warszawa', lat: 52.23, lng: 21.01 });
   await writeRawRows(db, {
     ...INPUT,
@@ -214,7 +214,7 @@ test('sink: geo candidate reuses the known venue (cheap, no geo API call)', asyn
 });
 
 test('sink: geo candidate with an unknown venue saves its coordinates (no stub)', async () => {
-  const db = new MockRawDB() as unknown as D1Database;
+  const db = new MockRawDB() as unknown as D1Database & MockRawDB;
   await writeRawRows(db, {
     ...INPUT,
     candidates: [cand({ venue: 'Nowa Sala', lat: 50.06, lng: 19.94, city: 'Kraków' })],
@@ -230,7 +230,7 @@ test('sink: geo candidate with an unknown venue saves its coordinates (no stub)'
 });
 
 test('sink: a later geo visit heals a stub left by a geo-less candidate', async () => {
-  const db = new MockRawDB() as unknown as D1Database;
+  const db = new MockRawDB() as unknown as D1Database & MockRawDB;
   await writeRawRows(db, { ...INPUT, candidates: [cand()] }, 90); // geo-less → stub
   assert.equal(db.venues.get('scenarelax')!.lat, null);
   await writeRawRows(db, {

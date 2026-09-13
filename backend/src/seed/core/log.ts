@@ -1,9 +1,6 @@
-// Persistent seed-run logs in D1 (manual + cron) + Browser Run budget tracking.
+// Persistent seed-run logs in D1 for the manual facebook/mtp paths.
 import { nanoid } from 'nanoid';
 import { RunType } from './types';
-import { HOUR_MS } from './constants';
-
-const BROWSER_BUDGET_MS = 10 * HOUR_MS; // 10h / month (Workers Paid included)
 
 export interface SeedRunLog {
   runType: RunType;
@@ -33,23 +30,4 @@ export async function writeSeedRun(env: Env, log: SeedRunLog): Promise<void> {
       log.durationMs, log.browserMs, log.batchId ?? null, Date.now()
     )
     .run();
-}
-
-export interface BrowserBudget {
-  monthMs: number;
-  limitMs: number;
-  exceeded: boolean;
-}
-
-export async function browserBudget(env: Env): Promise<BrowserBudget | null> {
-  if (!env.BROWSER) return null;
-  const startOfMonth = new Date();
-  startOfMonth.setUTCDate(1);
-  startOfMonth.setUTCHours(0, 0, 0, 0);
-  const row = await env.DB
-    .prepare('SELECT COALESCE(SUM(browser_ms), 0) AS total FROM seed_runs WHERE created_at >= ?')
-    .bind(startOfMonth.getTime())
-    .first<{ total: number }>();
-  const monthMs = row?.total ?? 0;
-  return { monthMs, limitMs: BROWSER_BUDGET_MS, exceeded: monthMs > BROWSER_BUDGET_MS };
 }

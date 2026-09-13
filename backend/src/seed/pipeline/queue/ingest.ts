@@ -80,9 +80,16 @@ export async function ingestWinnerRow(
     return { postId: null, skipped: true, pendingGeo: false };
   }
 
-  await env.DB.prepare(`UPDATE seed_raw SET status='ingesting', attempts=attempts+1, updated_at=? WHERE id=?`)
+  // Atomic claim: only one worker may move a winner to 'ingesting'. A concurrent
+  // finalize loses here (changes=0) instead of racing the post unique index and
+  // getting its row stuck in 'error'.
+  const claim = await env.DB
+    .prepare(`UPDATE seed_raw SET status='ingesting', attempts=attempts+1, updated_at=? WHERE id=? AND status='winner'`)
     .bind(now(), row.id)
     .run();
+  if (Number(claim?.meta?.changes ?? 0) !== 1) {
+    return { postId: null, skipped: true, pendingGeo: false };
+  }
   try {
     const dayStart = warsawMidnightMs(day);
     const createdAt = eventCreatedAtMs(day);

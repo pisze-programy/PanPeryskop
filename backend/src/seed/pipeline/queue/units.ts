@@ -14,8 +14,16 @@ import { now } from './state';
 // How long a claim lives before the unit may be re-claimed by someone else.
 export const UNIT_LEASE_MS = 30 * 60_000;
 
-// A unit that fails this many times is terminal — never re-opened by a refresh.
+// A unit that fails this many times within one run is terminal for that run.
 export const MAX_UNIT_ATTEMPTS = 3;
+
+// A failed unit is retried (with a backoff) by the watchdog while under MAX.
+export const UNIT_RETRY_BACKOFF_MS = 15 * 60_000;
+
+// Refills that may end with this unit still failed before it is left terminal for
+// good. attempts are per-run, strikes are per-refill — a transient outage recovers,
+// a permanently broken scope stops costing money after the cap.
+export const MAX_UNIT_STRIKES = 5;
 
 /** The event days a unit is allowed to write: [day] for a day unit,
  *  [day..day+SEED_REFILL_AHEAD] for a window unit. Candidates outside this set
@@ -143,35 +151,51 @@ export async function completeUnit(db: D1Database, unitId: string, token: string
   return Number(r?.meta?.changes ?? 0) === 1;
 }
 
-/** Mark a unit failed. Only the claim owner (token) may fail a claimed unit. */
+/** Mark a unit failed (attempts already counted at claim). Ownership is released
+ *  so the watchdog can retry it after a backoff while attempts remain; the unit
+ *  never hot-loops back into the same invocation. */
 export async function failUnit(db: D1Database, unitId: string, token: string, error: string): Promise<boolean> {
   const r = await db
-    .prepare(`UPDATE seed_units SET status='failed', error=?, updated_at=? WHERE id=? AND status='claimed' AND claimed_by=?`)
+    .prepare(
+      `UPDATE seed_units
+          SET status='failed', error=?, claimed_by=NULL, claimed_at=NULL, lease_expires_at=NULL, updated_at=?
+        WHERE id=? AND status='claimed' AND claimed_by=?`,
+    )
     .bind(error.slice(0, 500), now(), unitId, token)
     .run();
   return Number(r?.meta?.changes ?? 0) === 1;
 }
 
-/** Lease repair (watchdog): a claimed unit whose lease expired goes back to
- *  pending for a retry, unless it already exhausted MAX_UNIT_ATTEMPTS — then it
- *  is marked failed. Returns the number of units touched. Never schedules work. */
+/** Lease repair (watchdog): expired claimed leases go back to pending for a retry
+ *  (or failed at the cap), and failed units are retried after a backoff while
+ *  attempts remain. Returns the counts touched. Never schedules work. */
 export async function watchdogUnits(db: D1Database): Promise<{ requeued: number; failed: number }> {
   const t = now();
-  const requeued = await db
+  const requeuedLease = await db
     .prepare(
       `UPDATE seed_units SET status='pending', claimed_by=NULL, claimed_at=NULL, lease_expires_at=NULL, updated_at=?
         WHERE status='claimed' AND lease_expires_at < ? AND attempts < ?`,
     )
     .bind(t, t, MAX_UNIT_ATTEMPTS)
     .run();
-  const failed = await db
+  const failedLease = await db
     .prepare(
       `UPDATE seed_units SET status='failed', error='lease expired after max attempts', updated_at=?
         WHERE status='claimed' AND lease_expires_at < ? AND attempts >= ?`,
     )
     .bind(t, t, MAX_UNIT_ATTEMPTS)
     .run();
-  return { requeued: Number(requeued?.meta?.changes ?? 0), failed: Number(failed?.meta?.changes ?? 0) };
+  const retriedFailed = await db
+    .prepare(
+      `UPDATE seed_units SET status='pending', updated_at=?
+        WHERE status='failed' AND attempts < ? AND updated_at < ?`,
+    )
+    .bind(t, MAX_UNIT_ATTEMPTS, t - UNIT_RETRY_BACKOFF_MS)
+    .run();
+  return {
+    requeued: Number(requeuedLease?.meta?.changes ?? 0) + Number(retriedFailed?.meta?.changes ?? 0),
+    failed: Number(failedLease?.meta?.changes ?? 0),
+  };
 }
 
 /** Counts by status for one day — the future reconcile gate and today's debug view. */

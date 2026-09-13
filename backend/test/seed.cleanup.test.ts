@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pruneSeedData } from '../src/seed/pipeline/cleanup';
-import { DAY_MS } from '../src/seed/core/constants';
+import { DAY_MS, SEED_REFILL_AHEAD } from '../src/seed/core/constants';
 
-test('cleanup: pruneSeedData removes audit older than 4 days, keeps venues', async () => {
+test('cleanup: pruneSeedData keeps window + audit, skips open units/reconciling days', async () => {
   // Fake D1 recording DELETE statements and their WHERE bindings.
   const deletes: { sql: string; cutoff: number }[] = [];
   const db = {
@@ -26,11 +26,17 @@ test('cleanup: pruneSeedData removes audit older than 4 days, keeps venues', asy
 
   const raw = deletes.find((d) => d.sql.includes('seed_raw'));
   const units = deletes.find((d) => d.sql.includes('seed_units'));
+  const days = deletes.find((d) => d.sql.includes('seed_days'));
   const batches = deletes.find((d) => d.sql.includes('seed_batches'));
   const runs = deletes.find((d) => d.sql.includes('seed_runs'));
-  assert.ok(raw && raw.cutoff <= Date.now() - 4 * DAY_MS, 'raw pruned');
-  assert.ok(units && units.cutoff <= Date.now() - 4 * DAY_MS, 'units pruned');
-  assert.ok(batches, 'batches pruned');
+  // Retention must exceed the live refill window.
+  const retention = (SEED_REFILL_AHEAD + 6) * DAY_MS;
+  assert.ok(retention > (SEED_REFILL_AHEAD + 1) * DAY_MS, 'retention exceeds the window');
+  assert.ok(raw && raw.cutoff <= Date.now() - retention, 'raw pruned');
+  assert.ok(units && units.cutoff <= Date.now() - retention, 'units pruned');
+  assert.ok(units!.sql.includes("status IN ('done','failed')"), 'open units never pruned');
+  assert.ok(days && days.sql.includes('reconciling=0'), 'reconciling days never pruned');
+  assert.ok(batches && batches.sql.includes('NOT IN (SELECT DISTINCT batch_id FROM seed_units)'), 'batches with live units kept');
   assert.ok(runs, 'runs pruned');
   // The persistent venues store must never be pruned.
   assert.ok(!deletes.some((d) => d.sql.includes('FROM venues')), 'venues untouched');

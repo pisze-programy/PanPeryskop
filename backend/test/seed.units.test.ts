@@ -112,8 +112,18 @@ class MockUnitsDB {
           if (!row || row.status !== 'claimed' || row.claimed_by !== token) return { meta: { changes: 0 } };
           row.status = 'failed';
           row.error = error;
-          row.updated_at = t;
+          row.claimed_by = null; row.claimed_at = null; row.lease_expires_at = null; row.updated_at = t;
           return { meta: { changes: 1 } };
+        }
+        if (sql.includes("SET status='pending', updated_at=?")) {
+          const [t, maxAttempts, cutoff] = args as [number, number, number];
+          let n = 0;
+          for (const row of db.units.values()) {
+            if (row.status === 'failed' && row.attempts < maxAttempts && row.updated_at < cutoff) {
+              row.status = 'pending'; row.updated_at = t; n++;
+            }
+          }
+          return { meta: { changes: n } };
         }
         if (sql.includes("SET status='pending', claimed_by=NULL")) {
           const [t, t2, maxAttempts] = args as [number, number, number];
@@ -142,7 +152,7 @@ class MockUnitsDB {
   }
 }
 
-const db = () => new MockUnitsDB() as unknown as D1Database;
+const db = () => new MockUnitsDB() as unknown as D1Database & MockUnitsDB;
 const plan = (gen = 1) => planSeedUnits({ windowStart: '2026-09-08', days: ['2026-09-08'], batchId: 'b1', generation: gen });
 
 test('planSeedUnits: day providers one unit per scope; window providers one per scope; manual skipped', () => {
@@ -186,13 +196,36 @@ test('claim returns a token; only that token can complete', async () => {
   assert.equal(await completeUnit(d, w1!.id, w1!.token, 12), true, 'owner completes');
 });
 
-test('fail requires the owner token too', async () => {
-  const d = db();
-  await writeDayUnits(d, plan().slice(0, 2), 1000, 90);
+test('fail: owner token required; watchdog retries after backoff, terminal at cap', async () => {
+  const mock = new MockUnitsDB();
+  const d = mock as unknown as D1Database;
+  await writeDayUnits(d, plan().slice(0, 1), 1000, 90);
   const u = await claimUnit(d, 'vps');
   assert.ok(u);
-  assert.equal(await failUnit(d, u!.id, 'nope', 'boom'), false);
-  assert.equal(await failUnit(d, u!.id, u!.token, 'boom'), true);
+  assert.equal(await failUnit(d, u!.id, 'nope', 'boom'), false, 'wrong token cannot fail');
+  assert.equal(await failUnit(d, u!.id, u!.token, 'boom'), true, 'owner may fail');
+  const row = mock.units.get(u!.id)!;
+  assert.equal(row.status, 'failed', 'released as failed, not hot-looped');
+
+  // Fresh failure is inside the backoff window → watchdog does not retry yet.
+  let wd = await watchdogUnits(d);
+  assert.equal(wd.requeued, 0, 'no retry before the backoff elapses');
+
+  // Age it past the backoff → requeued for another attempt.
+  row.updated_at = 0;
+  wd = await watchdogUnits(d);
+  assert.equal(wd.requeued, 1, 'retried after the backoff');
+  assert.equal(row.status, 'pending');
+
+  // At the attempt cap the watchdog leaves it terminal.
+  const u2 = await claimUnit(d, 'vps');
+  assert.ok(u2);
+  mock.units.get(u2!.id)!.attempts = MAX_UNIT_ATTEMPTS;
+  mock.units.get(u2!.id)!.updated_at = 0;
+  await failUnit(d, u2!.id, u2!.token, 'poison');
+  wd = await watchdogUnits(d);
+  assert.equal(wd.requeued, 0, 'at-cap failure not retried');
+  assert.equal(mock.units.get(u2!.id)!.status, 'failed');
 });
 
 test('claim re-claims an expired lease; watchdog requeues/fails by attempts', async () => {

@@ -2,6 +2,7 @@ import { GeoStore } from '../seed/core/geo';
 import { keepEuropeanCityEvent } from './airports';
 import { resolveTravelGeo } from './geo';
 import { TravelEvent } from './store';
+import type { TravelSource } from './run';
 import {
   TRAVEL_PROVIDER, ESPN_TAG,
   ESPN_HOST, ESPN_BACKUP_HOST, ESPN_LIMIT, ESPN_TIMEOUT_MS, ESPN_RETRIES, ESPN_RETRY_DELAY_MS,
@@ -115,3 +116,8 @@ export async function fetchEspnDay(day: string, opts: EspnFetchOptions & { store
   }
   return out;
 }
+/** ESPN travel source — soccer matches (tag `pilka-nozna`). */
+export const ESPN_SOURCE: TravelSource = {
+  id: TRAVEL_PROVIDER,
+  fetchDay: (day, opts) => fetchEspnDay(day, { store: opts.store }),
+};

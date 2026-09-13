@@ -43,7 +43,7 @@ travelRoutes.get('/events', async (c) => {
 
   const { results } = await c.env.DB
     .prepare(
-      `SELECT provider, external_id, title, lat, lng, city, country, start_ms, tag, link
+      `SELECT provider, external_id, title, lat, lng, city, country, start_ms, tag, link, meta
        FROM travel_events
        WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
        AND start_ms >= ? AND start_ms <= ?

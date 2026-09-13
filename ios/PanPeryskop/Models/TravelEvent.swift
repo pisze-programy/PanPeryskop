@@ -13,11 +13,21 @@ struct TravelEvent: Codable, Identifiable, Equatable {
     let start_ms: Int64
     let tag: String
     let link: String?
+    /// Provider extras as a JSON string (runs: distance/surface/time/price; nil for soccer).
+    let meta: String?
     /// Nearby airport IATAs (≤200 km) that actually have flights from the chosen
     /// origin around the event day — computed by the backend; nil = not filtered.
     let reachableAirports: [String]?
 
     var id: String { "\(provider):\(external_id)" }
+
+    var isRun: Bool { tag == AppConstants.runTag }
+
+    /// Parsed provider extras — nil when absent or malformed.
+    var metaData: TravelEventMeta? {
+        guard let meta, let data = meta.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(TravelEventMeta.self, from: data)
+    }
 
     /// Home/away team split from the title ("X vs Y"); nil when not a match.
     var home: String? { matchParts?.home }
@@ -37,6 +47,18 @@ struct TravelEvent: Codable, Identifiable, Equatable {
 
 struct TravelEventsResponse: Codable {
     let events: [TravelEvent]
+}
+
+/// Provider-specific extras for a travel event (runs today: race info).
+struct TravelEventMeta: Decodable {
+    let distance: String?
+    let distances: [String]?
+    let surface: String?
+    let difficulty: String?
+    let price: String?
+    let time: String?
+    let website: String?
+    let countryCode: String?
 }
 
 /// Airport (Wycieczki) — Polish origin airports + European destinations with

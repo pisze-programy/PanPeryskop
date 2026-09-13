@@ -55,7 +55,7 @@ mkdir -p "$REPO_DIR/backend/dist" "$REPO_DIR/admin/vps"
 install -m 0644 "$SRC_TMP/seed-consumer.mjs" "$REPO_DIR/backend/dist/seed-consumer.mjs"
 install -m 0644 "$SRC_TMP/kup-warm.mjs"    "$REPO_DIR/backend/dist/kup-warm.mjs"
 install -m 0644 "$SRC_TMP/awin-warm.mjs"   "$REPO_DIR/backend/dist/awin-warm.mjs"
-install -m 0644 "$SRC_TMP/travel-espn.mjs" "$REPO_DIR/backend/dist/travel-espn.mjs"
+install -m 0644 "$SRC_TMP/travel.mjs"       "$REPO_DIR/backend/dist/travel.mjs"
 install -m 0755 "$SRC_TMP/consumer.sh"        "$REPO_DIR/admin/vps/consumer.sh"
 install -m 0755 "$SRC_TMP/consumer-ensure.sh" "$REPO_DIR/admin/vps/consumer-ensure.sh"
 install -m 0755 "$SRC_TMP/setup-vps.sh"    "$REPO_DIR/admin/vps/setup-vps.sh"
@@ -72,7 +72,7 @@ say "legacy files cleaned"
 
 # ---------- 5. crontab (preserve system + user entries; swap our seed lines) ----------
 TMP_CRON=$(mktemp)
-crontab -l 2>/dev/null | grep -vE 'panperyskop.*(watchdog|orchestrator)\.sh|vps-seed\.mjs|(kup-warm|awin-warm|travel-espn|consumer-ensure)\.(mjs|sh)' > "$TMP_CRON"
+crontab -l 2>/dev/null | grep -vE 'panperyskop.*(watchdog|orchestrator)\.sh|vps-seed\.mjs|(kup-warm|awin-warm|travel|consumer-ensure)\.(mjs|sh)' > "$TMP_CRON"
 # Seed consumer supervisor — restart the long-lived drain within 5 min if it dies.
 printf '%s\n' '*/5 * * * * /opt/panperyskop/admin/vps/consumer-ensure.sh' >> "$TMP_CRON"
 # Nightly kupbilecik manifest warm — 00:01 Warsaw, CLEAN env (no proxy: the origin
@@ -80,11 +80,13 @@ printf '%s\n' '*/5 * * * * /opt/panperyskop/admin/vps/consumer-ensure.sh' >> "$T
 printf '%s\n' '1 0 * * * cd /opt/panperyskop && /usr/bin/node --max-old-space-size=128 backend/dist/kup-warm.mjs >> admin/vps/logs/warm-kup.log 2>&1' >> "$TMP_CRON"
 # Eventim (Awin) feed warm — 00:03 Warsaw, after the kupbilecik warm.
 printf '%s\n' '3 0 * * * cd /opt/panperyskop && /usr/bin/node --max-old-space-size=128 backend/dist/awin-warm.mjs >> admin/vps/logs/warm-awin.log 2>&1' >> "$TMP_CRON"
-# ESPN travel replenish — Monday 00:10 Warsaw.
-printf '%s\n' '10 0 * * 1 cd /opt/panperyskop && /usr/bin/node --max-old-space-size=128 backend/dist/travel-espn.mjs >> admin/vps/logs/travel-espn.log 2>&1' >> "$TMP_CRON"
+# ESPN soccer replenish — Monday 00:10 Warsaw.
+printf '%s\n' '10 0 * * 1 cd /opt/panperyskop && /usr/bin/node --max-old-space-size=192 backend/dist/travel.mjs --provider=espn >> admin/vps/logs/travel-espn.log 2>&1' >> "$TMP_CRON"
+# worldsmarathons runs replenish — Monday 00:25 Warsaw (after ESPN).
+printf '%s\n' '25 0 * * 1 cd /opt/panperyskop && /usr/bin/node --max-old-space-size=192 backend/dist/travel.mjs --provider=worldsmarathons >> admin/vps/logs/travel-wm.log 2>&1' >> "$TMP_CRON"
 crontab "$TMP_CRON"
 rm -f "$TMP_CRON"
-say "crontab ok: */5 consumer-ensure + 00:01 kup-warm + 00:03 awin-warm + 00:10 mon travel-espn"
+say "crontab ok: */5 consumer-ensure + 00:01 kup-warm + 00:03 awin-warm + 00:10 mon espn + 00:25 mon worldsmarathons"
 
 # ---------- env ----------
 if [ -f "$ENV_FILE" ]; then

@@ -9,10 +9,10 @@ private extension Airline {
     }
 }
 
-/// Soccer flight section: destination-airport rail, the single flight timeline and
-/// the "Lecimy" buy bar. Ryanair is the only live provider, so there is no airline
+/// Flight section: destination-airport rail, the single flight timeline and the
+/// "Lecimy" buy bar. Ryanair is the only live provider, so there is no airline
 /// pill — the brand shows on the CTA only.
-struct SoccerFlightSection: View {
+struct EventFlightSection: View {
     let event: TravelEvent
     let origin: Airport
     let destinations: [Destination]
@@ -40,9 +40,11 @@ struct SoccerFlightSection: View {
                     loadPrices()
                 }
             } else if let destination, let window {
-                SoccerFlightTimeline(
+                FlightTimeline(
                     window: window,
                     eventDay: event.start_ms,
+                    markerIcon: event.isRun ? "figure.run" : "sportscourt.fill",
+                    markerLabel: event.isRun ? "BIEG" : "MECZ",
                     selectedOutbound: $selectedOutbound,
                     selectedReturn: $selectedReturn,
                     best: bestPair(window)

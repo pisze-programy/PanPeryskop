@@ -5,7 +5,7 @@
 //   backend/dist/seed-consumer.mjs — the v2 producer/consumer drain consumer.
 //   backend/dist/kup-warm.mjs — the standalone kupbilecik warm.
 //   backend/dist/awin-warm.mjs — the standalone Awin (eventim) feed warm.
-//   backend/dist/travel-espn.mjs — the ESPN travel replenish.
+//   backend/dist/travel.mjs — the travel replenish (--provider=espn|worldsmarathons).
 // ONE node process each, no tsx/esbuild at runtime (that blew the 256 MB box).
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -35,4 +35,4 @@ function build(entry, out) {
 build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'consumer.ts'), join(OUT_DIR, 'seed-consumer.mjs'));
 build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'kupWarmCli.ts'), join(OUT_DIR, 'kup-warm.mjs'));
 build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'awinWarmCli.ts'), join(OUT_DIR, 'awin-warm.mjs'));
-build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'espnCli.ts'), join(OUT_DIR, 'travel-espn.mjs'));
+build(join(BACKEND, 'src', 'seed', 'executors', 'vps', 'travelCli.ts'), join(OUT_DIR, 'travel.mjs'));

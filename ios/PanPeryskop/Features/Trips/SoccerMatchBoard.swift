@@ -17,7 +17,7 @@ struct SoccerMatchBoard: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
-            SoccerVenueMap(coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng))
+            VenueMap(coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng))
                 .padding(.horizontal, Theme.Spacing.l)
         }
         .frame(maxWidth: .infinity)

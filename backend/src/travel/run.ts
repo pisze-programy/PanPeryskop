@@ -1,13 +1,18 @@
 import { GeoStore } from '../seed/core/geo';
 import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
-import { fetchEspnDay, EspnFetchOptions } from './espn';
 import { TravelManifest, TravelEvent } from './store';
 import { TravelRunType, TRAVEL_BACKFILL_DAYS, TRAVEL_REPLENISH_DAYS } from './constants';
+
+/** A travel data source (ESPN soccer, worldsmarathons runs, …). One `fetchDay`
+ *  call returns that day's events already mapped to `TravelEvent`. */
+export interface TravelSource {
+  id: string;
+  fetchDay(day: string, opts: { store?: GeoStore }): Promise<TravelEvent[]>;
+}
 
 export interface TravelRunOptions {
   runType: TravelRunType;
   store?: GeoStore;
-  fetchOptions?: EspnFetchOptions;
   /** Days already covered (e.g. from a checkpoint) — skipped to close gaps. */
   coveredDays?: Set<string>;
 }
@@ -31,20 +36,20 @@ function travelDays(runType: TravelRunType, coveredDays?: Set<string>): string[]
   return out;
 }
 
-/** Fetch the travel window day-by-day (one ESPN request per day), skipping
- *  already-covered days. Returns a manifest ready for POST /admin/travel/ingest. */
-export async function runTravelProvider(opts: TravelRunOptions): Promise<TravelManifest> {
-  const { runType, store, fetchOptions, coveredDays } = opts;
+/** Fetch a source's travel window day-by-day, skipping already-covered days.
+ *  Returns a manifest ready for POST /admin/travel/ingest. */
+export async function runTravelProvider(source: TravelSource, opts: TravelRunOptions): Promise<TravelManifest> {
+  const { runType, store, coveredDays } = opts;
   const days = travelDays(runType, coveredDays);
   const events: TravelEvent[] = [];
   const seen = new Set<string>();
   for (const day of days) {
     if (coveredDays?.has(day)) continue;
-    for (const e of await fetchEspnDay(day, { ...fetchOptions, store })) {
+    for (const e of await source.fetchDay(day, { store })) {
       if (seen.has(e.externalId)) continue;
       seen.add(e.externalId);
       events.push(e);
     }
   }
-  return { provider: 'espn', runType, days, events };
+  return { provider: source.id, runType, days, events };
 }

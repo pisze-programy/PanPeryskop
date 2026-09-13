@@ -109,7 +109,7 @@ struct MapScreen: View {
         .sheet(isPresented: $showTripsEventCard, onDismiss: {
             tripsViewModel.clearSelectionPublic()
         }) {
-            SoccerEventSheet(viewModel: tripsViewModel)
+            TripsEventSheet(viewModel: tripsViewModel)
         }
     }
 

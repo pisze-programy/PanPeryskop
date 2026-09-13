@@ -3,9 +3,11 @@ import SwiftUI
 /// One horizontal flight timeline: outbound days on the left, the event day in the
 /// middle (highlighted), return days on the right. Tap a left day to pick the
 /// outbound, a right day to pick the return — a single axis, not two rows.
-struct SoccerFlightTimeline: View {
+struct FlightTimeline: View {
     let window: FlightWindowResponse
     let eventDay: Int64
+    var markerIcon: String = "sportscourt.fill"
+    var markerLabel: String = "MECZ"
     @Binding var selectedOutbound: FlightWindowCell?
     @Binding var selectedReturn: FlightWindowCell?
     let best: FlightPair?
@@ -74,9 +76,9 @@ struct SoccerFlightTimeline: View {
 
     private var eventMarker: some View {
         VStack(spacing: 2) {
-            Image(systemName: "sportscourt.fill")
+            Image(systemName: markerIcon)
                 .font(.caption2)
-            Text("MECZ")
+            Text(markerLabel)
                 .font(.system(size: 8, weight: .heavy))
             Text(Self.shortDay(Self.dayKey(eventDay)))
                 .font(.system(size: 9, weight: .bold))

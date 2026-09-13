@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Wycieczki (soccer) event sheet. If the tapped pin is a group, the whole sheet
-/// pages across the events with dots at the top; a single event has no pager/dots.
-struct SoccerEventSheet: View {
+/// Wycieczki event sheet. If the tapped pin is a group, the whole sheet pages
+/// across the events with dots at the top; a single event has no pager/dots.
+/// The hero is picked per event tag (soccer match board vs. run board).
+struct TripsEventSheet: View {
     @ObservedObject var viewModel: TripsViewModel
     @State private var activeIndex = 0
 
@@ -18,7 +19,7 @@ struct SoccerEventSheet: View {
                 TabView(selection: $activeIndex) {
                     ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
                         ScrollView(showsIndicators: false) {
-                            SoccerEventPage(event: event, origin: viewModel.selectedAirport, viewModel: viewModel)
+                            TripsEventPage(event: event, origin: viewModel.selectedAirport, viewModel: viewModel)
                         }
                         .tag(index)
                     }
@@ -31,8 +32,8 @@ struct SoccerEventSheet: View {
     }
 }
 
-/// One event page: match board on top, flight section below.
-struct SoccerEventPage: View {
+/// One event page: the tag-specific hero on top, flight section below.
+struct TripsEventPage: View {
     let event: TravelEvent
     let origin: Airport
     @ObservedObject var viewModel: TripsViewModel
@@ -50,11 +51,11 @@ struct SoccerEventPage: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SoccerMatchBoard(event: event)
+            hero
             if destinations.isEmpty {
                 noAirportHint
             } else {
-                SoccerFlightSection(
+                EventFlightSection(
                     event: event,
                     origin: origin,
                     destinations: destinations,
@@ -66,6 +67,15 @@ struct SoccerEventPage: View {
             }
         }
         .padding(.bottom, Theme.Spacing.xl)
+    }
+
+    @ViewBuilder
+    private var hero: some View {
+        if event.isRun {
+            RunEventBoard(event: event)
+        } else {
+            SoccerMatchBoard(event: event)
+        }
     }
 
     private var noAirportHint: some View {

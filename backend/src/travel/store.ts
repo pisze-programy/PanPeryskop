@@ -11,6 +11,8 @@ export interface TravelEvent {
   startMs: number;
   tag: TravelTag;
   link: string | null;
+  /** Provider-specific extras as a JSON string (run distance, surface, …). */
+  meta?: string | null;
 }
 
 export interface TravelManifest {
@@ -33,7 +35,8 @@ function isTravelEvent(v: unknown): v is TravelEvent {
     typeof e.lat === 'number' && Number.isFinite(e.lat) &&
     typeof e.lng === 'number' && Number.isFinite(e.lng) &&
     typeof e.tag === 'string' && TRAVEL_TAGS.has(e.tag as TravelTag) &&
-    (e.link === null || typeof e.link === 'string')
+    (e.link === null || typeof e.link === 'string') &&
+    (e.meta === undefined || e.meta === null || typeof e.meta === 'string')
   );
 }
 
@@ -58,15 +61,15 @@ export async function upsertTravelEvents(db: D1Database, events: TravelEvent[]):
     const chunk = events.slice(i, i + TRAVEL_BATCH_CAP);
     const stmts = chunk.map((e) =>
       db.prepare(
-        `INSERT INTO travel_events (provider, external_id, title, lat, lng, city, country, start_ms, tag, link, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO travel_events (provider, external_id, title, lat, lng, city, country, start_ms, tag, link, meta, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(provider, external_id) DO UPDATE SET
            title=excluded.title, lat=excluded.lat, lng=excluded.lng, city=excluded.city,
            country=excluded.country, start_ms=excluded.start_ms, tag=excluded.tag,
-           link=excluded.link, updated_at=excluded.updated_at`
+           link=excluded.link, meta=excluded.meta, updated_at=excluded.updated_at`
       ).bind(
         e.provider, e.externalId, e.title, e.lat, e.lng, e.city, e.country,
-        e.startMs, e.tag, e.link, now, now
+        e.startMs, e.tag, e.link, e.meta ?? null, now, now
       )
     );
     await db.batch(stmts);

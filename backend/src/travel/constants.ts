@@ -16,6 +16,15 @@ export const ESPN_TIMEOUT_MS = 30_000;
 export const ESPN_RETRIES = 3;
 export const ESPN_RETRY_DELAY_MS = 5_000;
 
+// worldsmarathons.com — running races (tag `biegi`). CF-protected: `/api/search`
+// may need a warmed browser clearance cookie depending on egress network.
+export const WORLDSMARATHONS_PROVIDER = 'worldsmarathons';
+export const RUNS_TAG: TravelTag = 'biegi';
+export const WM_HOST = 'https://worldsmarathons.com';
+export const WM_TIMEOUT_MS = 30_000;
+export const WM_RETRIES = 3;
+export const WM_RETRY_DELAY_MS = 5_000;
+
 export const TRAVEL_BACKFILL_DAYS = 90;
 export const TRAVEL_REPLENISH_DAYS = 7;
 

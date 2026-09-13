@@ -32,6 +32,9 @@ enum AppConstants {
     /// Match title separator (backend espn.ts joins teams with this).
     static let matchSeparator = " vs "
 
+    /// Travel tag for running races (backend worldsmarathons.ts).
+    static let runTag = "biegi"
+
     /// Springs — the app's three animation configs (was inline magic).
     static let springStandard = Animation.spring(response: 0.35, dampingFraction: 0.82)
     static let springSoft = Animation.spring(response: 0.35, dampingFraction: 0.8)

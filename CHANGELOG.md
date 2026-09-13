@@ -18,6 +18,10 @@ All notable changes to PanPeryskop. Format based on
   with its `reachableAirports`.
 - In-app browser now blocks geolocation / push-notification prompts from
   providers (JS stubs + camera/mic capture denied).
+- Biegi (runs) in Wycieczki: worldsmarathons.com as a second event provider
+  (90-day backfill + weekly VPS replenish, Europe-filtered, `meta` carries
+  distance/surface/start time/price), and a run-specific sheet hero (distance,
+  details, venue map) sharing the flight timeline with a "BIEG" marker.
 
 ### Changed
 - Story card badges (SPONSOROWANE / tags / source) moved to the bottom so they

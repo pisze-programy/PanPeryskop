@@ -463,8 +463,13 @@ export async function daysReadyToReconcile(env: Env, sinceDay: string): Promise<
   const out: { day: string; batchId: string }[] = [];
   for (const r of results || []) {
     if ((await countOpenUnitsForDay(env.DB, r.day)) > 0) continue;
-    const latch = await env.DB.prepare('SELECT reconciling FROM seed_days WHERE day=?').bind(r.day).first<{ reconciling: number }>();
-    if (latch?.reconciling === 1) continue;
+    // Skip only a LIVE latch. A stale `reconciling=1` (the invocation was killed
+    // before its finally) must stay eligible: reconcileIfReady takes it over after
+    // RECONCILE_STALE_MS. Skipping it here deadlocks the day forever, because this
+    // sweep is the only wake left once all units are terminal.
+    const latch = await env.DB.prepare('SELECT reconciling, updated_at FROM seed_days WHERE day=?')
+      .bind(r.day).first<{ reconciling: number; updated_at: number }>();
+    if (latch?.reconciling === 1 && latch.updated_at >= now() - RECONCILE_STALE_MS) continue;
     out.push({ day: r.day, batchId: r.batch_id });
   }
   return out;

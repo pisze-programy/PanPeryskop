@@ -302,3 +302,20 @@ test('daysReadyToReconcile: a winner-only day is scheduled (E2)', async () => {
   assert.deepEqual(out, [{ day: '2026-09-13', batchId: 'b1' }], 'winner-only day is enqueued for finalize');
 });
 
+test('daysReadyToReconcile: stale reconciling latch stays eligible, fresh latch is skipped', async () => {
+  const mk = (updatedAt: number) => ({
+    prepare: (sql: string) => ({
+      bind: () => ({
+        all: async () => (sql.includes('FROM seed_raw') ? { results: [{ day: '2026-09-15', batch_id: 'b1' }] } : { results: [] }),
+        first: async () => (sql.includes('FROM seed_units') ? { n: 0 }
+          : sql.includes('FROM seed_days') ? { reconciling: 1, updated_at: updatedAt } : null),
+      }),
+    }),
+  } as unknown as D1Database);
+  const stale = await daysReadyToReconcile({ DB: mk(0) } as unknown as Env, '2026-09-12');
+  assert.deepEqual(stale, [{ day: '2026-09-15', batchId: 'b1' }], 'stale latch (killed invocation) is re-scheduled');
+  const fresh = await daysReadyToReconcile({ DB: mk(Date.now()) } as unknown as Env, '2026-09-12');
+  assert.deepEqual(fresh, [], 'live latch is left alone');
+});
+
+

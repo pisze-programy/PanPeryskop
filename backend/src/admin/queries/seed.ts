@@ -1,7 +1,5 @@
-// Seed dashboard queries over the v2 state: seed_batches (run identity) joined to
-// seed_units (per-scope work state) and seed_raw (per-event rows). seed_runs is
-// only written by the manual facebook/mtp paths now, so it is not read here.
-import { DAY_MS } from '../../seed/core/constants';
+import { CONFIG } from '../../config/index';
+
 
 export interface SeedRunSummary {
   id: string;
@@ -41,7 +39,7 @@ export async function seedRuns(db: D1Database, sinceMs: number, limit = 60): Pro
 }
 
 /** Count of runs per derived status. */
-export async function runStatusCounts(db: D1Database, sinceMs = Date.now() - 30 * DAY_MS): Promise<{ status: string; n: number }[]> {
+export async function runStatusCounts(db: D1Database, sinceMs = Date.now() - 30 * CONFIG.time.dayMs): Promise<{ status: string; n: number }[]> {
   const { results } = await db.prepare(
     `SELECT status, COUNT(*) n FROM (
        SELECT b.id, ${RUN_STATUS_EXPR} AS status

@@ -1,3 +1,4 @@
+import { CONFIG } from '../../../config/index';
 // Overview page: health strip, KPI cards, activity charts, events window, seed + cron.
 // Client logic in /admin/static/js/pages/overview.js; data bootstrapped inline.
 
@@ -7,16 +8,14 @@ import {
   pageHeader, pill, safeJson, staticFilePath, timeline, timelineItem,
 } from '../../ui';
 import { overviewData, overviewCharts } from '../../queries';
-import { DAY_MS, HOUR_MS } from '../../../seed/core/constants';
 import { todayWarsaw, addDaysWarsaw } from '../../../seed/core/dates';
-import { SEED_DAYS_AHEAD } from '../../../seed/core/constants';
 import { renderPage } from './shared';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
 
 function dayLabel(dateStr: string): string {
   const today = todayWarsaw();
-  const diff = Math.round((Date.parse(`${dateStr}T00:00:00+02:00`) - Date.parse(`${today}T00:00:00+02:00`)) / DAY_MS);
+  const diff = Math.round((Date.parse(`${dateStr}T00:00:00+02:00`) - Date.parse(`${today}T00:00:00+02:00`)) / CONFIG.time.dayMs);
   if (diff === 0) return 'Dziś';
   if (diff === 1) return 'Jutro';
   if (diff === 2) return 'Pojutrze';
@@ -35,8 +34,8 @@ pageRoutes.get('/', async (c) => {
   const db = c.env.DB;
   const now = Date.now();
   const today = todayWarsaw();
-  const windowEnd = addDaysWarsaw(today, SEED_DAYS_AHEAD);
-  const d = await overviewData(c.env, SEED_DAYS_AHEAD);
+  const windowEnd = addDaysWarsaw(today, CONFIG.seed.window.daysAhead);
+  const d = await overviewData(c.env, CONFIG.seed.window.daysAhead);
   const charts = overviewCharts(d);
   const lastUnits = d.lastSeed.units;
   const lastRunStatus = !lastUnits ? 'created' : lastUnits.failed > 0 ? 'failed' : lastUnits.active > 0 ? 'running' : 'done';
@@ -48,7 +47,7 @@ pageRoutes.get('/', async (c) => {
   if (seedFailed > 0) failures.push(`${seedFailed}/${totalBatches} batchy seeda <strong>failed</strong>`);
   if (d.status.pending > 0) failures.push(`${d.status.pending} event <strong>pending</strong>`);
   if (d.failedLogins7d > 0) failures.push(`${d.failedLogins7d} prób logowania do admina`);
-  if (d.cron.lastCronRunMs && now - d.cron.lastCronRunMs > 30 * HOUR_MS) failures.push('cron nie uruchomił się od <strong>30 h</strong>');
+  if (d.cron.lastCronRunMs && now - d.cron.lastCronRunMs > 30 * CONFIG.time.hourMs) failures.push('cron nie uruchomił się od <strong>30 h</strong>');
   const healthHtml = failures.length
     ? `<div class="alert alert-danger mb-3" role="alert">
         <div class="d-flex gap-3">
@@ -95,7 +94,7 @@ pageRoutes.get('/', async (c) => {
     <div class="col-12 col-md-6 col-xl-3">
       <a class="card card-sm text-reset text-decoration-none" href="/admin/events?from=${today}&to=${windowEnd}">
         <div class="card-body">
-          <div class="subheader">Eventy · okno ${SEED_DAYS_AHEAD + 1} dni</div>
+          <div class="subheader">Eventy · okno ${CONFIG.seed.window.daysAhead + 1} dni</div>
           <div class="h1 mb-2" id="kpi-wintotal">${charts.kpis.winTotal}</div>
           <div class="d-flex mb-1 text-secondary flex-wrap">
             <span class="me-3"><span class="status-dot bg-green me-1"></span><span id="kpi-winapproved">${charts.kpis.winApproved}</span> approved</span>
@@ -150,7 +149,7 @@ pageRoutes.get('/', async (c) => {
   const windowHtml = card({
     class: 'mb-3',
     header: cardHeader({
-      title: `Eventy — okno (${SEED_DAYS_AHEAD + 1} dni)`,
+      title: `Eventy — okno (${CONFIG.seed.window.daysAhead + 1} dni)`,
       actions: `<a class="btn btn-sm btn-outline-secondary" href="/admin/events?from=${esc(today)}&to=${esc(windowEnd)}">Zobacz wszystkie</a>`,
     }),
     body: '<div id="pp-chart-window"></div>',

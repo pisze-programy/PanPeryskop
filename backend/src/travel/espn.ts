@@ -1,12 +1,9 @@
+import { CONFIG } from '../config/index';
 import { GeoStore } from '../seed/core/geo';
 import { keepEuropeanCityEvent } from './airports';
 import { resolveTravelGeo } from './geo';
 import { TravelEvent } from './store';
 import type { TravelSource } from './run';
-import {
-  TRAVEL_PROVIDER, ESPN_TAG,
-  ESPN_HOST, ESPN_BACKUP_HOST, ESPN_LIMIT, ESPN_TIMEOUT_MS, ESPN_RETRIES, ESPN_RETRY_DELAY_MS,
-} from './constants';
 
 interface EspnCompetition {
   venue?: { fullName?: string; address?: { city?: string; country?: string } } | null;
@@ -29,12 +26,12 @@ export interface EspnFetchOptions {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchScoreboard(day: string, opts: EspnFetchOptions): Promise<EspnEvent[]> {
-  const { host = ESPN_HOST, timeoutMs = ESPN_TIMEOUT_MS, retries = ESPN_RETRIES, retryDelayMs = ESPN_RETRY_DELAY_MS } = opts;
+  const { host = CONFIG.travel.espn.host, timeoutMs = CONFIG.travel.espn.timeoutMs, retries = CONFIG.travel.espn.retries, retryDelayMs = CONFIG.travel.espn.retryDelayMs } = opts;
   // ESPN wants YYYYMMDD without separators (YYYY-MM-DD → 400).
   const compact = day.replace(/-/g, '');
-  const path = `/apis/site/v2/sports/soccer/all/scoreboard?dates=${compact}&limit=${ESPN_LIMIT}`;
+  const path = `/apis/site/v2/sports/soccer/all/scoreboard?dates=${compact}&limit=${CONFIG.travel.espn.limit}`;
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const url = `${attempt === 0 ? host : ESPN_BACKUP_HOST}${path}`;
+    const url = `${attempt === 0 ? host : CONFIG.travel.espn.backupHost}${path}`;
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
       signal: AbortSignal.timeout(timeoutMs),
@@ -93,13 +90,13 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
   const startMs = eventStartMs(e);
   if (startMs === null) return null;
   return {
-    provider: TRAVEL_PROVIDER,
+    provider: CONFIG.travel.provider,
     externalId: e.id,
     title: eventTitle(e),
     city: geo.city,
     country: geo.country,
     startMs,
-    tag: ESPN_TAG,
+    tag: CONFIG.travel.tags.espn,
     link: eventLink(e),
   };
 }
@@ -115,7 +112,7 @@ export async function fetchEspnDay(day: string, opts: EspnFetchOptions & { store
       name: raw.competitions?.[0]?.venue?.fullName ?? parsed.city,
       city: parsed.city,
       store: opts.store,
-      provider: TRAVEL_PROVIDER,
+      provider: CONFIG.travel.provider,
     });
     if (!geo) continue;
     out.push({ ...parsed, lat: geo.lat, lng: geo.lng });
@@ -124,6 +121,6 @@ export async function fetchEspnDay(day: string, opts: EspnFetchOptions & { store
 }
 /** ESPN travel source — soccer matches (tag `pilka-nozna`). */
 export const ESPN_SOURCE: TravelSource = {
-  id: TRAVEL_PROVIDER,
+  id: CONFIG.travel.provider,
   fetchDay: (day, opts) => fetchEspnDay(day, { store: opts.store }),
 };

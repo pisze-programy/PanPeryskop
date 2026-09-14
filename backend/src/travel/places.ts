@@ -1,9 +1,10 @@
 // Fake places catalogue. There is no provider yet, so the list is deterministic
 // around the event coordinates.
 // ponytail: static generator; swap for a real provider when one exists.
+import { CONFIG, type HotelTier, type PlaceKind } from '../config/index';
+import { KINDS, STREETS } from './data/places';
 
-export type PlaceKind = 'hotel' | 'attraction' | 'car' | 'insurance';
-export type HotelTier = 'economy' | 'recommended' | 'premium';
+export type { HotelTier, PlaceKind };
 
 export interface TravelPlace {
   id: string;
@@ -22,44 +23,8 @@ export interface TravelPlace {
   reviews?: number;
 }
 
-const KINDS: Record<PlaceKind, { names: string[]; min: number; max: number; currency: string }> = {
-  hotel: {
-    names: ['Hotel Centrum', 'Apartamenty Rynek', 'Hotel Airport', 'Pensjonat Stary Port',
-      'Boutique Suites', 'Hostel City', 'Hotel Marina', 'Resort Panorama', 'City Lodge',
-      'Grand Hotel', 'Hotel Park', 'Hotel Katedra'],
-    min: 180, max: 900, currency: 'PLN',
-  },
-  attraction: {
-    names: ['City Walking Tour', 'Muzeum Narodowe', 'Rejs po porcie', 'Degustacja lokalna',
-      'Karta miejska', 'Park rozrywki', 'Rejs statkiem', 'Wine Tasting', 'Segway Tour',
-      'Historyczne centrum'],
-    min: 25, max: 120, currency: 'PLN',
-  },
-  car: {
-    names: ['Fiat 500', 'Toyota Corolla', 'VW Golf', 'Skoda Octavia', 'Renault Clio',
-      'Ford Focus', 'Opel Corsa', 'Kia Ceed'],
-    min: 90, max: 320, currency: 'PLN',
-  },
-  insurance: {
-    names: ['Ubezpieczenie Podstawowe', 'Ubezpieczenie Sportowe', 'Ubezpieczenie Rodzinne',
-      'Ubezpieczenie Premium', 'Assistance 24/7'],
-    min: 30, max: 180, currency: 'PLN',
-  },
-};
-
-const STREETS = ['ul. Główna 12', 'Al. Portowa 4', 'ul. Kwiatowa 7', 'Rynek 1',
-  'ul. Sportowa 9', 'ul. Kolejowa 22', 'Bulwar 15', 'ul. Targowa 3'];
-
-// Fake search deep links until a real provider exists.
-const LINK_BASE: Record<PlaceKind, string> = {
-  hotel: 'https://www.booking.com/searchresults.html?ss=',
-  attraction: 'https://www.getyourguide.com/s/?q=',
-  car: 'https://www.booking.com/cars/index.html?ss=',
-  insurance: 'https://www.getyourguide.com/s/?q=',
-};
-
 export function isPlaceKind(raw: string): raw is PlaceKind {
-  return raw === 'hotel' || raw === 'attraction' || raw === 'car' || raw === 'insurance';
+  return (CONFIG.travel.places.kinds as readonly string[]).includes(raw);
 }
 
 /** FNV-1a — stable across Node versions (unlike Math.random). */
@@ -79,6 +44,7 @@ function jitter(seed: string): number {
 
 export function buildPlaces(kind: PlaceKind, lat: number, lng: number): TravelPlace[] {
   const cfg = KINDS[kind];
+  const tiers = CONFIG.travel.places.tiers;
   return cfg.names.map((name, i) => {
     const id = `${kind}-${hash(`${kind}:${name}:${i}`) % 100000}`;
     const t = cfg.names.length > 1 ? i / (cfg.names.length - 1) : 0;
@@ -93,12 +59,12 @@ export function buildPlaces(kind: PlaceKind, lat: number, lng: number): TravelPl
       address: STREETS[i % STREETS.length],
       lat: lat + jitter(`${id}:lat`),
       lng: lng + jitter(`${id}:lng`),
-      link: LINK_BASE[kind] + encodeURIComponent(name),
+      link: CONFIG.travel.places.linkBase[kind] + encodeURIComponent(name),
       rating: Math.round((3.6 + ((hash(`${id}:r`) % 15) / 10)) * 10) / 10,
       reviews: 40 + (hash(`${id}:n`) % 900),
     };
     if (kind === 'hotel') {
-      place.tier = (['economy', 'recommended', 'premium'] as HotelTier[])[i % 3];
+      place.tier = tiers[i % tiers.length];
     }
     return place;
   });

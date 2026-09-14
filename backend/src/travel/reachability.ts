@@ -1,3 +1,4 @@
+import { CONFIG } from '../config/index';
 // Event reachability from an origin airport: only events with a real flight
 // option are worth showing ("disappointment hurts"). Geo-based (event→airport
 // ≤200km, identical to the iOS rail radius) — never a fragile city-name join.
@@ -10,9 +11,6 @@ import { addDaysWarsaw, warsawDateOf } from '../seed/core/dates';
 import { destinationsFrom } from './airports';
 import { fetchRyanairAvailabilities } from './flightsApi';
 
-export const NEARBY_KM = 200;
-export const OUTBOUND_OFFSETS = [-3, -2, -1];
-export const RETURN_OFFSETS = [1, 2, 3];
 
 export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -45,7 +43,7 @@ export interface ReachableEvent extends TravelEventRow {
 
 export function windowHasFlights(flyingDays: Set<string>, eventDay: string): boolean {
   const anyDay = (offsets: number[]) => offsets.some((o) => flyingDays.has(addDaysWarsaw(eventDay, o)));
-  return anyDay(OUTBOUND_OFFSETS) && anyDay(RETURN_OFFSETS);
+  return anyDay([...CONFIG.travel.reachability.outboundOffsets]) && anyDay([...CONFIG.travel.reachability.returnOffsets]);
 }
 
 /**
@@ -72,7 +70,7 @@ export async function reachableEvents(
 
   const out: ReachableEvent[] = [];
   for (const e of events) {
-    const nearby = candidates.filter((d) => haversineKm(e.lat, e.lng, d.lat, d.lng) <= NEARBY_KM);
+    const nearby = candidates.filter((d) => haversineKm(e.lat, e.lng, d.lat, d.lng) <= CONFIG.travel.reachability.nearbyKm);
     if (nearby.length === 0) continue;
     const eventDay = warsawDateOf(e.start_ms);
     const reachable = liveFailed

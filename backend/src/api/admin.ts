@@ -1,18 +1,16 @@
+import { CONFIG } from '../config/index';
 import { Hono } from 'hono';
 import { STATUS_APPROVED, STATUS_REJECTED, CATEGORY_EVENTS } from '../core/models';
 import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
-import { SEED_DAYS_AHEAD } from '../seed/core/constants';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { claimUnit, completeUnit, failUnit, unitDayStatus, unitWindowDays } from '../seed/pipeline/queue/units';
 import { writeRawRows } from '../seed/pipeline/queue/raw';
 import { warsawDateOf } from '../seed/core/dates';
-import { D1_BATCH_STATEMENT_CAP, SEED_REFILL_AHEAD } from '../seed/core/constants';
 import { SeedCandidate } from '../seed/core/types';
 import { parseCandidate, isProviderId } from '../seed/core/candidate';
 import { ingestWinnersForDay } from '../seed/reconcile';
 import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
 import { getLastSeedDay, seedDue } from '../seed/cadence';
-import { SEED_INTERVAL_DAYS } from '../seed/core/constants';
 import { upsertTravelEvents, sanitizeManifest, TravelManifest, TravelEvent } from '../travel/store';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
@@ -80,7 +78,7 @@ adminRoutes.get('/seed/cadence', async (c) => {
   const today = todayWarsaw();
   // due = a refill is due (cron will run) OR the refill already ran today (lastSeedDay
   // === today — the VPS/warms run AFTER the 02:00 UTC cron sets the marker).
-  return c.json({ due: seedDue(last, today) || last === today, lastSeedDay: last, today, interval: SEED_INTERVAL_DAYS });
+  return c.json({ due: seedDue(last, today) || last === today, lastSeedDay: last, today, interval: CONFIG.seed.window.intervalDays });
 });
 
 // Reject posts by external_id (a batch) — used by one-off duplicate cleanups.
@@ -125,7 +123,7 @@ adminRoutes.post('/seed/affiliate', async (c) => {
 adminRoutes.get('/seed/coverage', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const today = todayWarsaw();
-  const window = Array.from({ length: SEED_DAYS_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i));
+  const window = Array.from({ length: CONFIG.seed.window.daysAhead + 1 }, (_, i) => addDaysWarsaw(today, i));
   const { results } = await c.env.DB.prepare(
     `SELECT substr(external_id, 1, instr(external_id, '-') - 1) AS source, event_date, COUNT(*) AS n
      FROM posts
@@ -234,7 +232,7 @@ adminRoutes.post('/seed/units/:id/raw', async (c) => {
     .catch(() => ({} as { token?: unknown; candidates?: unknown }));
   if (typeof body.token !== 'string' || !body.token) return c.json({ error: 'token required' }, 400);
   if (!Array.isArray(body.candidates)) return c.json({ error: 'candidates[] required' }, 400);
-  if (body.candidates.length > D1_BATCH_STATEMENT_CAP) return c.json({ error: `too many candidates (max ${D1_BATCH_STATEMENT_CAP})` }, 400);
+  if (body.candidates.length > CONFIG.queue.d1BatchCap) return c.json({ error: `too many candidates (max ${CONFIG.queue.d1BatchCap})` }, 400);
 
   const unit = await c.env.DB
     .prepare('SELECT id, day, kind, batch_id, provider, status, claimed_by FROM seed_units WHERE id=?')
@@ -267,7 +265,7 @@ adminRoutes.post('/seed/units/:id/raw', async (c) => {
   }
   let rowsWritten = 0;
   for (const [day, candidates] of groups) {
-    rowsWritten += await writeRawRows(c.env.DB, { day, batchId: unit.batch_id, unitId, provider: unit.provider, candidates }, D1_BATCH_STATEMENT_CAP);
+    rowsWritten += await writeRawRows(c.env.DB, { day, batchId: unit.batch_id, unitId, provider: unit.provider, candidates }, CONFIG.queue.d1BatchCap);
   }
   if (rejected.length) console.warn(`seed unit ${unitId}: rejected ${rejected.length} candidate(s): ${rejected.slice(0, 5).join('; ')}${rejected.length > 5 ? ' …' : ''}`);
   if (outOfWindow) console.warn(`seed unit ${unitId}: dropped ${outOfWindow} out-of-window candidate(s)`);
@@ -299,7 +297,7 @@ adminRoutes.post('/seed/units/complete', async (c) => {
     .first<{ day: string; kind: string; batch_id: string }>();
   if (unit) {
     const days = unit.kind === 'window'
-      ? Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(unit.day, i))
+      ? Array.from({ length: CONFIG.seed.window.refillAhead + 1 }, (_, i) => addDaysWarsaw(unit.day, i))
       : [unit.day];
     // Best-effort: the unit is already done; if the wake is lost the hourly
     // watchdog re-enqueues finalize for ready days.
@@ -322,7 +320,7 @@ adminRoutes.post('/seed/finalize', async (c) => {
   const body = await c.req.json<{ day?: unknown }>().catch(() => ({} as { day?: unknown }));
   const one = typeof body.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day) ? body.day : null;
   const today = todayWarsaw();
-  const days = one === null ? Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i)) : [one];
+  const days = one === null ? Array.from({ length: CONFIG.seed.window.refillAhead + 1 }, (_, i) => addDaysWarsaw(today, i)) : [one];
   const queued: string[] = [];
   for (const d of days) {
     // batchId is only used for reconciliation_failures provenance; use the day's

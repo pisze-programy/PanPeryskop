@@ -1,4 +1,5 @@
 #!/usr/bin/env -S npx tsx
+import { CONFIG } from '../../../config/index';
 // VPS seed consumer (v2). A long-lived process that DRAINS the durable work-list
 // (`seed_units`) for the vps executor:
 //   claim → fetch (residential proxy) → POST raw batches → complete (with token)
@@ -13,7 +14,6 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import process from 'node:process';
 import { installNetStats, setNetSource, netSnapshot } from '../../../seed/core/netStats';
-import { SEED_REFILL_AHEAD, D1_BATCH_STATEMENT_CAP } from '../../../seed/core/constants';
 import { addDaysWarsaw, warsawMidnightMs, eventDayEndMs } from '../../../seed/core/dates';
 import { ProviderId } from '../../../seed/core/types';
 import type { SeedCandidate } from '../../../seed/core/types';
@@ -33,7 +33,7 @@ const ENV_FILE = join(REPO_DIR, 'admin', 'vps', '.env');
 const IDLE_FAST_MS = 10_000;
 const IDLE_SLOW_MS = 30_000;
 const IDLE_SLOW_AFTER_MS = 5 * 60_000;
-const RAW_BATCH = D1_BATCH_STATEMENT_CAP;
+const RAW_BATCH = CONFIG.queue.d1BatchCap;
 
 const SOURCES: Partial<Record<ProviderId, ScopeSource>> = {
   [goingSource.source]: goingSource,
@@ -118,7 +118,7 @@ class Api {
 }
 
 function windowDays(anchor: string): string[] {
-  return Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(anchor, i));
+  return Array.from({ length: CONFIG.seed.window.refillAhead + 1 }, (_, i) => addDaysWarsaw(anchor, i));
 }
 
 function ctxFor(unit: Unit): ScopeCtx {

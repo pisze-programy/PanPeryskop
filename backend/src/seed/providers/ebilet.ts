@@ -1,3 +1,4 @@
+import { CONFIG } from '../../config/index';
 // ebilet.pl provider — 'fetch' transport (TradeDoubler affiliate feed, fid 94944).
 // TradeDoubler reference: https://dev.tradedoubler.com/products/publisher/
 // Integration notes: docs/ebilet-tradedoubler.md
@@ -36,7 +37,6 @@ import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/ty
 import { resolveGeo } from '../core/geo';
 import { aggregateDayCandidates } from '../core/aggregate';
 import { detectBlockedBody, parseFeedJson, SourceBlockedError } from '../core/fetchOnce';
-import { PROVIDER_FETCH_TIMEOUT_MS } from '../core/constants';
 
 const EBILET_UNLIMITED = 'https://api.tradedoubler.com/1.0/productsUnlimited.json';
 const EBILET_LAST_UPDATED = 'https://api.tradedoubler.com/1.0/productsUnlimited/lastUpdated.json';
@@ -264,7 +264,7 @@ export async function fetchEbiletFeed(token: string): Promise<{ products: Ebilet
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
       redirect: 'follow',
-      signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
+      signal: AbortSignal.timeout(CONFIG.seed.fetchTimeoutMs),
     });
     if (res.status === 202) {
       await sleep(15_000); // export still generating — try again

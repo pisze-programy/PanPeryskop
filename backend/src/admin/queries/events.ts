@@ -1,7 +1,7 @@
+import { CONFIG } from '../../config/index';
 // Events query builders + aggregates (category='events').
 import { CITIES, cityBbox } from '../cities';
 import { CATEGORY_EVENTS } from '../../core/models';
-import { UNKNOWN_TIME } from '../../seed/core/constants';
 
 export interface EventFilter {
   cityId: string | null;
@@ -50,7 +50,7 @@ function eventsWhere(f: EventFilter): { where: string; binds: unknown[] } {
   // Time filter on the first showtime (or absence of one). "zero" = the seed
   // default placeholder 00:00 OR no time at all; the rest are lower bounds on
   // the first showtime string (HH:MM compares lexicographically).
-  if (f.time === 'zero') { where += ` AND (p.showtimes IS NULL OR json_extract(p.showtimes,'$[0]')='${UNKNOWN_TIME}')`; }
+  if (f.time === 'zero') { where += ` AND (p.showtimes IS NULL OR json_extract(p.showtimes,'$[0]')='${CONFIG.time.unknownTime}')`; }
   else if (f.time === '06') { where += " AND json_extract(p.showtimes,'$[0]')>='06:00'"; }
   else if (f.time === '12') { where += " AND json_extract(p.showtimes,'$[0]')>='12:00'"; }
   else if (f.time === '18') { where += " AND json_extract(p.showtimes,'$[0]')>='18:00'"; }

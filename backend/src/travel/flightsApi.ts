@@ -1,3 +1,4 @@
+import { CONFIG } from '../config/index';
 // Flight availability — live Ryanair (farefinder, NO auth/bot-wall) with a
 // deterministic-mock fallback so the grid always renders. Wizzair stays mock
 // (its timetable is Akamai KPSDK bot-walled — separate effort).
@@ -30,27 +31,17 @@ function hash(s: string): number {
   return h >>> 0;
 }
 
-const NO_FARE_MASK = 3;            // (r & 3) === 0 → no fare that day
-const BASE_PRICE_MIN = 20;
-const BASE_PRICE_RANGE = 180;
-const PRICE_SPIKE_RANGE = 25;
-const HOUR_START = 8;
-const HOUR_RANGE = 11;
-const OUTBOUND_WINDOW: [number, number] = [-7, -1];
-const RETURN_WINDOW: [number, number] = [1, 7];
-const FALLBACK_PRICE_MIN = 50;
-const FALLBACK_PRICE_RANGE = 60;
 
 function seededPrice(seed: number, dayOffset: number): number | null {
   const r = (seed + dayOffset * 2654435761) >>> 0;
-  if ((r & NO_FARE_MASK) === 0) return null;
-  const base = BASE_PRICE_MIN + (r % BASE_PRICE_RANGE);
-  const spike = (r >>> 8) % PRICE_SPIKE_RANGE;
+  if ((r & CONFIG.travel.flights.sim.noFareMask) === 0) return null;
+  const base = CONFIG.travel.flights.sim.basePriceMin + (r % CONFIG.travel.flights.sim.basePriceRange);
+  const spike = (r >>> 8) % CONFIG.travel.flights.sim.priceSpikeRange;
   return Math.round((base + spike) * 100) / 100;
 }
 
 function mockHour(seed: number, dayOffset: number): string {
-  const hour = HOUR_START + ((seed + dayOffset) % HOUR_RANGE);
+  const hour = CONFIG.travel.flights.sim.hourStart + ((seed + dayOffset) % CONFIG.travel.flights.sim.hourRange);
   const minute = ((seed >>> 4) + dayOffset) % 60;
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
@@ -68,7 +59,7 @@ function dayCells(origin: string, dest: string, eventDay: string, range: [number
   }
   if (cells.every((c) => c.price === null)) {
     const last = cells[cells.length - 1];
-    last.price = FALLBACK_PRICE_MIN + (seed % FALLBACK_PRICE_RANGE);
+    last.price = CONFIG.travel.flights.sim.fallbackPriceMin + (seed % CONFIG.travel.flights.sim.fallbackPriceRange);
     last.hour = mockHour(seed, range[1]);
   }
   return cells;
@@ -76,23 +67,18 @@ function dayCells(origin: string, dest: string, eventDay: string, range: [number
 
 export function mockFlightWindow(origin: string, dest: string, eventDay: string): FlightWindow {
   return {
-    outbound: dayCells(origin, dest, eventDay, OUTBOUND_WINDOW),
-    returning: dayCells(origin, dest, eventDay, RETURN_WINDOW),
+    outbound: dayCells(origin, dest, eventDay, CONFIG.travel.flights.sim.outboundWindow),
+    returning: dayCells(origin, dest, eventDay, CONFIG.travel.flights.sim.returnWindow),
   };
 }
 
 // ---- Live Ryanair (farefinder) ----
 
-const FARE_BASE = 'https://www.ryanair.com/api/farfnd/3/oneWayFares';
-const FARE_UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36';
 
-const AVAILABILITY_TTL_MS = 24 * 3_600_000;
-const PRICE_TTL_MS = 12 * 3_600_000;
 
 /** Raw farefinder GET. 404 → null (no such route); any other non-2xx throws. */
 async function fetchFareJson(url: string): Promise<any | null> {
-  const res = await fetch(url, { headers: { 'User-Agent': FARE_UA, Accept: 'application/json' } });
+  const res = await fetch(url, { headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'application/json' } });
   if (res.status === 404) return null;
   if (res.status === 429 || res.status >= 500) {
     throw new Error(`Ryanair farefinder ${res.status}`);
@@ -129,15 +115,15 @@ export interface CheapestDay {
 
 /** Dates the origin→dest route flies (whole booking horizon), cached. */
 export async function fetchRyanairAvailabilities(db: D1Database, origin: string, dest: string): Promise<string[]> {
-  const data = await cachedJson(db, `avail:${origin}:${dest}`, AVAILABILITY_TTL_MS, () =>
-    fetchFareJson(`${FARE_BASE}/${origin}/${dest}/availabilities`));
+  const data = await cachedJson(db, `avail:${origin}:${dest}`, CONFIG.travel.flights.availabilityTtlMs, () =>
+    fetchFareJson(`${CONFIG.travel.flights.fareBase}/${origin}/${dest}/availabilities`));
   return Array.isArray(data) ? data.filter((d): d is string => typeof d === 'string') : [];
 }
 
 /** Per-day cheapest fare for (origin,dest) in `month` (YYYY-MM-01), cached. */
 export async function fetchRyanairCheapestPerDay(db: D1Database, origin: string, dest: string, month: string): Promise<Map<string, CheapestDay>> {
-  const data = await cachedJson(db, `price:${origin}:${dest}:${month}`, PRICE_TTL_MS, () =>
-    fetchFareJson(`${FARE_BASE}/${origin}/${dest}/cheapestPerDay?market=pl-pl&currency=PLN&outboundMonthOfDate=${month}`));
+  const data = await cachedJson(db, `price:${origin}:${dest}:${month}`, CONFIG.travel.flights.priceTtlMs, () =>
+    fetchFareJson(`${CONFIG.travel.flights.fareBase}/${origin}/${dest}/cheapestPerDay?market=pl-pl&currency=PLN&outboundMonthOfDate=${month}`));
   const fares = data?.outbound?.fares;
   if (!Array.isArray(fares)) return new Map();
   const out = new Map<string, CheapestDay>();
@@ -177,8 +163,8 @@ export function buildWindowFromCheapest(
   outboundPrices: Map<string, CheapestDay>,
   returnPrices: Map<string, CheapestDay>,
 ): FlightWindow {
-  const outDays = Array.from({ length: OUTBOUND_WINDOW[1] - OUTBOUND_WINDOW[0] + 1 }, (_, i) => addDaysWarsaw(eventDay, OUTBOUND_WINDOW[0] + i));
-  const retDays = Array.from({ length: RETURN_WINDOW[1] - RETURN_WINDOW[0] + 1 }, (_, i) => addDaysWarsaw(eventDay, RETURN_WINDOW[0] + i));
+  const outDays = Array.from({ length: CONFIG.travel.flights.sim.outboundWindow[1] - CONFIG.travel.flights.sim.outboundWindow[0] + 1 }, (_, i) => addDaysWarsaw(eventDay, CONFIG.travel.flights.sim.outboundWindow[0] + i));
+  const retDays = Array.from({ length: CONFIG.travel.flights.sim.returnWindow[1] - CONFIG.travel.flights.sim.returnWindow[0] + 1 }, (_, i) => addDaysWarsaw(eventDay, CONFIG.travel.flights.sim.returnWindow[0] + i));
   return {
     outbound: outDays.map((d) => buildCell(d, outboundPrices)),
     returning: retDays.map((d) => buildCell(d, returnPrices)),
@@ -188,7 +174,7 @@ export function buildWindowFromCheapest(
 /** Live window: fetch per-day prices for the months the window spans, both directions. */
 export async function liveRyanairWindow(db: D1Database, origin: string, dest: string, eventDay: string): Promise<FlightWindow> {
   const months = new Set<string>();
-  for (let o = OUTBOUND_WINDOW[0]; o <= RETURN_WINDOW[1]; o++) {
+  for (let o = CONFIG.travel.flights.sim.outboundWindow[0]; o <= CONFIG.travel.flights.sim.returnWindow[1]; o++) {
     months.add(monthKey(addDaysWarsaw(eventDay, o)));
   }
   const outPrices = new Map<string, CheapestDay>();

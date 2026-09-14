@@ -1,3 +1,4 @@
+import { CONFIG } from '../../../config/index';
 // Errors page: client error monitor — stat cards, type facets, per-day bars,
 // filterable table with expandable meta + pagination, rich empty state.
 // No client JS needed (SSR + CSS bars).
@@ -7,7 +8,6 @@ import { bars, card, cardHeader, empty, esc, fmtDate, icon, pageHeader, paginati
 import { requireSession } from '../common';
 import { renderPage } from './shared';
 import { ADMIN_PAGE_SIZE_COMPACT, ADMIN_DAYS_OPTIONS_COMPACT } from '../../config';
-import { DAY_MS } from '../../../seed/core/constants';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
 
@@ -23,12 +23,12 @@ pageRoutes.get('/errors', async (c) => {
   const type = q.type ? String(q.type) : null;
   const search = q.q ? String(q.q) : null;
   const page = Math.max(1, parseInt(String(q.page || '1'), 10) || 1);
-  const since = Date.now() - days * DAY_MS;
+  const since = Date.now() - days * CONFIG.time.dayMs;
 
   const [c24, c7d, c30d, unique] = await Promise.all([
-    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - DAY_MS).first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 7 * DAY_MS).first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 30 * DAY_MS).first<{ n: number }>(),
+    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - CONFIG.time.dayMs).first<{ n: number }>(),
+    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 7 * CONFIG.time.dayMs).first<{ n: number }>(),
+    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(Date.now() - 30 * CONFIG.time.dayMs).first<{ n: number }>(),
     db.prepare('SELECT COUNT(DISTINCT device_id) n FROM client_errors WHERE created_at>=?').bind(since).first<{ n: number }>(),
   ]);
 

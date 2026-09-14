@@ -1,3 +1,4 @@
+import { CONFIG } from '../../../config/index';
 // Users page: stat strip, search + activity filters, table with avatars/actions,
 // ban/unban with confirm modal + toasts, Tabler pagination.
 // Client logic in /admin/static/js/pages/users.js.
@@ -7,7 +8,6 @@ import { cards, empty, esc, fmtDate, icon, initialsAvatar, pageHeader, paginatio
 import { requireSession } from '../common';
 import { renderPage } from './shared';
 import { ADMIN_PAGE_SIZE } from '../../config';
-import { DAY_MS } from '../../../seed/core/constants';
 
 const pageRoutes = new Hono<{ Bindings: Env }>();
 
@@ -20,7 +20,7 @@ const PROVIDER_BADGE: Record<string, string> = {
 function dotColor(ms: number | null | undefined): string {
   if (!ms) return 'status-muted';
   const diff = Date.now() - ms;
-  if (diff < 7 * DAY_MS) return diff < DAY_MS ? 'status-green' : 'status-yellow';
+  if (diff < 7 * CONFIG.time.dayMs) return diff < CONFIG.time.dayMs ? 'status-green' : 'status-yellow';
   return 'status-muted';
 }
 
@@ -41,7 +41,7 @@ pageRoutes.get('/users', async (c) => {
         AND NOT EXISTS (SELECT 1 FROM auth_events e WHERE e.user_id=u.id)
         AND NOT EXISTS (SELECT 1 FROM posts p WHERE p.user_id=u.id)
         AND NOT EXISTS (SELECT 1 FROM views v WHERE v.user_id=u.id)) AS never_active,
-      (SELECT COUNT(*) FROM banned_devices) AS banned`).bind(Date.now() - DAY_MS, Date.now() - 7 * DAY_MS, Date.now() - 30 * DAY_MS).first<{ total: number; active24h: number; active7d: number; active30d: number; never_active: number; banned: number }>();
+      (SELECT COUNT(*) FROM banned_devices) AS banned`).bind(Date.now() - CONFIG.time.dayMs, Date.now() - 7 * CONFIG.time.dayMs, Date.now() - 30 * CONFIG.time.dayMs).first<{ total: number; active24h: number; active7d: number; active30d: number; never_active: number; banned: number }>();
   const provRow = await db.prepare('SELECT auth_provider, COUNT(*) n FROM users GROUP BY auth_provider').all<{ auth_provider: string; n: number }>();
   const providers = provRow.results ?? [];
 

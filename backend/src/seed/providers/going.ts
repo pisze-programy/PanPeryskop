@@ -1,10 +1,10 @@
+import { CONFIG } from '../../config/index';
 // goingapp provider — 'fetch' transport. Scrapes Algolia search + place API.
 // API keys come from wrangler vars (ALGOLIA_APP_ID / ALGOLIA_API_KEY /
 // CLOUDINARY_SIG) — never hardcoded (they were previously leaked via git).
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { getJson } from './http';
 import { upsertVenue } from '../venues/venueStore';
-import { GOING_BASE, GOING_ALGOLIA_ORIGIN, GOING_PLACE, GOING_POSTER, GOING_THUMB } from '../core/constants';
 import { goingSlugKey } from '../core/goingTd';
 
 interface GoingHit {
@@ -76,7 +76,7 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
   for (;;) {
     const res = await fetch(algoliaUrl, {
       method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: GOING_ALGOLIA_ORIGIN },
+      headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: CONFIG.providers.going.algoliaOrigin },
       body: JSON.stringify({ requests: [{ indexName: 'search-main', params: `${base}&page=${page}` }] }),
     });
     if (!res.ok) throw new Error(`going algolia -> ${res.status}`);
@@ -103,7 +103,7 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
       if (cached) {
         place = cached;
       } else {
-        try { place = await getJson(GOING_PLACE(slug)); placeCache.set(slug, place); } catch { /* keep place-less */ }
+        try { place = await getJson(CONFIG.providers.going.place(slug)); placeCache.set(slug, place); } catch { /* keep place-less */ }
       }
     }
     // Venue upsert is an optimization for future geo reuse — on the VPS executor
@@ -140,11 +140,11 @@ async function fetchGoing(ctx: SeedContext): Promise<SeedCandidate[]> {
       venue: place.name === undefined || place.name === '' ? (h.place_name === undefined ? '' : h.place_name) : place.name,
       address: place.address === undefined ? '' : place.address,
       link: h.slug && h.rundate_slug
-        ? `${GOING_BASE}/wydarzenie/${h.slug}/${h.rundate_slug}`
-        : `${GOING_BASE}/${h.path}`,
+        ? `${CONFIG.providers.going.base}/wydarzenie/${h.slug}/${h.rundate_slug}`
+        : `${CONFIG.providers.going.base}/${h.path}`,
       affiliateLink,
-      mediaUrl: GOING_POSTER(enc, cloudSig),
-      thumbUrl: GOING_THUMB(enc, cloudSig),
+      mediaUrl: CONFIG.providers.going.poster(enc, cloudSig),
+      thumbUrl: CONFIG.providers.going.thumb(enc, cloudSig),
       tags: goingTagList === null ? undefined : goingTagList,
       partnerId: h.partner_id != null ? String(h.partner_id) : undefined,
       partnerName: h.partner_name,

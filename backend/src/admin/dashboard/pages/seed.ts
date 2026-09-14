@@ -1,3 +1,4 @@
+import { CONFIG } from '../../../config/index';
 // Seed page: run health read straight from the v2 work-list — seed_batches
 // (run identity) joined to seed_units (per-scope state) and seed_raw (per-event
 // ingest). The old seed_runs / scope counters belonged to the retired pipeline.
@@ -11,7 +12,6 @@ import { cronInfo } from '../../queries';
 import {
   seedRuns, runStatusCounts, runStatusSeries, unitsForRuns, providerUnitHealth, seedIngestSeries,
 } from '../../queries/seed';
-import { DAY_MS } from '../../../seed/core/constants';
 import { PROVIDER_CONFIGS } from '../../../seed/providers/registry';
 import { renderPage } from './shared';
 
@@ -34,7 +34,7 @@ pageRoutes.get('/seed', async (c) => {
   const dFrom = q.dfrom ? String(q.dfrom) : null;
   const dTo = q.dto ? String(q.dto) : null;
   const bStatus = q.bstatus ? String(q.bstatus) : null;
-  const since = Date.now() - 30 * DAY_MS;
+  const since = Date.now() - 30 * CONFIG.time.dayMs;
 
   const [allRuns, statusCounts, ingestSeries, runSeries, providerHealth, cron] = await Promise.all([
     seedRuns(db, since, 60),

@@ -1,3 +1,4 @@
+import { CONFIG } from '../../../config/index';
 // VPS executor runtime — shared machinery for the per-provider runners
 // (executors/vps/runners/*). Providers stay pure; this is executor tooling:
 //   - the unified checkpoint contract {target, completed, completedAt, …} the
@@ -24,7 +25,6 @@ import { buildDescription, showtimesArray, parseEventDescription } from '../../.
 import { isCancelled, dropBlocked, rescueRealShows } from '../../../../src/seed/core/filters';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs, warsawDateOf, eventDayEndMs } from '../../../../src/seed/core/dates';
 import { GeoStore, fallbackSeedGeo } from '../../../../src/seed/core/geo';
-import { SEED_DAYS_AHEAD, SEED_REFILL_AHEAD, VPS_MIN_MEMAVAILABLE_MB, VPS_MAX_LOAD1, VPS_CONCURRENCY, EVENT_VISIBLE_OFFSET_MS, HOUR_MS } from '../../../../src/seed/core/constants';
 import { UA_HEADERS } from '../../../../src/seed/providers/http';
 import { configOf } from '../../../../src/seed/providers/registry';
 import type { SeedCandidate, ProviderId } from '../../../../src/seed/core/types';
@@ -51,7 +51,6 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET || '';
 export const PACING_MS = 500;
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-export { SEED_DAYS_AHEAD };
 
 // ---------- per-scope fetch retry ----------
 // A scope fetch can fail transiently when the rotating residential proxy hands us
@@ -342,7 +341,7 @@ export function entryFor(c: SeedCandidate & { lat: number; lng: number }, mediaR
     external_id: c.externalId,
     title: c.title,
     description: buildDescription(c),
-    created_at: `${day}T${String(EVENT_VISIBLE_OFFSET_MS / HOUR_MS).padStart(2, '0')}:00:00+02:00`,
+    created_at: `${day}T${String(CONFIG.time.visibilityOffsetMs / CONFIG.time.hourMs).padStart(2, '0')}:00:00+02:00`,
     venue: c.venue,
     address: c.address === undefined ? '' : c.address,
     city: c.city,
@@ -583,7 +582,7 @@ export async function runScopeSource(src: ScopeSource, opts?: { full?: boolean }
       paused = true;
       break;
     }
-    const batch = queue.splice(0, args.limit ? Math.min(VPS_CONCURRENCY, args.limit - processed) : VPS_CONCURRENCY);
+    const batch = queue.splice(0, args.limit ? Math.min(CONFIG.vps.concurrency, args.limit - processed) : CONFIG.vps.concurrency);
     processed += batch.length;
     const results = await Promise.allSettled(batch.map(processScope));
     if (results.some((r) => r.status === 'fulfilled' && r.value === 'paused')) {
@@ -642,7 +641,7 @@ async function rejectDisplaced(scope: string, geo: { lat: number; lng: number },
 // default = the new far edge (today+SEED_DAYS_AHEAD).
 function seedDays(args: CommonArgs): { days: string[]; target: string } {
   const today = todayWarsaw();
-  const farEdge = addDaysWarsaw(today, SEED_DAYS_AHEAD);
+  const farEdge = addDaysWarsaw(today, CONFIG.seed.window.daysAhead);
   if (args.day) return { days: [args.day], target: farEdge };
   if (args.range) {
     const [start, end] = args.range.split('..');
@@ -657,7 +656,7 @@ function seedDays(args: CommonArgs): { days: string[]; target: string } {
   // The refill model seeds the refill horizon [today..today+SEED_REFILL_AHEAD] on each
   // seed day (the orchestrator skips non-seed days) — not a single far edge. The
   // horizon outruns the app window so no browsable day is ever unseeded.
-  const days = Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i));
+  const days = Array.from({ length: CONFIG.seed.window.refillAhead + 1 }, (_, i) => addDaysWarsaw(today, i));
   return { days, target: farEdge };
 }
 
@@ -694,5 +693,5 @@ function load1(): number {
 function readResources(): boolean {
   const mem = memAvailableMb();
   const load = load1();
-  return mem >= VPS_MIN_MEMAVAILABLE_MB && load < VPS_MAX_LOAD1;
+  return mem >= CONFIG.vps.minMemAvailableMb && load < CONFIG.vps.maxLoad1;
 }

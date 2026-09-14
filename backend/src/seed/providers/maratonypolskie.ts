@@ -1,3 +1,4 @@
+import { CONFIG } from '../../config/index';
 // maratonypolskie.pl provider — 'fetch' transport, Worker executor. The site is a
 // plain PHP calendar (no anti-bot, returns 200 from datacenter egress), so it runs
 // on the CF Workers edge without a proxy. Content: Polish running events (grp=13).
@@ -13,7 +14,6 @@
 // posts); in practice ~100% of events have a current-year /logo/ poster.
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { resolveGeo } from '../core/geo';
-import { MP_BASE, MP_LIST } from '../core/constants';
 import { UA_HEADERS } from './http';
 
 const MP_GRP = '13';
@@ -142,7 +142,7 @@ interface MpDetail {
 }
 
 export function fetchDetail(code: string): Promise<MpDetail> {
-  const url = `${MP_LIST}?dzial=3&action=5&code=${code}&bieganie`;
+  const url = `${CONFIG.providers.maratonypolskie.list}?dzial=3&action=5&code=${code}&bieganie`;
   return fetch(url, { headers: UA_HEADERS, signal: AbortSignal.timeout(MP_TIMEOUT_MS) })
     .then((res) => (res.ok ? res.arrayBuffer() : null))
     .then((buf) => {
@@ -151,7 +151,7 @@ export function fetchDetail(code: string): Promise<MpDetail> {
       const poster = extractPoster(html);
       const links = [...html.matchAll(/<a[^>]+href=["'](https?:\/\/[^"']+?)["'][^>]*>/gi)].map((m) => m[1]);
       const officialLink = links.find((l) => !l.includes('maratonypolskie.pl')) || null;
-      return { logo: poster ? `${MP_BASE}${poster}` : null, officialLink };
+      return { logo: poster ? `${CONFIG.providers.maratonypolskie.base}${poster}` : null, officialLink };
     })
     .catch(() => ({ logo: null, officialLink: null }));
 }
@@ -172,7 +172,7 @@ export function fetchList(day: string): Promise<MpEvent[]> {
     dzial: '3',
     action: '1',
   }).toString();
-  return fetch(MP_LIST, {
+  return fetch(CONFIG.providers.maratonypolskie.list, {
     method: 'POST',
     headers: { ...UA_HEADERS, 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
@@ -212,7 +212,7 @@ export async function fetchMp(ctx: SeedContext): Promise<SeedCandidate[]> {
       city: ev.city,
       venue: ev.distance ? `${ev.city} (${ev.distance})` : ev.city,
       address: '',
-      link: detail.officialLink || `${MP_LIST}?dzial=3&action=5&code=${ev.code}&bieganie`,
+      link: detail.officialLink || `${CONFIG.providers.maratonypolskie.list}?dzial=3&action=5&code=${ev.code}&bieganie`,
       mediaUrl: detail.logo || DEFAULT_SPORT_POSTER,
       thumbUrl: null,
       tags: ['sport'],

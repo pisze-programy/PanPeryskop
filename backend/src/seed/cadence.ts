@@ -1,9 +1,5 @@
-// Seed cadence: the full window is refilled every SEED_INTERVAL_DAYS instead of
-// rolling daily. The marker (last_seed_day in D1) lets missed cycles catch up
-// (a run happens whenever >= interval days have passed). Warms and the VPS
-// orchestrator read the same cadence via GET /admin/seed/cadence so they only
-// run on seed days.
-import { SEED_INTERVAL_DAYS, DAY_MS } from './core/constants';
+import { CONFIG } from '../config/index';
+
 
 const KEY = 'last_seed_day';
 
@@ -24,6 +20,6 @@ export function seedDue(lastSeedDay: string | null, today: string): boolean {
   if (!lastSeedDay) return true;
   const last = Date.parse(`${lastSeedDay}T00:00:00Z`);
   const now = Date.parse(`${today}T00:00:00Z`);
-  const days = Math.round((now - last) / DAY_MS);
-  return days >= SEED_INTERVAL_DAYS;
+  const days = Math.round((now - last) / CONFIG.time.dayMs);
+  return days >= CONFIG.seed.window.intervalDays;
 }

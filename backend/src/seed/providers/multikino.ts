@@ -1,3 +1,5 @@
+import { CONFIG } from '../../config/index';
+import { MK_CINEMAS, mkCinemaById, mkScopes } from '../cinemas/index';
 // multikino.pl provider — 'fetch' transport. Sitecore JSS SPA backed by a JSON
 // microservice; no browser rendering needed. The per-cinema showings endpoint
 // returns 401 unless an anonymous session token (microservicesToken cookie) is
@@ -9,7 +11,6 @@
 // cinema locations, never resolved at run time.
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId, ShowtimeBooking } from '../core/types';
 import { getBytes, UA_HEADERS } from './http';
-import { MK_BASE, MK_API, MK_AUTH, MK_EMBARGO, MK_CINEMAS, MK_THUMB_QUERY, MK_TOKEN_TTL_MS, PROVIDER_FETCH_TIMEOUT_MS, mkScopes, mkCinemaById } from '../core/constants';
 
 // Module-level token cache — valid across multiple scopes in one invocation;
 // between invocations a fresh fetch is cheap (and idempotent).
@@ -78,7 +79,7 @@ async function getMkToken(store: MkTokenStore | null): Promise<string> {
     }
   }
 
-  const res = await fetch(MK_AUTH, { method: 'POST', headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8_000) });
+  const res = await fetch(CONFIG.providers.multikino.auth, { method: 'POST', headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8_000) });
   if (!res.ok) throw new Error(`multikino auth -> ${res.status}`);
   const cookies = typeof res.headers.getSetCookie === 'function'
     ? res.headers.getSetCookie()
@@ -93,7 +94,7 @@ async function getMkToken(store: MkTokenStore | null): Promise<string> {
     } catch { return 0; }
   })();
   token = t;
-  tokenExpMs = exp || Date.now() + MK_TOKEN_TTL_MS;
+  tokenExpMs = exp || Date.now() + CONFIG.providers.multikino.tokenTtlMs;
   if (store) await store.save(token, tokenExpMs);
   return t;
 }
@@ -128,8 +129,8 @@ export function parseMkFilms(data: unknown, cinemaId: string, days: string[]): S
     const filmSlug = (f.filmUrl || '').split('/filmy/')[1]?.split(/[?#]/)[0]?.replace(/\/$/, '') || '';
     const cinema = cinemaById(cinemaId);
     const link = cinema?.urlCinemaSlug && filmSlug
-      ? `${MK_BASE}/repertuar/${cinema.urlCinemaSlug}/filmy/${filmSlug}`
-      : (f.filmUrl || `${MK_BASE}/filmy`);
+      ? `${CONFIG.providers.multikino.base}/repertuar/${cinema.urlCinemaSlug}/filmy/${filmSlug}`
+      : (f.filmUrl || `${CONFIG.providers.multikino.base}/filmy`);
     for (const day of days) {
       const groups = (f.showingGroups || []).filter((g) => (g.date || '').slice(0, 10) === day);
       const sessions = groups.flatMap((g) => g.sessions || []);
@@ -174,7 +175,7 @@ export function parseMkFilms(data: unknown, cinemaId: string, days: string[]): S
         address: '',
         link,
         mediaUrl: poster,
-        thumbUrl: `${poster}${MK_THUMB_QUERY}`,
+        thumbUrl: `${poster}${CONFIG.providers.multikino.thumbQuery}`,
         isSoldOut: sessions.every((s) => s.isSoldOut),
       });
     }
@@ -197,16 +198,16 @@ function cinemaCity(id: string): string {
 // covered in a single call per cinema. Retries once with a fresh token on 401.
 export async function fetchMkCinema(opts: MkFetchOptions, cinemaId: string): Promise<SeedCandidate[]> {
   const t = await getMkToken(opts.tokenStore ?? null);
-  const url = `${MK_API}/showings/cinemas/${cinemaId}/films?minEmbargoLevel=${MK_EMBARGO}&includesSession=true&includeSessionAttributes=true`;
+  const url = `${CONFIG.providers.multikino.api}/showings/cinemas/${cinemaId}/films?minEmbargoLevel=${CONFIG.providers.multikino.embargo}&includesSession=true&includeSessionAttributes=true`;
   // Clean browser-ish headers WITHOUT a foreign Referer — UA_HEADERS carries
   // `Referer: https://goingapp.pl/` (shared with the going provider) which
   // multikino's Cloudflare rejects with 403.
-  const mkHeaders = { 'User-Agent': UA_HEADERS['User-Agent'], Accept: 'application/json', Referer: MK_BASE };
-  let res = await fetch(url, { headers: { ...mkHeaders, Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) });
+  const mkHeaders = { 'User-Agent': UA_HEADERS['User-Agent'], Accept: 'application/json', Referer: CONFIG.providers.multikino.base };
+  let res = await fetch(url, { headers: { ...mkHeaders, Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(CONFIG.seed.fetchTimeoutMs) });
   if (res.status === 401) {
     token = null;
     const t2 = await getMkToken(opts.tokenStore ?? null);
-    res = await fetch(url, { headers: { ...mkHeaders, Authorization: `Bearer ${t2}` }, signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) });
+    res = await fetch(url, { headers: { ...mkHeaders, Authorization: `Bearer ${t2}` }, signal: AbortSignal.timeout(CONFIG.seed.fetchTimeoutMs) });
   }
   if (!res.ok) throw new Error(`multikino ${cinemaId} -> ${res.status}`);
   const out = parseMkFilms(await res.json(), cinemaId, opts.days);

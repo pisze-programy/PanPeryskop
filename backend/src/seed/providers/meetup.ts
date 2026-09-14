@@ -1,3 +1,4 @@
+import { CONFIG } from '../../config/index';
 // meetup.com provider — 'fetch' transport. Apollo GraphQL behind Cloudflare Bot
 // Management (no auth/cookies needed from a residential IP). Runs from a
 // residential egress (local Mac / VPS via iPhone exit node) — the same class as
@@ -13,7 +14,6 @@ import { SeedProvider, SeedFetchCtx, SeedContext, SeedCandidate, ProviderId } fr
 import { CITIES, cityById } from '../../admin/cities';
 import { toWarsawIso } from '../core/dates';
 import { resolveGeo, GeoStore } from '../core/geo';
-import { MEETUP_GQL, MEETUP_RADIUS, MEETUP_FIRST, PROVIDER_FETCH_TIMEOUT_MS } from '../core/constants';
 
 const MEETUP_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:153.0) Gecko/20100101 Firefox/153.0',
@@ -106,19 +106,19 @@ export function parseMeetupNode(n: MeetupNode, cityName: string, fallback: { lat
 
 async function fetchPage(opts: MeetupFetchOptions, lat: number, lon: number, after?: string): Promise<{ nodes: MeetupNode[]; hasNextPage: boolean; endCursor: string | null }> {
   const variables: Record<string, unknown> = {
-    first: MEETUP_FIRST,
+    first: CONFIG.providers.meetup.first,
     lat,
     lon,
-    radius: MEETUP_RADIUS,
+    radius: CONFIG.providers.meetup.radius,
     startDateRange: toWarsawIso(opts.dayStart), // events starting on/after today
     eventType: 'PHYSICAL',
   };
   if (after) variables.after = after;
-  const res = await fetch(MEETUP_GQL, {
+  const res = await fetch(CONFIG.providers.meetup.gql, {
     method: 'POST',
     headers: MEETUP_HEADERS,
     body: JSON.stringify({ operationName: 'recommendedEventsWithSeries', variables, query: MEETUP_QUERY }),
-    signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS),
+    signal: AbortSignal.timeout(CONFIG.seed.fetchTimeoutMs),
   });
   if (!res.ok) throw new Error(`meetup gql2 -> ${res.status}`);
   const body = (await res.json()) as {

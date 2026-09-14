@@ -1,3 +1,4 @@
+import { CONFIG } from '../../config/index';
 // luma.com provider — 'fetch' transport. Private JSON API behind Cloudflare Bot
 // Management (__cf_bm cookie; no auth). Runs from a residential egress (local
 // Mac / VPS via iPhone exit node) — same class as multikino/cinemacity, which
@@ -12,7 +13,6 @@
 import { SeedProvider, SeedContext, SeedFetchCtx, SeedCandidate, ProviderId } from '../core/types';
 import { CITIES, cityById } from '../../admin/cities';
 import { resolveGeo, GeoStore } from '../core/geo';
-import { LUMA_API, LUMA_EVENT_WEB, LUMA_LIMIT, LUMA_PLACE_WARSAW, LUMA_BBOX_RADIUS, PROVIDER_FETCH_TIMEOUT_MS } from '../core/constants';
 
 const LUMA_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:153.0) Gecko/20100101 Firefox/153.0',
@@ -132,7 +132,7 @@ export function parseLumaEntry(e: LumaEntry, cityName: string, fallback: { lat: 
       city: geo?.city || cityName,
       venue,
       address,
-      link: `${LUMA_EVENT_WEB}/${ev.url || ev.api_id}`,
+      link: `${CONFIG.providers.luma.eventWeb}/${ev.url || ev.api_id}`,
       mediaUrl: isUsableImage(ev.cover_url) || isUsableImage(ev.social_image_url),
       thumbUrl: null, // lumacdn has no resize; the VPS/seed-ingest path builds the thumb
       tags: ['meetup'],
@@ -141,7 +141,7 @@ export function parseLumaEntry(e: LumaEntry, cityName: string, fallback: { lat: 
 }
 
 async function fetchPage(url: string): Promise<LumaPage> {
-  const res = await fetch(url, { headers: LUMA_HEADERS, signal: AbortSignal.timeout(PROVIDER_FETCH_TIMEOUT_MS) });
+  const res = await fetch(url, { headers: LUMA_HEADERS, signal: AbortSignal.timeout(CONFIG.seed.fetchTimeoutMs) });
   if (!res.ok) throw new Error(`luma get-paginated-events -> ${res.status}`);
   return (await res.json()) as LumaPage;
 }
@@ -154,13 +154,13 @@ export async function fetchLumaCity(ctx: SeedFetchCtx, cityId: string, opts?: Lu
   if (!city) return [];
   const o: LumaFetchOptions = opts ?? { day: ctx.day, dayStart: ctx.dayStart, dayEnd: ctx.dayEnd };
   const base = cityId === 'warszawa'
-    ? `discover_place_api_id=${LUMA_PLACE_WARSAW}`
-    : `east=${(city.lng + LUMA_BBOX_RADIUS).toFixed(5)}&north=${(city.lat + LUMA_BBOX_RADIUS).toFixed(5)}&south=${(city.lat - LUMA_BBOX_RADIUS).toFixed(5)}&west=${(city.lng - LUMA_BBOX_RADIUS).toFixed(5)}`;
+    ? `discover_place_api_id=${CONFIG.providers.luma.placeWarsaw}`
+    : `east=${(city.lng + CONFIG.providers.luma.bboxRadius).toFixed(5)}&north=${(city.lat + CONFIG.providers.luma.bboxRadius).toFixed(5)}&south=${(city.lat - CONFIG.providers.luma.bboxRadius).toFixed(5)}&west=${(city.lng - CONFIG.providers.luma.bboxRadius).toFixed(5)}`;
 
   const out: SeedCandidate[] = [];
   let cursor: string | null = null;
   for (let page = 0; page < 10; page++) {
-    const url = `${LUMA_API}/get-paginated-events?${base}&pagination_limit=${LUMA_LIMIT}${cursor ? `&pagination_cursor=${encodeURIComponent(cursor)}` : ''}`;
+    const url = `${CONFIG.providers.luma.api}/get-paginated-events?${base}&pagination_limit=${CONFIG.providers.luma.limit}${cursor ? `&pagination_cursor=${encodeURIComponent(cursor)}` : ''}`;
     let data: LumaPage;
     try { data = await fetchPage(url); }
     catch (e) {

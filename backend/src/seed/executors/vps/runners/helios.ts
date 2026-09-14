@@ -1,8 +1,6 @@
-// helios provider — VPS executor source. One request per cinema returns the FULL
-// repertoire (~25 days), so a scope fetches once and is parsed for every window
-// day (mirrors multikino: 1 req per cinema covers the whole seed window). The
-// static catalog provides the dedupe/reject anchor (lat/lng).
-import { HELIOS_CINEMAS, HELIOS_SCREENINGS, HELIOS_TIMEOUT_MS, heliosScopes } from '../../../../seed/core/constants';
+import { CONFIG } from '../../../../config/index';
+import { HELIOS_CINEMAS, heliosScopes } from '../../../cinemas/index';
+
 import { parseHeliosPayload } from '../../../../seed/providers/helios';
 import { UA_HEADERS } from '../../../../seed/providers/http';
 import type { ScopeSource } from '../runtime';
@@ -18,9 +16,9 @@ export const heliosSource: ScopeSource = {
     return { lat: c.lat, lng: c.lng };
   },
   fetchScope: async (scope, ctx) => {
-    const res = await fetch(HELIOS_SCREENINGS(Number(scope)), {
+    const res = await fetch(CONFIG.providers.helios.screenings(Number(scope)), {
       headers: { 'User-Agent': UA_HEADERS['User-Agent'], 'Accept-Language': 'pl', Accept: 'application/json' },
-      signal: AbortSignal.timeout(HELIOS_TIMEOUT_MS),
+      signal: AbortSignal.timeout(CONFIG.providers.helios.timeoutMs),
     });
     if (!res.ok) throw new Error(`helios ${scope} -> ${res.status}`);
     const body = (await res.json()) as { data?: unknown };

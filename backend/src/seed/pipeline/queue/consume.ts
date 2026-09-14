@@ -1,14 +1,11 @@
-// Consumer entry: dispatch a queue batch. v2 only carries `{ type: 'unit' }`
-// wake-ups; the durable work-list (seed_units) is the source of truth, so one
-// wake-up drains the pending WORKER units. Per-message ack/retry keeps one slow
-// message from nuking the batch.
-import { QUEUE_CONSUMER_CONCURRENCY, QUEUE_RETRY_DELAY_SECONDS } from '../../core/constants';
+import { CONFIG } from '../../../config/index';
+
 import { EnvQ, SeedQueueMessage } from './types';
 import { handleUnitWake } from './unitHandler';
 import { handleFinalizeWake } from './finalize';
 
 export async function runQueue(env: EnvQ, batch: MessageBatch<SeedQueueMessage>): Promise<void> {
-  const CONCURRENCY = QUEUE_CONSUMER_CONCURRENCY;
+  const CONCURRENCY = CONFIG.queue.consumerConcurrency;
   const msgs = [...batch.messages];
   let cursor = 0;
   const workers = Array.from({ length: Math.min(CONCURRENCY, msgs.length) }, async () => {
@@ -20,7 +17,7 @@ export async function runQueue(env: EnvQ, batch: MessageBatch<SeedQueueMessage>)
         msg.ack();
       } catch (e) {
         console.error(`queue unit wake attempt ${msg.attempts} failed: ${(e as Error).message}`);
-        msg.retry({ delaySeconds: QUEUE_RETRY_DELAY_SECONDS });
+        msg.retry({ delaySeconds: CONFIG.queue.retryDelaySeconds });
       }
     }
   });

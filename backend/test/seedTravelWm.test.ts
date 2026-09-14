@@ -1,8 +1,8 @@
+import { CONFIG } from '../src/config/index';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseWmEvent } from '../src/travel/worldsmarathons';
 import { runTravelProvider } from '../src/travel/run';
-import { TRAVEL_REPLENISH_DAYS, TRAVEL_BACKFILL_DAYS } from '../src/travel/constants';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs } from '../src/seed/core/dates';
 
 const row = (over: Record<string, unknown> = {}) => ({
@@ -80,15 +80,15 @@ test('runTravelProvider: collects a source over the window and dedupes', async (
   };
   const manifest = await runTravelProvider(source, { runType: 'replenish' });
   assert.equal(manifest.provider, 'test');
-  assert.equal(manifest.days.length, TRAVEL_REPLENISH_DAYS);
-  assert.equal(seen.length, TRAVEL_REPLENISH_DAYS);
-  assert.equal(manifest.events.length, TRAVEL_REPLENISH_DAYS);
+  assert.equal(manifest.days.length, CONFIG.travel.replenishDays);
+  assert.equal(seen.length, CONFIG.travel.replenishDays);
+  assert.equal(manifest.events.length, CONFIG.travel.replenishDays);
 });
 
 test('runTravelProvider: near window always refreshed, covered far days skipped', async () => {
   const today = todayWarsaw();
   const covered = new Set<string>();
-  for (let i = TRAVEL_REPLENISH_DAYS; i < TRAVEL_BACKFILL_DAYS; i++) covered.add(addDaysWarsaw(today, i));
+  for (let i = CONFIG.travel.replenishDays; i < CONFIG.travel.backfillDays; i++) covered.add(addDaysWarsaw(today, i));
   const seen: string[] = [];
   const source = {
     id: 'test',
@@ -98,6 +98,6 @@ test('runTravelProvider: near window always refreshed, covered far days skipped'
     },
   };
   const manifest = await runTravelProvider(source, { runType: 'replenish', coveredDays: covered });
-  assert.equal(manifest.days.length, TRAVEL_REPLENISH_DAYS);
-  assert.equal(seen.length, TRAVEL_REPLENISH_DAYS);
+  assert.equal(manifest.days.length, CONFIG.travel.replenishDays);
+  assert.equal(seen.length, CONFIG.travel.replenishDays);
 });

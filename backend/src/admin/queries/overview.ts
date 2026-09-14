@@ -1,8 +1,8 @@
+import { CONFIG } from '../../config/index';
 // Overview page: full data assembly + chart payloads (SSR + refresh API).
 import { runStatusCounts, seedIngestSeries, failedAdminLogins } from './seed';
 import { eventStatusBreakdown } from './events';
 import { daySeries, statsRange, cronInfo } from './shared';
-import { DAY_MS } from '../../seed/core/constants';
 import { CATEGORY_EVENTS, STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED } from '../../core/models';
 import { addDaysWarsaw, todayWarsaw } from '../../seed/core/dates';
 import { CronInfo } from '../cron';
@@ -48,15 +48,15 @@ export async function overviewData(env: Env, seedDaysAhead: number): Promise<Ove
   const windowEnd = addDaysWarsaw(today, seedDaysAhead);
   const [users, active7d, status, views14, media14, logins14, seedSeries, batchCounts, failedLogins7d, errors7d, reportsOpen, banned, lastSeed, cron, windowRows] = await Promise.all([
     db.prepare('SELECT COUNT(*) n FROM users').first<{ n: number }>(),
-    db.prepare('SELECT COUNT(*) n FROM users WHERE last_seen>=?').bind(now - 7 * DAY_MS).first<{ n: number }>(),
+    db.prepare('SELECT COUNT(*) n FROM users WHERE last_seen>=?').bind(now - 7 * CONFIG.time.dayMs).first<{ n: number }>(),
     eventStatusBreakdown(db),
     statsRange(db, 'views', 'created_at', 14),
     statsRange(db, 'posts', 'created_at', 14),
     statsRange(db, 'auth_events', 'created_at', 14, " AND event='login'"),
-    seedIngestSeries(db, now - 8 * DAY_MS),
+    seedIngestSeries(db, now - 8 * CONFIG.time.dayMs),
     runStatusCounts(db),
-    failedAdminLogins(db, now - 7 * DAY_MS),
-    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(now - 7 * DAY_MS).first<{ n: number }>(),
+    failedAdminLogins(db, now - 7 * CONFIG.time.dayMs),
+    db.prepare('SELECT COUNT(*) n FROM client_errors WHERE created_at>=?').bind(now - 7 * CONFIG.time.dayMs).first<{ n: number }>(),
     db.prepare("SELECT COUNT(*) n FROM reports WHERE status='open'").first<{ n: number }>(),
     db.prepare('SELECT COUNT(*) n FROM banned_devices').first<{ n: number }>(),
     db.prepare('SELECT * FROM seed_batches ORDER BY created_at DESC LIMIT 1').first<Record<string, unknown>>(),

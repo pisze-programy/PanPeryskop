@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { TRAVEL_TAGS, TravelTag } from '../travel/constants';
-import { buildPlaces, isPlaceKind } from '../travel/places';
+import { buildPlaces, isPlaceKind, paginatePlaces } from '../travel/places';
 import { fetchRyanairWindow, fetchWizzairWindow } from '../travel/flightsApi';
 import { reachableEvents, type TravelEventRow } from '../travel/reachability';
 
@@ -105,7 +105,8 @@ travelRoutes.get('/places', (c) => {
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
     return c.json({ error: 'valid lat and lng required' }, 400);
   }
-  return c.json({ places: buildPlaces(kind, lat, lng) });
+  const all = buildPlaces(kind, lat, lng);
+  return c.json(paginatePlaces(all, Number(q.offset) || 0, Number(q.limit)));
 });
 
 function flightParams(q: Record<string, string | undefined>): { origin: string; destination: string; eventDay: string } | null {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPlaces, isPlaceKind } from '../src/travel/places';
+import { buildPlaces, isPlaceKind, paginatePlaces } from '../src/travel/places';
 
 test('buildPlaces: is deterministic and stays near the event', () => {
   const a = buildPlaces('hotel', 41.41, 2.2);
@@ -13,6 +13,7 @@ test('buildPlaces: is deterministic and stays near the event', () => {
     assert.ok(Math.abs(p.lng - 2.2) < 0.05);
     assert.ok(p.price > 0);
     assert.ok(/^https:\/\//.test(p.image));
+    assert.ok(/^https:\/\//.test(p.link));
   }
 });
 
@@ -26,4 +27,20 @@ test('isPlaceKind: accepts the four kinds only', () => {
   for (const k of ['hotel', 'attraction', 'car', 'insurance']) assert.equal(isPlaceKind(k), true);
   assert.equal(isPlaceKind('flight'), false);
   assert.equal(isPlaceKind(''), false);
+});
+
+test('paginatePlaces: slices and reports hasMore', () => {
+  const all = buildPlaces('hotel', 50, 20);
+  const first = paginatePlaces(all, 0, 5);
+  assert.equal(first.places.length, 5);
+  assert.equal(first.total, all.length);
+  assert.equal(first.hasMore, true);
+
+  const rest = paginatePlaces(all, all.length - 2, 5);
+  assert.equal(rest.places.length, 2);
+  assert.equal(rest.hasMore, false);
+
+  const past = paginatePlaces(all, 999, 5);
+  assert.equal(past.places.length, 0);
+  assert.equal(past.hasMore, false);
 });

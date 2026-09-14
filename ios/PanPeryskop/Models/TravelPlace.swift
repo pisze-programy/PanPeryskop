@@ -12,6 +12,7 @@ struct TravelPlace: Codable, Identifiable, Equatable {
     let address: String
     let lat: Double
     let lng: Double
+    let link: String
     let tier: HotelTier?
     let rating: Double?
     let reviews: Int?
@@ -19,6 +20,8 @@ struct TravelPlace: Codable, Identifiable, Equatable {
 
 struct TravelPlacesResponse: Codable {
     let places: [TravelPlace]
+    let total: Int
+    let hasMore: Bool
 }
 
 enum PlaceKind: String, Codable, CaseIterable {
@@ -52,7 +55,26 @@ enum HotelTier: String, Codable, CaseIterable {
 }
 
 extension TravelPlace {
+    var url: URL? { URL(string: link) }
+
     var priceLabel: String { "\(price) \(currency)" }
+
+    /// Hotels: the API price is per night.
+    var nightlyPriceLabel: String { "\(price) \(currency) za noc" }
+
+    func totalPriceLabel(nights: Int) -> String {
+        let n = max(nights, 1)
+        return "(łącznie \(price * n) \(currency), \(Self.nightsLabel(n)))"
+    }
+
+    static func nightsLabel(_ nights: Int) -> String {
+        let n = max(nights, 0)
+        let last = n % 10
+        let lastTwo = n % 100
+        if n == 1 { return "1 noc" }
+        if (2...4).contains(last) && !(12...14).contains(lastTwo) { return "\(n) noce" }
+        return "\(n) nocy"
+    }
 
     func distanceMeters(to coordinate: CLLocationCoordinate2D) -> CLLocationDistance {
         CLLocation(latitude: lat, longitude: lng)

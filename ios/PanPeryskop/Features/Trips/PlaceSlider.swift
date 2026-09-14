@@ -6,9 +6,9 @@ struct PlaceSlider: View {
     let places: [TravelPlace]
     let eventCoordinate: CLLocationCoordinate2D
     let airportCoordinate: CLLocationCoordinate2D?
-    var selectedId: String? = nil
+    var nights: Int = 1
     var maxVisible: Int = 3
-    var onSelect: (TravelPlace) -> Void
+    var onOpen: (TravelPlace) -> Void
     var onSeeMore: () -> Void
 
     private var visible: [TravelPlace] { Array(places.prefix(maxVisible)) }
@@ -22,17 +22,9 @@ struct PlaceSlider: View {
                         place: place,
                         eventCoordinate: eventCoordinate,
                         airportCoordinate: airportCoordinate,
-                        onTap: { onSelect(place) }
+                        nights: nights,
+                        onTap: { onOpen(place) }
                     )
-                    .overlay(alignment: .topTrailing) {
-                        if place.id == selectedId {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.title3)
-                                .foregroundColor(.white)
-                                .background(Circle().fill(Color.accentColor))
-                                .padding(6)
-                        }
-                    }
                 }
                 if hasMore {
                     seeMoreTile

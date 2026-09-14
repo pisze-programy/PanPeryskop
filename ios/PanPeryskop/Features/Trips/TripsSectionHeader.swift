@@ -1,37 +1,39 @@
 import SwiftUI
 
-/// Section header: a divider, a title and an optional tip button.
+/// Section header: a divider, an uppercase label and optional trailing controls.
 struct TripsSectionHeader: View {
     let title: String
     /// Tip shown by the "i" button. nil hides the button.
     var info: String? = nil
-    @State private var showInfo = false
+    /// Filter control (hotels). nil hides it.
+    var filterLabel: String? = nil
+    var onFilter: (() -> Void)? = nil
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.s) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             Divider()
             HStack(spacing: Theme.Spacing.s) {
-                Text(title)
-                    .font(.headline.weight(.bold))
+                Text(title.uppercased())
+                    .font(Theme.Typo.sectionLabel)
+                    .kerning(0.6)
+                    .foregroundColor(.secondary)
                 Spacer(minLength: 0)
-                if let info {
+                if let filterLabel, let onFilter {
                     Button {
                         Haptics.selection()
-                        showInfo.toggle()
+                        onFilter()
                     } label: {
-                        Image(systemName: "info.circle")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 4) {
+                            Text(filterLabel)
+                                .font(.subheadline.weight(.semibold))
+                            Image(systemName: "chevron.down")
+                                .font(.caption2.weight(.semibold))
+                        }
                     }
                     .buttonStyle(.plain)
-                    .popover(isPresented: $showInfo, arrowEdge: .top) {
-                        Text(info)
-                            .font(.footnote)
-                            .foregroundColor(.primary)
-                            .padding(Theme.Spacing.m)
-                            .frame(maxWidth: 260, alignment: .leading)
-                            .presentationCompactAdaptation(.popover)
-                    }
+                }
+                if let info {
+                    TipButton(text: info)
                 }
             }
         }
@@ -47,5 +49,31 @@ struct TripsSectionFooter: View {
             .font(.caption2)
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Small "i" button with a tip popover.
+struct TipButton: View {
+    let text: String
+    @State private var show = false
+
+    var body: some View {
+        Button {
+            Haptics.selection()
+            show.toggle()
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $show, arrowEdge: .top) {
+            Text(text)
+                .font(.footnote)
+                .foregroundColor(.primary)
+                .padding(Theme.Spacing.m)
+                .frame(maxWidth: 260, alignment: .leading)
+                .presentationCompactAdaptation(.popover)
+        }
     }
 }

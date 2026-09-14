@@ -1,43 +1,145 @@
 import SwiftUI
 import CoreLocation
 
-/// Wycieczki event sheet. If the tapped pin is a group, the whole sheet pages
-/// across the events with dots at the top; a single event has no pager/dots.
-/// The hero is picked per event tag (soccer match board vs. run board).
+/// Wycieczki event sheet. A group pages across its events; a section can expand
+/// to a full list in the same sheet. External links open in the in-app browser.
 struct TripsEventSheet: View {
     @ObservedObject var viewModel: TripsViewModel
     @State private var activeIndex: Int? = 0
+    @State private var detent: PresentationDetent = .medium
+    @State private var expanded: PlaceKind?
+    @State private var browserURL: URL?
+    @State private var browserOffset: CGFloat = 0
+    @State private var nights = 1
+    @State private var airportCoordinate: CLLocationCoordinate2D?
 
     private var events: [TravelEvent] { viewModel.selectedEventGroup?.events ?? [] }
 
+    private var currentEvent: TravelEvent? {
+        let index = activeIndex ?? 0
+        return events.indices.contains(index) ? events[index] : events.first
+    }
+
+    private var bottomSafeAreaInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }?.safeAreaInsets.bottom ?? 0
+    }
+
     var body: some View {
-        SheetShell {
-            VStack(spacing: 0) {
-                // Reserve the same space above the hero for a group (dots) and a
-                // single event (no dots) so the gap to the sheet handle is identical.
-                PageDots(count: max(events.count, 1), index: activeIndex ?? 0)
-                    .opacity(events.count > 1 ? 1 : 0)
-                    .padding(.top, 22)
-                // A plain paging ScrollView (same pattern as ShowtimesPager) instead
-                // of a UIKit page TabView, so the sheet can track the content scroll
-                // and grow/collapse with it (medium ↔ large ↔ dismiss).
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 0) {
-                        ForEach(Array(events.enumerated()), id: \.offset) { _, event in
-                            ScrollView(showsIndicators: false) {
-                                TripsEventPage(event: event, origin: viewModel.selectedAirport, viewModel: viewModel)
-                            }
-                            .containerRelativeFrame(.horizontal)
-                        }
-                    }
-                    .scrollTargetLayout()
+        ZStack(alignment: .bottom) {
+            SheetShell(detent: $detent) {
+                if let expanded {
+                    PlacesListView(
+                        kind: expanded,
+                        eventCoordinate: currentCoordinate,
+                        airportCoordinate: airportCoordinate,
+                        nights: nights,
+                        onBack: {
+                            self.expanded = nil
+                            detent = .medium
+                        },
+                        onOpenURL: openBrowser
+                    )
+                } else {
+                    pager
                 }
-                .scrollTargetBehavior(.paging)
-                .scrollPosition(id: $activeIndex)
+            }
+            if let browserURL {
+                StoryBrowserOverlay(
+                    url: browserURL,
+                    offset: browserOffset,
+                    bottomInset: bottomSafeAreaInset,
+                    onClose: closeBrowser
+                )
             }
         }
-        .presentationContentInteraction(.scrolls)
-        .onChange(of: viewModel.selectedEventGroup?.id) { _, _ in activeIndex = 0 }
+        .onChange(of: viewModel.selectedEventGroup?.id) { _, _ in
+            activeIndex = 0
+            expanded = nil
+            detent = .medium
+        }
+    }
+
+    private var currentCoordinate: CLLocationCoordinate2D {
+        guard let event = currentEvent else { return CLLocationCoordinate2D(latitude: 0, longitude: 0) }
+        return CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
+    }
+
+    private var pager: some View {
+        VStack(spacing: 0) {
+            PageDots(count: max(events.count, 1), index: activeIndex ?? 0)
+                .opacity(events.count > 1 ? 1 : 0)
+                .padding(.top, 22)
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 0) {
+                    ForEach(Array(events.enumerated()), id: \.offset) { index, event in
+                        ScrollView(showsIndicators: false) {
+                            TripsEventPage(
+                                event: event,
+                                origin: viewModel.selectedAirport,
+                                viewModel: viewModel,
+                                isActive: (activeIndex ?? 0) == index,
+                                onOpenURL: openBrowser,
+                                onExpand: expandPlaces,
+                                onPlannerChange: { newNights, coord in
+                                    guard (activeIndex ?? 0) == index else { return }
+                                    nights = newNights
+                                    airportCoordinate = coord
+                                }
+                            )
+                        }
+                        .containerRelativeFrame(.horizontal)
+                        .id(event.id)
+                        .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                            geometry.contentOffset.y
+                        } action: { _, y in
+                            guard (activeIndex ?? 0) == index else { return }
+                            handleScroll(y)
+                        }
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $activeIndex)
+        }
+    }
+
+    private func expandPlaces(_ kind: PlaceKind) {
+        expanded = kind
+        detent = .large
+    }
+
+    /// Medium grows to large on scroll down; back to medium at the top.
+    private func handleScroll(_ y: CGFloat) {
+        if y > 40, detent == .medium {
+            detent = .large
+        } else if y <= 4, detent == .large {
+            detent = .medium
+        }
+    }
+
+    private func openBrowser(_ url: URL) {
+        browserURL = url
+        detent = .large
+        browserOffset = StoryBrowserOverlay.panelHeight
+        DispatchQueue.main.async {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                browserOffset = 0
+            }
+        }
+    }
+
+    private func closeBrowser() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+            browserOffset = StoryBrowserOverlay.panelHeight
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+            browserURL = nil
+            browserOffset = 0
+        }
     }
 }
 
@@ -46,6 +148,10 @@ struct TripsEventPage: View {
     let event: TravelEvent
     let origin: Airport
     @ObservedObject var viewModel: TripsViewModel
+    let isActive: Bool
+    let onOpenURL: (URL) -> Void
+    let onExpand: (PlaceKind) -> Void
+    let onPlannerChange: (Int, CLLocationCoordinate2D?) -> Void
     @StateObject private var planner = TripsEventPlanner()
 
     private var destinations: [Destination] { viewModel.nearbyDestinations(for: event) }
@@ -67,8 +173,19 @@ struct TripsEventPage: View {
             ForEach(TripsSheetSection.sections(for: event)) { section in
                 sectionView(section)
             }
+            priceFooter
         }
         .padding(.bottom, Theme.Spacing.xl)
+        .onAppear { report() }
+        .onChange(of: isActive) { _, _ in report() }
+        .onChange(of: planner.outbound?.date) { _, _ in report() }
+        .onChange(of: planner.returning?.date) { _, _ in report() }
+        .onChange(of: planner.destination?.iata) { _, _ in report() }
+    }
+
+    private func report() {
+        guard isActive else { return }
+        onPlannerChange(planner.nights, airportCoordinate)
     }
 
     @ViewBuilder
@@ -88,7 +205,8 @@ struct TripsEventPage: View {
                     reachableAirports: reachableAirports,
                     onSelectDestination: { planner.destination = $0 },
                     planner: planner,
-                    viewModel: viewModel
+                    viewModel: viewModel,
+                    isActive: isActive
                 )
             }
         case .stays:
@@ -96,19 +214,18 @@ struct TripsEventPage: View {
                 kind: .hotel,
                 event: event,
                 airportCoordinate: airportCoordinate,
-                info: "Wybierz nocleg. Filtr ustawia kolejność: najtaniej, najlepiej oceniane lub premium.",
+                nights: planner.nights,
                 tiers: HotelTier.allCases,
-                selectedId: planner.hotel?.id,
-                onSelect: { planner.hotel = $0 }
+                onOpenURL: onOpenURL,
+                onExpand: onExpand
             )
         case .attractions:
             PlacesSection(
                 kind: .attraction,
                 event: event,
                 airportCoordinate: airportCoordinate,
-                info: "Sugerowane atrakcje w okolicy wydarzenia. Bilety kupisz u organizatora.",
-                selectedId: planner.attraction?.id,
-                onSelect: { planner.attraction = $0 }
+                onOpenURL: onOpenURL,
+                onExpand: onExpand
             )
         case .transport:
             TransportSection(planner: planner)
@@ -117,25 +234,32 @@ struct TripsEventPage: View {
                 kind: .car,
                 event: event,
                 airportCoordinate: airportCoordinate,
-                selectedId: planner.car?.id,
-                onSelect: { planner.car = $0 }
+                onOpenURL: onOpenURL,
+                onExpand: onExpand
             )
         case .insurance:
             PlacesSection(
                 kind: .insurance,
                 event: event,
                 airportCoordinate: airportCoordinate,
-                onSelect: { _ in }
+                onOpenURL: onOpenURL,
+                onExpand: onExpand
             )
         }
+    }
+
+    private var priceFooter: some View {
+        TripsSectionFooter(text: "Ceny są orientacyjne i mogą się zmienić u dostawcy. To podgląd oferty.")
+            .padding(.horizontal, Theme.Spacing.l)
+            .padding(.top, Theme.Spacing.section)
     }
 
     @ViewBuilder
     private var hero: some View {
         if event.isRun {
-            RunEventBoard(event: event)
+            RunEventBoard(event: event, onOpenURL: onOpenURL)
         } else {
-            SoccerMatchBoard(event: event)
+            SoccerMatchBoard(event: event, onOpenURL: onOpenURL)
         }
     }
 

@@ -13,6 +13,7 @@ enum TripsSheetSection: CaseIterable, Identifiable {
     var id: Self { self }
 
     static func sections(for event: TravelEvent) -> [TripsSheetSection] {
-        allCases
+        // Transport, cars and insurance are hidden until their data exists.
+        [.hero, .flights, .stays, .attractions]
     }
 }

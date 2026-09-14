@@ -5,7 +5,7 @@ final class PlaceScoringTests: XCTestCase {
     private func place(_ id: String, price: Int, rating: Double, reviews: Int) -> TravelPlace {
         TravelPlace(
             id: id, kind: .hotel, name: id, image: "", price: price, currency: "PLN",
-            address: "", lat: 0, lng: 0, tier: .recommended, rating: rating, reviews: reviews
+            address: "", lat: 0, lng: 0, link: "", tier: .recommended, rating: rating, reviews: reviews
         )
     }
 

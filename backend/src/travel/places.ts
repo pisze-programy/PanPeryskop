@@ -15,6 +15,8 @@ export interface TravelPlace {
   address: string;
   lat: number;
   lng: number;
+  /** Provider search/deep link, opened in the in-app browser. */
+  link: string;
   /** Hotels only. */
   tier?: HotelTier;
   rating?: number;
@@ -48,6 +50,14 @@ const KINDS: Record<PlaceKind, { names: string[]; min: number; max: number; curr
 
 const STREETS = ['ul. Główna 12', 'Al. Portowa 4', 'ul. Kwiatowa 7', 'Rynek 1',
   'ul. Sportowa 9', 'ul. Kolejowa 22', 'Bulwar 15', 'ul. Targowa 3'];
+
+// Fake search deep links until a real provider exists.
+const LINK_BASE: Record<PlaceKind, string> = {
+  hotel: 'https://www.booking.com/searchresults.html?ss=',
+  attraction: 'https://www.getyourguide.com/s/?q=',
+  car: 'https://www.booking.com/cars/index.html?ss=',
+  insurance: 'https://www.getyourguide.com/s/?q=',
+};
 
 export function isPlaceKind(raw: string): raw is PlaceKind {
   return raw === 'hotel' || raw === 'attraction' || raw === 'car' || raw === 'insurance';
@@ -84,6 +94,7 @@ export function buildPlaces(kind: PlaceKind, lat: number, lng: number): TravelPl
       address: STREETS[i % STREETS.length],
       lat: lat + jitter(`${id}:lat`),
       lng: lng + jitter(`${id}:lng`),
+      link: LINK_BASE[kind] + encodeURIComponent(name),
       rating: Math.round((3.6 + ((hash(`${id}:r`) % 15) / 10)) * 10) / 10,
       reviews: 40 + (hash(`${id}:n`) % 900),
     };
@@ -92,4 +103,12 @@ export function buildPlaces(kind: PlaceKind, lat: number, lng: number): TravelPl
     }
     return place;
   });
+}
+
+/** Slice a place list for the list view. */
+export function paginatePlaces(all: TravelPlace[], offset: number, limit: number) {
+  const start = Math.max(0, Math.floor(offset) || 0);
+  const size = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 15;
+  const places = all.slice(start, start + size);
+  return { places, total: all.length, hasMore: start + places.length < all.length };
 }

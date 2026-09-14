@@ -14,6 +14,7 @@ enum AllowedWebDomains {
         "meetup.com", "getyourguide.com", "maratonypolskie.pl",
         "lu.ma", "luma.com",
         "ebilet.pl", "tradedoubler.com",
+        "booking.com", "airbnb.com", "espn.com",
     ]
 
     /// Exact host or a subdomain of a registrable domain, e.g. "bilety.helios.pl".

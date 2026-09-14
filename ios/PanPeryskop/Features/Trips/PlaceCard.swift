@@ -6,6 +6,7 @@ struct PlaceCard: View {
     let place: TravelPlace
     let eventCoordinate: CLLocationCoordinate2D
     let airportCoordinate: CLLocationCoordinate2D?
+    var nights: Int = 1
     var width: CGFloat? = 200
     var onTap: (() -> Void)? = nil
 
@@ -24,8 +25,16 @@ struct PlaceCard: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                Text(place.priceLabel)
-                    .font(.subheadline.weight(.bold))
+                if place.kind == .hotel {
+                    Text(place.nightlyPriceLabel)
+                        .font(.subheadline.weight(.bold))
+                    Text(place.totalPriceLabel(nights: nights))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text(place.priceLabel)
+                        .font(.subheadline.weight(.bold))
+                }
                 Text(place.address)
                     .font(.caption2)
                     .foregroundColor(.secondary)

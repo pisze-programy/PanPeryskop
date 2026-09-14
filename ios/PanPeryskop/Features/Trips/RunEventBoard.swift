@@ -6,6 +6,7 @@ import CoreLocation
 /// map and a direct link to the race website (registration/tickets).
 struct RunEventBoard: View {
     let event: TravelEvent
+    let onOpenURL: (URL) -> Void
 
     private var meta: TravelEventMeta? { event.metaData }
 
@@ -70,8 +71,14 @@ struct RunEventBoard: View {
                 systemImage: "figure.run"
             )
             if let ticketURL {
-                CapsuleButton(title: "Zapisz się", trailingText: priceLabel, tint: .orange, fullWidth: true) {
-                    UIApplication.shared.open(ticketURL)
+                if let priceLabel {
+                    CapsuleButton(title: "Zapisz się", trailingText: priceLabel, fullWidth: true) {
+                        onOpenURL(ticketURL)
+                    }
+                } else {
+                    CapsuleButton(title: "Zobacz więcej", fullWidth: true) {
+                        onOpenURL(ticketURL)
+                    }
                 }
             }
         }

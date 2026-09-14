@@ -5,6 +5,7 @@ import CoreLocation
 /// crests on the sides, kickoff time in the middle, venue below.
 struct SoccerMatchBoard: View {
     let event: TravelEvent
+    let onOpenURL: (URL) -> Void
 
     var body: some View {
         VStack(spacing: Theme.Spacing.m) {
@@ -19,12 +20,11 @@ struct SoccerMatchBoard: View {
                 .lineLimit(1)
             VenueMap(
                 coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
-                distance: 2_000,
-                pitch: 55
+                systemImage: "sportscourt.fill"
             )
             if let ticketURL {
-                CapsuleButton(title: "Kup bilet", fullWidth: true) {
-                    UIApplication.shared.open(ticketURL)
+                CapsuleButton(title: "Zobacz więcej", fullWidth: true) {
+                    onOpenURL(ticketURL)
                 }
             }
         }

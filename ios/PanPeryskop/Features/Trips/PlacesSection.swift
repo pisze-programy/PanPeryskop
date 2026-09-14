@@ -2,7 +2,7 @@ import SwiftUI
 import CoreLocation
 
 @MainActor
-final class PlaceListLoader: ObservableObject {
+final class PlacePreviewLoader: ObservableObject {
     @Published var places: [TravelPlace] = []
     @Published var failed = false
     private var loadedKind: PlaceKind?
@@ -11,7 +11,7 @@ final class PlaceListLoader: ObservableObject {
         if loadedKind == kind, !places.isEmpty { return }
         failed = false
         do {
-            let resp = try await APIClient.getTravelPlaces(kind: kind, lat: lat, lng: lng)
+            let resp = try await APIClient.getTravelPlaces(kind: kind, lat: lat, lng: lng, limit: 10, offset: 0)
             places = resp.places
             loadedKind = kind
         } catch {
@@ -20,26 +20,29 @@ final class PlaceListLoader: ObservableObject {
     }
 }
 
-/// A place section: header, optional filter, slider and full-list sheet.
+/// A place section: header, optional filter, preview slider. The full list opens
+/// in the same sheet through `onExpand`. Data loads only when the section is on
+/// screen.
 struct PlacesSection: View {
     let kind: PlaceKind
     let event: TravelEvent
     let airportCoordinate: CLLocationCoordinate2D?
-    var info: String? = nil
+    var nights: Int = 1
     var tiers: [HotelTier] = []
-    var selectedId: String? = nil
-    var onSelect: (TravelPlace) -> Void
+    var info: String? = nil
+    let onOpenURL: (URL) -> Void
+    let onExpand: (PlaceKind) -> Void
 
-    @StateObject private var loader = PlaceListLoader()
-    @State private var tier: HotelTier = .recommended
-    @State private var showList = false
+    @StateObject private var loader = PlacePreviewLoader()
+    @State private var tier: HotelTier = .economy
+    @State private var showFilter = false
 
     private var eventCoordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
     }
 
     private var activeTier: HotelTier {
-        tiers.contains(tier) ? tier : (tiers.first ?? .recommended)
+        tiers.contains(tier) ? tier : (tiers.first ?? .economy)
     }
 
     private var places: [TravelPlace] {
@@ -50,44 +53,22 @@ struct PlacesSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            TripsSectionHeader(title: kind.label, info: info)
-                .padding(.horizontal, Theme.Spacing.l)
-            if !tiers.isEmpty {
-                filterBar
-            }
-            content
-            if !loader.places.isEmpty {
-                TripsSectionFooter(text: "Ceny są orientacyjne i mogą się zmienić u dostawcy. To podgląd oferty.")
-                    .padding(.horizontal, Theme.Spacing.l)
-            }
-        }
-        .padding(.top, Theme.Spacing.l)
-        .task(id: kind) {
-            await loader.load(kind: kind, lat: event.lat, lng: event.lng)
-        }
-        .sheet(isPresented: $showList) {
-            PlaceListSheet(
+            TripsSectionHeader(
                 title: kind.label,
-                places: places,
-                eventCoordinate: eventCoordinate,
-                airportCoordinate: airportCoordinate,
-                selectedId: selectedId,
-                onSelect: onSelect
+                info: info,
+                filterLabel: tiers.isEmpty ? nil : activeTier.label,
+                onFilter: tiers.isEmpty ? nil : { showFilter = true }
             )
-        }
-    }
-
-    private var filterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Theme.Spacing.s) {
-                ForEach(tiers, id: \.self) { option in
-                    Chip(label: option.label, isSelected: activeTier == option) {
-                        tier = option
-                    }
-                }
-            }
             .padding(.horizontal, Theme.Spacing.l)
-            .padding(.vertical, Theme.Spacing.xs)
+            content
+        }
+        .padding(.top, Theme.Spacing.section)
+        .onScrollVisibilityChange(threshold: 0.1) { visible in
+            guard visible else { return }
+            Task { await loader.load(kind: kind, lat: event.lat, lng: event.lng) }
+        }
+        .sheet(isPresented: $showFilter) {
+            HotelFilterSheet(selection: $tier)
         }
     }
 
@@ -105,11 +86,11 @@ struct PlacesSection: View {
                 places: places,
                 eventCoordinate: eventCoordinate,
                 airportCoordinate: airportCoordinate,
-                selectedId: selectedId,
-                onSelect: onSelect,
-                onSeeMore: {
-                    showList = true
-                }
+                nights: nights,
+                onOpen: { place in
+                    if let url = place.url { onOpenURL(url) }
+                },
+                onSeeMore: { onExpand(kind) }
             )
         }
     }
@@ -125,5 +106,42 @@ struct PlacesSection: View {
             .padding(.vertical, Theme.Spacing.s)
         }
         .disabled(true)
+    }
+}
+
+/// Bottom sheet for the hotel filter, default Ekonomiczne.
+struct HotelFilterSheet: View {
+    @Binding var selection: HotelTier
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text("Filtruj noclegi")
+                .font(Theme.Typo.sectionTitle)
+                .padding(Theme.Spacing.l)
+            ForEach(HotelTier.allCases, id: \.self) { tier in
+                Button {
+                    Haptics.selection()
+                    selection = tier
+                    dismiss()
+                } label: {
+                    HStack {
+                        Text(tier.label)
+                            .font(.body)
+                        Spacer()
+                        if selection == tier {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                    .padding(.horizontal, Theme.Spacing.l)
+                    .padding(.vertical, Theme.Spacing.m)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Divider()
+            }
+        }
+        .presentationDetents([.height(240)])
     }
 }

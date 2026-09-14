@@ -21,27 +21,30 @@ struct EventFlightSection: View {
     let onSelectDestination: (Destination) -> Void
     @ObservedObject var planner: TripsEventPlanner
     @ObservedObject var viewModel: TripsViewModel
+    let isActive: Bool
 
     @State private var window: FlightWindowResponse?
     @State private var loadFailed = false
+    @State private var visible = false
 
     private let airline: Airline = .ryanair
     private var loadKey: String { "\(event.id)|\(destination?.iata ?? "")" }
+    private var shouldLoad: Bool { isActive && visible }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             TripsSectionHeader(
                 title: "Wybierz lotnisko docelowe",
-                info: "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska. Zmień lotnisko docelowe, aby ustawić trasę powrotu."
+                info: "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska."
             )
             card
-            if destination != nil, !loadFailed {
-                TripsSectionFooter(text: "Ceny lotów są odświeżane na bieżąco i mogą się zmienić na stronie przewoźnika. To podgląd oferty.")
-            }
         }
         .padding(.horizontal, Theme.Spacing.l)
-        .onAppear { reset() }
-        .onChange(of: loadKey) { _, _ in reset() }
+        .padding(.top, Theme.Spacing.section)
+        .onScrollVisibilityChange(threshold: 0.1) { visible = $0 }
+        .onAppear { if shouldLoad { reset() } }
+        .onChange(of: shouldLoad) { _, load in if load { reset() } }
+        .onChange(of: loadKey) { _, _ in if shouldLoad { reset() } }
     }
 
     private var card: some View {
@@ -68,10 +71,20 @@ struct EventFlightSection: View {
                 buyBar(destination)
             } else if destination != nil {
                 FlightTimelineSkeleton()
+                ctaPlaceholder
             }
         }
         .padding(Theme.Spacing.l)
         .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
+    }
+
+    /// Keeps the card height stable while prices load.
+    private var ctaPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 22)
+            .fill(Theme.Palette.surfaceRaised)
+            .frame(height: 44)
+            .frame(maxWidth: .infinity)
+            .skeletonPulse()
     }
 
     private var reachableDestinations: [Destination] {
@@ -94,7 +107,7 @@ struct EventFlightSection: View {
                         }
                         .padding(.horizontal, Theme.Spacing.m)
                         .padding(.vertical, Theme.Spacing.s)
-                        .background(Capsule().fill(active.iata == dest.iata ? airline.color : Theme.Palette.surfaceRaised))
+                        .background(Capsule().fill(active.iata == dest.iata ? Color.accentColor : Theme.Palette.surfaceRaised))
                         .foregroundColor(active.iata == dest.iata ? .white : .primary)
                     }
                     .buttonStyle(.plain)
@@ -119,7 +132,6 @@ struct EventFlightSection: View {
             CapsuleButton(
                 title: "\(airline.label) ✈ Lecimy",
                 trailingText: "\(total) zł",
-                tint: airline.color,
                 fullWidth: true
             ) {
                 if let url = buyURL(destination: destination.iata, outbound: outbound.date, returning: ret?.date) {

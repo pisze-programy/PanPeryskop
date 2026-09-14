@@ -1,9 +1,9 @@
+import { CONFIG } from '../src/config/index';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
 import { scanKupEvents, maybeGunzip } from '../src/seed/providers/kupbilecik';
 import { todayWarsaw, addDaysWarsaw } from '../src/seed/core/dates';
-import { SEED_REFILL_AHEAD } from '../src/seed/core/constants';
 import { SourceBlockedError, SourceShapeError } from '../src/seed/core/fetchOnce';
 
 const enc = new TextEncoder();
@@ -40,8 +40,8 @@ function ev(id: number, day: string): string {
 const today = todayWarsaw();
 const d1 = today;
 const d2 = addDaysWarsaw(today, 3);
-const dFarEdge = addDaysWarsaw(today, SEED_REFILL_AHEAD);
-const dOutside = addDaysWarsaw(today, SEED_REFILL_AHEAD + 1);
+const dFarEdge = addDaysWarsaw(today, CONFIG.seed.window.refillAhead);
+const dOutside = addDaysWarsaw(today, CONFIG.seed.window.refillAhead + 1);
 
 async function scan(text: string, chunkSize = 1_000_000): Promise<Awaited<ReturnType<typeof scanKupEvents>>> {
   return scanKupEvents(streamOf(text, chunkSize));

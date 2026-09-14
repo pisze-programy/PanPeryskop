@@ -9,9 +9,6 @@ private extension Airline {
     }
 }
 
-/// Flight section: destination-airport rail, the single flight timeline and the
-/// "Lecimy" buy bar. Ryanair is the only live provider, so there is no airline
-/// pill — the brand shows on the CTA only.
 struct EventFlightSection: View {
     let event: TravelEvent
     let origin: Airport
@@ -19,46 +16,79 @@ struct EventFlightSection: View {
     let destination: Destination?
     var reachableAirports: Set<String>? = nil
     let onSelectDestination: (Destination) -> Void
+    @ObservedObject var planner: TripsEventPlanner
     @ObservedObject var viewModel: TripsViewModel
+    let isActive: Bool
 
-    @State private var selectedOutbound: FlightWindowCell?
-    @State private var selectedReturn: FlightWindowCell?
     @State private var window: FlightWindowResponse?
     @State private var loadFailed = false
+    @State private var isLoading = false
+    @State private var visible = false
 
     private let airline: Airline = .ryanair
     private var loadKey: String { "\(event.id)|\(destination?.iata ?? "")" }
+    private var shouldLoad: Bool { isActive && visible }
 
     var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            TripsSectionHeader(
+                title: "Wybierz lotnisko docelowe",
+                info: "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska."
+            )
+            card
+        }
+        .padding(.horizontal, Theme.Spacing.l)
+        .padding(.top, Theme.Spacing.section)
+        .onScrollVisibilityChange(threshold: 0.1) { visible = $0 }
+        .onAppear { if shouldLoad { fetchPrices() } }
+        .onChange(of: shouldLoad) { _, ready in if ready { fetchPrices() } }
+        .onChange(of: loadKey) { _, _ in if shouldLoad { fetchPrices() } }
+    }
+
+    private var card: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             if let destination, !reachableDestinations.isEmpty {
                 destinationRail(destination)
             }
-            if loadFailed {
+            if loadFailed, window == nil {
                 ErrorState(message: "Nie udało się pobrać lotów") {
                     loadFailed = false
-                    loadPrices()
+                    fetchPrices()
                 }
             } else if let destination, let window {
                 FlightTimeline(
                     window: window,
                     eventDay: event.start_ms,
+                    eventHour: event.displayTime,
                     markerIcon: event.isRun ? "figure.run" : "sportscourt.fill",
                     markerLabel: event.isRun ? "BIEG" : "MECZ",
-                    selectedOutbound: $selectedOutbound,
-                    selectedReturn: $selectedReturn,
+                    selectedOutbound: $planner.outbound,
+                    selectedReturn: $planner.returning,
                     best: bestPair(window)
                 )
                 buyBar(destination)
             } else if destination != nil {
-                LoadingOverlay()
+                FlightTimelineSkeleton()
+                ctaPlaceholder
             }
         }
         .padding(Theme.Spacing.l)
         .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
-        .padding(.horizontal, Theme.Spacing.l)
-        .onAppear { reset() }
-        .onChange(of: loadKey) { _, _ in reset() }
+        .overlay {
+            if isLoading, window != nil {
+                ProgressView()
+                    .padding(Theme.Spacing.s)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.chip))
+            }
+        }
+    }
+
+    private var ctaPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 22)
+            .fill(Theme.Palette.surfaceRaised)
+            .frame(height: 44)
+            .frame(maxWidth: .infinity)
+            .skeletonPulse()
     }
 
     private var reachableDestinations: [Destination] {
@@ -81,7 +111,7 @@ struct EventFlightSection: View {
                         }
                         .padding(.horizontal, Theme.Spacing.m)
                         .padding(.vertical, Theme.Spacing.s)
-                        .background(Capsule().fill(active.iata == dest.iata ? airline.color : Theme.Palette.surfaceRaised))
+                        .background(Capsule().fill(active.iata == dest.iata ? Color.accentColor : Theme.Palette.surfaceRaised))
                         .foregroundColor(active.iata == dest.iata ? .white : .primary)
                     }
                     .buttonStyle(.plain)
@@ -100,13 +130,13 @@ struct EventFlightSection: View {
 
     @ViewBuilder
     private func buyBar(_ destination: Destination) -> some View {
-        if let outbound = selectedOutbound {
-            let ret = selectedReturn
+        if let outbound = planner.outbound {
+            let ret = planner.returning
             let total = Int((outbound.price ?? 0) + (ret?.price ?? 0))
             CapsuleButton(
                 title: "\(airline.label) ✈ Lecimy",
                 trailingText: "\(total) zł",
-                tint: airline.color
+                fullWidth: true
             ) {
                 if let url = buyURL(destination: destination.iata, outbound: outbound.date, returning: ret?.date) {
                     UIApplication.shared.open(url)
@@ -149,30 +179,33 @@ struct EventFlightSection: View {
         return components.url
     }
 
-    private func reset() {
-        selectedOutbound = nil
-        selectedReturn = nil
-        window = nil
-        loadFailed = false
-        loadPrices()
-    }
-
-    private func loadPrices() {
+    private func fetchPrices() {
         guard let destination else { return }
         let day = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
         let originIata = origin.iata
         let destIata = destination.iata
+        isLoading = true
+        let started = Date()
         Task {
-            if let w = await FlightPricesService.shared.flights(airline: airline, origin: originIata, destination: destIata, eventDay: day) {
-                window = w
-                // Recommend the best pair up front — no tap needed.
-                if let best = bestPair(w) {
-                    selectedOutbound = w.outbound.first { $0.date == Self.dayKey(best.outbound.date) }
-                    selectedReturn = w.returning.first { $0.date == Self.dayKey(best.returning.date) }
+            let fetched = await FlightPricesService.shared.flights(
+                airline: airline, origin: originIata, destination: destIata, eventDay: day
+            )
+            let elapsed = Date().timeIntervalSince(started)
+            if elapsed < 0.15 {
+                try? await Task.sleep(nanoseconds: UInt64((0.15 - elapsed) * 1_000_000_000))
+            }
+            if let fetched {
+                window = fetched
+                if let best = bestPair(fetched) {
+                    planner.outbound = fetched.outbound.first { $0.date == Self.dayKey(best.outbound.date) }
+                    planner.returning = fetched.returning.first { $0.date == Self.dayKey(best.returning.date) }
+                } else {
+                    planner.clearFlightSelection()
                 }
-            } else {
+            } else if window == nil {
                 loadFailed = true
             }
+            isLoading = false
         }
     }
 

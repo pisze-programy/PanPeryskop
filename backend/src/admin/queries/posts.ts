@@ -1,5 +1,5 @@
-// Live posts query builders + status aggregates (category='live').
-import { DAY_MS } from '../../seed/core/constants';
+import { CONFIG } from '../../config/index';
+
 import { CATEGORY_LIVE } from '../../core/models';
 
 export interface PostsFilter {
@@ -58,7 +58,7 @@ export interface PostStatusCounts {
 export async function postStatusCounts(db: D1Database): Promise<PostStatusCounts> {
   const [total, active24h, byStatus] = await Promise.all([
     db.prepare(`SELECT COUNT(*) n FROM posts WHERE category='${CATEGORY_LIVE}'`).first<{ n: number }>(),
-    db.prepare(`SELECT COUNT(*) n FROM posts WHERE category='${CATEGORY_LIVE}' AND created_at>=?`).bind(Date.now() - DAY_MS).first<{ n: number }>(),
+    db.prepare(`SELECT COUNT(*) n FROM posts WHERE category='${CATEGORY_LIVE}' AND created_at>=?`).bind(Date.now() - CONFIG.time.dayMs).first<{ n: number }>(),
     db.prepare(`SELECT status, COUNT(*) n FROM posts WHERE category='${CATEGORY_LIVE}' GROUP BY status`).all<{ status: string; n: number }>(),
   ]);
   const r: Record<string, number> = { total: total?.n ?? 0, active24h: active24h?.n ?? 0, approved: 0, pending: 0, rejected: 0 };

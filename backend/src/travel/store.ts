@@ -1,4 +1,5 @@
-import { TRAVEL_BATCH_CAP, TRAVEL_TAGS, TravelRunType, TravelTag } from './constants';
+import { CONFIG, type TravelRunType, type TravelTag } from '../config/index';
+
 
 export interface TravelEvent {
   provider: string;
@@ -34,7 +35,7 @@ function isTravelEvent(v: unknown): v is TravelEvent {
     typeof e.startMs === 'number' && Number.isFinite(e.startMs) &&
     typeof e.lat === 'number' && Number.isFinite(e.lat) &&
     typeof e.lng === 'number' && Number.isFinite(e.lng) &&
-    typeof e.tag === 'string' && TRAVEL_TAGS.has(e.tag as TravelTag) &&
+    typeof e.tag === 'string' && CONFIG.travel.tags.set.has(e.tag as TravelTag) &&
     (e.link === null || typeof e.link === 'string') &&
     (e.meta === undefined || e.meta === null || typeof e.meta === 'string')
   );
@@ -57,8 +58,8 @@ export function sanitizeManifest(manifest: TravelManifest): TravelEvent[] {
 
 export async function upsertTravelEvents(db: D1Database, events: TravelEvent[]): Promise<void> {
   const now = Date.now();
-  for (let i = 0; i < events.length; i += TRAVEL_BATCH_CAP) {
-    const chunk = events.slice(i, i + TRAVEL_BATCH_CAP);
+  for (let i = 0; i < events.length; i += CONFIG.travel.batchCap) {
+    const chunk = events.slice(i, i + CONFIG.travel.batchCap);
     const stmts = chunk.map((e) =>
       db.prepare(
         `INSERT INTO travel_events (provider, external_id, title, lat, lng, city, country, start_ms, tag, link, meta, created_at, updated_at)

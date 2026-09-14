@@ -1,8 +1,8 @@
+import { CONFIG } from '../src/config/index';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normHashInput } from '../src/seed/pipeline/queue/raw';
 import { produceSeedWindow } from '../src/seed/pipeline/queue/produce';
-import { SEED_REFILL_AHEAD } from '../src/seed/core/constants';
 import type { SeedCandidate } from '../src/seed/core/types';
 
 // ---------- content_hash stability ----------
@@ -83,7 +83,7 @@ test('produceSeedWindow: bumps generation, marks every window day, resets old un
 
   const res = await produceSeedWindow(env, '2026-09-08');
   assert.equal(res.generation, 4, 'max gen 3 + 1');
-  assert.equal(db.days.size, SEED_REFILL_AHEAD + 1, 'every window day marked');
+  assert.equal(db.days.size, CONFIG.seed.window.refillAhead + 1, 'every window day marked');
   assert.ok([...db.days.values()].every((g) => g === 4), 'all days on the new generation');
   assert.equal(db.resets, 1, 'older-generation units reset once');
   assert.ok(db.inserts > 0, 'units written');

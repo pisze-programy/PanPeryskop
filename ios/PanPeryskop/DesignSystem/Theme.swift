@@ -11,6 +11,12 @@ enum Theme {
         static let l: CGFloat = 16
         static let xl: CGFloat = 24
         static let xxl: CGFloat = 32
+        static let section: CGFloat = 28
+    }
+
+    enum Typo {
+        static let sectionTitle = Font.headline.weight(.bold)
+        static let sectionLabel = Font.caption.weight(.semibold)
     }
 
     enum Radius {

@@ -1,15 +1,13 @@
 import SwiftUI
 import CoreLocation
 
-/// Run event board — the hero of the Wycieczki sheet for `biegi`. Shows the race
-/// name, distance, provider details (surface/difficulty/price), start time, venue
-/// map and a direct link to the race website (registration/tickets).
 struct RunEventBoard: View {
     let event: TravelEvent
+    let onOpenURL: (URL) -> Void
+    @State private var showMapPicker = false
 
     private var meta: TravelEventMeta? { event.metaData }
 
-    /// Distance headline — nil when the provider gave none (never a filler word).
     private var distanceLabel: String? {
         if let d = meta?.distance, !d.isEmpty { return d }
         if let ds = meta?.distances, !ds.isEmpty { return ds.prefix(3).joined(separator: ", ") }
@@ -17,10 +15,15 @@ struct RunEventBoard: View {
     }
 
     private var detail: String? {
-        let parts = [meta?.surface, meta?.difficulty, meta?.price]
+        let parts = [meta?.surface, meta?.difficulty]
             .compactMap { $0 }
             .filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private var priceLabel: String? {
+        guard let price = meta?.price, !price.isEmpty else { return nil }
+        return price
     }
 
     private var ticketURL: URL? {
@@ -61,11 +64,18 @@ struct RunEventBoard: View {
                 .lineLimit(1)
             VenueMap(
                 coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
-                systemImage: "figure.run"
+                systemImage: "figure.run",
+                onTap: { showMapPicker = true }
             )
             if let ticketURL {
-                CapsuleButton(title: "Zapisz się", tint: .orange) {
-                    UIApplication.shared.open(ticketURL)
+                if let priceLabel {
+                    CapsuleButton(title: "Zapisz się", trailingText: priceLabel, fullWidth: true) {
+                        onOpenURL(ticketURL)
+                    }
+                } else {
+                    CapsuleButton(title: "Zobacz więcej", fullWidth: true) {
+                        onOpenURL(ticketURL)
+                    }
                 }
             }
         }
@@ -73,6 +83,12 @@ struct RunEventBoard: View {
         .padding(.horizontal, Theme.Spacing.l)
         .padding(.top, Theme.Spacing.s)
         .padding(.bottom, Theme.Spacing.m)
+        .sheet(isPresented: $showMapPicker) {
+            MapAppPickerSheet(
+                coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
+                title: event.title
+            )
+        }
     }
 
     private var icon: some View {
@@ -88,7 +104,7 @@ struct RunEventBoard: View {
 
     private var timeColumn: some View {
         VStack(spacing: 2) {
-            if let time = meta?.time {
+            if let time = event.displayTime {
                 Text(time)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
             }
@@ -100,7 +116,7 @@ struct RunEventBoard: View {
     }
 
     private var dateLabel: String {
-        let date = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
+        let date = event.displayDate
         let day = AppConstants.shortDayFormatter.string(from: date)
         let weekday = AppConstants.weekdayFormatter.string(from: date)
         return "\(day) · \(weekday)"

@@ -1,3 +1,5 @@
+import { CONFIG } from '../../config/index';
+import { CC_CINEMAS, ccScopes } from '../cinemas/index';
 // cinema-city.pl provider — 'fetch' transport. Public quickbook JSON API: one
 // call per cinema×day returns films + events (title, poster, showtimes). Geo and
 // the venue come from the static CC_CINEMAS catalog (constants.ts), which was
@@ -8,7 +10,6 @@
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId, ShowtimeBooking } from '../core/types';
 import { getBytes } from './http';
 import { warsawMidnightMs } from '../core/dates';
-import { CC_CINEMAS, CC_FILM_EVENTS, CC_FILM_URL, CC_TIMEOUT_MS, ccScopes } from '../core/constants';
 
 function cinemaById(code: string) {
   return CC_CINEMAS.find((c) => c.id === code);
@@ -59,7 +60,7 @@ export function parseCcScope(data: unknown, code: string, day: string): SeedCand
       city: cinema?.city || '',
       venue: `Cinema City ${cinema?.name || code}`,
       venueId: `cinemacity-${code}`,
-      link: f.link || CC_FILM_URL(f.id),
+      link: f.link || CONFIG.providers.cinemacity.filmUrl(f.id),
       mediaUrl: poster,
       thumbUrl: null,
       isSoldOut: dayEvents.every((e) => e.soldOut === true),
@@ -70,9 +71,9 @@ export function parseCcScope(data: unknown, code: string, day: string): SeedCand
 
 // Fetch one cinema (queue scope = externalCode).
 export async function fetchCcCinema(day: string, code: string): Promise<SeedCandidate[]> {
-  const res = await fetch(CC_FILM_EVENTS(code, day), {
+  const res = await fetch(CONFIG.providers.cinemacity.filmEvents(code, day), {
     headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
-    signal: AbortSignal.timeout(CC_TIMEOUT_MS),
+    signal: AbortSignal.timeout(CONFIG.providers.cinemacity.timeoutMs),
   });
   if (!res.ok) throw new Error(`cinemacity ${code} -> ${res.status}`);
   return parseCcScope(await res.json(), code, day);

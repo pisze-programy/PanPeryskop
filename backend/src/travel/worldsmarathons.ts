@@ -1,3 +1,4 @@
+import { CONFIG } from '../config/index';
 // worldsmarathons.com provider — running races (tag `biegi`).
 //
 //   GET /api/search?fromDate=DD-MM-YYYY&toDate=DD-MM-YYYY&search=&searchType=0&all=true&currency=EUR
@@ -9,19 +10,6 @@ import { GeoStore } from '../seed/core/geo';
 import { warsawMidnightMs } from '../seed/core/dates';
 import { TravelEvent } from './store';
 import type { TravelSource } from './run';
-import {
-  WORLDSMARATHONS_PROVIDER, RUNS_TAG, WM_HOST, WM_TIMEOUT_MS, WM_RETRIES, WM_RETRY_DELAY_MS,
-} from './constants';
-
-const WM_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:155.0) Gecko/20100101 Firefox/155.0';
-
-/** European ISO-3166 alpha-2 codes (the app is Europe-only). */
-const EUROPEAN_ISO = new Set([
-  'AL', 'AD', 'AT', 'BA', 'BE', 'BG', 'BY', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI',
-  'FR', 'GB', 'GE', 'GR', 'HR', 'HU', 'IE', 'IS', 'IT', 'LI', 'LT', 'LU', 'LV', 'MC', 'MD',
-  'ME', 'MK', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'RU', 'SE', 'SI', 'SK', 'SM', 'TR',
-  'UA', 'VA', 'XK',
-]);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -38,23 +26,30 @@ function localTime(iso: unknown): string | null {
   return m ? `${m[1]}:${m[2]}` : null;
 }
 
+/** "HH:mm" → milliseconds after midnight; 0 for null. */
+function timeToMs(time: string | null): number {
+  if (!time) return 0;
+  const [h, m] = time.split(':').map(Number);
+  return (h * 60 + m) * 60_000;
+}
+
 async function fetchSearch(from: string, to: string): Promise<unknown> {
-  const url = `${WM_HOST}/api/search?fromDate=${from}&toDate=${to}&search=&searchType=0&all=true&currency=EUR`;
+  const url = `${CONFIG.travel.worldsmarathons.host}/api/search?fromDate=${from}&toDate=${to}&search=&searchType=0&all=true&currency=EUR`;
   const cookie = typeof process !== 'undefined' ? process.env?.WM_COOKIE : undefined;
-  const headers: Record<string, string> = { 'User-Agent': WM_UA, Accept: 'application/json' };
+  const headers: Record<string, string> = { 'User-Agent': CONFIG.travel.worldsmarathons.userAgent, Accept: 'application/json' };
   if (cookie) headers['Cookie'] = cookie;
-  for (let attempt = 0; attempt <= WM_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= CONFIG.travel.worldsmarathons.retries; attempt++) {
     try {
-      const res = await fetch(url, { headers, signal: AbortSignal.timeout(WM_TIMEOUT_MS) });
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(CONFIG.travel.worldsmarathons.timeoutMs) });
       if (res.ok) return await res.json();
       if (res.status === 403 || res.status === 429 || res.status >= 500) {
-        if (attempt < WM_RETRIES) await sleep(WM_RETRY_DELAY_MS * (attempt + 1));
+        if (attempt < CONFIG.travel.worldsmarathons.retries) await sleep(CONFIG.travel.worldsmarathons.retryDelayMs * (attempt + 1));
         continue;
       }
       throw new Error(`worldsmarathons ${res.status}`);
     } catch (e) {
-      if (attempt >= WM_RETRIES) throw e;
-      await sleep(WM_RETRY_DELAY_MS * (attempt + 1));
+      if (attempt >= CONFIG.travel.worldsmarathons.retries) throw e;
+      await sleep(CONFIG.travel.worldsmarathons.retryDelayMs * (attempt + 1));
     }
   }
   throw new Error('worldsmarathons search failed');
@@ -84,14 +79,26 @@ export function parseWmEvent(e: WmEvent, fallbackDay: string): TravelEvent | nul
   const [lng, lat] = coords;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   const cc = String(e?.countryCode ?? '').toUpperCase();
-  if (!EUROPEAN_ISO.has(cc)) return null;
+  if (!CONFIG.travel.europe.isoCodes.has(cc)) return null;
   const externalId = String(e?.id ?? '').trim();
   const title = String(e?.title ?? '').trim();
   const city = String(e?.city ?? '').trim();
   if (!externalId || !title || !city) return null;
 
-  const raceDate = String(e?.dateNextRace ?? e?.dateNextRaceLocal ?? '').slice(0, 10);
-  const startMs = /^\d{4}-\d{2}-\d{2}$/.test(raceDate) ? warsawMidnightMs(raceDate) : warsawMidnightMs(fallbackDay);
+  // dateNextRace is UTC; dateNextRaceLocal is the provider's wall clock. Prefer
+  // the local value: the UTC date can land on the previous day (CEST 00:00 is
+  // 22:00 UTC), and its hour is not the start time a traveller sees.
+  const localIso = String(e?.dateNextRaceLocal ?? e?.dateNextRace ?? '');
+  const raceDate = localIso.slice(0, 10);
+  const raceTime = localTime(localIso);
+  // "00:00" is the provider's date-only placeholder — not a real start time.
+  const time = raceTime && raceTime !== '00:00' ? raceTime : null;
+  // startMs is a LOCAL-DAY ANCHOR, not a UTC instant: the provider gives the race's
+  // local wall clock, so we place it on that date in Europe/Warsaw. The app groups
+  // by that day and shows meta.time. (ESPN events carry a real instant instead.)
+  const startMs = /^\d{4}-\d{2}-\d{2}$/.test(raceDate)
+    ? warsawMidnightMs(raceDate) + timeToMs(time)
+    : warsawMidnightMs(fallbackDay);
 
   const meta = {
     distance: e?.distance ?? null,
@@ -99,13 +106,13 @@ export function parseWmEvent(e: WmEvent, fallbackDay: string): TravelEvent | nul
     surface: e?.surface ?? null,
     difficulty: e?.courseDifficulty ?? null,
     price: e?.minPriceFormatted ?? null,
-    time: localTime(e?.dateNextRace ?? e?.dateNextRaceLocal),
+    time,
     website: e?.website ?? null,
     countryCode: cc,
   };
 
   return {
-    provider: WORLDSMARATHONS_PROVIDER,
+    provider: CONFIG.travel.worldsmarathons.provider,
     externalId,
     title,
     lat,
@@ -113,7 +120,7 @@ export function parseWmEvent(e: WmEvent, fallbackDay: string): TravelEvent | nul
     city,
     country: String(e?.country ?? '').trim(),
     startMs,
-    tag: RUNS_TAG,
+    tag: CONFIG.travel.tags.runs,
     link: typeof e?.website === 'string' ? e.website : null,
     meta: JSON.stringify(meta),
   };
@@ -136,6 +143,6 @@ export async function fetchWorldsmarathonsDay(day: string, _opts?: { store?: Geo
 
 /** worldsmarathons travel source — running races (tag `biegi`). */
 export const WORLDSMARATHONS_SOURCE: TravelSource = {
-  id: WORLDSMARATHONS_PROVIDER,
+  id: CONFIG.travel.worldsmarathons.provider,
   fetchDay: (day, opts) => fetchWorldsmarathonsDay(day, opts),
 };

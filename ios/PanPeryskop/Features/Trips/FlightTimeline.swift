@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// One horizontal flight timeline: outbound days on the left, the event day in the
-/// middle (highlighted), return days on the right. Tap a left day to pick the
-/// outbound, a right day to pick the return — a single axis, not two rows.
 struct FlightTimeline: View {
     let window: FlightWindowResponse
     let eventDay: Int64
+    /// nil = unknown start time (runs without a provider time) → "—".
+    var eventHour: String? = nil
     var markerIcon: String = "sportscourt.fill"
     var markerLabel: String = "MECZ"
     @Binding var selectedOutbound: FlightWindowCell?
@@ -36,7 +35,6 @@ struct FlightTimeline: View {
 
     private static let markerId = "flight-event-marker"
 
-    /// Is this ISO day key today (Europe/Warsaw)?
     private func isToday(_ dateStr: String) -> Bool {
         dateStr == Self.dayKey(Int64(Date().timeIntervalSince1970 * 1000))
     }
@@ -87,7 +85,7 @@ struct FlightTimeline: View {
                 .font(.system(size: 8, weight: .heavy))
             Text(Self.shortDay(Self.dayKey(eventDay)))
                 .font(.system(size: 9, weight: .bold))
-            Text(Self.hour(eventDay))
+            Text(eventHour ?? "—")
                 .font(.system(size: 10))
         }
         .foregroundColor(.purple)
@@ -108,11 +106,6 @@ struct FlightTimeline: View {
 
     static func dayKey(_ ms: Int64) -> String {
         AppConstants.isoDayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
-    }
-
-    /// Event start hour "HH:mm" (Europe/Warsaw) — the line the marker was missing.
-    static func hour(_ ms: Int64) -> String {
-        AppConstants.hourFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
     }
 
     static func date(from dateStr: String) -> Date? {

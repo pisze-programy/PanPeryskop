@@ -1,51 +1,120 @@
 import SwiftUI
+import CoreLocation
 
-/// Wycieczki event sheet. If the tapped pin is a group, the whole sheet pages
-/// across the events with dots at the top; a single event has no pager/dots.
-/// The hero is picked per event tag (soccer match board vs. run board).
+private struct BrowserItem: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
 struct TripsEventSheet: View {
     @ObservedObject var viewModel: TripsViewModel
     @State private var activeIndex: Int? = 0
+    @State private var detent: PresentationDetent = .medium
+    @State private var expanded: PlaceKind?
+    @State private var browserItem: BrowserItem?
+    @State private var nights = 1
+    @State private var airportCoordinate: CLLocationCoordinate2D?
 
     private var events: [TravelEvent] { viewModel.selectedEventGroup?.events ?? [] }
 
+    private var currentEvent: TravelEvent? {
+        let index = activeIndex ?? 0
+        return events.indices.contains(index) ? events[index] : events.first
+    }
+
     var body: some View {
-        SheetShell {
-            VStack(spacing: 0) {
-                // Reserve the same space above the hero for a group (dots) and a
-                // single event (no dots) so the gap to the sheet handle is identical.
-                PageDots(count: max(events.count, 1), index: activeIndex ?? 0)
-                    .opacity(events.count > 1 ? 1 : 0)
-                    .padding(.top, 22)
-                // A plain paging ScrollView (same pattern as ShowtimesPager) instead
-                // of a UIKit page TabView, so the sheet can track the content scroll
-                // and grow/collapse with it (medium ↔ large ↔ dismiss).
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 0) {
-                        ForEach(Array(events.enumerated()), id: \.offset) { _, event in
-                            ScrollView(showsIndicators: false) {
-                                TripsEventPage(event: event, origin: viewModel.selectedAirport, viewModel: viewModel)
-                            }
-                            .containerRelativeFrame(.horizontal)
+        SheetShell(detent: $detent) {
+            if let expanded {
+                PlacesListView(
+                    kind: expanded,
+                    eventCoordinate: currentCoordinate,
+                    airportCoordinate: airportCoordinate,
+                    nights: nights,
+                    onBack: {
+                        withAnimation(AppConstants.springStandard) {
+                            self.expanded = nil
+                            detent = .medium
                         }
-                    }
-                    .scrollTargetLayout()
-                }
-                .scrollTargetBehavior(.paging)
-                .scrollPosition(id: $activeIndex)
+                    },
+                    onOpenURL: openBrowser
+                )
+                .id(expanded)
+            } else {
+                pager
             }
         }
-        .presentationContentInteraction(.scrolls)
-        .onChange(of: viewModel.selectedEventGroup?.id) { _, _ in activeIndex = 0 }
+        .sheet(item: $browserItem) { item in
+            InAppBrowserView(url: item.url, onClose: { browserItem = nil })
+                .presentationDetents([.medium, .large])
+        }
+        .onChange(of: viewModel.selectedEventGroup?.id) { _, _ in
+            activeIndex = 0
+            expanded = nil
+            detent = .medium
+        }
+    }
+
+    private var currentCoordinate: CLLocationCoordinate2D {
+        guard let event = currentEvent else { return CLLocationCoordinate2D(latitude: 0, longitude: 0) }
+        return CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
+    }
+
+    private var pager: some View {
+        VStack(spacing: 0) {
+            PageDots(count: max(events.count, 1), index: activeIndex ?? 0)
+                .opacity(events.count > 1 ? 1 : 0)
+                .padding(.top, 22)
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 0) {
+                    ForEach(Array(events.enumerated()), id: \.offset) { index, event in
+                        ScrollView(showsIndicators: false) {
+                            TripsEventPage(
+                                event: event,
+                                origin: viewModel.selectedAirport,
+                                viewModel: viewModel,
+                                isActive: (activeIndex ?? 0) == index,
+                                onOpenURL: openBrowser,
+                                onExpand: expandPlaces,
+                                onPlannerChange: { newNights, coord in
+                                    guard (activeIndex ?? 0) == index else { return }
+                                    nights = newNights
+                                    airportCoordinate = coord
+                                }
+                            )
+                        }
+                        .containerRelativeFrame(.horizontal)
+                        .id(event.id)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $activeIndex)
+        }
+    }
+
+    private func expandPlaces(_ kind: PlaceKind) {
+        withAnimation(AppConstants.springStandard) {
+            expanded = kind
+            detent = .large
+        }
+    }
+
+    private func openBrowser(_ url: URL) {
+        browserItem = BrowserItem(url: url)
+        detent = .large
     }
 }
 
-/// One event page: the tag-specific hero on top, flight section below.
 struct TripsEventPage: View {
     let event: TravelEvent
     let origin: Airport
     @ObservedObject var viewModel: TripsViewModel
-    @State private var selectedDestinationIata: String?
+    let isActive: Bool
+    let onOpenURL: (URL) -> Void
+    let onExpand: (PlaceKind) -> Void
+    let onPlannerChange: (Int, CLLocationCoordinate2D?) -> Void
+    @StateObject private var planner = TripsEventPlanner()
 
     private var destinations: [Destination] { viewModel.nearbyDestinations(for: event) }
     private var reachableAirports: Set<String>? { event.reachableAirports.map(Set.init) }
@@ -53,13 +122,40 @@ struct TripsEventPage: View {
     private func isReachable(_ iata: String) -> Bool { reachableAirports?.contains(iata) ?? true }
 
     private var destination: Destination? {
-        if let selected = destinations.first(where: { $0.iata == selectedDestinationIata }) { return selected }
+        if let selected = planner.destination, destinations.contains(where: { $0.iata == selected.iata }) { return selected }
         return destinations.first(where: { isReachable($0.iata) }) ?? destinations.first
+    }
+
+    private var airportCoordinate: CLLocationCoordinate2D? {
+        destination.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng) }
     }
 
     var body: some View {
         VStack(spacing: 0) {
+            ForEach(TripsSheetSection.sections(for: event)) { section in
+                sectionView(section)
+            }
+            priceFooter
+        }
+        .padding(.bottom, Theme.Spacing.xl)
+        .onAppear { report() }
+        .onChange(of: isActive) { _, _ in report() }
+        .onChange(of: planner.outbound?.date) { _, _ in report() }
+        .onChange(of: planner.returning?.date) { _, _ in report() }
+        .onChange(of: planner.destination?.iata) { _, _ in report() }
+    }
+
+    private func report() {
+        guard isActive else { return }
+        onPlannerChange(planner.nights, airportCoordinate)
+    }
+
+    @ViewBuilder
+    private func sectionView(_ section: TripsSheetSection) -> some View {
+        switch section {
+        case .hero:
             hero
+        case .flights:
             if destinations.isEmpty {
                 noAirportHint
             } else {
@@ -69,20 +165,63 @@ struct TripsEventPage: View {
                     destinations: destinations,
                     destination: destination,
                     reachableAirports: reachableAirports,
-                    onSelectDestination: { selectedDestinationIata = $0.iata },
-                    viewModel: viewModel
+                    onSelectDestination: { planner.destination = $0 },
+                    planner: planner,
+                    viewModel: viewModel,
+                    isActive: isActive
                 )
             }
+        case .stays:
+            PlacesSection(
+                kind: .hotel,
+                event: event,
+                airportCoordinate: airportCoordinate,
+                nights: planner.nights,
+                tiers: HotelTier.allCases,
+                onOpenURL: onOpenURL,
+                onExpand: onExpand
+            )
+        case .attractions:
+            PlacesSection(
+                kind: .attraction,
+                event: event,
+                airportCoordinate: airportCoordinate,
+                onOpenURL: onOpenURL,
+                onExpand: onExpand
+            )
+        case .transport:
+            TransportSection(planner: planner)
+        case .cars:
+            PlacesSection(
+                kind: .car,
+                event: event,
+                airportCoordinate: airportCoordinate,
+                onOpenURL: onOpenURL,
+                onExpand: onExpand
+            )
+        case .insurance:
+            PlacesSection(
+                kind: .insurance,
+                event: event,
+                airportCoordinate: airportCoordinate,
+                onOpenURL: onOpenURL,
+                onExpand: onExpand
+            )
         }
-        .padding(.bottom, Theme.Spacing.xl)
+    }
+
+    private var priceFooter: some View {
+        TripsSectionFooter(text: "Ceny są orientacyjne i mogą się zmienić u dostawcy.")
+            .padding(.horizontal, Theme.Spacing.l)
+            .padding(.top, Theme.Spacing.section)
     }
 
     @ViewBuilder
     private var hero: some View {
         if event.isRun {
-            RunEventBoard(event: event)
+            RunEventBoard(event: event, onOpenURL: onOpenURL)
         } else {
-            SoccerMatchBoard(event: event)
+            SoccerMatchBoard(event: event, onOpenURL: onOpenURL)
         }
     }
 

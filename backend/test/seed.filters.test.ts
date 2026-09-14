@@ -1,8 +1,8 @@
+import { CONFIG } from '../src/config/index';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dedupe, dropCancelled, rescueRealShows, isCancelled } from '../src/seed';
 import { ProviderId } from '../src/seed/core/types';
-import { HOUR_MS } from '../src/seed/core/constants';
 
 function cand(over: Partial<{ source: ProviderId; externalId: string; title: string; startMs: number; venue: string; link: string }>) {
   const externalId = over.externalId ?? 'x-1';
@@ -41,7 +41,7 @@ test('dropCancelled: always removes cancelled events before dedupe', () => {
 test('rescueRealShows: keeps two real kupbilecik shows of the same title+venue, >=2h apart', () => {
   const base = Date.parse('2026-08-22T17:00:00+02:00');
   const show17 = cand({ source: ProviderId.KUPBILECIK, externalId: 'k-17', title: 'SKOLIM', startMs: base, venue: 'Amfiteatr' });
-  const show20 = cand({ source: ProviderId.KUPBILECIK, externalId: 'k-20', title: 'SKOLIM', startMs: base + 3 * HOUR_MS, venue: 'Amfiteatr' });
+  const show20 = cand({ source: ProviderId.KUPBILECIK, externalId: 'k-20', title: 'SKOLIM', startMs: base + 3 * CONFIG.time.hourMs, venue: 'Amfiteatr' });
   const deduped = dedupe([show17, show20]);
   assert.equal(deduped.length, 1, 'dedupe alone would merge the two shows');
   const out = rescueRealShows([show17, show20], deduped);
@@ -59,7 +59,7 @@ test('rescueRealShows: does NOT rescue when hours differ by less than 2h', () =>
 test('rescueRealShows: keeps two real going shows of the same title+venue, >=2h apart', () => {
   const base = Date.parse('2026-08-22T17:00:00+02:00');
   const a = cand({ source: ProviderId.GOING, externalId: 'g-17', title: 'SKOLIM', startMs: base, venue: 'Amfiteatr' });
-  const b = cand({ source: ProviderId.GOING, externalId: 'g-20', title: 'SKOLIM', startMs: base + 3 * HOUR_MS, venue: 'Amfiteatr' });
+  const b = cand({ source: ProviderId.GOING, externalId: 'g-20', title: 'SKOLIM', startMs: base + 3 * CONFIG.time.hourMs, venue: 'Amfiteatr' });
   const out = rescueRealShows([a, b], dedupe([a, b]));
   assert.equal(out.length, 2, 'two going shows of the same day are both real');
 });
@@ -76,13 +76,13 @@ test('rescueRealShows: gap of exactly 2h is rescued, 1h59m is not', () => {
   const base = Date.parse('2026-08-22T17:00:00+02:00');
   const exactly2h = [
     cand({ source: ProviderId.KUPBILECIK, externalId: 'k-a', title: 'SKOLIM', startMs: base, venue: 'Amfiteatr' }),
-    cand({ source: ProviderId.KUPBILECIK, externalId: 'k-b', title: 'SKOLIM', startMs: base + 2 * HOUR_MS, venue: 'Amfiteatr' }),
+    cand({ source: ProviderId.KUPBILECIK, externalId: 'k-b', title: 'SKOLIM', startMs: base + 2 * CONFIG.time.hourMs, venue: 'Amfiteatr' }),
   ];
   assert.equal(rescueRealShows(exactly2h, dedupe(exactly2h)).length, 2, 'exactly 2h apart = two shows');
 
   const justUnder = [
     cand({ source: ProviderId.KUPBILECIK, externalId: 'k-a', title: 'SKOLIM', startMs: base, venue: 'Amfiteatr' }),
-    cand({ source: ProviderId.KUPBILECIK, externalId: 'k-b', title: 'SKOLIM', startMs: base + 2 * HOUR_MS - 60_000, venue: 'Amfiteatr' }),
+    cand({ source: ProviderId.KUPBILECIK, externalId: 'k-b', title: 'SKOLIM', startMs: base + 2 * CONFIG.time.hourMs - 60_000, venue: 'Amfiteatr' }),
   ];
   assert.equal(rescueRealShows(justUnder, dedupe(justUnder)).length, 1, 'under 2h = one event');
 });

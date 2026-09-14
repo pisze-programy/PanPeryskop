@@ -1,3 +1,5 @@
+import { CONFIG } from '../../config/index';
+import { HELIOS_CINEMAS, heliosScopes } from '../cinemas/index';
 // helios.pl provider — 'fetch' transport. Public REST API (api.helios.pl/api/v1):
 // one call per cinema returns the full repertoire (~25 days) with embedded movie
 // and event metadata, so no HTML/SSR parsing is needed. Geo + venue come from the
@@ -9,7 +11,6 @@
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId, ShowtimeBooking } from '../core/types';
 import { getBytes } from './http';
 import { warsawMidnightMs } from '../core/dates';
-import { HELIOS_CINEMAS, HELIOS_FILM, HELIOS_SCREENINGS, HELIOS_TIMEOUT_MS, heliosScopes } from '../core/constants';
 
 function cinemaById(id: string) {
   return HELIOS_CINEMAS.find((c) => c.id === id);
@@ -114,7 +115,7 @@ export function parseHeliosPayload(payload: HeliosPayload, cinemaId: string, day
       city: cinema.city,
       venue: cinema.name,
       venueId: `helios-${cinema.id}`,
-      link: HELIOS_FILM(cinema, slug, filmIdNum),
+      link: CONFIG.providers.helios.film(cinema, slug, filmIdNum),
       mediaUrl: poster,
       thumbUrl: null,
     });
@@ -124,9 +125,9 @@ export function parseHeliosPayload(payload: HeliosPayload, cinemaId: string, day
 
 // Fetch one cinema (queue scope = numeric cinema id).
 export async function fetchHeliosCinema(day: string, cinemaId: string): Promise<SeedCandidate[]> {
-  const res = await fetch(HELIOS_SCREENINGS(Number(cinemaId)), {
+  const res = await fetch(CONFIG.providers.helios.screenings(Number(cinemaId)), {
     headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'pl', Accept: 'application/json' },
-    signal: AbortSignal.timeout(HELIOS_TIMEOUT_MS),
+    signal: AbortSignal.timeout(CONFIG.providers.helios.timeoutMs),
   });
   if (!res.ok) throw new Error(`helios ${cinemaId} -> ${res.status}`);
   const body = await res.json() as { data?: HeliosPayload };

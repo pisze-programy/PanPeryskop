@@ -1,7 +1,7 @@
+import { CONFIG, type TravelRunType } from '../config/index';
 import { GeoStore } from '../seed/core/geo';
 import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
 import { TravelManifest, TravelEvent } from './store';
-import { TravelRunType, TRAVEL_BACKFILL_DAYS, TRAVEL_REPLENISH_DAYS } from './constants';
 
 /** A travel data source (ESPN soccer, worldsmarathons runs, …). One `fetchDay`
  *  call returns that day's events already mapped to `TravelEvent`. */
@@ -24,11 +24,11 @@ export interface TravelRunOptions {
  */
 function travelDays(runType: TravelRunType, coveredDays?: Set<string>): string[] {
   const today = todayWarsaw();
-  const refresh = runType === 'replenish' ? TRAVEL_REPLENISH_DAYS - 1 : TRAVEL_BACKFILL_DAYS - 1;
+  const refresh = runType === 'replenish' ? CONFIG.travel.replenishDays - 1 : CONFIG.travel.backfillDays - 1;
   const out: string[] = [];
   for (let i = 0; i <= refresh; i++) out.push(addDaysWarsaw(today, i));
   if (runType === 'replenish' && coveredDays) {
-    for (let i = TRAVEL_REPLENISH_DAYS; i < TRAVEL_BACKFILL_DAYS; i++) {
+    for (let i = CONFIG.travel.replenishDays; i < CONFIG.travel.backfillDays; i++) {
       const day = addDaysWarsaw(today, i);
       if (!coveredDays.has(day)) out.push(day);
     }

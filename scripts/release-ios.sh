@@ -13,7 +13,6 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS="$ROOT/ios"
 YML="$IOS/project.yml"
-PLIST="$IOS/PanPeryskop/Info.plist"
 
 VERSION=""; BUILD=""; DO_UPLOAD=1
 while [[ $# -gt 0 ]]; do
@@ -42,18 +41,9 @@ s = re.sub(r'CURRENT_PROJECT_VERSION: [0-9]+', f'CURRENT_PROJECT_VERSION: {build
 open(path, 'w').write(s)
 PY
 
-# 2) Regenerate the Xcode project, then keep Info.plist in sync (xcodegen resets it).
+# 2) Regenerate the Xcode project. Info.plist holds $(MARKETING_VERSION) and
+#    $(CURRENT_PROJECT_VERSION), so the version lives only in project.yml.
 ( cd "$IOS" && xcodegen generate >/dev/null )
-python3 - "$PLIST" "$VERSION" "$BUILD" <<'PY'
-import sys
-path, version, build = sys.argv[1], sys.argv[2], sys.argv[3]
-s = open(path).read()
-s = s.replace('<key>CFBundleShortVersionString</key>\n\t<string>1.0</string>',
-              f'<key>CFBundleShortVersionString</key>\n\t<string>{version}</string>')
-s = s.replace('<key>CFBundleVersion</key>\n\t<string>1</string>',
-              f'<key>CFBundleVersion</key>\n\t<string>{build}</string>')
-open(path, 'w').write(s)
-PY
 
 # 3) Archive (Release) with capped parallelism.
 if [[ "$DO_UPLOAD" != "1" ]]; then

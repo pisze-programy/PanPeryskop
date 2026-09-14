@@ -1,3 +1,4 @@
+import { CONFIG } from './config/index';
 import {Hono} from 'hono';
 import {cors} from 'hono/cors';
 import {authRoutes} from './api/auth';
@@ -17,7 +18,6 @@ import {produceSeedWindow, runQueue, SeedQueueMessage, watchdogUnits} from './se
 import {pruneSeedData, pruneSeedManifests} from './seed/pipeline/cleanup';
 import {alertFailedUnits, daysReadyToReconcile, sweepStuckRaw} from './seed/reconcile';
 import {getLastSeedDay, setLastSeedDay, seedDue} from './seed/cadence';
-import {SEED_DAYS_AHEAD, SEED_INTERVAL_DAYS, SEED_REFILL_AHEAD} from './seed/core/constants';
 // Nominatim pace per executor: the Worker egresses from Cloudflare's shared
 // datacenter IPs — the OSM policy caps regular (daily cron) bulk geocoding at
 // 4 req/min (the VPS rotates residential IPs via Webshare and keeps 1/s).
@@ -169,7 +169,7 @@ export default {
         const today = todayWarsaw();
         const last = await getLastSeedDay(env.DB);
         if (!seedDue(last, today)) {
-          console.log(`seed cron: not due (last ${last ?? 'never'}, interval ${SEED_INTERVAL_DAYS}) — skip`);
+          console.log(`seed cron: not due (last ${last ?? 'never'}, interval ${CONFIG.seed.window.intervalDays}) — skip`);
           return;
         }
         const { batchId, generation, units } = await produceSeedWindow(env, today);

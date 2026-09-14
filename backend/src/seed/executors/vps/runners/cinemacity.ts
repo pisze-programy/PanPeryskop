@@ -1,3 +1,4 @@
+import { CC_CINEMAS, ccScopes } from '../../../cinemas/index';
 // cinemacity provider — VPS executor source. The quickbook API is PER-DAY
 // (at-date/{date} → exactly one day, no bulk variant), so each cinema scope
 // fetches every window day sequentially.
@@ -5,7 +6,6 @@
 import { sleep, PACING_MS } from '../runtime';
 import type { ScopeSource } from '../runtime';
 import { fetchCcCinema } from '../../../../seed/providers/cinemacity';
-import { ccScopes, CC_CINEMAS } from '../../../../seed/core/constants';
 import { ProviderId } from '../../../../seed/core/types';
 import type { SeedCandidate } from '../../../../seed/core/types';
 

@@ -1,7 +1,7 @@
+import { CONFIG } from '../src/config/index';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pruneSeedData } from '../src/seed/pipeline/cleanup';
-import { DAY_MS, SEED_REFILL_AHEAD } from '../src/seed/core/constants';
 
 test('cleanup: pruneSeedData keeps window + audit, skips open units/reconciling days', async () => {
   // Fake D1 recording DELETE statements and their WHERE bindings.
@@ -30,8 +30,8 @@ test('cleanup: pruneSeedData keeps window + audit, skips open units/reconciling 
   const batches = deletes.find((d) => d.sql.includes('seed_batches'));
   const runs = deletes.find((d) => d.sql.includes('seed_runs'));
   // Retention must exceed the live refill window.
-  const retention = (SEED_REFILL_AHEAD + 6) * DAY_MS;
-  assert.ok(retention > (SEED_REFILL_AHEAD + 1) * DAY_MS, 'retention exceeds the window');
+  const retention = (CONFIG.seed.window.refillAhead + 6) * CONFIG.time.dayMs;
+  assert.ok(retention > (CONFIG.seed.window.refillAhead + 1) * CONFIG.time.dayMs, 'retention exceeds the window');
   assert.ok(raw && raw.cutoff <= Date.now() - retention, 'raw pruned');
   assert.ok(units && units.cutoff <= Date.now() - retention, 'units pruned');
   assert.ok(units!.sql.includes("status IN ('done','failed')"), 'open units never pruned');

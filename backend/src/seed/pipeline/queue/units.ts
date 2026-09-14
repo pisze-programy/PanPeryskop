@@ -1,3 +1,4 @@
+import { CONFIG } from '../../../config/index';
 // Durable unit work-list (the source of truth for seed work).
 // One row per (day, provider, slice). CF consumers claim via queue wake-ups;
 // the VPS poller claims via POST /seed/units/claim. Exactly one winner per unit:
@@ -7,7 +8,6 @@
 import { nanoid } from 'nanoid';
 import { SEED_PROVIDERS } from '../../providers';
 import { configOf } from '../../providers/registry';
-import { SEED_REFILL_AHEAD } from '../../core/constants';
 import { addDaysWarsaw } from '../../core/dates';
 import { now } from './state';
 
@@ -30,7 +30,7 @@ export const MAX_UNIT_STRIKES = 5;
  *  are dropped at the sink (never staged as out-of-window rows). */
 export function unitWindowDays(unit: Pick<UnitRow, 'day' | 'kind'>): string[] {
   return unit.kind === 'window'
-    ? Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(unit.day, i))
+    ? Array.from({ length: CONFIG.seed.window.refillAhead + 1 }, (_, i) => addDaysWarsaw(unit.day, i))
     : [unit.day];
 }
 
@@ -219,7 +219,7 @@ export async function countOpenUnitsForDay(db: D1Database, day: string): Promise
         WHERE status IN ('pending','claimed')
           AND ((kind='day' AND day=?) OR (kind='window' AND day<=? AND date(day, '+' || ? || ' day') >= ?))`,
     )
-    .bind(day, day, SEED_REFILL_AHEAD, day)
+    .bind(day, day, CONFIG.seed.window.refillAhead, day)
     .first<{ n: number }>();
   return row?.n ?? 0;
 }

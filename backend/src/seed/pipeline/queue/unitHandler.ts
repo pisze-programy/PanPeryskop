@@ -1,3 +1,4 @@
+import { CONFIG } from '../../../config/index';
 // CF consumer for the v2 work-list: drain pending WORKER units, fetch each
 // provider scope, stage normalized rows into seed_raw, complete the unit with
 // its claim token, then reconcile any day whose fetch work is now complete.
@@ -5,7 +6,6 @@
 import { enabledProviders } from '../../providers';
 import { SeedContext, SeedCandidate } from '../../core/types';
 import { warsawMidnightMs, warsawDateOf, eventCreatedAtMs, eventDayEndMs, addDaysWarsaw } from '../../core/dates';
-import { D1_BATCH_STATEMENT_CAP, SEED_REFILL_AHEAD } from '../../core/constants';
 import { ClaimedUnit, claimUnit, completeUnit, failUnit, unitWindowDays } from './units';
 import { writeRawRows } from './raw';
 import { parseCandidate } from '../../core/candidate';
@@ -76,7 +76,7 @@ async function runUnit(env: Env, unit: ClaimedUnit): Promise<void> {
 
   let rowsWritten = 0;
   for (const [eventDay, cands] of byDay) {
-    rowsWritten += await writeRawRows(env.DB, { day: eventDay, batchId: unit.batch_id, unitId: unit.id, provider: unit.provider, candidates: cands }, D1_BATCH_STATEMENT_CAP);
+    rowsWritten += await writeRawRows(env.DB, { day: eventDay, batchId: unit.batch_id, unitId: unit.id, provider: unit.provider, candidates: cands }, CONFIG.queue.d1BatchCap);
   }
 
   const ok = await completeUnit(env.DB, unit.id, unit.token, rowsWritten);

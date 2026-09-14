@@ -1,13 +1,11 @@
+import { CONFIG, type TravelTag } from '../config/index';
 import { Hono } from 'hono';
-import { TRAVEL_TAGS, TravelTag } from '../travel/constants';
+import { buildPlaces, isPlaceKind, paginatePlaces } from '../travel/places';
 import { fetchRyanairWindow, fetchWizzairWindow } from '../travel/flightsApi';
 import { reachableEvents, type TravelEventRow } from '../travel/reachability';
 
 export const travelRoutes = new Hono<{ Bindings: Env }>();
 
-const MAX_WINDOW_MS = 370 * 24 * 3_600_000;
-const MAX_LIMIT = 1000;
-const IATA_RE = /^[A-Z]{3}$/;
 
 interface BBox {
   swLat: number;
@@ -36,10 +34,10 @@ travelRoutes.get('/events', async (c) => {
   const from = Number(q.from);
   const to = Number(q.to);
   if (!isFinite(from) || !isFinite(to) || to <= from) return c.json({ error: 'Invalid or missing from/to (epoch ms)' }, 400);
-  if (to - from > MAX_WINDOW_MS) return c.json({ error: 'Window too large' }, 400);
+  if (to - from > CONFIG.travel.api.maxWindowMs) return c.json({ error: 'Window too large' }, 400);
   const tag = parseTag(q.tag);
   const limit = parseLimit(q.limit);
-  const origin = q.origin && IATA_RE.test(q.origin) ? q.origin.toUpperCase() : null;
+  const origin = q.origin && CONFIG.travel.api.iataPattern.test(q.origin) ? q.origin.toUpperCase() : null;
 
   const { results } = await c.env.DB
     .prepare(
@@ -65,7 +63,7 @@ travelRoutes.get('/events', async (c) => {
 
 function parseTag(raw: string | undefined): TravelTag | null {
   if (!raw) return null;
-  if (TRAVEL_TAGS.has(raw as TravelTag)) return raw as TravelTag;
+  if (CONFIG.travel.tags.set.has(raw as TravelTag)) return raw as TravelTag;
   return null;
 }
 
@@ -77,26 +75,41 @@ travelRoutes.get('/tag-counts', async (c) => {
   const from = Number(q.from);
   const to = Number(q.to);
   if (!isFinite(from) || !isFinite(to) || to <= from) return c.json({ error: 'Invalid or missing from/to (epoch ms)' }, 400);
-  if (to - from > MAX_WINDOW_MS) return c.json({ error: 'Window too large' }, 400);
+  if (to - from > CONFIG.travel.api.maxWindowMs) return c.json({ error: 'Window too large' }, 400);
   const { results } = await c.env.DB
     .prepare(`SELECT tag, COUNT(*) AS count FROM travel_events WHERE start_ms >= ? AND start_ms <= ? GROUP BY tag`)
     .bind(from, to)
     .all<{ tag: string; count: number }>();
-  const counts = (results ?? []).filter((r) => TRAVEL_TAGS.has(r.tag as TravelTag));
+  const counts = (results ?? []).filter((r) => CONFIG.travel.tags.set.has(r.tag as TravelTag));
   const total = counts.reduce((a, r) => a + r.count, 0);
   return c.json({ total, counts });
 });
 
 function parseLimit(raw: string | undefined): number {
   const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), MAX_LIMIT) : MAX_LIMIT;
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), CONFIG.travel.api.maxLimit) : CONFIG.travel.api.maxLimit;
 }
+
+travelRoutes.get('/places', (c) => {
+  const q = c.req.query();
+  const kind = q.kind ?? '';
+  if (!isPlaceKind(kind)) {
+    return c.json({ error: 'kind must be hotel|attraction|car|insurance' }, 400);
+  }
+  const lat = Number(q.lat);
+  const lng = Number(q.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    return c.json({ error: 'valid lat and lng required' }, 400);
+  }
+  const all = buildPlaces(kind, lat, lng);
+  return c.json(paginatePlaces(all, Number(q.offset) || 0, Number(q.limit)));
+});
 
 function flightParams(q: Record<string, string | undefined>): { origin: string; destination: string; eventDay: string } | null {
   const origin = q.origin?.toUpperCase() ?? '';
   const destination = q.destination?.toUpperCase() ?? '';
   const eventDay = q.eventDay ?? '';
-  if (!IATA_RE.test(origin) || !IATA_RE.test(destination) || !/^\d{4}-\d{2}-\d{2}$/.test(eventDay)) return null;
+  if (!CONFIG.travel.api.iataPattern.test(origin) || !CONFIG.travel.api.iataPattern.test(destination) || !/^\d{4}-\d{2}-\d{2}$/.test(eventDay)) return null;
   return { origin, destination, eventDay };
 }
 

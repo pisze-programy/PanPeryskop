@@ -1,3 +1,4 @@
+import { MK_CINEMAS, mkScopes } from '../src/seed/cinemas/index';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { enabledProviders, SEED_PROVIDERS } from '../src/seed';
@@ -6,7 +7,6 @@ import { parseMkFilms, extractToken } from '../src/seed/providers/multikino';
 import { parseHeliosPayload } from '../src/seed/providers/helios';
 import { parseCcScope } from '../src/seed/providers/cinemacity';
 import { goingTags } from '../src/seed/providers/going';
-import { mkScopes, MK_CINEMAS } from '../src/seed/core/constants';
 import { PROVIDER_CONFIGS, enabledForExecutor, configOf, priorityOf, EXECUTOR } from '../src/seed/providers/registry';
 import { workerExecutor } from '../src/seed/executors/worker';
 

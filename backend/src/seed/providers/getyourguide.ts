@@ -1,3 +1,4 @@
+import { CONFIG } from '../../config/index';
 // getyourguide.com provider — 'fetch' transport, Worker executor. Partner API
 // (https://api.getyourguide.com), auth via the X-ACCESS-TOKEN header
 // (wrangler secret GETYOURGUIDE_TOKEN). JSON API, no anti-bot → runs on the CF
@@ -9,7 +10,6 @@
 // availability endpoint; link_url is the API-provided affiliate URL.
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { CityDef, CITIES } from '../../admin/cities';
-import { GYG_BASE, GYG_WEB, GYG_RADIUS_KM, GYG_LIMIT, GYG_IMG_FORMAT } from '../core/constants';
 import { UA_HEADERS } from './http';
 
 const GYG_TIMEOUT_MS = 15_000;
@@ -36,7 +36,7 @@ interface GyAvailability {
 }
 
 async function gyGet<T>(token: string, path: string, params: [string, string][]): Promise<T | null> {
-  const url = new URL(`${GYG_BASE}${path}`);
+  const url = new URL(`${CONFIG.providers.getyourguide.base}${path}`);
   for (const [k, v] of params) url.searchParams.append(k, v);
   try {
     const res = await fetch(url.toString(), {
@@ -66,10 +66,10 @@ async function fetchCityTours(ctx: SeedContext, token: string, city: CityDef): P
   const data = await gyGet<{ data?: { tours?: GyTour[] } }>(token, '/v2/tours', [
     ['coordinates[]', String(city.lat)],
     ['coordinates[]', String(city.lng)],
-    ['coordinates[]', String(GYG_RADIUS_KM)],
+    ['coordinates[]', String(CONFIG.providers.getyourguide.radiusKm)],
     ['cnt_language', 'pl'],
     ['currency', 'PLN'],
-    ['limit', String(GYG_LIMIT)],
+    ['limit', String(CONFIG.providers.getyourguide.limit)],
     ['sortfield', 'popularity'],
   ]);
   const tours = (data?.data?.tours || []).filter((t) => t.activity_type !== 'transfer');
@@ -89,8 +89,8 @@ async function fetchCityTours(ctx: SeedContext, token: string, city: CityDef): P
       city: city.name,
       venue: loc,
       address: '',
-      link: t.url || `${GYG_WEB}/`,
-      mediaUrl: img ? img.replace('[format_id]', GYG_IMG_FORMAT) : '',
+      link: t.url || `${CONFIG.providers.getyourguide.web}/`,
+      mediaUrl: img ? img.replace('[format_id]', CONFIG.providers.getyourguide.imgFormat) : '',
       thumbUrl: null,
       times: times && times.length ? times : undefined,
       tags: ['inne'],

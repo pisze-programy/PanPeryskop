@@ -1,9 +1,9 @@
+import { CONFIG } from '../src/config/index';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseWmEvent } from '../src/travel/worldsmarathons';
 import { runTravelProvider } from '../src/travel/run';
-import { TRAVEL_REPLENISH_DAYS, TRAVEL_BACKFILL_DAYS } from '../src/travel/constants';
-import { todayWarsaw, addDaysWarsaw } from '../src/seed/core/dates';
+import { todayWarsaw, addDaysWarsaw, warsawMidnightMs } from '../src/seed/core/dates';
 
 const row = (over: Record<string, unknown> = {}) => ({
   id: 'cursa-dels-nassos-10-km',
@@ -40,6 +40,26 @@ test('parseWmEvent: maps a European race to a TravelEvent (tag biegi)', () => {
   assert.equal(meta.surface, 'Road');
 });
 
+test('parseWmEvent: prefers local date/time — UTC would shift the day', () => {
+  // CEST midnight: 22:00 UTC on the previous day, 00:00 local on race day.
+  const e = parseWmEvent(row({
+    dateNextRace: '2026-09-17T22:00:00',
+    dateNextRaceLocal: '2026-09-18T00:00:00',
+  }), '2026-09-18');
+  assert.ok(e);
+  // Day is the local one (Sep 18), not the UTC one (Sep 17).
+  assert.equal(e!.startMs, warsawMidnightMs('2026-09-18'));
+  // 00:00 is a date-only placeholder, not a real start time.
+  assert.equal(JSON.parse(e!.meta!).time, null);
+});
+
+test('parseWmEvent: keeps a real local start time on startMs', () => {
+  const e = parseWmEvent(row({ dateNextRaceLocal: '2026-12-31T09:30:00' }), '2026-12-31');
+  assert.ok(e);
+  assert.equal(JSON.parse(e!.meta!).time, '09:30');
+  assert.equal(e!.startMs, warsawMidnightMs('2026-12-31') + (9 * 60 + 30) * 60_000);
+});
+
 test('parseWmEvent: skips non-European and un-geocoded rows', () => {
   assert.equal(parseWmEvent(row({ countryCode: 'US', country: 'United States' }), '2026-12-31'), null);
   assert.equal(parseWmEvent(row({ geoStartPoint: undefined }), '2026-12-31'), null);
@@ -60,15 +80,15 @@ test('runTravelProvider: collects a source over the window and dedupes', async (
   };
   const manifest = await runTravelProvider(source, { runType: 'replenish' });
   assert.equal(manifest.provider, 'test');
-  assert.equal(manifest.days.length, TRAVEL_REPLENISH_DAYS);
-  assert.equal(seen.length, TRAVEL_REPLENISH_DAYS);
-  assert.equal(manifest.events.length, TRAVEL_REPLENISH_DAYS);
+  assert.equal(manifest.days.length, CONFIG.travel.replenishDays);
+  assert.equal(seen.length, CONFIG.travel.replenishDays);
+  assert.equal(manifest.events.length, CONFIG.travel.replenishDays);
 });
 
 test('runTravelProvider: near window always refreshed, covered far days skipped', async () => {
   const today = todayWarsaw();
   const covered = new Set<string>();
-  for (let i = TRAVEL_REPLENISH_DAYS; i < TRAVEL_BACKFILL_DAYS; i++) covered.add(addDaysWarsaw(today, i));
+  for (let i = CONFIG.travel.replenishDays; i < CONFIG.travel.backfillDays; i++) covered.add(addDaysWarsaw(today, i));
   const seen: string[] = [];
   const source = {
     id: 'test',
@@ -78,6 +98,6 @@ test('runTravelProvider: near window always refreshed, covered far days skipped'
     },
   };
   const manifest = await runTravelProvider(source, { runType: 'replenish', coveredDays: covered });
-  assert.equal(manifest.days.length, TRAVEL_REPLENISH_DAYS);
-  assert.equal(seen.length, TRAVEL_REPLENISH_DAYS);
+  assert.equal(manifest.days.length, CONFIG.travel.replenishDays);
+  assert.equal(seen.length, CONFIG.travel.replenishDays);
 });

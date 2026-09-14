@@ -1,10 +1,10 @@
 import SwiftUI
 import CoreLocation
 
-/// Soccer match board — the hero of the Wycieczki sheet. Two teams with generated
-/// crests on the sides, kickoff time in the middle, venue below.
 struct SoccerMatchBoard: View {
     let event: TravelEvent
+    let onOpenURL: (URL) -> Void
+    @State private var showMapPicker = false
 
     var body: some View {
         VStack(spacing: Theme.Spacing.m) {
@@ -19,12 +19,12 @@ struct SoccerMatchBoard: View {
                 .lineLimit(1)
             VenueMap(
                 coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
-                distance: 2_000,
-                pitch: 55
+                systemImage: "sportscourt.fill",
+                onTap: { showMapPicker = true }
             )
             if let ticketURL {
-                CapsuleButton(title: "Kup bilet") {
-                    UIApplication.shared.open(ticketURL)
+                CapsuleButton(title: "Zobacz więcej", fullWidth: true) {
+                    onOpenURL(ticketURL)
                 }
             }
         }
@@ -32,6 +32,12 @@ struct SoccerMatchBoard: View {
         .padding(.horizontal, Theme.Spacing.l)
         .padding(.top, Theme.Spacing.s)
         .padding(.bottom, Theme.Spacing.m)
+        .sheet(isPresented: $showMapPicker) {
+            MapAppPickerSheet(
+                coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
+                title: event.title
+            )
+        }
     }
 
     private var ticketURL: URL? {
@@ -59,7 +65,7 @@ struct SoccerMatchBoard: View {
 
     private var centerStatus: some View {
         VStack(spacing: 2) {
-            Text(event.hour)
+            Text(event.displayTime ?? "—")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
             Text(dateLabel)
@@ -70,7 +76,7 @@ struct SoccerMatchBoard: View {
     }
 
     private var dateLabel: String {
-        let date = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
+        let date = event.displayDate
         let day = AppConstants.shortDayFormatter.string(from: date)
         let weekday = AppConstants.weekdayFormatter.string(from: date)
         return "\(day) · \(weekday)"

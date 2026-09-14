@@ -1,3 +1,4 @@
+import { CONFIG } from '../config/index';
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED, CATEGORY_LIVE, CATEGORY_EVENTS } from '../core/models';
@@ -5,7 +6,6 @@ import { mediaUrl, originFromRequest, resolvePostMedia } from '../core/media';
 import { tagCatalog, tagIdSet } from '../core/tagCatalog';
 import { cityBbox } from '../admin/cities';
 import { warsawMidnightMs } from '../seed/core/dates';
-import { EVENT_GRACE_MS, UNKNOWN_TIME } from '../seed/core/constants';
 
 export const storiesRoutes = new Hono<{ Bindings: Env }>();
 
@@ -20,12 +20,12 @@ function hhmmToMs(t: string): number {
 function liveShowtimes(showtimes: string[] | null, eventDate: string | null): { keep: boolean; showtimes: string[] | null } {
   // No day or no times → unknown liveness → keep unchanged (all-day events, live posts).
   if (!eventDate || !showtimes || showtimes.length === 0) return { keep: true, showtimes };
-  const known = showtimes.filter((t) => t !== UNKNOWN_TIME);
+  const known = showtimes.filter((t) => t !== CONFIG.time.unknownTime);
   // All times are the "unknown" marker → all-day event → never filter.
   if (known.length === 0) return { keep: true, showtimes };
   const now = Date.now();
   const dayStart = warsawMidnightMs(eventDate);
-  const live = showtimes.filter((t) => t === UNKNOWN_TIME || dayStart + hhmmToMs(t) + EVENT_GRACE_MS > now);
+  const live = showtimes.filter((t) => t === CONFIG.time.unknownTime || dayStart + hhmmToMs(t) + CONFIG.time.graceMs > now);
   return live.length > 0 ? { keep: true, showtimes: live } : { keep: false, showtimes: [] };
 }
 

@@ -1,3 +1,4 @@
+import { CONFIG } from '../../../config/index';
 // Producer side of the seed pipeline: plan one seed run's whole window into the
 // durable work-list (seed_units) and wake the CF consumers. Also the sendBatch
 // chunker used whenever a phase enqueues a batch of messages.
@@ -6,7 +7,6 @@ import { EnvQ, SeedQueueMessage } from './types';
 import { RunType } from '../../core/types';
 import { now } from './state';
 import { planSeedUnits, writeDayUnits, MAX_UNIT_STRIKES } from './units';
-import { D1_BATCH_STATEMENT_CAP, QUEUE_SEND_BATCH_CAP, SEED_REFILL_AHEAD } from '../../core/constants';
 import { addDaysWarsaw } from '../../core/dates';
 
 // ---- v2 producer ---------------------------------------------------------
@@ -19,7 +19,7 @@ export async function produceSeedWindow(
   today: string,
   runType: RunType = 'cron',
 ): Promise<{ batchId: string; generation: number; units: number }> {
-  const days = Array.from({ length: SEED_REFILL_AHEAD + 1 }, (_, i) => addDaysWarsaw(today, i));
+  const days = Array.from({ length: CONFIG.seed.window.refillAhead + 1 }, (_, i) => addDaysWarsaw(today, i));
   const windowStart = days[0];
   const t = now();
   const placeholders = days.map(() => '?').join(',');
@@ -52,7 +52,7 @@ export async function produceSeedWindow(
       )
       .bind(day, generation, t),
   );
-  for (let i = 0; i < dayStmts.length; i += D1_BATCH_STATEMENT_CAP) await env.DB.batch(dayStmts.slice(i, i + D1_BATCH_STATEMENT_CAP));
+  for (let i = 0; i < dayStmts.length; i += CONFIG.queue.d1BatchCap) await env.DB.batch(dayStmts.slice(i, i + CONFIG.queue.d1BatchCap));
 
   // Refresh: reset older-generation units in the window so their data is re-fetched.
   // Never touch a claimed unit (in-flight). A done unit starts clean. A failed unit
@@ -73,7 +73,7 @@ export async function produceSeedWindow(
     .run();
 
   // Insert new units. UNIQUE(day, provider, slice, kind) keeps re-runs idempotent.
-  await writeDayUnits(env.DB, units, t, D1_BATCH_STATEMENT_CAP);
+  await writeDayUnits(env.DB, units, t, CONFIG.queue.d1BatchCap);
 
   // Wake CF consumers for worker units only; the VPS consumer pulls its own.
   const workerMsgs: MessageSendRequest<SeedQueueMessage>[] = units
@@ -86,7 +86,7 @@ export async function produceSeedWindow(
 
 // Cloudflare Queues sendBatch caps at QUEUE_SEND_BATCH_CAP (100) messages per call.
 export async function sendChunked(env: EnvQ, queue: Queue<SeedQueueMessage>, msgs: MessageSendRequest<SeedQueueMessage>[]): Promise<void> {
-  for (let i = 0; i < msgs.length; i += QUEUE_SEND_BATCH_CAP) {
-    await queue.sendBatch(msgs.slice(i, i + QUEUE_SEND_BATCH_CAP));
+  for (let i = 0; i < msgs.length; i += CONFIG.queue.sendBatchCap) {
+    await queue.sendBatch(msgs.slice(i, i + CONFIG.queue.sendBatchCap));
   }
 }

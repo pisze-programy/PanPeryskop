@@ -1,3 +1,4 @@
+import { CONFIG } from '../../../config/index';
 // JSON API: seed runs (v2 unit state) + manual trigger.
 
 import { Hono } from 'hono';
@@ -5,7 +6,6 @@ import { cronInfo } from '../../queries';
 import { seedRuns, runStatusCounts, seedIngestSeries } from '../../queries/seed';
 import { produceSeedWindow } from '../../../seed/pipeline/queue';
 import { todayWarsaw } from '../../../seed/core/dates';
-import { DAY_MS } from '../../../seed/core/constants';
 import { api } from '../common';
 
 const apiRoutes = new Hono<{ Bindings: Env }>();
@@ -13,7 +13,7 @@ const apiRoutes = new Hono<{ Bindings: Env }>();
 apiRoutes.get('/seed', (c) => api(c, async (env) => {
   const q = c.req.query();
   const days = parseInt(String(q.days || '30'), 10) || 30;
-  const since = Date.now() - days * DAY_MS;
+  const since = Date.now() - days * CONFIG.time.dayMs;
   const [runs, statusCounts, ingest] = await Promise.all([
     seedRuns(env.DB, since, 500),
     runStatusCounts(env.DB, since),

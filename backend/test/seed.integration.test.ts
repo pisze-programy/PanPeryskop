@@ -1,3 +1,4 @@
+import { CONFIG } from '../src/config/index';
 // Integration tests for the stories API and the VPS candidate mapper against the
 // real schema (all migrations applied to an in-memory SQLite via node:sqlite).
 import { test } from 'node:test';
@@ -8,7 +9,6 @@ import { DatabaseSync } from 'node:sqlite';
 import { storiesRoutes } from '../src/api/stories';
 import { parseStoriesLimit } from '../src/api/stories';
 import { todayWarsaw, addDaysWarsaw, warsawMidnightMs } from '../src/seed/core/dates';
-import { HOUR_MS } from '../src/seed/core/constants';
 import { entryFor } from '../src/seed/executors/vps/runtime';
 
 // ---------- D1 adapter over node:sqlite ----------
@@ -167,11 +167,11 @@ test('integration: /stories applies the +1h liveness rule to events and showtime
   }).format(new Date(ms));
   // Times relative to now — the test mirrors the rule (oracle) so it stays correct
   // regardless of the hour the suite runs (including Warsaw midnight rollover).
-  const tPast = warsawHhmm(now - 2 * HOUR_MS);   // 2h ago → over the grace
+  const tPast = warsawHhmm(now - 2 * CONFIG.time.hourMs);   // 2h ago → over the grace
   const tGrace = warsawHhmm(now - 30 * 60_000);    // 30min ago → still within grace
-  const tFuture = warsawHhmm(now + 2 * HOUR_MS); // upcoming → kept
+  const tFuture = warsawHhmm(now + 2 * CONFIG.time.hourMs); // upcoming → kept
   const hhmmMs = (t: string) => (Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))) * 60_000;
-  const isLive = (t: string) => t === '00:00' || dayStart + hhmmMs(t) + HOUR_MS > now;
+  const isLive = (t: string) => t === '00:00' || dayStart + hhmmMs(t) + CONFIG.time.hourMs > now;
 
   const bbox = 'sw_lat=52.0&sw_lng=20.9&ne_lat=52.5&ne_lng=21.3';
 
@@ -223,7 +223,7 @@ test('integration: parseStoriesLimit defaults to 50, caps at 1000, clamps to >=1
 
 test('vps entryFor: single startMs becomes a showtimes array (luma/meetup/going)', () => {
   const today = todayWarsaw();
-  const startMs = warsawMidnightMs(today) + 11 * HOUR_MS; // 11:00 Europe/Warsaw
+  const startMs = warsawMidnightMs(today) + 11 * CONFIG.time.hourMs; // 11:00 Europe/Warsaw
   const cand = {
     source: 'luma' as const, externalId: 'luma-x', title: 'Spacer', startMs,
     lat: 52.4, lng: 16.9, city: 'Poznań', venue: 'Park', address: '', link: '',

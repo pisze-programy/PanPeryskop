@@ -1,14 +1,12 @@
 import SwiftUI
 import MapKit
 
-/// Small, non-interactive 3D map centred on the event venue — gives the event a
-/// place without opening a full map. Default is a city-ish zoom (imprecise venue
-/// coordinates still look right); callers can zoom closer (e.g. a stadium).
 struct VenueMap: View {
     let coordinate: CLLocationCoordinate2D
     var systemImage: String = "sportscourt.fill"
     var distance: CLLocationDistance = 9_000
     var pitch: Double = 50
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
         Map(
@@ -24,6 +22,12 @@ struct VenueMap: View {
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .stroke(Theme.Palette.hairline, lineWidth: 0.5)
         )
-        .allowsHitTesting(false)
+        .overlay {
+            if let onTap {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { onTap() }
+            }
+        }
     }
 }

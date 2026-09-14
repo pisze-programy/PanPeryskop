@@ -1,3 +1,4 @@
+import { CONFIG } from '../../config/index';
 // kupbilecik provider — 'fetch' transport (official partner API + affiliate links).
 // Replaces the old Browser Run HTML-scraping module.
 //
@@ -19,7 +20,6 @@
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { aggregateDayCandidates } from '../core/aggregate';
 import { parseFeedJson, detectBlockedBody, SourceBlockedError, SourceShapeError } from '../core/fetchOnce';
-import { SEED_REFILL_AHEAD } from '../core/constants';
 import { todayWarsaw, addDaysWarsaw } from '../core/dates';
 
 const KUP_CACHE_PREFIX = 'seed/kupbilecik/';
@@ -177,7 +177,7 @@ function trimKupEvent(raw: Record<string, unknown>): KupEvent {
  * with them. objBuf is a growable Uint8Array reused between events. */
 export async function scanKupEvents(
   body: ReadableStream<Uint8Array>,
-  daysAhead = SEED_REFILL_AHEAD,
+  daysAhead = CONFIG.seed.window.refillAhead,
 ): Promise<{ byDay: Map<string, KupEvent[]>; total: number }> {
   const today = todayWarsaw();
   const days = new Set(Array.from({ length: daysAhead + 1 }, (_, i) => addDaysWarsaw(today, i)));

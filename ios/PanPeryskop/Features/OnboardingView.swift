@@ -47,9 +47,9 @@ struct OnboardingView: View {
                     .foregroundColor(.secondary)
 
                 VStack(alignment: .leading, spacing: 16) {
-                    Label("Koncerty, kino, teatr, spotkania i więcej!", systemImage: "map")
-                    Label("Treści na żywo od innych użytkowników", systemImage: "video.fill")
-                    Label("Zobacz co się, dzieje w Twojej okolicy!", systemImage: "bell.fill")
+                    Label("Wycieczki w Europie – wydarzenie, loty, nocleg i atrakcje!", systemImage: "airplane")
+                    Label("Lokalnie? Koncerty, kino, teatr, spotkania i więcej!", systemImage: "map")
+                    Label("Zobacz, co się dzieje w Twojej okolicy!", systemImage: "location.fill")
                 }
                 .font(.subheadline)
                 .foregroundColor(.secondary)

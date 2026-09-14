@@ -1,3 +1,4 @@
+import { CONFIG } from '../config/index';
 import { diacriticFold } from '../seed/core/match';
 import ryanairAirportsJson from './data/ryanair-airports.json';
 import ryanairConnectionsJson from './data/ryanair-connections.json';
@@ -117,20 +118,8 @@ export function airportForCity(city: string): AirportRef | null {
   return byCity.get(key) ?? byToken.get(key) ?? null;
 }
 
-// Country check kills false positives from identically-named non-European cities
-// (Santiago CL vs ES, Valencia VE vs ES).
-export const EUROPEAN_COUNTRIES: ReadonlySet<string> = new Set([
-  'Albania', 'Andorra', 'Austria', 'Belgium', 'Bosnia', 'Bulgaria', 'Croatia',
-  'Czech Republic', 'Denmark', 'England', 'Estonia', 'Finland', 'France',
-  'Georgia', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy',
-  'Kosovo', 'Latvia', 'Lithuania', 'Luxembourg', 'Malta', 'Moldova', 'Montenegro',
-  'Netherlands', 'Northern Ireland', 'Norway', 'Poland', 'Portugal', 'Romania',
-  'Russia', 'San Marino', 'Scotland', 'Serbia', 'Slovakia', 'Slovenia', 'Spain',
-  'Sweden', 'Switzerland', 'Turkey', 'Ukraine', 'Wales',
-]);
-
 export function keepEuropeanCityEvent(country: string, city: string): boolean {
-  return EUROPEAN_COUNTRIES.has(country) && airportForCity(city) !== null;
+  return CONFIG.travel.europe.countryNames.has(country) && airportForCity(city) !== null;
 }
 
 // ---- Ryanair route normalization: "airport:STN"/"city:LONDON"/"country:es"/"region:ENGLAND" → IATA ----

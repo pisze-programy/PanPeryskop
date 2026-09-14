@@ -40,12 +40,50 @@ All notable changes to PanPeryskop. Format based on
   remembered; the map defaults/max zoom out covers the whole of Europe.
 - A small loader on the category switcher (Wydarzenia left, Wycieczki right)
   shows during day/place fetches, kept for at least 250 ms.
+- Wycieczki sheet sections: Noclegi (Ekonomiczne / Polecane / Premium filter),
+  Atrakcje, Transport (mini-map + Google Maps), Wynajem samochodu and
+  Ubezpieczenie. A "Zobacz więcej" tile opens a full vertical list, and every
+  section shares one planner state (chosen flight + hotel).
+- New `GET /travel/places` supplies the section items (deterministic catalogue
+  until a real provider exists).
+- Flights draw as curved arcs; the flight loader is a day-cell skeleton, so the
+  section no longer jumps while prices load.
 
 ### Fixed
-- Run sheet shows the race name, distance, details and a "Zapisz się" link;
-  match sheet shows a "Kup bilet" link.
+- Run events use the provider's local date and time (was UTC): the date no
+  longer shifts by a day and an unknown start time is hidden instead of shown as
+  a wrong hour (e.g. 22:00).
+- Wycieczki sheet: changing the destination airport no longer resizes the sheet
+  (the flight card keeps its height while prices load).
+- Wycieczki hero CTA: soccer shows "Zobacz więcej" (was "Kup bilet"), and a run
+  without a price shows "Zobacz więcej" too.
+- Hotel and attraction cards open the in-app browser instead of the system
+  browser (booking.com / getyourguide.com / espn.com added to the allow-list).
 - Wycieczki sheet keeps a consistent gap to the handle for grouped and single
   events.
+- The in-app browser is a separate sheet now: closing it keeps the event sheet
+  open underneath.
+- Soccer matches show the venue's local time and date (were shown in the app's
+  timezone, so UK/Portugal were off by an hour). Existing matches were updated.
+
+### Changed
+- Onboarding lists the real benefits: European trips (event, flights, stay,
+  attractions), local events, and what is happening nearby.
+- Wycieczki sheet loads lazily: flights only for the active, visible page, and
+  place sections only when they scroll into view. The full list loads on
+  "Zobacz więcej" and fetches more as you scroll.
+- "Zobacz więcej" expands the same sheet to large and shows the list inline, with
+  a native back button and a loading skeleton.
+- The expanded list shows the details first and a full-width image below, with a
+  right chevron per row.
+- Changing the destination airport swaps the flight prices in place; the sheet
+  no longer jumps or blanks.
+- Tapping the venue map opens a picker for Google Maps or Apple Maps.
+- Hotels: the filter is a bottom sheet (default Ekonomiczne) and the price shows
+  "X zł za noc" with the total for the chosen number of nights.
+- One accent colour for all CTAs; clearer section headers and spacing.
+- Transport, car rental and insurance sections are hidden until their data
+  exists.
 
 ## [1.2.1] — 2026-09-08
 

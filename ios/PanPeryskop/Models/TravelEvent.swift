@@ -1,7 +1,5 @@
 import Foundation
 
-/// Travel event pin (from GET /travel/events) — European events from global
-/// providers (espn, worldsmarathons, ...), browsed by week. No media, no moderation.
 struct TravelEvent: Codable, Identifiable, Equatable {
     let provider: String
     let external_id: String
@@ -23,13 +21,11 @@ struct TravelEvent: Codable, Identifiable, Equatable {
 
     var isRun: Bool { tag == AppConstants.runTag }
 
-    /// Parsed provider extras — nil when absent or malformed.
     var metaData: TravelEventMeta? {
         guard let meta, let data = meta.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(TravelEventMeta.self, from: data)
     }
 
-    /// Home/away team split from the title ("X vs Y"); nil when not a match.
     var home: String? { matchParts?.home }
     var away: String? { matchParts?.away }
 
@@ -39,9 +35,15 @@ struct TravelEvent: Codable, Identifiable, Equatable {
         return (parts[0], parts[1])
     }
 
-    /// Kickoff hour "HH:mm" in Europe/Warsaw — derived from start_ms.
-    var hour: String {
-        AppConstants.hourFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(start_ms) / 1000))
+    /// Hero/timeline hour from the backend: the venue's local time. nil = none.
+    var displayTime: String? { metaData?.time }
+
+    /// Venue local date from the backend; falls back to the stored date.
+    var displayDate: Date {
+        if let raw = metaData?.date, let parsed = AppConstants.isoDayFormatter.date(from: raw) {
+            return parsed
+        }
+        return Date(timeIntervalSince1970: TimeInterval(start_ms) / 1000)
     }
 }
 
@@ -49,7 +51,6 @@ struct TravelEventsResponse: Codable {
     let events: [TravelEvent]
 }
 
-/// Provider-specific extras for a travel event (runs today: race info).
 struct TravelEventMeta: Decodable {
     let distance: String?
     let distances: [String]?
@@ -57,12 +58,11 @@ struct TravelEventMeta: Decodable {
     let difficulty: String?
     let price: String?
     let time: String?
+    let date: String?
     let website: String?
     let countryCode: String?
 }
 
-/// Airport (Wycieczki) — Polish origin airports + European destinations with
-/// flight-connection info per provider.
 struct Airport: Codable, Identifiable, Hashable {
     let iata: String
     let name: String
@@ -74,7 +74,6 @@ struct Airport: Codable, Identifiable, Hashable {
     var id: String { iata }
 }
 
-/// Destination reachable from an origin airport — carries which airlines serve it.
 struct Destination: Codable, Identifiable, Hashable {
     let iata: String
     let name: String
@@ -87,7 +86,6 @@ struct Destination: Codable, Identifiable, Hashable {
     var id: String { iata }
 }
 
-/// The tapped pin's event set shown in the bottom card — one event or a cluster.
 struct EventGroup: Identifiable {
     let events: [TravelEvent]
 
@@ -95,7 +93,6 @@ struct EventGroup: Identifiable {
     var isGroup: Bool { events.count > 1 }
 }
 
-/// Flight availability response (backend FlightWindow): outbound/return day cells.
 struct FlightWindowResponse: Codable {
     let outbound: [FlightWindowCell]
     let returning: [FlightWindowCell]
@@ -108,7 +105,6 @@ struct FlightWindowCell: Codable {
 }
 
 extension FlightWindowCell {
-    /// Bridge to the scoring cell — nil when there is no price or the date is unparsable.
     var cell: FlightCell? {
         guard let price, let date = AppConstants.isoDayFormatter.date(from: date) else { return nil }
         return FlightCell(date: date, hour: hour, price: price)

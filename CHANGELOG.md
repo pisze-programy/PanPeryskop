@@ -22,6 +22,8 @@ All notable changes to PanPeryskop. Format based on
   (90-day backfill + weekly VPS replenish, Europe-filtered, `meta` carries
   distance/surface/start time/price), and a run-specific sheet hero (distance,
   details, venue map) sharing the flight timeline with a "BIEG" marker.
+- Wycieczki tag bar: a default "Wszystkie" pill and a per-tag event count badge
+  (`GET /travel/tag-counts`, Europe-wide for the selected day).
 
 ### Changed
 - Story card badges (SPONSOROWANE / tags / source) moved to the bottom so they
@@ -30,6 +32,20 @@ All notable changes to PanPeryskop. Format based on
   (desc, then alphabet), with "Inne" pushed last when empty.
 - Sport + Sztuka tags retired — their events are reassigned to "Inne".
 - MTP (Targi Poznańskie) events are now all-day (start 00:00 instead of 10:00).
+- Wycieczki flight calendar now spans ±7 days around the event and marks "dziś";
+  the sheet hero shows the event hour, and the match sheet zooms to the stadium
+  (3D).
+- Wycieczki booking CTA appears with a single selected flight (one-way link) or
+  two (round trip); "Wszystkie" is the default tag; the chosen airport is
+  remembered; the map defaults/max zoom out covers the whole of Europe.
+- A small loader on the category switcher (Wydarzenia left, Wycieczki right)
+  shows during day/place fetches, kept for at least 250 ms.
+
+### Fixed
+- Run sheet shows the race name, distance, details and a "Zapisz się" link;
+  match sheet shows a "Kup bilet" link.
+- Wycieczki sheet keeps a consistent gap to the handle for grouped and single
+  events.
 
 ## [1.2.1] — 2026-09-08
 

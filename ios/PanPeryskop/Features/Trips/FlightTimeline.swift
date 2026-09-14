@@ -108,10 +108,6 @@ struct FlightTimeline: View {
         AppConstants.isoDayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
     }
 
-    static func hour(_ ms: Int64) -> String {
-        AppConstants.hourFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
-    }
-
     static func date(from dateStr: String) -> Date? {
         AppConstants.isoDayFormatter.date(from: dateStr)
     }

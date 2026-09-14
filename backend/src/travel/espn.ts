@@ -2,6 +2,7 @@ import { CONFIG } from '../config/index';
 import { GeoStore } from '../seed/core/geo';
 import { keepEuropeanCityEvent } from './airports';
 import { resolveTravelGeo } from './geo';
+import { localDateTime } from './localTime';
 import { TravelEvent } from './store';
 import type { TravelSource } from './run';
 
@@ -89,6 +90,9 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
   if (!geo || !keepEuropeanCityEvent(geo.country, geo.city)) return null;
   const startMs = eventStartMs(e);
   if (startMs === null) return null;
+  // ESPN dates are UTC. Store the local date/hour of the venue so the app shows
+  // the time where the match is played, not the app's own timezone.
+  const local = localDateTime(startMs, geo.country, geo.city);
   return {
     provider: CONFIG.travel.provider,
     externalId: e.id,
@@ -98,6 +102,7 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
     startMs,
     tag: CONFIG.travel.tags.espn,
     link: eventLink(e),
+    meta: local ? JSON.stringify(local) : null,
   };
 }
 

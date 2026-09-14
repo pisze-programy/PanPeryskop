@@ -104,7 +104,7 @@ struct RunEventBoard: View {
 
     private var timeColumn: some View {
         VStack(spacing: 2) {
-            if let time = meta?.time {
+            if let time = event.displayTime {
                 Text(time)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
             }
@@ -116,7 +116,7 @@ struct RunEventBoard: View {
     }
 
     private var dateLabel: String {
-        let date = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
+        let date = event.displayDate
         let day = AppConstants.shortDayFormatter.string(from: date)
         let weekday = AppConstants.weekdayFormatter.string(from: date)
         return "\(day) · \(weekday)"

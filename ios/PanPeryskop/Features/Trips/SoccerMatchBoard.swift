@@ -65,7 +65,7 @@ struct SoccerMatchBoard: View {
 
     private var centerStatus: some View {
         VStack(spacing: 2) {
-            Text(event.hour)
+            Text(event.displayTime ?? "—")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
             Text(dateLabel)
@@ -76,7 +76,7 @@ struct SoccerMatchBoard: View {
     }
 
     private var dateLabel: String {
-        let date = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
+        let date = event.displayDate
         let day = AppConstants.shortDayFormatter.string(from: date)
         let weekday = AppConstants.weekdayFormatter.string(from: date)
         return "\(day) · \(weekday)"

@@ -35,12 +35,16 @@ struct TravelEvent: Codable, Identifiable, Equatable {
         return (parts[0], parts[1])
     }
 
-    var hour: String {
-        AppConstants.hourFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(start_ms) / 1000))
-    }
+    /// Hero/timeline hour from the backend: the venue's local time. nil = none.
+    var displayTime: String? { metaData?.time }
 
-    /// Hero/timeline hour. Runs use the provider time; nil = unknown.
-    var displayTime: String? { isRun ? metaData?.time : hour }
+    /// Venue local date from the backend; falls back to the stored date.
+    var displayDate: Date {
+        if let raw = metaData?.date, let parsed = AppConstants.isoDayFormatter.date(from: raw) {
+            return parsed
+        }
+        return Date(timeIntervalSince1970: TimeInterval(start_ms) / 1000)
+    }
 }
 
 struct TravelEventsResponse: Codable {
@@ -54,6 +58,7 @@ struct TravelEventMeta: Decodable {
     let difficulty: String?
     let price: String?
     let time: String?
+    let date: String?
     let website: String?
     let countryCode: String?
 }

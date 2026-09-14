@@ -1,7 +1,6 @@
 import SwiftUI
 import CoreLocation
 
-/// Horizontal rail of place cards with a see-more tile.
 struct PlaceSlider: View {
     let places: [TravelPlace]
     let eventCoordinate: CLLocationCoordinate2D

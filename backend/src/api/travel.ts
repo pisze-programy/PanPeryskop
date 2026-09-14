@@ -93,7 +93,6 @@ function parseLimit(raw: string | undefined): number {
   return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), MAX_LIMIT) : MAX_LIMIT;
 }
 
-// Fake places for the Wycieczki sections (no provider yet).
 travelRoutes.get('/places', (c) => {
   const q = c.req.query();
   const kind = q.kind ?? '';

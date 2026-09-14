@@ -1,8 +1,6 @@
 import SwiftUI
 import CoreLocation
 
-/// Soccer match board — the hero of the Wycieczki sheet. Two teams with generated
-/// crests on the sides, kickoff time in the middle, venue below.
 struct SoccerMatchBoard: View {
     let event: TravelEvent
     let onOpenURL: (URL) -> Void

@@ -1,16 +1,12 @@
 import SwiftUI
 import CoreLocation
 
-/// Run event board — the hero of the Wycieczki sheet for `biegi`. Shows the race
-/// name, distance, provider details (surface/difficulty/price), start time, venue
-/// map and a direct link to the race website (registration/tickets).
 struct RunEventBoard: View {
     let event: TravelEvent
     let onOpenURL: (URL) -> Void
 
     private var meta: TravelEventMeta? { event.metaData }
 
-    /// Distance headline — nil when the provider gave none (never a filler word).
     private var distanceLabel: String? {
         if let d = meta?.distance, !d.isEmpty { return d }
         if let ds = meta?.distances, !ds.isEmpty { return ds.prefix(3).joined(separator: ", ") }
@@ -24,7 +20,6 @@ struct RunEventBoard: View {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    /// Price goes on the CTA, not under the distance.
     private var priceLabel: String? {
         guard let price = meta?.price, !price.isEmpty else { return nil }
         return price

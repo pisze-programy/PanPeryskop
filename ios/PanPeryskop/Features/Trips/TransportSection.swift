@@ -2,7 +2,6 @@ import SwiftUI
 import MapKit
 import CoreLocation
 
-/// Route from the arrival airport to the chosen hotel.
 struct TransportSection: View {
     @ObservedObject var planner: TripsEventPlanner
 
@@ -76,7 +75,6 @@ struct TransportSection: View {
     }
 }
 
-/// Small non-interactive map: arrival airport → hotel with a connecting line.
 struct TransportMiniMap: View {
     let from: CLLocationCoordinate2D
     let to: CLLocationCoordinate2D

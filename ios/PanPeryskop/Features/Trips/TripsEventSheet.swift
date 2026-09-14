@@ -1,8 +1,6 @@
 import SwiftUI
 import CoreLocation
 
-/// Wycieczki event sheet. A group pages across its events; a section can expand
-/// to a full list in the same sheet. External links open in the in-app browser.
 struct TripsEventSheet: View {
     @ObservedObject var viewModel: TripsViewModel
     @State private var activeIndex: Int? = 0
@@ -143,7 +141,6 @@ struct TripsEventSheet: View {
     }
 }
 
-/// One event page: the hero plus the sheet sections.
 struct TripsEventPage: View {
     let event: TravelEvent
     let origin: Airport

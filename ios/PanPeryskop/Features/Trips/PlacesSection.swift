@@ -20,9 +20,6 @@ final class PlacePreviewLoader: ObservableObject {
     }
 }
 
-/// A place section: header, optional filter, preview slider. The full list opens
-/// in the same sheet through `onExpand`. Data loads only when the section is on
-/// screen.
 struct PlacesSection: View {
     let kind: PlaceKind
     let event: TravelEvent
@@ -109,7 +106,6 @@ struct PlacesSection: View {
     }
 }
 
-/// Bottom sheet for the hotel filter, default Ekonomiczne.
 struct HotelFilterSheet: View {
     @Binding var selection: HotelTier
     @Environment(\.dismiss) private var dismiss

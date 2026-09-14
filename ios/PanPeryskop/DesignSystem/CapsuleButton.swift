@@ -1,11 +1,9 @@
 import SwiftUI
 
-/// Filled capsule call-to-action, optionally with a trailing value (e.g. a price).
 struct CapsuleButton: View {
     let title: String
     var trailingText: String? = nil
     var tint: Color = .accentColor
-    /// Fill the available width.
     var fullWidth: Bool = false
     let action: () -> Void
 

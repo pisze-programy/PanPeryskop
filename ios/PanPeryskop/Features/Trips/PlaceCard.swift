@@ -1,7 +1,6 @@
 import SwiftUI
 import CoreLocation
 
-/// A place tile, shared by the sliders and the full list.
 struct PlaceCard: View {
     let place: TravelPlace
     let eventCoordinate: CLLocationCoordinate2D
@@ -64,7 +63,6 @@ struct PlaceCard: View {
     }
 }
 
-/// Skeleton with the shape of `PlaceCard`.
 struct PlaceSkeletonCard: View {
     var width: CGFloat = 200
 

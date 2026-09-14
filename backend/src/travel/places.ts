@@ -17,7 +17,6 @@ export interface TravelPlace {
   lng: number;
   /** Provider search/deep link, opened in the in-app browser. */
   link: string;
-  /** Hotels only. */
   tier?: HotelTier;
   rating?: number;
   reviews?: number;

@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Placeholder with the exact day-cell size of `FlightTimeline` (no height jump).
 struct FlightTimelineSkeleton: View {
     var cells: Int = 7
 

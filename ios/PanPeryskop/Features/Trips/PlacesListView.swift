@@ -1,8 +1,6 @@
 import SwiftUI
 import CoreLocation
 
-/// Paged list of places for the expanded sheet. Loads one batch at a time and
-/// fetches the next batch when the last row appears.
 @MainActor
 final class PlacesListModel: ObservableObject {
     @Published var places: [TravelPlace] = []
@@ -44,7 +42,6 @@ final class PlacesListModel: ObservableObject {
     }
 }
 
-/// Full vertical list shown in the same sheet when a section expands.
 struct PlacesListView: View {
     let kind: PlaceKind
     let eventCoordinate: CLLocationCoordinate2D

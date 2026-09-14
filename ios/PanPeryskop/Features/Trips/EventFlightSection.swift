@@ -9,9 +9,6 @@ private extension Airline {
     }
 }
 
-/// Flight section: destination-airport rail, the single flight timeline and the
-/// "Lecimy" buy bar. Ryanair is the only live provider, so there is no airline
-/// pill — the brand shows on the CTA only.
 struct EventFlightSection: View {
     let event: TravelEvent
     let origin: Airport
@@ -78,7 +75,6 @@ struct EventFlightSection: View {
         .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
     }
 
-    /// Keeps the card height stable while prices load.
     private var ctaPlaceholder: some View {
         RoundedRectangle(cornerRadius: 22)
             .fill(Theme.Palette.surfaceRaised)
@@ -190,7 +186,6 @@ struct EventFlightSection: View {
         Task {
             if let w = await FlightPricesService.shared.flights(airline: airline, origin: originIata, destination: destIata, eventDay: day) {
                 window = w
-                // Recommend the best pair up front — no tap needed.
                 if let best = bestPair(w) {
                     planner.outbound = w.outbound.first { $0.date == Self.dayKey(best.outbound.date) }
                     planner.returning = w.returning.first { $0.date == Self.dayKey(best.returning.date) }

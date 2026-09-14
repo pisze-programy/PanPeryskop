@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Standard sheet chrome: detents, drag indicator and material background in one place.
 struct SheetShell<Content: View>: View {
     @Binding var detent: PresentationDetent
     var detents: Set<PresentationDetent> = [.medium, .large]

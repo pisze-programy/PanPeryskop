@@ -1,7 +1,6 @@
 import Foundation
 import CoreLocation
 
-/// A place from `GET /travel/places`. Distances are computed on device.
 struct TravelPlace: Codable, Identifiable, Equatable {
     let id: String
     let kind: PlaceKind

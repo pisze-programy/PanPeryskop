@@ -1,7 +1,5 @@
 import Foundation
 
-/// Sorts places within a filter tier: economy = cheapest, recommended =
-/// balanced, premium = the opposite. Pure logic, unit tested.
 enum PlaceScoring {
     static func sorted(_ places: [TravelPlace], by tier: HotelTier) -> [TravelPlace] {
         switch tier {

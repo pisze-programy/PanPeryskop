@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Pulsing opacity for skeleton placeholders.
 struct SkeletonPulse: ViewModifier {
     @State private var on = false
 
@@ -16,7 +15,6 @@ extension View {
     func skeletonPulse() -> some View { modifier(SkeletonPulse()) }
 }
 
-/// One grey rounded block used to fake content.
 struct SkeletonBlock: View {
     var width: CGFloat? = nil
     var height: CGFloat

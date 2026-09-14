@@ -1,11 +1,8 @@
 import SwiftUI
 
-/// Section header: a divider, an uppercase label and optional trailing controls.
 struct TripsSectionHeader: View {
     let title: String
-    /// Tip shown by the "i" button. nil hides the button.
     var info: String? = nil
-    /// Filter control (hotels). nil hides it.
     var filterLabel: String? = nil
     var onFilter: (() -> Void)? = nil
 
@@ -40,19 +37,6 @@ struct TripsSectionHeader: View {
     }
 }
 
-/// Secondary note under a section.
-struct TripsSectionFooter: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(.caption2)
-            .foregroundColor(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
-/// Small "i" button with a tip popover.
 struct TipButton: View {
     let text: String
     @State private var show = false
@@ -75,5 +59,16 @@ struct TipButton: View {
                 .frame(maxWidth: 260, alignment: .leading)
                 .presentationCompactAdaptation(.popover)
         }
+    }
+}
+
+struct TripsSectionFooter: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

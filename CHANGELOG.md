@@ -61,12 +61,20 @@ All notable changes to PanPeryskop. Format based on
   browser (booking.com / getyourguide.com / espn.com added to the allow-list).
 - Wycieczki sheet keeps a consistent gap to the handle for grouped and single
   events.
+- The in-app browser is a separate sheet now: closing it keeps the event sheet
+  open underneath.
 
 ### Changed
 - Wycieczki sheet loads lazily: flights only for the active, visible page, and
   place sections only when they scroll into view. The full list loads on
   "Zobacz więcej" and fetches more as you scroll.
-- "Zobacz więcej" expands the same sheet to large and shows the list inline.
+- "Zobacz więcej" expands the same sheet to large and shows the list inline, with
+  a native back button and a loading skeleton.
+- The expanded list shows the details first and a full-width image below, with a
+  right chevron per row.
+- Changing the destination airport swaps the flight prices in place; the sheet
+  no longer jumps or blanks.
+- Tapping the venue map opens a picker for Google Maps or Apple Maps.
 - Hotels: the filter is a bottom sheet (default Ekonomiczne) and the price shows
   "X zł za noc" with the total for the chosen number of nights.
 - One accent colour for all CTAs; clearer section headers and spacing.

@@ -4,6 +4,7 @@ import CoreLocation
 struct SoccerMatchBoard: View {
     let event: TravelEvent
     let onOpenURL: (URL) -> Void
+    @State private var showMapPicker = false
 
     var body: some View {
         VStack(spacing: Theme.Spacing.m) {
@@ -18,7 +19,8 @@ struct SoccerMatchBoard: View {
                 .lineLimit(1)
             VenueMap(
                 coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
-                systemImage: "sportscourt.fill"
+                systemImage: "sportscourt.fill",
+                onTap: { showMapPicker = true }
             )
             if let ticketURL {
                 CapsuleButton(title: "Zobacz więcej", fullWidth: true) {
@@ -30,6 +32,12 @@ struct SoccerMatchBoard: View {
         .padding(.horizontal, Theme.Spacing.l)
         .padding(.top, Theme.Spacing.s)
         .padding(.bottom, Theme.Spacing.m)
+        .sheet(isPresented: $showMapPicker) {
+            MapAppPickerSheet(
+                coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
+                title: event.title
+            )
+        }
     }
 
     private var ticketURL: URL? {

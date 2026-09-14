@@ -1,13 +1,17 @@
 import SwiftUI
 import CoreLocation
 
+private struct BrowserItem: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
 struct TripsEventSheet: View {
     @ObservedObject var viewModel: TripsViewModel
     @State private var activeIndex: Int? = 0
     @State private var detent: PresentationDetent = .medium
     @State private var expanded: PlaceKind?
-    @State private var browserURL: URL?
-    @State private var browserOffset: CGFloat = 0
+    @State private var browserItem: BrowserItem?
     @State private var nights = 1
     @State private var airportCoordinate: CLLocationCoordinate2D?
 
@@ -18,40 +22,30 @@ struct TripsEventSheet: View {
         return events.indices.contains(index) ? events[index] : events.first
     }
 
-    private var bottomSafeAreaInset: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow }?.safeAreaInsets.bottom ?? 0
-    }
-
     var body: some View {
-        ZStack(alignment: .bottom) {
-            SheetShell(detent: $detent) {
-                if let expanded {
-                    PlacesListView(
-                        kind: expanded,
-                        eventCoordinate: currentCoordinate,
-                        airportCoordinate: airportCoordinate,
-                        nights: nights,
-                        onBack: {
+        SheetShell(detent: $detent) {
+            if let expanded {
+                PlacesListView(
+                    kind: expanded,
+                    eventCoordinate: currentCoordinate,
+                    airportCoordinate: airportCoordinate,
+                    nights: nights,
+                    onBack: {
+                        withAnimation(AppConstants.springStandard) {
                             self.expanded = nil
                             detent = .medium
-                        },
-                        onOpenURL: openBrowser
-                    )
-                } else {
-                    pager
-                }
-            }
-            if let browserURL {
-                StoryBrowserOverlay(
-                    url: browserURL,
-                    offset: browserOffset,
-                    bottomInset: bottomSafeAreaInset,
-                    onClose: closeBrowser
+                        }
+                    },
+                    onOpenURL: openBrowser
                 )
+                .id(expanded)
+            } else {
+                pager
             }
+        }
+        .sheet(item: $browserItem) { item in
+            InAppBrowserView(url: item.url, onClose: { browserItem = nil })
+                .presentationDetents([.medium, .large])
         }
         .onChange(of: viewModel.selectedEventGroup?.id) { _, _ in
             activeIndex = 0
@@ -90,12 +84,6 @@ struct TripsEventSheet: View {
                         }
                         .containerRelativeFrame(.horizontal)
                         .id(event.id)
-                        .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                            geometry.contentOffset.y
-                        } action: { _, y in
-                            guard (activeIndex ?? 0) == index else { return }
-                            handleScroll(y)
-                        }
                     }
                 }
                 .scrollTargetLayout()
@@ -106,38 +94,15 @@ struct TripsEventSheet: View {
     }
 
     private func expandPlaces(_ kind: PlaceKind) {
-        expanded = kind
-        detent = .large
-    }
-
-    /// Medium grows to large on scroll down; back to medium at the top.
-    private func handleScroll(_ y: CGFloat) {
-        if y > 40, detent == .medium {
+        withAnimation(AppConstants.springStandard) {
+            expanded = kind
             detent = .large
-        } else if y <= 4, detent == .large {
-            detent = .medium
         }
     }
 
     private func openBrowser(_ url: URL) {
-        browserURL = url
+        browserItem = BrowserItem(url: url)
         detent = .large
-        browserOffset = StoryBrowserOverlay.panelHeight
-        DispatchQueue.main.async {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
-                browserOffset = 0
-            }
-        }
-    }
-
-    private func closeBrowser() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
-            browserOffset = StoryBrowserOverlay.panelHeight
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
-            browserURL = nil
-            browserOffset = 0
-        }
     }
 }
 
@@ -246,7 +211,7 @@ struct TripsEventPage: View {
     }
 
     private var priceFooter: some View {
-        TripsSectionFooter(text: "Ceny są orientacyjne i mogą się zmienić u dostawcy. To podgląd oferty.")
+        TripsSectionFooter(text: "Ceny są orientacyjne i mogą się zmienić u dostawcy.")
             .padding(.horizontal, Theme.Spacing.l)
             .padding(.top, Theme.Spacing.section)
     }

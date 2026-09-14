@@ -36,8 +36,8 @@ const BASE_PRICE_RANGE = 180;
 const PRICE_SPIKE_RANGE = 25;
 const HOUR_START = 8;
 const HOUR_RANGE = 11;
-const OUTBOUND_WINDOW: [number, number] = [-3, -1];
-const RETURN_WINDOW: [number, number] = [1, 3];
+const OUTBOUND_WINDOW: [number, number] = [-7, -1];
+const RETURN_WINDOW: [number, number] = [1, 7];
 const FALLBACK_PRICE_MIN = 50;
 const FALLBACK_PRICE_RANGE = 60;
 
@@ -177,8 +177,8 @@ export function buildWindowFromCheapest(
   outboundPrices: Map<string, CheapestDay>,
   returnPrices: Map<string, CheapestDay>,
 ): FlightWindow {
-  const outDays = Array.from({ length: 3 }, (_, i) => addDaysWarsaw(eventDay, OUTBOUND_WINDOW[0] + i));
-  const retDays = Array.from({ length: 3 }, (_, i) => addDaysWarsaw(eventDay, RETURN_WINDOW[0] + i));
+  const outDays = Array.from({ length: OUTBOUND_WINDOW[1] - OUTBOUND_WINDOW[0] + 1 }, (_, i) => addDaysWarsaw(eventDay, OUTBOUND_WINDOW[0] + i));
+  const retDays = Array.from({ length: RETURN_WINDOW[1] - RETURN_WINDOW[0] + 1 }, (_, i) => addDaysWarsaw(eventDay, RETURN_WINDOW[0] + i));
   return {
     outbound: outDays.map((d) => buildCell(d, outboundPrices)),
     returning: retDays.map((d) => buildCell(d, returnPrices)),

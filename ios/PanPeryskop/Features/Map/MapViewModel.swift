@@ -262,6 +262,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     func fetchStories(swLat: Double, swLng: Double, neLat: Double, neLng: Double) {
         viewport = MapBBox(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
         isRegionFetchPending = true
+        startUserLoad()
         debounceTask?.cancel()
         debounceTask = Task {
             try? await Task.sleep(nanoseconds: 500_000_000)
@@ -270,7 +271,32 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
                 knownPostIds = Set(fetched.map(\.id))
             }
             isRegionFetchPending = false
+            await finishUserLoad()
         }
+    }
+
+    // MARK: - User-load indicator (day/city/tag changes — never the poll)
+
+    private var loadingSince: Date?
+
+    private func startUserLoad() {
+        loadingSince = Date()
+        if !isLoading { isLoading = true }
+    }
+
+    /// Keep the indicator up for at least `minLoadingIndicatorMs` so a fast
+    /// response does not flash the spinner.
+    private func finishUserLoad() async {
+        guard isLoading else { return }
+        if let since = loadingSince {
+            let minS = Double(AppConstants.minLoadingIndicatorMs) / 1000
+            let elapsed = Date().timeIntervalSince(since)
+            if elapsed < minS {
+                try? await Task.sleep(nanoseconds: UInt64((minS - elapsed) * 1_000_000_000))
+            }
+        }
+        loadingSince = nil
+        isLoading = false
     }
 
     @discardableResult

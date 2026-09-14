@@ -1,18 +1,19 @@
 import SwiftUI
 import CoreLocation
 
-/// Run event board — the hero of the Wycieczki sheet for `biegi`. Races have no
-/// two teams, so the distance is the headline, with start time, surface/price
-/// details and the venue map below.
+/// Run event board — the hero of the Wycieczki sheet for `biegi`. Shows the race
+/// name, distance, provider details (surface/difficulty/price), start time, venue
+/// map and a direct link to the race website (registration/tickets).
 struct RunEventBoard: View {
     let event: TravelEvent
 
     private var meta: TravelEventMeta? { event.metaData }
 
-    private var distanceLabel: String {
+    /// Distance headline — nil when the provider gave none (never a filler word).
+    private var distanceLabel: String? {
         if let d = meta?.distance, !d.isEmpty { return d }
         if let ds = meta?.distances, !ds.isEmpty { return ds.prefix(3).joined(separator: ", ") }
-        return "Bieg"
+        return nil
     }
 
     private var detail: String? {
@@ -22,20 +23,33 @@ struct RunEventBoard: View {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
+    private var ticketURL: URL? {
+        let raw = event.link ?? meta?.website
+        guard let raw, let url = URL(string: raw) else { return nil }
+        return url
+    }
+
     var body: some View {
         VStack(spacing: Theme.Spacing.m) {
             HStack(alignment: .top, spacing: Theme.Spacing.m) {
                 icon
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(distanceLabel)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                    Text(event.title)
+                        .font(.headline.weight(.bold))
                         .lineLimit(2)
-                        .minimumScaleFactor(0.7)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let distanceLabel {
+                        Text(distanceLabel)
+                            .font(.title3.weight(.bold))
+                            .foregroundColor(.orange)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
                     if let detail {
                         Text(detail)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .lineLimit(1)
+                            .lineLimit(2)
                     }
                 }
                 Spacer(minLength: 0)
@@ -49,7 +63,11 @@ struct RunEventBoard: View {
                 coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
                 systemImage: "figure.run"
             )
-            .padding(.horizontal, Theme.Spacing.l)
+            if let ticketURL {
+                CapsuleButton(title: "Zapisz się", tint: .orange) {
+                    UIApplication.shared.open(ticketURL)
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, Theme.Spacing.l)

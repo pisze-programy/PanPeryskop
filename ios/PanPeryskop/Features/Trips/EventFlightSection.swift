@@ -100,34 +100,51 @@ struct EventFlightSection: View {
 
     @ViewBuilder
     private func buyBar(_ destination: Destination) -> some View {
-        if let outbound = selectedOutbound, let ret = selectedReturn {
+        if let outbound = selectedOutbound {
+            let ret = selectedReturn
+            let total = Int((outbound.price ?? 0) + (ret?.price ?? 0))
             CapsuleButton(
                 title: "\(airline.label) ✈ Lecimy",
-                trailingText: "\(Int(outbound.price ?? 0) + Int(ret.price ?? 0)) zł",
+                trailingText: "\(total) zł",
                 tint: airline.color
             ) {
-                if let url = buyURL(destination: destination.iata, outbound: outbound.date, returning: ret.date) {
+                if let url = buyURL(destination: destination.iata, outbound: outbound.date, returning: ret?.date) {
                     UIApplication.shared.open(url)
                 }
             }
         }
     }
 
-    private func buyURL(destination: String, outbound: String, returning: String) -> URL? {
+    /// Ryanair deep link. Two days selected → round trip (isReturn=true, dateIn
+    /// set); one day (outbound only) → one-way (isReturn=false, dateIn/tpEndDate
+    /// empty). Mirrors the booking form's own query keys, incl. the tp* mirror.
+    private func buyURL(destination: String, outbound: String, returning: String?) -> URL? {
         var components = URLComponents(string: "https://www.ryanair.com/pl/pl/trip/flights/select")!
+        let isReturn = returning != nil
+        let dateIn = returning ?? ""
         components.queryItems = [
             URLQueryItem(name: "adults", value: "1"),
             URLQueryItem(name: "teens", value: "0"),
             URLQueryItem(name: "children", value: "0"),
             URLQueryItem(name: "infants", value: "0"),
             URLQueryItem(name: "dateOut", value: outbound),
-            URLQueryItem(name: "dateIn", value: returning),
+            URLQueryItem(name: "dateIn", value: dateIn),
             URLQueryItem(name: "isConnectedFlight", value: "false"),
             URLQueryItem(name: "discount", value: "0"),
             URLQueryItem(name: "promoCode", value: ""),
-            URLQueryItem(name: "isReturn", value: "false"),
+            URLQueryItem(name: "isReturn", value: isReturn ? "true" : "false"),
             URLQueryItem(name: "originIata", value: origin.iata),
             URLQueryItem(name: "destinationIata", value: destination),
+            URLQueryItem(name: "tpAdults", value: "1"),
+            URLQueryItem(name: "tpTeens", value: "0"),
+            URLQueryItem(name: "tpChildren", value: "0"),
+            URLQueryItem(name: "tpInfants", value: "0"),
+            URLQueryItem(name: "tpStartDate", value: outbound),
+            URLQueryItem(name: "tpEndDate", value: dateIn),
+            URLQueryItem(name: "tpDiscount", value: "0"),
+            URLQueryItem(name: "tpPromoCode", value: ""),
+            URLQueryItem(name: "tpOriginIata", value: origin.iata),
+            URLQueryItem(name: "tpDestinationIata", value: destination),
         ]
         return components.url
     }

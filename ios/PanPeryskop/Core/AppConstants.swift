@@ -8,6 +8,10 @@ enum AppConstants {
     static let hourMs: Int64 = 3_600_000
     static let secondsPerHour: TimeInterval = 3600
 
+    /// Minimum time the category-pill loader stays visible after a (non-poll)
+    /// day/place fetch — so a fast response never flashes the spinner.
+    static let minLoadingIndicatorMs: Int = 250
+
     /// Post (event/live) visibility window — mirrors backend `TTL_HOURS` (24h).
     static let postTTLHours: TimeInterval = 24
     static let postTTLMs: Int64 = 24 * hourMs

@@ -17,12 +17,26 @@ struct SoccerMatchBoard: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
-            VenueMap(coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng))
-                .padding(.horizontal, Theme.Spacing.l)
+            VenueMap(
+                coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
+                distance: 2_000,
+                pitch: 55
+            )
+            if let ticketURL {
+                CapsuleButton(title: "Kup bilet") {
+                    UIApplication.shared.open(ticketURL)
+                }
+            }
         }
         .frame(maxWidth: .infinity)
+        .padding(.horizontal, Theme.Spacing.l)
         .padding(.top, Theme.Spacing.s)
         .padding(.bottom, Theme.Spacing.m)
+    }
+
+    private var ticketURL: URL? {
+        guard let link = event.link, let url = URL(string: link) else { return nil }
+        return url
     }
 
     @ViewBuilder

@@ -31,9 +31,12 @@ struct MapFilterBar: View {
                         title: "\(tripsViewModel.selectedAirport.iata) · \(tripsViewModel.selectedAirport.city)",
                         action: onAirportTap
                     )
+                    Chip(label: "Wszystkie", isSelected: tripsViewModel.selectedTag == nil, badgeCount: tripsViewModel.tagTotalCount, showsBadgeWhenEmpty: true) {
+                        tripsViewModel.selectTag(nil)
+                    }
                     .padding(.leading, 10)
                     ForEach(TripsViewModel.TravelTag.allCases) { tag in
-                        Chip(label: tag.label, isSelected: tripsViewModel.selectedTag == tag) {
+                        Chip(label: tag.label, isSelected: tripsViewModel.selectedTag == tag, badgeCount: tripsViewModel.tagCounts[tag.rawValue] ?? 0, showsBadgeWhenEmpty: true) {
                             tripsViewModel.selectTag(tripsViewModel.selectedTag == tag ? nil : tag)
                         }
                     }

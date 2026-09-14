@@ -10,6 +10,10 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     @Published var selectedDayOffset: Int = 0
     /// Travel tag filter — nil = all. Matches travel_events.tag.
     @Published var selectedTag: TravelTag?
+    /// Event-count badge per travel tag (Europe-wide, selected day).
+    @Published var tagCounts: [String: Int] = [:]
+    /// Total travel events for the selected day ("Wszystkie" badge).
+    @Published var tagTotalCount: Int = 0
     @Published var events: [TravelEvent] = []
     /// Flight layer (airport pins + arcs) is hidden until an event is selected.
     @Published var showFlightLayer: Bool = false
@@ -18,29 +22,38 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     @Published var selectedEventGroup: EventGroup?
 
     private var eventsCache: [String: [String: TravelEvent]] = [:]
-    private var isLoading = false
+    /// True while a user-triggered fetch (day/airport/tag) is in flight — drives the
+    /// Wycieczki pill loader. Trips has no polling, so every load qualifies.
+    @Published private(set) var isLoading = false
     private var cachedOriginAirlines: [Airline] = []
     private var cachedPosts: [Post] = []
 
     enum TravelTag: String, CaseIterable, Identifiable {
         // rawValues must match backend TRAVEL_TAGS (constants.ts).
+        // Fixed display/selection order — independent of tag counts.
         case cityBreak = "citybreak"
-        case football = "pilka-nozna"
         case runs = "biegi"
+        case football = "pilka-nozna"
 
         var id: String { rawValue }
         var label: String {
             switch self {
             case .cityBreak: return "City-break"
-            case .football: return "Piłka nożna"
             case .runs: return "Biegi"
+            case .football: return "Piłka nożna"
             }
         }
     }
 
+    private enum TripsPrefs {
+        static let airportIata = "trips.last_airport_iata"
+    }
+
     init() {
-        selectedAirport = TripsData.polishAirports[0]
+        let savedIata = UserDefaults.standard.string(forKey: TripsPrefs.airportIata)
+        selectedAirport = TripsData.polishAirports.first { $0.iata == savedIata } ?? TripsData.polishAirports[0]
         cachedOriginAirlines = Self.airlines(for: destinations)
+        loadTagCounts()
     }
 
     var overlays: [MapOverlay] {
@@ -131,7 +144,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     var initialRegion: MKCoordinateRegion {
         MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: selectedAirport.lat, longitude: selectedAirport.lng),
-            span: MKCoordinateSpan(latitudeDelta: 40, longitudeDelta: 40)
+            span: MKCoordinateSpan(latitudeDelta: 60, longitudeDelta: 60)
         )
     }
 
@@ -148,17 +161,20 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     func selectAirport(_ airport: Airport) {
         selectedAirport = airport
+        UserDefaults.standard.set(airport.iata, forKey: TripsPrefs.airportIata)
         cachedOriginAirlines = Self.airlines(for: destinations)
         eventsCache = [:]
         cachedPosts = []
         clearSelection()
         refresh()
+        loadTagCounts()
     }
 
     func selectTag(_ tag: TravelTag?) {
         selectedTag = tag
         clearSelection()
         refresh()
+        loadTagCounts()
     }
 
     func commitDay(_ offset: Int) {
@@ -166,13 +182,38 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         selectedDayOffset = offset
         clearSelection()
         refresh()
+        loadTagCounts()
+    }
+
+    /// Fetch per-tag event counts for the selected day, Europe-wide (no bbox) —
+    /// independent of the active tag, mirroring the Events chips.
+    @MainActor
+    func loadTagCounts() {
+        Task {
+            struct TagCount: Decodable { let tag: String; let count: Int }
+            struct TagCountsResponse: Decodable { let total: Int; let counts: [TagCount] }
+            let (from, to) = dayRange(offset: selectedDayOffset)
+            guard let resp: TagCountsResponse = try? await APIClient.get(
+                "/travel/tag-counts",
+                params: ["from": String(from), "to": String(to)]
+            ) else { return }
+            tagTotalCount = resp.total
+            tagCounts = Dictionary(uniqueKeysWithValues: resp.counts.map { ($0.tag, $0.count) })
+        }
     }
 
     func refresh() {
         guard !isLoading else { return }
+        let startedAt = Date()
         isLoading = true
         Task { [weak self] in
             await self?.loadEvents()
+            // Keep the pill loader up for at least the min duration.
+            let minS = Double(AppConstants.minLoadingIndicatorMs) / 1000
+            let elapsed = Date().timeIntervalSince(startedAt)
+            if elapsed < minS {
+                try? await Task.sleep(nanoseconds: UInt64((minS - elapsed) * 1_000_000_000))
+            }
             self?.isLoading = false
         }
     }

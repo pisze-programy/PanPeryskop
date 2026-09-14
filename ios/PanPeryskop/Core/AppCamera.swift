@@ -5,5 +5,5 @@ extension AppConstants {
     /// Nearby-airport radius.
     static let nearbyAirportRadiusMeters: CLLocationDistance = 200_000
     static let eventsMaxZoomOutDistance: CLLocationDistance = 100_000
-    static let tripsMaxZoomOutDistance: CLLocationDistance = 6_000_000
+    static let tripsMaxZoomOutDistance: CLLocationDistance = 15_000_000
 }

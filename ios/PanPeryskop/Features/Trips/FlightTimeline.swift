@@ -36,6 +36,11 @@ struct FlightTimeline: View {
 
     private static let markerId = "flight-event-marker"
 
+    /// Is this ISO day key today (Europe/Warsaw)?
+    private func isToday(_ dateStr: String) -> Bool {
+        dateStr == Self.dayKey(Int64(Date().timeIntervalSince1970 * 1000))
+    }
+
     private func dayCell(_ cell: FlightWindowCell, isOutbound: Bool) -> some View {
         let disabled = cell.price == nil
         let selected = isOutbound
@@ -48,9 +53,9 @@ struct FlightTimeline: View {
             VStack(spacing: 1) {
                 Text(Self.shortDay(cell.date))
                     .font(.caption2.weight(.semibold))
-                Text(Self.weekday(cell.date))
+                Text(isToday(cell.date) ? "dziś" : Self.weekday(cell.date))
                     .font(.system(size: 9))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(isToday(cell.date) ? .accentColor : .secondary)
                 Text(cell.hour ?? "—")
                     .font(.system(size: 10))
                 Text(priceLabel(cell))
@@ -82,6 +87,8 @@ struct FlightTimeline: View {
                 .font(.system(size: 8, weight: .heavy))
             Text(Self.shortDay(Self.dayKey(eventDay)))
                 .font(.system(size: 9, weight: .bold))
+            Text(Self.hour(eventDay))
+                .font(.system(size: 10))
         }
         .foregroundColor(.purple)
         .frame(width: 56, height: 66)
@@ -101,6 +108,11 @@ struct FlightTimeline: View {
 
     static func dayKey(_ ms: Int64) -> String {
         AppConstants.isoDayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
+    }
+
+    /// Event start hour "HH:mm" (Europe/Warsaw) — the line the marker was missing.
+    static func hour(_ ms: Int64) -> String {
+        AppConstants.hourFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
     }
 
     static func date(from dateStr: String) -> Date? {

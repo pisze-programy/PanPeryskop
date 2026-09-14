@@ -69,6 +69,24 @@ function parseTag(raw: string | undefined): TravelTag | null {
   return null;
 }
 
+// Europe-wide per-day tag counts for the Wycieczki filter chips. Scope is the
+// WHOLE of Europe (no bbox) for the requested day window, independent of the
+// currently selected tag — mirrors /stories/tag-counts for the Events chips.
+travelRoutes.get('/tag-counts', async (c) => {
+  const q = c.req.query();
+  const from = Number(q.from);
+  const to = Number(q.to);
+  if (!isFinite(from) || !isFinite(to) || to <= from) return c.json({ error: 'Invalid or missing from/to (epoch ms)' }, 400);
+  if (to - from > MAX_WINDOW_MS) return c.json({ error: 'Window too large' }, 400);
+  const { results } = await c.env.DB
+    .prepare(`SELECT tag, COUNT(*) AS count FROM travel_events WHERE start_ms >= ? AND start_ms <= ? GROUP BY tag`)
+    .bind(from, to)
+    .all<{ tag: string; count: number }>();
+  const counts = (results ?? []).filter((r) => TRAVEL_TAGS.has(r.tag as TravelTag));
+  const total = counts.reduce((a, r) => a + r.count, 0);
+  return c.json({ total, counts });
+});
+
 function parseLimit(raw: string | undefined): number {
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), MAX_LIMIT) : MAX_LIMIT;

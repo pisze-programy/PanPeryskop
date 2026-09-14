@@ -5,26 +5,34 @@ import SwiftUI
 /// The hero is picked per event tag (soccer match board vs. run board).
 struct TripsEventSheet: View {
     @ObservedObject var viewModel: TripsViewModel
-    @State private var activeIndex = 0
+    @State private var activeIndex: Int? = 0
 
     private var events: [TravelEvent] { viewModel.selectedEventGroup?.events ?? [] }
 
     var body: some View {
         SheetShell {
             VStack(spacing: 0) {
-                if events.count > 1 {
-                    PageDots(count: events.count, index: activeIndex)
-                        .padding(.top, 22)
-                }
-                TabView(selection: $activeIndex) {
-                    ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
-                        ScrollView(showsIndicators: false) {
-                            TripsEventPage(event: event, origin: viewModel.selectedAirport, viewModel: viewModel)
+                // Reserve the same space above the hero for a group (dots) and a
+                // single event (no dots) so the gap to the sheet handle is identical.
+                PageDots(count: max(events.count, 1), index: activeIndex ?? 0)
+                    .opacity(events.count > 1 ? 1 : 0)
+                    .padding(.top, 22)
+                // A plain paging ScrollView (same pattern as ShowtimesPager) instead
+                // of a UIKit page TabView, so the sheet can track the content scroll
+                // and grow/collapse with it (medium ↔ large ↔ dismiss).
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 0) {
+                        ForEach(Array(events.enumerated()), id: \.offset) { _, event in
+                            ScrollView(showsIndicators: false) {
+                                TripsEventPage(event: event, origin: viewModel.selectedAirport, viewModel: viewModel)
+                            }
+                            .containerRelativeFrame(.horizontal)
                         }
-                        .tag(index)
                     }
+                    .scrollTargetLayout()
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: $activeIndex)
             }
         }
         .presentationContentInteraction(.scrolls)

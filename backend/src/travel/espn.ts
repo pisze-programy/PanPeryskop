@@ -51,8 +51,14 @@ async function fetchScoreboard(day: string, opts: EspnFetchOptions): Promise<Esp
   throw new Error(`ESPN scoreboard ${day} failed after ${retries + 1} attempts`);
 }
 
+// Prefer a direct ticket link when ESPN provides one; otherwise the match page.
+// Both are real destinations the app can open from the Wycieczki hero.
 function eventLink(e: EspnEvent): string | null {
-  return e.links?.find((l) => l.rel?.includes('summary'))?.href ?? null;
+  for (const rel of ['tickets', 'summary'] as const) {
+    const href = e.links?.find((l) => l.rel?.includes(rel))?.href;
+    if (href) return href;
+  }
+  return null;
 }
 
 function eventTitle(e: EspnEvent): string {

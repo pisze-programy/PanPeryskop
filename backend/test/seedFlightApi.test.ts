@@ -7,22 +7,23 @@ function day(day: string, price: number | null, opts: Partial<CheapestDay> = {})
   return { day, departureDate: `${day}T09:30:00`, price, unavailable: false, soldOut: false, ...opts };
 }
 
-test('buildWindowFromCheapest: slices outbound D-3..D-1 and return D+1..D+3', () => {
+test('buildWindowFromCheapest: slices outbound D-7..D-1 and return D+1..D+7', () => {
   const out = new Map<string, CheapestDay>([
-    ['2026-09-07', day('2026-09-07', 120)],
     ['2026-09-08', day('2026-09-08', 95)],
-    ['2026-09-09', day('2026-09-09', 100)],
   ]);
   const ret = new Map<string, CheapestDay>([
-    ['2026-09-11', day('2026-09-11', 80)],
     ['2026-09-12', day('2026-09-12', 90)],
-    ['2026-09-13', day('2026-09-13', 70)],
   ]);
   const w = buildWindowFromCheapest('2026-09-10', out, ret);
-  assert.deepEqual(w.outbound.map((c) => c.date), ['2026-09-07', '2026-09-08', '2026-09-09']);
-  assert.deepEqual(w.returning.map((c) => c.date), ['2026-09-11', '2026-09-12', '2026-09-13']);
-  assert.equal(w.outbound[1].price, 95);
-  assert.equal(w.outbound[1].hour, '09:30'); // destination-local departure hour
+  assert.deepEqual(w.outbound.map((c) => c.date), [
+    '2026-09-03', '2026-09-04', '2026-09-05', '2026-09-06', '2026-09-07', '2026-09-08', '2026-09-09',
+  ]);
+  assert.deepEqual(w.returning.map((c) => c.date), [
+    '2026-09-11', '2026-09-12', '2026-09-13', '2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17',
+  ]);
+  const d8 = w.outbound.find((c) => c.date === '2026-09-08')!;
+  assert.equal(d8.price, 95);
+  assert.equal(d8.hour, '09:30'); // destination-local departure hour
 });
 
 test('buildWindowFromCheapest: missing / unavailable / soldOut days become price null', () => {
@@ -32,11 +33,12 @@ test('buildWindowFromCheapest: missing / unavailable / soldOut days become price
     ['2026-09-09', day('2026-09-09', 100, { soldOut: true })],
   ]);
   const w = buildWindowFromCheapest('2026-09-10', out, new Map());
-  assert.equal(w.outbound[0].price, 120);
-  assert.equal(w.outbound[1].price, null);
-  assert.equal(w.outbound[1].hour, null);
-  assert.equal(w.outbound[2].price, null); // sold out counts as no fare
-  assert.deepEqual(w.returning.map((c) => c.price), [null, null, null]);
+  const cell = (d: string) => w.outbound.find((c) => c.date === d)!;
+  assert.equal(cell('2026-09-07').price, 120);
+  assert.equal(cell('2026-09-08').price, null);
+  assert.equal(cell('2026-09-08').hour, null);
+  assert.equal(cell('2026-09-09').price, null); // sold out counts as no fare
+  assert.deepEqual(w.returning.map((c) => c.price), [null, null, null, null, null, null, null]);
 });
 
 test('buildWindowFromCheapest: window spanning a month boundary merges both months', () => {
@@ -46,8 +48,10 @@ test('buildWindowFromCheapest: window spanning a month boundary merges both mont
     ['2026-09-01', day('2026-09-01', 50)],
   ]);
   const w = buildWindowFromCheapest('2026-09-02', out, new Map());
-  assert.deepEqual(w.outbound.map((c) => c.date), ['2026-08-30', '2026-08-31', '2026-09-01']);
-  assert.deepEqual(w.outbound.map((c) => c.price), [40, 45, 50]);
+  assert.deepEqual(w.outbound.map((c) => c.date), [
+    '2026-08-26', '2026-08-27', '2026-08-28', '2026-08-29', '2026-08-30', '2026-08-31', '2026-09-01',
+  ]);
+  assert.deepEqual(w.outbound.map((c) => c.price), [null, null, null, null, 40, 45, 50]);
 });
 
 test('haversineKm: nearby vs distant airports', () => {

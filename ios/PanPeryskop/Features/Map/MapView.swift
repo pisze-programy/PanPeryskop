@@ -50,7 +50,11 @@ struct MapScreen: View {
 
             VStack {
                 Spacer()
-                CategoryPill(selection: $activeCategory)
+                CategoryPill(
+                    selection: $activeCategory,
+                    eventsLoading: mapViewModel.isLoading,
+                    tripsLoading: tripsViewModel.isLoading
+                )
                     .padding(.bottom, 112)
             }
 

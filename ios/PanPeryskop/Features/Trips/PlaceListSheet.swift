@@ -1,9 +1,7 @@
 import SwiftUI
 import CoreLocation
 
-/// Full vertical list for a section, presented as a large sheet when
-/// "Zobacz więcej" is tapped. The header's back control returns to the event
-/// sheet. Selecting a row picks the place and closes the list.
+/// Full vertical list, shown as a large sheet from the see-more tile.
 struct PlaceListSheet: View {
     let title: String
     let places: [TravelPlace]

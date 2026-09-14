@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Loading placeholder for `FlightTimeline`. It reuses the exact day-cell size
-/// (56×66) so the section keeps its height while prices load — no jump, no
-/// spinner. Fake days pulse softly.
+/// Placeholder with the exact day-cell size of `FlightTimeline` (no height jump).
 struct FlightTimelineSkeleton: View {
     var cells: Int = 7
 

@@ -1,8 +1,7 @@
 import SwiftUI
 import CoreLocation
 
-/// Horizontal place rail: the first `maxVisible` cards and, when there are more,
-/// a "Zobacz więcej" tile that opens the full vertical list.
+/// Horizontal rail of place cards with a see-more tile.
 struct PlaceSlider: View {
     let places: [TravelPlace]
     let eventCoordinate: CLLocationCoordinate2D

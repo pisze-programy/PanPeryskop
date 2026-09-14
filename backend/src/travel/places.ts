@@ -1,7 +1,5 @@
-// Fake "places" catalogue for the Wycieczki sheet: hotels, attractions, car
-// rentals and insurance. There is no provider integration yet (getyourguide is
-// parked, no booking/rental API) — the list is generated from a fixed seed
-// around the event so the UI is stable and distances stay plausible.
+// Fake places catalogue. There is no provider yet, so the list is deterministic
+// around the event coordinates.
 // ponytail: static generator; swap for a real provider when one exists.
 
 export type PlaceKind = 'hotel' | 'attraction' | 'car' | 'insurance';
@@ -17,7 +15,7 @@ export interface TravelPlace {
   address: string;
   lat: number;
   lng: number;
-  /** Hotels only — the Ekonomiczne / Polecane / Premium filter. */
+  /** Hotels only. */
   tier?: HotelTier;
   rating?: number;
   reviews?: number;
@@ -70,7 +68,6 @@ function jitter(seed: string): number {
   return ((hash(seed) % 2400) - 1200) / 100_000;
 }
 
-/** One deterministic place list around `lat,lng` for the given kind. */
 export function buildPlaces(kind: PlaceKind, lat: number, lng: number): TravelPlace[] {
   const cfg = KINDS[kind];
   return cfg.names.map((name, i) => {

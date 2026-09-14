@@ -23,7 +23,7 @@ struct RunEventBoard: View {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    /// Price shown on the CTA (like the flight "Lecimy" bar), not under the distance.
+    /// Price goes on the CTA, not under the distance.
     private var priceLabel: String? {
         guard let price = meta?.price, !price.isEmpty else { return nil }
         return price

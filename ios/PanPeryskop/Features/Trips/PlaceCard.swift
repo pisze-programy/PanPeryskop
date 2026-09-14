@@ -1,9 +1,7 @@
 import SwiftUI
 import CoreLocation
 
-/// One place tile: image, name, rating, price, address and the distance from the
-/// event (and from the arrival airport when known). Shared by the horizontal
-/// sliders and the full "Zobacz więcej" list.
+/// A place tile, shared by the sliders and the full list.
 struct PlaceCard: View {
     let place: TravelPlace
     let eventCoordinate: CLLocationCoordinate2D
@@ -57,7 +55,7 @@ struct PlaceCard: View {
     }
 }
 
-/// Loading placeholder with the same shape as `PlaceCard`.
+/// Skeleton with the shape of `PlaceCard`.
 struct PlaceSkeletonCard: View {
     var width: CGFloat = 200
 

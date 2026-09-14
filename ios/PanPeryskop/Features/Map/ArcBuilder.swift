@@ -1,8 +1,7 @@
 import CoreLocation
 
-/// Builds a curved flight path between two coordinates — a quadratic Bézier
-/// bowed sideways, so routes read as flight arcs instead of straight lines.
-/// The bow grows with the route length and is capped so long routes stay sane.
+/// Curved flight path between two coordinates: a quadratic Bézier bowed
+/// sideways, with the bow capped so long routes stay readable.
 enum ArcBuilder {
     static func curve(
         from: CLLocationCoordinate2D,

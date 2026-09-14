@@ -1,7 +1,6 @@
 import SwiftUI
 import CoreLocation
 
-/// Loads one place kind for a section and caches it for the page's lifetime.
 @MainActor
 final class PlaceListLoader: ObservableObject {
     @Published var places: [TravelPlace] = []
@@ -21,15 +20,12 @@ final class PlaceListLoader: ObservableObject {
     }
 }
 
-/// Generic Wycieczki section: a header, an optional filter bar (hotels), a
-/// horizontal slider with a "Zobacz więcej" tile and the full-list sheet. Used
-/// by every future place-based section — only `kind` and the callbacks change.
+/// A place section: header, optional filter, slider and full-list sheet.
 struct PlacesSection: View {
     let kind: PlaceKind
     let event: TravelEvent
     let airportCoordinate: CLLocationCoordinate2D?
     var info: String? = nil
-    /// Non-empty ⇒ show these filter chips (hotels: Ekonomiczne/Polecane/Premium).
     var tiers: [HotelTier] = []
     var selectedId: String? = nil
     var onSelect: (TravelPlace) -> Void

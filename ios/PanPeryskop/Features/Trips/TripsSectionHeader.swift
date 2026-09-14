@@ -1,11 +1,9 @@
 import SwiftUI
 
-/// Section header for the Wycieczki sheet: a divider, a bold headline and an
-/// optional "i" button that shows a short tip. Keeps every section visually
-/// separated as the sheet grows past the hero + flights.
+/// Section header: a divider, a title and an optional tip button.
 struct TripsSectionHeader: View {
     let title: String
-    /// Short tip shown after tapping "i" (nil hides the button).
+    /// Tip shown by the "i" button. nil hides the button.
     var info: String? = nil
     @State private var showInfo = false
 
@@ -40,7 +38,7 @@ struct TripsSectionHeader: View {
     }
 }
 
-/// Small secondary note under a section (e.g. "prices are a preview").
+/// Secondary note under a section.
 struct TripsSectionFooter: View {
     let text: String
 

@@ -2,9 +2,7 @@ import SwiftUI
 import MapKit
 import CoreLocation
 
-/// Transport section: how to get from the arrival airport to the chosen hotel.
-/// It listens to the planner — with no flight/hotel picked it shows a grey hint;
-/// otherwise a mini-map plus Google Maps route buttons (transit / driving).
+/// Route from the arrival airport to the chosen hotel.
 struct TransportSection: View {
     @ObservedObject var planner: TripsEventPlanner
 

@@ -41,7 +41,7 @@ struct TripsEventSheet: View {
     }
 }
 
-/// One event page: the tag-specific hero on top, flight section below.
+/// One event page: the hero plus the sheet sections.
 struct TripsEventPage: View {
     let event: TravelEvent
     let origin: Airport

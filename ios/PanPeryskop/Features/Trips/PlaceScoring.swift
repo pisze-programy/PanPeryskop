@@ -1,8 +1,7 @@
 import Foundation
 
-/// Sorts places within a filter tier. Port of the reference HotelWidget scoring:
-/// cheap = lowest price, best = balanced price/rating/reviews, luxury = the
-/// opposite (high price, reviews and rating). Pure logic — unit tested.
+/// Sorts places within a filter tier: economy = cheapest, recommended =
+/// balanced, premium = the opposite. Pure logic, unit tested.
 enum PlaceScoring {
     static func sorted(_ places: [TravelPlace], by tier: HotelTier) -> [TravelPlace] {
         switch tier {
@@ -19,7 +18,7 @@ enum PlaceScoring {
         }
     }
 
-    /// Lower is better: cheap price, high rating, many reviews.
+    /// Low score = cheap, well rated, many reviews.
     private static func score(
         _ place: TravelPlace,
         in places: [TravelPlace],

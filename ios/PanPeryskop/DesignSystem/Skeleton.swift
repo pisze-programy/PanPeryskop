@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Subtle pulsing opacity for skeleton placeholders — replaces a spinner where a
-/// known layout can be faked (no height jump when the real content arrives).
+/// Pulsing opacity for skeleton placeholders.
 struct SkeletonPulse: ViewModifier {
     @State private var on = false
 

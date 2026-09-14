@@ -5,7 +5,7 @@ struct CapsuleButton: View {
     let title: String
     var trailingText: String? = nil
     var tint: Color = .accentColor
-    /// Fill the available width (event CTAs use this so every section lines up).
+    /// Fill the available width.
     var fullWidth: Bool = false
     let action: () -> Void
 

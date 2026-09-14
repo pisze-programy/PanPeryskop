@@ -63,8 +63,12 @@ All notable changes to PanPeryskop. Format based on
   events.
 - The in-app browser is a separate sheet now: closing it keeps the event sheet
   open underneath.
+- Soccer matches show the venue's local time and date (were shown in the app's
+  timezone, so UK/Portugal were off by an hour). Existing matches were updated.
 
 ### Changed
+- Onboarding lists the real benefits: European trips (event, flights, stay,
+  attractions), local events, and what is happening nearby.
 - Wycieczki sheet loads lazily: flights only for the active, visible page, and
   place sections only when they scroll into view. The full list loads on
   "Zobacz więcej" and fetches more as you scroll.

@@ -19,7 +19,7 @@ export const MK_CINEMAS: Cinema[] = [
   { id: '0023', name: 'Łódź', city: 'Łódź', urlCinemaSlug: 'lodz', enabled: true, lat: 51.759002, lng: 19.461654 },
   { id: '0051', name: 'Mielec', city: 'Mielec', urlCinemaSlug: 'mielec', enabled: false },
   { id: '0036', name: 'Olsztyn', city: 'Olsztyn', urlCinemaSlug: 'olsztyn', enabled: true, lat: 53.753960, lng: 20.485498 },
-  { id: '0011', name: 'Poznań Stary Browar', city: 'Poznań', urlCinemaSlug: 'poznan-stary-browar', enabled: true, lat: 52.410000, lng: 16.909853 },
+  { id: '0011', name: 'Poznań Stary Browar', city: 'Poznań', urlCinemaSlug: 'poznan-stary-browar', enabled: true, lat: 52.40126016948028, lng: 16.927976453874976 },
   { id: '0039', name: 'Pruszków', city: 'Pruszków', urlCinemaSlug: 'pruszkow', enabled: false },
   { id: '0026', name: 'Radom', city: 'Radom', urlCinemaSlug: 'radom', enabled: false },
   { id: '0027', name: 'Rumia', city: 'Rumia', urlCinemaSlug: 'rumia', enabled: false },

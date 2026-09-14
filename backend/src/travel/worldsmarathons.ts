@@ -93,6 +93,9 @@ export function parseWmEvent(e: WmEvent, fallbackDay: string): TravelEvent | nul
   const raceTime = localTime(localIso);
   // "00:00" is the provider's date-only placeholder — not a real start time.
   const time = raceTime && raceTime !== '00:00' ? raceTime : null;
+  // startMs is a LOCAL-DAY ANCHOR, not a UTC instant: the provider gives the race's
+  // local wall clock, so we place it on that date in Europe/Warsaw. The app groups
+  // by that day and shows meta.time. (ESPN events carry a real instant instead.)
   const startMs = /^\d{4}-\d{2}-\d{2}$/.test(raceDate)
     ? warsawMidnightMs(raceDate) + timeToMs(time)
     : warsawMidnightMs(fallbackDay);

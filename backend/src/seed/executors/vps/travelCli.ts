@@ -4,9 +4,11 @@
 // to /admin/travel/ingest. `--backfill` (one-off) fetches 90 days instead. The
 // checkpoint (geo cache + covered days) persists per provider in
 // admin/vps/logs/travel-<provider>.state so a gap closes on the next run.
+// `--force` ignores the checkpoint and refetches every day — use it after a parser
+// change to overwrite already-ingested rows.
 //
 //   node backend/dist/travel.mjs --provider=espn
-//   node backend/dist/travel.mjs --provider=worldsmarathons --backfill
+//   node backend/dist/travel.mjs --provider=worldsmarathons --backfill --force
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -75,9 +77,10 @@ async function main(): Promise<void> {
   const state = join(ROOT, 'admin', 'vps', 'logs', `travel-${provider}.state`);
   const cp = loadCp(state);
   const store = checkpointGeoStore(cp);
-  const coveredDays = new Set(Object.keys(cp.scopes ?? {}));
+  const force = process.argv.includes('--force');
+  const coveredDays = force ? new Set<string>() : new Set(Object.keys(cp.scopes ?? {}));
   const runType = backfill ? 'backfill' : 'replenish';
-  log(provider, `start ${runType} (${coveredDays.size} covered days)`);
+  log(provider, `start ${runType}${force ? ' --force' : ''} (${coveredDays.size} covered days)`);
 
   const manifest = await runTravelProvider(source, { runType, store, coveredDays });
   log(provider, `fetched ${manifest.events.length} events over ${manifest.days.length} days`);

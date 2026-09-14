@@ -40,8 +40,19 @@ All notable changes to PanPeryskop. Format based on
   remembered; the map defaults/max zoom out covers the whole of Europe.
 - A small loader on the category switcher (Wydarzenia left, Wycieczki right)
   shows during day/place fetches, kept for at least 250 ms.
+- Wycieczki sheet sections: Noclegi (Ekonomiczne / Polecane / Premium filter),
+  Atrakcje, Transport (mini-map + Google Maps), Wynajem samochodu and
+  Ubezpieczenie. A "Zobacz więcej" tile opens a full vertical list, and every
+  section shares one planner state (chosen flight + hotel).
+- New `GET /travel/places` supplies the section items (deterministic catalogue
+  until a real provider exists).
+- Flights draw as curved arcs; the flight loader is a day-cell skeleton, so the
+  section no longer jumps while prices load.
 
 ### Fixed
+- Run events use the provider's local date and time (was UTC): the date no
+  longer shifts by a day and an unknown start time is hidden instead of shown as
+  a wrong hour (e.g. 22:00).
 - Run sheet shows the race name, distance, details and a "Zapisz się" link;
   match sheet shows a "Kup bilet" link.
 - Wycieczki sheet keeps a consistent gap to the handle for grouped and single

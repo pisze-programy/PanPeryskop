@@ -6,6 +6,8 @@ import SwiftUI
 struct FlightTimeline: View {
     let window: FlightWindowResponse
     let eventDay: Int64
+    /// Event start hour; nil = unknown (runs without a provider time) → "—".
+    var eventHour: String? = nil
     var markerIcon: String = "sportscourt.fill"
     var markerLabel: String = "MECZ"
     @Binding var selectedOutbound: FlightWindowCell?
@@ -87,7 +89,7 @@ struct FlightTimeline: View {
                 .font(.system(size: 8, weight: .heavy))
             Text(Self.shortDay(Self.dayKey(eventDay)))
                 .font(.system(size: 9, weight: .bold))
-            Text(Self.hour(eventDay))
+            Text(eventHour ?? "—")
                 .font(.system(size: 10))
         }
         .foregroundColor(.purple)

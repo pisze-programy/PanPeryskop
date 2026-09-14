@@ -17,10 +17,16 @@ struct RunEventBoard: View {
     }
 
     private var detail: String? {
-        let parts = [meta?.surface, meta?.difficulty, meta?.price]
+        let parts = [meta?.surface, meta?.difficulty]
             .compactMap { $0 }
             .filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// Price shown on the CTA (like the flight "Lecimy" bar), not under the distance.
+    private var priceLabel: String? {
+        guard let price = meta?.price, !price.isEmpty else { return nil }
+        return price
     }
 
     private var ticketURL: URL? {
@@ -64,7 +70,7 @@ struct RunEventBoard: View {
                 systemImage: "figure.run"
             )
             if let ticketURL {
-                CapsuleButton(title: "Zapisz się", tint: .orange) {
+                CapsuleButton(title: "Zapisz się", trailingText: priceLabel, tint: .orange, fullWidth: true) {
                     UIApplication.shared.open(ticketURL)
                 }
             }

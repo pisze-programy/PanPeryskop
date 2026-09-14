@@ -38,6 +38,13 @@ function localTime(iso: unknown): string | null {
   return m ? `${m[1]}:${m[2]}` : null;
 }
 
+/** "HH:mm" → milliseconds after midnight; 0 for null. */
+function timeToMs(time: string | null): number {
+  if (!time) return 0;
+  const [h, m] = time.split(':').map(Number);
+  return (h * 60 + m) * 60_000;
+}
+
 async function fetchSearch(from: string, to: string): Promise<unknown> {
   const url = `${WM_HOST}/api/search?fromDate=${from}&toDate=${to}&search=&searchType=0&all=true&currency=EUR`;
   const cookie = typeof process !== 'undefined' ? process.env?.WM_COOKIE : undefined;
@@ -90,8 +97,17 @@ export function parseWmEvent(e: WmEvent, fallbackDay: string): TravelEvent | nul
   const city = String(e?.city ?? '').trim();
   if (!externalId || !title || !city) return null;
 
-  const raceDate = String(e?.dateNextRace ?? e?.dateNextRaceLocal ?? '').slice(0, 10);
-  const startMs = /^\d{4}-\d{2}-\d{2}$/.test(raceDate) ? warsawMidnightMs(raceDate) : warsawMidnightMs(fallbackDay);
+  // dateNextRace is UTC; dateNextRaceLocal is the provider's wall clock. Prefer
+  // the local value: the UTC date can land on the previous day (CEST 00:00 is
+  // 22:00 UTC), and its hour is not the start time a traveller sees.
+  const localIso = String(e?.dateNextRaceLocal ?? e?.dateNextRace ?? '');
+  const raceDate = localIso.slice(0, 10);
+  const raceTime = localTime(localIso);
+  // "00:00" is the provider's date-only placeholder — not a real start time.
+  const time = raceTime && raceTime !== '00:00' ? raceTime : null;
+  const startMs = /^\d{4}-\d{2}-\d{2}$/.test(raceDate)
+    ? warsawMidnightMs(raceDate) + timeToMs(time)
+    : warsawMidnightMs(fallbackDay);
 
   const meta = {
     distance: e?.distance ?? null,
@@ -99,7 +115,7 @@ export function parseWmEvent(e: WmEvent, fallbackDay: string): TravelEvent | nul
     surface: e?.surface ?? null,
     difficulty: e?.courseDifficulty ?? null,
     price: e?.minPriceFormatted ?? null,
-    time: localTime(e?.dateNextRace ?? e?.dateNextRaceLocal),
+    time,
     website: e?.website ?? null,
     countryCode: cc,
   };

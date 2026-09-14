@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 /// Wycieczki event sheet. If the tapped pin is a group, the whole sheet pages
 /// across the events with dots at the top; a single event has no pager/dots.
@@ -45,7 +46,7 @@ struct TripsEventPage: View {
     let event: TravelEvent
     let origin: Airport
     @ObservedObject var viewModel: TripsViewModel
-    @State private var selectedDestinationIata: String?
+    @StateObject private var planner = TripsEventPlanner()
 
     private var destinations: [Destination] { viewModel.nearbyDestinations(for: event) }
     private var reachableAirports: Set<String>? { event.reachableAirports.map(Set.init) }
@@ -53,13 +54,29 @@ struct TripsEventPage: View {
     private func isReachable(_ iata: String) -> Bool { reachableAirports?.contains(iata) ?? true }
 
     private var destination: Destination? {
-        if let selected = destinations.first(where: { $0.iata == selectedDestinationIata }) { return selected }
+        if let selected = planner.destination, destinations.contains(where: { $0.iata == selected.iata }) { return selected }
         return destinations.first(where: { isReachable($0.iata) }) ?? destinations.first
+    }
+
+    private var airportCoordinate: CLLocationCoordinate2D? {
+        destination.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng) }
     }
 
     var body: some View {
         VStack(spacing: 0) {
+            ForEach(TripsSheetSection.sections(for: event)) { section in
+                sectionView(section)
+            }
+        }
+        .padding(.bottom, Theme.Spacing.xl)
+    }
+
+    @ViewBuilder
+    private func sectionView(_ section: TripsSheetSection) -> some View {
+        switch section {
+        case .hero:
             hero
+        case .flights:
             if destinations.isEmpty {
                 noAirportHint
             } else {
@@ -69,12 +86,48 @@ struct TripsEventPage: View {
                     destinations: destinations,
                     destination: destination,
                     reachableAirports: reachableAirports,
-                    onSelectDestination: { selectedDestinationIata = $0.iata },
+                    onSelectDestination: { planner.destination = $0 },
+                    planner: planner,
                     viewModel: viewModel
                 )
             }
+        case .stays:
+            PlacesSection(
+                kind: .hotel,
+                event: event,
+                airportCoordinate: airportCoordinate,
+                info: "Wybierz nocleg. Filtr ustawia kolejność: najtaniej, najlepiej oceniane lub premium.",
+                tiers: HotelTier.allCases,
+                selectedId: planner.hotel?.id,
+                onSelect: { planner.hotel = $0 }
+            )
+        case .attractions:
+            PlacesSection(
+                kind: .attraction,
+                event: event,
+                airportCoordinate: airportCoordinate,
+                info: "Sugerowane atrakcje w okolicy wydarzenia. Bilety kupisz u organizatora.",
+                selectedId: planner.attraction?.id,
+                onSelect: { planner.attraction = $0 }
+            )
+        case .transport:
+            TransportSection(planner: planner)
+        case .cars:
+            PlacesSection(
+                kind: .car,
+                event: event,
+                airportCoordinate: airportCoordinate,
+                selectedId: planner.car?.id,
+                onSelect: { planner.car = $0 }
+            )
+        case .insurance:
+            PlacesSection(
+                kind: .insurance,
+                event: event,
+                airportCoordinate: airportCoordinate,
+                onSelect: { _ in }
+            )
         }
-        .padding(.bottom, Theme.Spacing.xl)
     }
 
     @ViewBuilder

@@ -43,6 +43,10 @@ struct TravelEvent: Codable, Identifiable, Equatable {
     var hour: String {
         AppConstants.hourFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(start_ms) / 1000))
     }
+
+    /// Event hour for the hero/timeline marker. Runs: the provider's local time
+    /// (nil = unknown, never a fake 00:00). Soccer: derived from start_ms.
+    var displayTime: String? { isRun ? metaData?.time : hour }
 }
 
 struct TravelEventsResponse: Codable {

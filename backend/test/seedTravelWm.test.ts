@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { parseWmEvent } from '../src/travel/worldsmarathons';
 import { runTravelProvider } from '../src/travel/run';
 import { TRAVEL_REPLENISH_DAYS, TRAVEL_BACKFILL_DAYS } from '../src/travel/constants';
-import { todayWarsaw, addDaysWarsaw } from '../src/seed/core/dates';
+import { todayWarsaw, addDaysWarsaw, warsawMidnightMs } from '../src/seed/core/dates';
 
 const row = (over: Record<string, unknown> = {}) => ({
   id: 'cursa-dels-nassos-10-km',
@@ -38,6 +38,26 @@ test('parseWmEvent: maps a European race to a TravelEvent (tag biegi)', () => {
   assert.equal(meta.time, '09:30');
   assert.deepEqual(meta.distances, ['10km']);
   assert.equal(meta.surface, 'Road');
+});
+
+test('parseWmEvent: prefers local date/time — UTC would shift the day', () => {
+  // CEST midnight: 22:00 UTC on the previous day, 00:00 local on race day.
+  const e = parseWmEvent(row({
+    dateNextRace: '2026-09-17T22:00:00',
+    dateNextRaceLocal: '2026-09-18T00:00:00',
+  }), '2026-09-18');
+  assert.ok(e);
+  // Day is the local one (Sep 18), not the UTC one (Sep 17).
+  assert.equal(e!.startMs, warsawMidnightMs('2026-09-18'));
+  // 00:00 is a date-only placeholder, not a real start time.
+  assert.equal(JSON.parse(e!.meta!).time, null);
+});
+
+test('parseWmEvent: keeps a real local start time on startMs', () => {
+  const e = parseWmEvent(row({ dateNextRaceLocal: '2026-12-31T09:30:00' }), '2026-12-31');
+  assert.ok(e);
+  assert.equal(JSON.parse(e!.meta!).time, '09:30');
+  assert.equal(e!.startMs, warsawMidnightMs('2026-12-31') + (9 * 60 + 30) * 60_000);
 });
 
 test('parseWmEvent: skips non-European and un-geocoded rows', () => {

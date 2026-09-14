@@ -26,4 +26,14 @@ extension APIClient {
         let path = airline == .ryanair ? "/travel/flights/ryanair" : "/travel/flights/wizzair"
         return try await get(path, params: ["origin": origin, "destination": destination, "eventDay": eventDay])
     }
+
+    /// Places for one Wycieczki section (hotel / attraction / car / insurance)
+    /// around the event coordinates.
+    static func getTravelPlaces(kind: PlaceKind, lat: Double, lng: Double) async throws -> TravelPlacesResponse {
+        try await get("/travel/places", params: [
+            "kind": kind.rawValue,
+            "lat": String(lat),
+            "lng": String(lng),
+        ])
+    }
 }

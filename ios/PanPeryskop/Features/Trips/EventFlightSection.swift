@@ -19,10 +19,9 @@ struct EventFlightSection: View {
     let destination: Destination?
     var reachableAirports: Set<String>? = nil
     let onSelectDestination: (Destination) -> Void
+    @ObservedObject var planner: TripsEventPlanner
     @ObservedObject var viewModel: TripsViewModel
 
-    @State private var selectedOutbound: FlightWindowCell?
-    @State private var selectedReturn: FlightWindowCell?
     @State private var window: FlightWindowResponse?
     @State private var loadFailed = false
 
@@ -30,6 +29,22 @@ struct EventFlightSection: View {
     private var loadKey: String { "\(event.id)|\(destination?.iata ?? "")" }
 
     var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            TripsSectionHeader(
+                title: "Wybierz lotnisko docelowe",
+                info: "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska. Zmień lotnisko docelowe, aby ustawić trasę powrotu."
+            )
+            card
+            if destination != nil, !loadFailed {
+                TripsSectionFooter(text: "Ceny lotów są odświeżane na bieżąco i mogą się zmienić na stronie przewoźnika. To podgląd oferty.")
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.l)
+        .onAppear { reset() }
+        .onChange(of: loadKey) { _, _ in reset() }
+    }
+
+    private var card: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             if let destination, !reachableDestinations.isEmpty {
                 destinationRail(destination)
@@ -43,22 +58,20 @@ struct EventFlightSection: View {
                 FlightTimeline(
                     window: window,
                     eventDay: event.start_ms,
+                    eventHour: event.displayTime,
                     markerIcon: event.isRun ? "figure.run" : "sportscourt.fill",
                     markerLabel: event.isRun ? "BIEG" : "MECZ",
-                    selectedOutbound: $selectedOutbound,
-                    selectedReturn: $selectedReturn,
+                    selectedOutbound: $planner.outbound,
+                    selectedReturn: $planner.returning,
                     best: bestPair(window)
                 )
                 buyBar(destination)
             } else if destination != nil {
-                LoadingOverlay()
+                FlightTimelineSkeleton()
             }
         }
         .padding(Theme.Spacing.l)
         .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
-        .padding(.horizontal, Theme.Spacing.l)
-        .onAppear { reset() }
-        .onChange(of: loadKey) { _, _ in reset() }
     }
 
     private var reachableDestinations: [Destination] {
@@ -100,13 +113,14 @@ struct EventFlightSection: View {
 
     @ViewBuilder
     private func buyBar(_ destination: Destination) -> some View {
-        if let outbound = selectedOutbound {
-            let ret = selectedReturn
+        if let outbound = planner.outbound {
+            let ret = planner.returning
             let total = Int((outbound.price ?? 0) + (ret?.price ?? 0))
             CapsuleButton(
                 title: "\(airline.label) ✈ Lecimy",
                 trailingText: "\(total) zł",
-                tint: airline.color
+                tint: airline.color,
+                fullWidth: true
             ) {
                 if let url = buyURL(destination: destination.iata, outbound: outbound.date, returning: ret?.date) {
                     UIApplication.shared.open(url)
@@ -150,8 +164,7 @@ struct EventFlightSection: View {
     }
 
     private func reset() {
-        selectedOutbound = nil
-        selectedReturn = nil
+        planner.clearFlightSelection()
         window = nil
         loadFailed = false
         loadPrices()
@@ -167,8 +180,8 @@ struct EventFlightSection: View {
                 window = w
                 // Recommend the best pair up front — no tap needed.
                 if let best = bestPair(w) {
-                    selectedOutbound = w.outbound.first { $0.date == Self.dayKey(best.outbound.date) }
-                    selectedReturn = w.returning.first { $0.date == Self.dayKey(best.returning.date) }
+                    planner.outbound = w.outbound.first { $0.date == Self.dayKey(best.outbound.date) }
+                    planner.returning = w.returning.first { $0.date == Self.dayKey(best.returning.date) }
                 }
             } else {
                 loadFailed = true

@@ -23,7 +23,7 @@ struct SoccerMatchBoard: View {
                 pitch: 55
             )
             if let ticketURL {
-                CapsuleButton(title: "Kup bilet") {
+                CapsuleButton(title: "Kup bilet", fullWidth: true) {
                     UIApplication.shared.open(ticketURL)
                 }
             }

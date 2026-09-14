@@ -40,6 +40,9 @@ ios/vendor/YPImagePicker/Package.resolved
 # everything lives under one ignored folder so nothing sensitive is named here.
 _internal/
 
+# Local guide for opencode agents (points to _internal/).
+/AGENTS.md
+
 # Staging + media produced by the local/VPS per-source fetches (regenerated on demand).
 admin/seed/*.json
 admin/seed/*-media/

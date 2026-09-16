@@ -69,6 +69,9 @@ All notable changes to PanPeryskop. Format based on
 ### Changed
 - Onboarding lists the real benefits: European trips (event, flights, stay,
   attractions), local events, and what is happening nearby.
+- Events download by 50 km squares: moving the map inside a downloaded square
+  makes no request; leaving it downloads only the new squares (max 5 kept). The
+  20s refresh downloads only the squares on screen.
 - Wycieczki sheet loads lazily: flights only for the active, visible page, and
   place sections only when they scroll into view. The full list loads on
   "Zobacz więcej" and fetches more as you scroll.

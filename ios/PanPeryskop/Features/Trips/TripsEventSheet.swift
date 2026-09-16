@@ -86,6 +86,11 @@ struct TripsEventSheet: View {
 
     private var pager: some View {
         VStack(spacing: 0) {
+            if let event = currentEvent {
+                TripsCompactHeader(event: event, isVisible: activePageScrolled) {
+                    scrollTopToken += 1
+                }
+            }
             PageDots(count: max(events.count, 1), index: activeIndex ?? 0)
                 .opacity(events.count > 1 ? 1 : 0)
                 .padding(.top, 22)
@@ -124,15 +129,6 @@ struct TripsEventSheet: View {
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { _, width in
                 pageWidth = width
             }
-            .overlay(alignment: .top) {
-                if activePageScrolled, let event = currentEvent {
-                    TripsCompactHeader(event: event) {
-                        scrollTopToken += 1
-                    }
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
-            }
-            .animation(AppConstants.springSnappy, value: activePageScrolled)
         }
     }
 

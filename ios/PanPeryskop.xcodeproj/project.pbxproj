@@ -46,6 +46,7 @@
 		3A17113983F4FCDEE086816F /* StoryBadgesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD924F09FFE0F2030F220C7C /* StoryBadgesView.swift */; };
 		3D4BC5E301C79E49329CF1EF /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BAC25B954B1175BEE343240 /* AppConstants.swift */; };
 		3E085309EC1126060BBF6AAF /* PlacesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CC3D5D50D1D5E23E9F0587F /* PlacesListView.swift */; };
+		40B85FA43AC7AF792426E3F1 /* RunPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E24106BABF1C88CC96C2B26 /* RunPalette.swift */; };
 		445842E80ADEB75D8DCEC9DF /* InAppBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A1D27EF60659004BFCF63B /* InAppBrowserView.swift */; };
 		447CB9B6E33F985A796FD83B /* MapCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 823DAF3FECAD28727A4D487F /* MapCategory.swift */; };
 		49397EF796E57CD651510C23 /* StoryBrowserOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D29D6330C75C194FF4322E01 /* StoryBrowserOverlay.swift */; };
@@ -236,6 +237,7 @@
 		942107648DD5D43A6AFE02D1 /* DaySliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaySliderView.swift; sourceTree = "<group>"; };
 		9B9DAF71EA1CA5361B2C0265 /* ErrorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorState.swift; sourceTree = "<group>"; };
 		9C0C2297077E1CF861F55EF2 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		9E24106BABF1C88CC96C2B26 /* RunPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunPalette.swift; sourceTree = "<group>"; };
 		A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
 		A15F3F36A0E617633DA2A779 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A31390352664649563409CC4 /* LoadingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingOverlay.swift; sourceTree = "<group>"; };
@@ -389,6 +391,7 @@
 				A5A18BF050D2634EC4EE2764 /* PlacesSection.swift */,
 				432D943812F0315D044D3228 /* RunEventBoard.swift */,
 				7F41F73C824DFF4DE8B30A65 /* RunLabels.swift */,
+				9E24106BABF1C88CC96C2B26 /* RunPalette.swift */,
 				3204020F5A7BA81E8BA92E7B /* SoccerMatchBoard.swift */,
 				5FA307036755388922C7B5F8 /* TransportSection.swift */,
 				72484DC0A713432C2B0D3254 /* TripsCompactHeader.swift */,
@@ -757,6 +760,7 @@
 				84D197577717604F47047F82 /* RailSliderView.swift in Sources */,
 				958B9F97F0F49D6E1849BFDD /* RunEventBoard.swift in Sources */,
 				4EED23412FB89FFAF2C34437 /* RunLabels.swift in Sources */,
+				40B85FA43AC7AF792426E3F1 /* RunPalette.swift in Sources */,
 				CECE3357221FA0E0F7164F66 /* SettingsView.swift in Sources */,
 				5F1441DC9B82420DC0EAEDA1 /* SheetShell.swift in Sources */,
 				3534B66D1565F3397D89524D /* Skeleton.swift in Sources */,

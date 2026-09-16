@@ -43,7 +43,7 @@ struct RunEventBoard: View {
                     if let distanceLabel {
                         Text(distanceLabel)
                             .font(.title3.weight(.bold))
-                            .foregroundColor(.orange)
+                            .foregroundColor(runColor)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                     }
@@ -87,13 +87,15 @@ struct RunEventBoard: View {
     private var icon: some View {
         ZStack {
             Circle()
-                .fill(Color.orange.opacity(0.15))
+                .fill(runColor.opacity(0.15))
                 .frame(width: 46, height: 46)
             Image(systemName: "figure.run")
                 .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(.orange)
+                .foregroundColor(runColor)
         }
     }
+
+    private var runColor: Color { RunPalette.color(for: event) }
 
     private var timeColumn: some View {
         VStack(spacing: 2) {

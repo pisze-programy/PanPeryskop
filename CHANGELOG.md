@@ -103,9 +103,13 @@ All notable changes to PanPeryskop. Format based on
 - Soccer sheet shows the stadium name (from the provider) and a soft team-colour
   gradient across the full sheet width; the destination map marks the arrival
   airport with a landing-plane icon; the section heading reads "Wybierz lot".
-- Trips sheet: the sticky header moved into the sheet's handle area and carries
-  the team colours (orange for runs); the hero gradient is limited to the crest
-  row with a soft fade; the ticket strip is full width with side fades.
+- Trips sheet: the sticky header mirrors ESPN — neutral background, two soft
+  radial team-colour glows in the top corners, team crests and codes on the sides
+  with the date over the time in the centre; it expands from the sheet handle and
+  the group dots stay below it. The hero gradient is limited to the crest row with
+  a soft fade; the ticket strip is full width with side fades.
+- Run colour scales from light (short, asphalt) to dark (long, trail, ultra) from
+  the provider's real distance, surface and difficulty.
 - Run surface and difficulty show Polish labels (Asfalt, pagórkowaty, …).
 - Race links stay in the in-app browser with a wider policy (they redirect to
   external hosts); other links still use the fixed list.

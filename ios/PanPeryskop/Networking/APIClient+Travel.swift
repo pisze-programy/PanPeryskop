@@ -5,7 +5,7 @@ import Foundation
 extension APIClient {
     /// Travel events within a bbox + day window, optionally reachable from an
     /// origin airport. `from`/`to` are epoch ms.
-    static func getTravelEvents(swLat: Double, swLng: Double, neLat: Double, neLng: Double, from: Int64, to: Int64, tag: String?, origin: String? = nil) async throws -> TravelEventsResponse {
+    static func getTravelEvents(swLat: Double, swLng: Double, neLat: Double, neLng: Double, from: Int64, to: Int64, tags: String?, origin: String? = nil) async throws -> TravelEventsResponse {
         var params = [
             "sw_lat": String(swLat),
             "sw_lng": String(swLng),
@@ -15,7 +15,7 @@ extension APIClient {
             "to": String(to),
             "limit": "1000",
         ]
-        if let tag { params["tag"] = tag }
+        if let tags { params["tags"] = tags }
         if let origin { params["origin"] = origin }
         return try await get("/travel/events", params: params)
     }

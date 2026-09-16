@@ -8,6 +8,7 @@ struct MapFilterBar: View {
     let onCityTap: () -> Void
     let onAirportTap: () -> Void
     let onDayTap: () -> Void
+    let onTripDayTap: () -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -23,17 +24,15 @@ struct MapFilterBar: View {
                         }
                     }
                 case .trips:
+                    MapPickerPill(title: DayLabels.title(offset: tripsViewModel.selectedDayOffset), action: onTripDayTap)
                     MapPickerPill(
                         title: "\(tripsViewModel.selectedAirport.iata) · \(tripsViewModel.selectedAirport.city)",
                         action: onAirportTap
                     )
-                    Chip(label: "Wszystkie", isSelected: tripsViewModel.selectedTag == nil, badgeCount: tripsViewModel.tagTotalCount, showsBadgeWhenEmpty: true) {
-                        tripsViewModel.selectTag(nil)
-                    }
-                    .padding(.leading, 10)
+                        .padding(.trailing, 12)
                     ForEach(TripsViewModel.TravelTag.allCases) { tag in
-                        Chip(label: tag.label, isSelected: tripsViewModel.selectedTag == tag, badgeCount: tripsViewModel.tagCounts[tag.rawValue] ?? 0, showsBadgeWhenEmpty: true) {
-                            tripsViewModel.selectTag(tripsViewModel.selectedTag == tag ? nil : tag)
+                        Chip(label: tag.label, isSelected: tripsViewModel.isTagSelected(tag.rawValue), badgeCount: tripsViewModel.tagCounts[tag.rawValue] ?? 0, showsBadgeWhenEmpty: true) {
+                            tripsViewModel.toggleTag(tag.rawValue)
                         }
                     }
                 }

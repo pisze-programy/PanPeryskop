@@ -8,12 +8,10 @@ import MapKit
 final class TripsViewModel: ObservableObject, MapContentProvider {
     @Published var selectedAirport: Airport
     @Published var selectedDayOffset: Int = 0
-    /// Travel tag filter — nil = all. Matches travel_events.tag.
-    @Published var selectedTag: TravelTag?
+    /// Selected tag filter (all by default, at least one stays on), persisted.
+    @Published private var tagSelection = MultiTagSelection(prefsKey: TripsPrefs.selectedTags)
     /// Event-count badge per travel tag (Europe-wide, selected day).
     @Published var tagCounts: [String: Int] = [:]
-    /// Total travel events for the selected day ("Wszystkie" badge).
-    @Published var tagTotalCount: Int = 0
     @Published var events: [TravelEvent] = []
     /// Flight layer (airport pins + arcs) is hidden until an event is selected.
     @Published var showFlightLayer: Bool = false
@@ -47,11 +45,20 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     private enum TripsPrefs {
         static let airportIata = "trips.last_airport_iata"
+        static let selectedTags = "trips.selected_tags"
+        static let selectedDay = "trips.selected_day"
     }
+
+    /// Day-browser range, shared by the slider and the day sheet.
+    static let minDayOffset = 0
+    static let maxDayOffset = 89
+    static var dayOffsets: [Int] { Array(minDayOffset...maxDayOffset) }
 
     init() {
         let savedIata = UserDefaults.standard.string(forKey: TripsPrefs.airportIata)
         selectedAirport = TripsData.polishAirports.first { $0.iata == savedIata } ?? TripsData.polishAirports[0]
+        selectedDayOffset = min(StoredDay.loadOffset(key: TripsPrefs.selectedDay) ?? 0, Self.maxDayOffset)
+        tagSelection.sync(all: Set(TravelTag.allCases.map(\.rawValue)))
         cachedOriginAirlines = Self.airlines(for: destinations)
         loadTagCounts()
     }
@@ -170,16 +177,19 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         loadTagCounts()
     }
 
-    func selectTag(_ tag: TravelTag?) {
-        selectedTag = tag
+    /// Toggle one travel tag. The last selected tag cannot be turned off.
+    func toggleTag(_ id: String) {
+        tagSelection.toggle(id)
         clearSelection()
         refresh()
-        loadTagCounts()
     }
+
+    func isTagSelected(_ id: String) -> Bool { tagSelection.isSelected(id) }
 
     func commitDay(_ offset: Int) {
         guard selectedDayOffset != offset else { return }
         selectedDayOffset = offset
+        StoredDay.save(offset: offset, key: TripsPrefs.selectedDay)
         clearSelection()
         refresh()
         loadTagCounts()
@@ -197,7 +207,6 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
                 "/travel/tag-counts",
                 params: ["from": String(from), "to": String(to)]
             ) else { return }
-            tagTotalCount = resp.total
             tagCounts = Dictionary(uniqueKeysWithValues: resp.counts.map { ($0.tag, $0.count) })
         }
     }
@@ -225,14 +234,16 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         let swLng = region.center.longitude - region.span.longitudeDelta / 2
         let neLat = region.center.latitude + region.span.latitudeDelta / 2
         let neLng = region.center.longitude + region.span.longitudeDelta / 2
-        let key = "\(selectedAirport.iata)|\(from)-\(to)|\(selectedTag?.rawValue ?? "")"
+        let key = "\(selectedAirport.iata)|\(from)-\(to)|\(tagSelection.param(all: Set(TravelTag.allCases.map(\.rawValue))) ?? "")"
         if let cached = eventsCache[key], !cached.isEmpty {
             apply(Array(cached.values))
             return
         }
         guard let resp = try? await APIClient.getTravelEvents(
             swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng,
-            from: from, to: to, tag: selectedTag?.rawValue, origin: selectedAirport.iata
+            from: from, to: to,
+            tags: tagSelection.param(all: Set(TravelTag.allCases.map(\.rawValue))),
+            origin: selectedAirport.iata
         ) else { return }
         var bucket: [String: TravelEvent] = [:]
         for e in resp.events { bucket[e.id] = e }
@@ -254,14 +265,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         return (Int64(day.timeIntervalSince1970 * 1000), Int64(endOfDay.timeIntervalSince1970 * 1000) - 1)
     }
 
-    private func dateLabel(_ ms: Int64) -> String {
-        AppConstants.shortDayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
-    }
-
-    func dayLabel(offset: Int) -> String {
-        let (from, _) = dayRange(offset: offset)
-        return dateLabel(from)
-    }
+    func dayLabel(offset: Int) -> String { DayLabels.short(offset: offset) }
 }
 
 extension TravelEvent {

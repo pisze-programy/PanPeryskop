@@ -16,6 +16,7 @@ struct MapScreen: View {
 
     @State private var showCityList = false
     @State private var showDayList = false
+    @State private var showTripsDayList = false
     @State private var showAirportList = false
     @State private var showTripsEventCard = false
 
@@ -47,7 +48,8 @@ struct MapScreen: View {
                     tripsViewModel: tripsViewModel,
                     onCityTap: { showCityList = true },
                     onAirportTap: { showAirportList = true },
-                    onDayTap: { showDayList = true }
+                    onDayTap: { showDayList = true },
+                    onTripDayTap: { showTripsDayList = true }
                 )
                 Spacer()
             }
@@ -113,7 +115,20 @@ struct MapScreen: View {
             }
         }
         .sheet(isPresented: $showDayList) {
-            DayListView(viewModel: mapViewModel)
+            DayListSheet(
+                title: "Wybierz dzień",
+                offsets: MapViewModel.dayOffsets,
+                selected: mapViewModel.selectedDayOffset,
+                onSelect: { mapViewModel.commitDay($0) }
+            )
+        }
+        .sheet(isPresented: $showTripsDayList) {
+            DayListSheet(
+                title: "Wybierz dzień",
+                offsets: TripsViewModel.dayOffsets,
+                selected: tripsViewModel.selectedDayOffset,
+                onSelect: { tripsViewModel.commitDay($0) }
+            )
         }
         .sheet(isPresented: $showAirportList) {
             AirportPickerView(selectedAirport: tripsViewModel.selectedAirport) { airport in

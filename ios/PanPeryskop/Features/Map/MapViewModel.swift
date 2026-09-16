@@ -8,11 +8,8 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     @Published var selectedCity: City = City.all[0]
     /// Canonical event tags for the map filter chips (backend order).
     @Published var tags: [TagPill] = []
-    /// Selected tag filter. All tags are selected by default; at least one stays on.
-    @Published private(set) var selectedTags: Set<String> = []
-    /// True once the user changes the selection — then it is persisted and wins
-    /// over the "all tags" default.
-    private var hasUserTagSelection = false
+    /// Selected tag filter (all by default, at least one stays on), persisted.
+    @Published private var tagSelection = MultiTagSelection(prefsKey: MapPrefs.selectedTags)
     // Selected day offset 0…3 (dziś / jutro / +2 / +3). Kept only as a live variable
     // (no persistence) — resets to today on a fresh launch, survives view switches.
     @Published var selectedDayOffset: Int = 0
@@ -22,9 +19,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
 
     /// nil = no tag filter (all tags selected, or not loaded yet).
     private var tagFilterParam: String? {
-        let all = Set(tags.map(\.id))
-        guard !selectedTags.isEmpty, selectedTags != all else { return nil }
-        return selectedTags.sorted().joined(separator: ",")
+        tagSelection.param(all: Set(tags.map(\.id)))
     }
     var currentUserId: String? {
         didSet { MediaNearbyNotifier.persistCurrentUserId(currentUserId) }
@@ -49,6 +44,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     private enum MapPrefs {
         static let cityId = "map.last_city_id"
         static let selectedTags = "map.selected_tags"
+        static let selectedDay = "map.selected_day"
         static let vpLat = "map.viewport.lat"
         static let vpLng = "map.viewport.lng"
         static let vpSpanLat = "map.viewport.span_lat"
@@ -60,10 +56,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     init() {
         let savedCityId = UserDefaults.standard.string(forKey: MapPrefs.cityId)
         selectedCity = City.all.first { $0.id == savedCityId } ?? City.all[0]
-        if let savedTags = UserDefaults.standard.array(forKey: MapPrefs.selectedTags) as? [String], !savedTags.isEmpty {
-            selectedTags = Set(savedTags)
-            hasUserTagSelection = true
-        }
+        selectedDayOffset = min(StoredDay.loadOffset(key: MapPrefs.selectedDay) ?? 0, Self.maxDayOffset)
         loadTags()
         loadTagCounts()
     }
@@ -83,12 +76,12 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
                let decoded = try? JSONDecoder().decode(TagsResponse.self, from: data),
                 !decoded.tags.isEmpty {
                 tags = decoded.tags
-                syncTagSelection()
+                tagSelection.sync(all: Set(tags.map(\.id)))
             }
             do {
                 let resp: TagsResponse = try await APIClient.get("/stories/tags")
                 tags = resp.tags
-                syncTagSelection()
+                tagSelection.sync(all: Set(tags.map(\.id)))
                 if let data = try? JSONEncoder().encode(resp),
                    let json = String(data: data, encoding: .utf8) {
                     UserDefaults.standard.set(json, forKey: Self.tagsCacheKey)
@@ -101,40 +94,12 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
 
     /// Toggle one tag. The last selected tag cannot be turned off.
     func toggleTag(_ id: String) {
-        if selectedTags.contains(id) {
-            guard selectedTags.count > 1 else { return }
-            selectedTags.remove(id)
-        } else {
-            selectedTags.insert(id)
-        }
-        hasUserTagSelection = true
-        persistSelectedTags()
+        tagSelection.toggle(id)
         clearFeed()
         refreshCurrentRegion()
     }
 
-    func isTagSelected(_ id: String) -> Bool { selectedTags.contains(id) }
-
-    /// Keep the selection in step with the loaded catalog: default to all tags,
-    /// drop tags that no longer exist, and fall back to all if nothing remains.
-    private func syncTagSelection() {
-        let all = Set(tags.map(\.id))
-        if !hasUserTagSelection {
-            selectedTags = all
-            persistSelectedTags()
-            return
-        }
-        selectedTags = selectedTags.intersection(all)
-        if selectedTags.isEmpty {
-            selectedTags = all
-            hasUserTagSelection = false
-        }
-        persistSelectedTags()
-    }
-
-    private func persistSelectedTags() {
-        UserDefaults.standard.set(Array(selectedTags), forKey: MapPrefs.selectedTags)
-    }
+    func isTagSelected(_ id: String) -> Bool { tagSelection.isSelected(id) }
 
     // MARK: - Tag count badges (events, per city+day)
 
@@ -235,20 +200,13 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     static let maxDayOffset = 5
     static var dayOffsets: [Int] { Array(minDayOffset...maxDayOffset) }
 
-    /// "Dziś", "Jutro", else the full weekday and date ("Wtorek, 16.09").
-    func dayLabel(offset: Int) -> String {
-        if offset == 0 { return "Dziś" }
-        if offset == 1 { return "Jutro" }
-        let calendar = AppConstants.warsawCalendar
-        let date = calendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
-        let weekday = AppConstants.weekdayFullFormatter.string(from: date).capitalized
-        return "\(weekday), \(AppConstants.shortDayFormatter.string(from: date))"
-    }
+    func dayLabel(offset: Int) -> String { DayLabels.title(offset: offset) }
 
     /// Commit the selected day (called on slider release) → refetch visible squares.
     func commitDay(_ offset: Int) {
         guard selectedDayOffset != offset else { return }
         selectedDayOffset = offset
+        StoredDay.save(offset: offset, key: MapPrefs.selectedDay)
         clearFeed()
         refreshCurrentRegion()
         loadTagCounts()

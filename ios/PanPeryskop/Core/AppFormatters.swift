@@ -42,6 +42,15 @@ extension AppConstants {
         return f
     }()
 
+    /// "LLLL yyyy" — month section header (e.g. "wrzesień 2026").
+    static let monthYearFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = warsawCalendar
+        f.locale = Locale(identifier: "pl_PL")
+        f.dateFormat = "LLLL yyyy"
+        return f
+    }()
+
     static let hourFormatter: DateFormatter = {
         let f = DateFormatter()
         f.calendar = warsawCalendar

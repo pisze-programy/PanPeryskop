@@ -35,7 +35,19 @@ travelRoutes.get('/events', async (c) => {
   const to = Number(q.to);
   if (!isFinite(from) || !isFinite(to) || to <= from) return c.json({ error: 'Invalid or missing from/to (epoch ms)' }, 400);
   if (to - from > CONFIG.travel.api.maxWindowMs) return c.json({ error: 'Window too large' }, 400);
-  const tag = parseTag(q.tag);
+  const hasTagFilter = q.tags !== undefined || q.tag !== undefined;
+  let tagCond = '';
+  let tagBinds: string[] = [];
+  if (hasTagFilter) {
+    const requested = String(q.tags ?? q.tag ?? '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const tags = requested.filter((t) => CONFIG.travel.tags.set.has(t as TravelTag));
+    if (tags.length === 0) return c.json({ events: [] });
+    tagCond = 'AND (' + tags.map(() => 'tag = ?').join(' OR ') + ')';
+    tagBinds = tags;
+  }
   const limit = parseLimit(q.limit);
   const origin = q.origin && CONFIG.travel.api.iataPattern.test(q.origin) ? q.origin.toUpperCase() : null;
 
@@ -45,11 +57,11 @@ travelRoutes.get('/events', async (c) => {
        FROM travel_events
        WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
        AND start_ms >= ? AND start_ms <= ?
-       ${tag ? 'AND tag = ?' : ''}
+       ${tagCond}
        ORDER BY start_ms
        LIMIT ${limit}`
     )
-    .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, from, to, ...(tag ? [tag] : []))
+    .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, from, to, ...tagBinds)
     .all<{ city: string }>();
 
   const events = (results ?? []) as TravelEventRow[];
@@ -60,12 +72,6 @@ travelRoutes.get('/events', async (c) => {
   }
   return c.json({ events });
 });
-
-function parseTag(raw: string | undefined): TravelTag | null {
-  if (!raw) return null;
-  if (CONFIG.travel.tags.set.has(raw as TravelTag)) return raw as TravelTag;
-  return null;
-}
 
 // Europe-wide per-day tag counts for the Wycieczki filter chips. Scope is the
 // WHOLE of Europe (no bbox) for the requested day window, independent of the

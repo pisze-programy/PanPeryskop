@@ -72,6 +72,10 @@ All notable changes to PanPeryskop. Format based on
   gone; adding content is temporarily disabled (screen kept, no entry point).
 - "Wyloguj się" moved to the Profile screen; Settings keeps only account
   deletion. The events icon in the bottom bar is a home icon.
+- Events and Trips: tags are multi-select (all by default, the last one stays
+  on, the choice is remembered) and the "Wszystkie" chip is gone. A Data chip
+  opens a day sheet (0–5 days for events, 0–89 for trips) synced with the day
+  rail; a past day falls back to today on launch.
 - Onboarding lists the real benefits: European trips (event, flights, stay,
   attractions), local events, and what is happening nearby.
 - Events download by 50 km squares: moving the map inside a downloaded square

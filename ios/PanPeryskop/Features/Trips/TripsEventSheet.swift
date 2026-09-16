@@ -30,7 +30,7 @@ struct TripsEventSheet: View {
     @State private var nights = 1
     @State private var airportCoordinate: CLLocationCoordinate2D?
     @State private var pageWidth: CGFloat = UIScreen.main.bounds.width
-    @State private var activePageScrolled = false
+    @State private var heroProgress: Double = 0
     @State private var scrollTopToken = 0
 
     private var events: [TravelEvent] { viewModel.selectedEventGroup?.events ?? [] }
@@ -76,7 +76,7 @@ struct TripsEventSheet: View {
             expanded = nil
             detent = .medium
         }
-        .onChange(of: activeIndex) { _, _ in activePageScrolled = false }
+        .onChange(of: activeIndex) { _, _ in heroProgress = 0 }
     }
 
     private var currentCoordinate: CLLocationCoordinate2D {
@@ -86,11 +86,6 @@ struct TripsEventSheet: View {
 
     private var pager: some View {
         VStack(spacing: 0) {
-            if let event = currentEvent {
-                TripsCompactHeader(event: event, isVisible: activePageScrolled) {
-                    scrollTopToken += 1
-                }
-            }
             PageDots(count: max(events.count, 1), index: activeIndex ?? 0)
                 .opacity(events.count > 1 ? 1 : 0)
                 .padding(.top, 22)
@@ -108,9 +103,9 @@ struct TripsEventSheet: View {
                                 mapPicker = MapPickerRequest(coordinate: coordinate, title: title)
                             },
                             onExpand: expandPlaces,
-                            onScrolled: { isScrolled in
+                            onScrolled: { progress in
                                 guard (activeIndex ?? 0) == index else { return }
-                                activePageScrolled = isScrolled
+                                heroProgress = progress
                             },
                             onPlannerChange: { newNights, coord in
                                 guard (activeIndex ?? 0) == index else { return }
@@ -128,6 +123,13 @@ struct TripsEventSheet: View {
             .scrollDisabled(events.count <= 1)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { _, width in
                 pageWidth = width
+            }
+            .overlay(alignment: .top) {
+                if let event = currentEvent {
+                    TripsCompactHeader(event: event, progress: heroProgress) {
+                        scrollTopToken += 1
+                    }
+                }
             }
         }
     }
@@ -154,13 +156,12 @@ struct TripsEventPage: View {
     let onOpenURL: (URL, BrowserAccess) -> Void
     let onOpenMap: (CLLocationCoordinate2D, String) -> Void
     let onExpand: (PlaceKind) -> Void
-    let onScrolled: (Bool) -> Void
+    let onScrolled: (Double) -> Void
     let onPlannerChange: (Int, CLLocationCoordinate2D?) -> Void
     @StateObject private var planner = TripsEventPlanner()
     @State private var heroHeight: CGFloat = 320
 
     private static let topId = "trips-page-top"
-    private static let headerHeight: CGFloat = 48
 
     private var destinations: [Destination] { viewModel.nearbyDestinations(for: event) }
     private var reachableAirports: Set<String>? { event.reachableAirports.map(Set.init) }
@@ -190,7 +191,8 @@ struct TripsEventPage: View {
             }
             .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
                 guard isActive else { return }
-                onScrolled(offset > max(heroHeight - Self.headerHeight, 80))
+                let span = max(heroHeight - TripsCompactHeader.height, 80)
+                onScrolled(min(max(offset / span, 0), 1))
             }
             .onChange(of: scrollTopToken) { _, _ in
                 guard isActive else { return }

@@ -20,7 +20,7 @@ struct CapsuleButton: View {
             .font(.subheadline.weight(.bold))
             .foregroundColor(.white)
             .padding(.horizontal, Theme.Spacing.l)
-            .padding(.vertical, 10)
+            .frame(height: 44)
             .frame(maxWidth: fullWidth ? .infinity : nil)
             .background(Capsule().fill(tint))
             .opacity(isEnabled ? 1 : 0.45)

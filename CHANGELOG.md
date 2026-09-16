@@ -105,9 +105,11 @@ All notable changes to PanPeryskop. Format based on
   airport with a landing-plane icon; the section heading reads "Wybierz lot".
 - Trips sheet: the sticky header mirrors ESPN — neutral background, two soft
   radial team-colour glows in the top corners, team crests and codes on the sides
-  with the date over the time in the centre; it expands from the sheet handle and
-  the group dots stay below it. The hero gradient is limited to the crest row with
-  a soft fade; the ticket strip is full width with side fades.
+  with the date over the time in the centre. It is an overlay driven by the hero
+  scroll offset, so it grows out of the hero without moving the content, and the
+  group dots stay above the hero. No divider and no seam between the glows. The
+  hero gradient is limited to the crest row with a soft fade; the ticket strip is
+  full width with side fades.
 - Run colour scales from light (short, asphalt) to dark (long, trail, ultra) from
   the provider's real distance, surface and difficulty.
 - Run surface and difficulty show Polish labels (Asfalt, pagórkowaty, …).
@@ -119,9 +121,12 @@ All notable changes to PanPeryskop. Format based on
 - Events download by 50 km squares: moving the map inside a downloaded square
   makes no request; leaving it downloads only the new squares (max 5 kept). The
   20s refresh downloads only the squares on screen.
-- Wycieczki sheet loads lazily: flights only for the active, visible page, and
-  place sections only when they scroll into view. The full list loads on
-  "Zobacz więcej" and fetches more as you scroll.
+- Wycieczki sheet loads lazily: flights only for the active page, and place
+  sections only when they scroll into view. The flight loader re-runs when the
+  page comes back from the hotel list, so it never spins forever. The buy button
+  reserves its exact height while loading, so the content does not jump when the
+  prices arrive. The full list loads on "Zobacz więcej" and fetches more as you
+  scroll.
 - "Zobacz więcej" expands the same sheet to large and shows the list inline, with
   a native back button and a loading skeleton.
 - The expanded list shows the details first and a full-width image below, with a

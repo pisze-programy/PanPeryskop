@@ -14,11 +14,10 @@ struct EventFlightSection: View {
     @State private var window: FlightWindowResponse?
     @State private var loadFailed = false
     @State private var isLoading = false
-    @State private var visible = false
 
     private let airline: Airline = .ryanair
     private var loadKey: String { "\(event.id)|\(destination?.iata ?? "")" }
-    private var shouldLoad: Bool { isActive && visible }
+    private var loadTrigger: String { "\(loadKey)|\(isActive)" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
@@ -49,10 +48,10 @@ struct EventFlightSection: View {
             }
         }
         .padding(.top, Theme.Spacing.section)
-        .onScrollVisibilityChange(threshold: 0.1) { visible = $0 }
-        .onAppear { if shouldLoad { fetchPrices() } }
-        .onChange(of: shouldLoad) { _, ready in if ready { fetchPrices() } }
-        .onChange(of: loadKey) { _, _ in if shouldLoad { fetchPrices() } }
+        .task(id: loadTrigger) {
+            guard isActive else { return }
+            await fetchPrices()
+        }
     }
 
     /// Full-width ticket strip; the side gradients mask the hard cut.
@@ -61,7 +60,7 @@ struct EventFlightSection: View {
             if loadFailed, window == nil {
                 ErrorState(message: "Nie udało się pobrać lotów") {
                     loadFailed = false
-                    fetchPrices()
+                    Task { await fetchPrices() }
                 }
                 .padding(.horizontal, Theme.Spacing.l)
             } else if let window {
@@ -192,33 +191,32 @@ struct EventFlightSection: View {
         return components.url
     }
 
-    private func fetchPrices() {
+    private func fetchPrices() async {
         guard let destination else { return }
         let day = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
         let originIata = origin.iata
         let destIata = destination.iata
         isLoading = true
+        defer { isLoading = false }
         let started = Date()
-        Task {
-            let fetched = await FlightPricesService.shared.flights(
-                airline: airline, origin: originIata, destination: destIata, eventDay: day
-            )
-            let elapsed = Date().timeIntervalSince(started)
-            if elapsed < 0.15 {
-                try? await Task.sleep(nanoseconds: UInt64((0.15 - elapsed) * 1_000_000_000))
+        let fetched = await FlightPricesService.shared.flights(
+            airline: airline, origin: originIata, destination: destIata, eventDay: day
+        )
+        guard !Task.isCancelled else { return }
+        let elapsed = Date().timeIntervalSince(started)
+        if elapsed < 0.15 {
+            try? await Task.sleep(nanoseconds: UInt64((0.15 - elapsed) * 1_000_000_000))
+        }
+        if let fetched {
+            window = fetched
+            if let best = bestPair(fetched) {
+                planner.outbound = fetched.outbound.first { $0.date == Self.dayKey(best.outbound.date) }
+                planner.returning = fetched.returning.first { $0.date == Self.dayKey(best.returning.date) }
+            } else {
+                planner.clearFlightSelection()
             }
-            if let fetched {
-                window = fetched
-                if let best = bestPair(fetched) {
-                    planner.outbound = fetched.outbound.first { $0.date == Self.dayKey(best.outbound.date) }
-                    planner.returning = fetched.returning.first { $0.date == Self.dayKey(best.returning.date) }
-                } else {
-                    planner.clearFlightSelection()
-                }
-            } else if window == nil {
-                loadFailed = true
-            }
-            isLoading = false
+        } else if window == nil {
+            loadFailed = true
         }
     }
 

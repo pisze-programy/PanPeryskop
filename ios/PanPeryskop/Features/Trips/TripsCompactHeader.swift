@@ -4,28 +4,31 @@ import SwiftUI
 /// neutral background, two soft radial team-colour glows in the top corners,
 /// crests with codes on the sides and the date over the time in the centre.
 /// For runs the glow and the distance use the run's colour (light for short/easy,
-/// dark for long/hard). It expands from the sheet handle once the hero scrolls away.
+/// dark for long/hard). `progress` (0…1) is driven by the hero scroll offset, so
+/// the bar grows continuously out of the hero instead of popping in.
 struct TripsCompactHeader: View {
     let event: TravelEvent
-    let isVisible: Bool
+    let progress: Double
     let onTap: () -> Void
 
     static let height: CGFloat = 56
+
+    private var t: Double { min(max(progress, 0), 1) }
 
     var body: some View {
         Button(action: onTap) {
             content
                 .padding(.horizontal, Theme.Spacing.l)
-                .frame(height: Self.height)
+                .frame(height: Self.height, alignment: .bottom)
                 .frame(maxWidth: .infinity)
                 .background(background)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .frame(height: isVisible ? Self.height : 0)
+        .frame(height: Self.height * CGFloat(t), alignment: .top)
         .clipped()
-        .opacity(isVisible ? 1 : 0)
-        .animation(AppConstants.springSnappy, value: isVisible)
+        .opacity(t)
+        .allowsHitTesting(t > 0.5)
     }
 
     @ViewBuilder
@@ -70,20 +73,24 @@ struct TripsCompactHeader: View {
     private var background: some View {
         ZStack {
             Rectangle().fill(.regularMaterial)
-            RadialGradient(
-                colors: [leadingGlow.opacity(0.8), .clear],
-                center: UnitPoint(x: -0.02, y: -0.25),
-                startRadius: 0,
-                endRadius: 190
-            )
-            RadialGradient(
-                colors: [trailingGlow.opacity(0.8), .clear],
-                center: UnitPoint(x: 1.02, y: -0.25),
-                startRadius: 0,
-                endRadius: 190
-            )
+            glow(leadingGlow, from: UnitPoint(x: 0, y: 0))
+            glow(trailingGlow, from: UnitPoint(x: 1, y: 0))
         }
-        .overlay(alignment: .bottom) { Divider() }
+    }
+
+    /// A corner glow that fades out long before the centre, so the two glows
+    /// overlap softly and never leave a seam between them.
+    private func glow(_ color: Color, from center: UnitPoint) -> some View {
+        RadialGradient(
+            stops: [
+                .init(color: color.opacity(0.55), location: 0),
+                .init(color: color.opacity(0.16), location: 0.45),
+                .init(color: .clear, location: 1),
+            ],
+            center: center,
+            startRadius: 0,
+            endRadius: 280
+        )
     }
 
     private var leadingGlow: Color {

@@ -10,7 +10,7 @@ struct AppTabBar: View {
 
     var body: some View {
         HStack(spacing: 40) {
-            categoryButton(.events, icon: "map.fill", loading: eventsLoading)
+            categoryButton(.events, icon: "house.fill", loading: eventsLoading)
             categoryButton(.trips, icon: "airplane.departure", loading: tripsLoading)
 
             Button {

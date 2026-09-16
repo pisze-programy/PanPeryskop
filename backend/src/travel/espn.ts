@@ -8,7 +8,7 @@ import type { TravelSource } from './run';
 
 interface EspnCompetition {
   venue?: { fullName?: string; address?: { city?: string; country?: string } } | null;
-  competitors?: Array<{ team?: { displayName?: string; abbreviation?: string } }>;
+  competitors?: Array<{ team?: { displayName?: string; abbreviation?: string; color?: string } }>;
 }
 interface EspnEvent {
   id: string;
@@ -99,6 +99,8 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
     ...(local ?? {}),
     homeCode: competitors[0]?.team?.abbreviation ?? null,
     awayCode: competitors[1]?.team?.abbreviation ?? null,
+    homeColor: competitors[0]?.team?.color ?? null,
+    awayColor: competitors[1]?.team?.color ?? null,
   };
   return {
     provider: CONFIG.travel.provider,

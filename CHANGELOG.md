@@ -65,6 +65,8 @@ All notable changes to PanPeryskop. Format based on
   open underneath.
 - Soccer matches show the venue's local time and date (were shown in the app's
   timezone, so UK/Portugal were off by an hour). Existing matches were updated.
+- Soccer crests use the club's real colour from the provider (was a generated
+  colour); existing matches were updated.
 - Soccer matches show the provider's team codes (BEL, FRA, …) on the crest
   instead of generated initials; existing matches were re-fetched.
 - Wycieczki sheet no longer flashes full width before settling to its padding.
@@ -87,6 +89,9 @@ All notable changes to PanPeryskop. Format based on
   rail; a past day falls back to today on launch.
 - Onboarding lists the real benefits: European trips (event, flights, stay,
   attractions), local events, and what is happening nearby.
+- The trips sheet shows a compact sticky header once the hero scrolls away —
+  team crests (soccer) or the race distance (runs) plus the event time — and
+  tapping it scrolls back to the top.
 - Events download by 50 km squares: moving the map inside a downloaded square
   makes no request; leaving it downloads only the new squares (max 5 kept). The
   20s refresh downloads only the squares on screen.

@@ -68,21 +68,19 @@ struct TripsEventSheet: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 0) {
                     ForEach(Array(events.enumerated()), id: \.offset) { index, event in
-                        ScrollView(showsIndicators: false) {
-                            TripsEventPage(
-                                event: event,
-                                origin: viewModel.selectedAirport,
-                                viewModel: viewModel,
-                                isActive: (activeIndex ?? 0) == index,
-                                onOpenURL: openBrowser,
-                                onExpand: expandPlaces,
-                                onPlannerChange: { newNights, coord in
-                                    guard (activeIndex ?? 0) == index else { return }
-                                    nights = newNights
-                                    airportCoordinate = coord
-                                }
-                            )
-                        }
+                        TripsEventPage(
+                            event: event,
+                            origin: viewModel.selectedAirport,
+                            viewModel: viewModel,
+                            isActive: (activeIndex ?? 0) == index,
+                            onOpenURL: openBrowser,
+                            onExpand: expandPlaces,
+                            onPlannerChange: { newNights, coord in
+                                guard (activeIndex ?? 0) == index else { return }
+                                nights = newNights
+                                airportCoordinate = coord
+                            }
+                        )
                         .frame(width: pageWidth)
                         .id(event.id)
                     }
@@ -119,6 +117,11 @@ struct TripsEventPage: View {
     let onExpand: (PlaceKind) -> Void
     let onPlannerChange: (Int, CLLocationCoordinate2D?) -> Void
     @StateObject private var planner = TripsEventPlanner()
+    @State private var heroHeight: CGFloat = 320
+    @State private var scrolled = false
+
+    private static let topId = "trips-page-top"
+    private static let headerHeight: CGFloat = 48
 
     private var destinations: [Destination] { viewModel.nearbyDestinations(for: event) }
     private var reachableAirports: Set<String>? { event.reachableAirports.map(Set.init) }
@@ -135,13 +138,32 @@ struct TripsEventPage: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(TripsSheetSection.sections(for: event)) { section in
-                sectionView(section)
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    ForEach(TripsSheetSection.sections(for: event)) { section in
+                        sectionView(section)
+                    }
+                    priceFooter
+                }
+                .padding(.bottom, Theme.Spacing.xl)
+                .id(Self.topId)
             }
-            priceFooter
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
+                scrolled = offset > max(heroHeight - Self.headerHeight, 80)
+            }
+            .overlay(alignment: .top) {
+                if scrolled {
+                    TripsCompactHeader(event: event) {
+                        withAnimation(AppConstants.springStandard) {
+                            proxy.scrollTo(Self.topId, anchor: .top)
+                        }
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(AppConstants.springSnappy, value: scrolled)
         }
-        .padding(.bottom, Theme.Spacing.xl)
         .onAppear { report() }
         .onChange(of: isActive) { _, _ in report() }
         .onChange(of: planner.outbound?.date) { _, _ in report() }
@@ -159,6 +181,9 @@ struct TripsEventPage: View {
         switch section {
         case .hero:
             hero
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { _, height in
+                    heroHeight = height
+                }
         case .flights:
             if destinations.isEmpty {
                 noAirportHint

@@ -9,9 +9,9 @@ struct SoccerMatchBoard: View {
     var body: some View {
         VStack(spacing: Theme.Spacing.m) {
             HStack(alignment: .top, spacing: Theme.Spacing.m) {
-                teamColumn(event.home, code: event.metaData?.homeCode)
+                teamColumn(event.home, code: event.metaData?.homeCode, color: event.metaData?.homeColor)
                 centerStatus
-                teamColumn(event.away, code: event.metaData?.awayCode)
+                teamColumn(event.away, code: event.metaData?.awayCode, color: event.metaData?.awayColor)
             }
             Text("\(event.city), \(event.country)")
                 .font(.caption)
@@ -46,10 +46,10 @@ struct SoccerMatchBoard: View {
     }
 
     @ViewBuilder
-    private func teamColumn(_ name: String?, code: String?) -> some View {
+    private func teamColumn(_ name: String?, code: String?, color: String?) -> some View {
         if let name {
             VStack(spacing: 6) {
-                TeamCrest(name: name, code: code)
+                TeamCrest(name: name, code: code, colorHex: color)
                 Text(name)
                     .font(.subheadline.weight(.semibold))
                     .multilineTextAlignment(.center)
@@ -83,11 +83,12 @@ struct SoccerMatchBoard: View {
     }
 }
 
-/// Club crest mark. Uses the provider's three-letter code (BEL, FRA, …) when
-/// present; falls back to the name's initials.
+/// Club crest mark. Uses the provider's three-letter code (BEL, FRA, …) and its
+/// colour when present; falls back to the name's initials and a generated colour.
 struct TeamCrest: View {
     let name: String
     var code: String?
+    var colorHex: String?
     var size: CGFloat = 46
 
     var body: some View {
@@ -96,20 +97,25 @@ struct TeamCrest: View {
                 .font(.system(size: size))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [Self.color(for: name).opacity(0.85), Self.color(for: name)],
+                        colors: [fill.opacity(0.92), fill],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                 )
             Image(systemName: "shield")
                 .font(.system(size: size))
-                .foregroundStyle(Color.gray.opacity(0.55))
+                .foregroundStyle(Self.isLight(colorHex) ? Color.black.opacity(0.35) : Color.white.opacity(0.35))
             Text(displayCode)
                 .font(.system(size: size * 0.3, weight: .heavy))
                 .minimumScaleFactor(0.6)
                 .padding(.horizontal, 3)
-                .foregroundColor(.white)
+                .foregroundColor(Self.isLight(colorHex) ? .black : .white)
         }
+    }
+
+    private var fill: Color {
+        if let colorHex, let color = Color(hexString: colorHex) { return color }
+        return Self.color(for: name)
     }
 
     private var displayCode: String {
@@ -121,6 +127,17 @@ struct TeamCrest: View {
         let words = name.split(separator: " ").prefix(2)
         let letters = words.compactMap { $0.first }.map(String.init)
         return letters.joined().uppercased()
+    }
+
+    /// True for light colours (white/gold) so the code switches to dark text.
+    static func isLight(_ hex: String?) -> Bool {
+        guard let hex, let value = UInt32(hex.replacingOccurrences(of: "#", with: ""), radix: 16) else {
+            return false
+        }
+        let r = Double((value >> 16) & 0xFF) / 255
+        let g = Double((value >> 8) & 0xFF) / 255
+        let b = Double(value & 0xFF) / 255
+        return (0.299 * r + 0.587 * g + 0.114 * b) > 0.6
     }
 
     private static let palette: [Color] = [.blue, .red, .green, .orange, .purple, .teal, .indigo, .pink, .brown]

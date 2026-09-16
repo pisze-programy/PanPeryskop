@@ -9,9 +9,9 @@ struct SoccerMatchBoard: View {
     var body: some View {
         VStack(spacing: Theme.Spacing.m) {
             HStack(alignment: .top, spacing: Theme.Spacing.m) {
-                teamColumn(event.home)
+                teamColumn(event.home, code: event.metaData?.homeCode)
                 centerStatus
-                teamColumn(event.away)
+                teamColumn(event.away, code: event.metaData?.awayCode)
             }
             Text("\(event.city), \(event.country)")
                 .font(.caption)
@@ -46,10 +46,10 @@ struct SoccerMatchBoard: View {
     }
 
     @ViewBuilder
-    private func teamColumn(_ name: String?) -> some View {
+    private func teamColumn(_ name: String?, code: String?) -> some View {
         if let name {
             VStack(spacing: 6) {
-                TeamCrest(name: name)
+                TeamCrest(name: name, code: code)
                 Text(name)
                     .font(.subheadline.weight(.semibold))
                     .multilineTextAlignment(.center)
@@ -83,9 +83,11 @@ struct SoccerMatchBoard: View {
     }
 }
 
-/// Generated club crest — no logos in the data, so a colored shield with initials.
+/// Club crest mark. Uses the provider's three-letter code (BEL, FRA, …) when
+/// present; falls back to the name's initials.
 struct TeamCrest: View {
     let name: String
+    var code: String?
     var size: CGFloat = 46
 
     var body: some View {
@@ -102,10 +104,17 @@ struct TeamCrest: View {
             Image(systemName: "shield")
                 .font(.system(size: size))
                 .foregroundStyle(Color.gray.opacity(0.55))
-            Text(Self.initials(name))
-                .font(.system(size: size * 0.32, weight: .heavy))
+            Text(displayCode)
+                .font(.system(size: size * 0.3, weight: .heavy))
+                .minimumScaleFactor(0.6)
+                .padding(.horizontal, 3)
                 .foregroundColor(.white)
         }
+    }
+
+    private var displayCode: String {
+        if let code, !code.isEmpty { return code.uppercased() }
+        return Self.initials(name)
     }
 
     static func initials(_ name: String) -> String {

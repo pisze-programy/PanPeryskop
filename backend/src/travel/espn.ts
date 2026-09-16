@@ -8,7 +8,7 @@ import type { TravelSource } from './run';
 
 interface EspnCompetition {
   venue?: { fullName?: string; address?: { city?: string; country?: string } } | null;
-  competitors?: Array<{ team?: { displayName?: string } }>;
+  competitors?: Array<{ team?: { displayName?: string; abbreviation?: string } }>;
 }
 interface EspnEvent {
   id: string;
@@ -91,8 +91,15 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
   const startMs = eventStartMs(e);
   if (startMs === null) return null;
   // ESPN dates are UTC. Store the local date/hour of the venue so the app shows
-  // the time where the match is played, not the app's own timezone.
+  // the time where the match is played, not the app's own timezone. The team
+  // abbreviations (BEL, FRA, …) come straight from ESPN — never generated.
   const local = localDateTime(startMs, geo.country, geo.city);
+  const competitors = e.competitions?.[0]?.competitors ?? [];
+  const meta = {
+    ...(local ?? {}),
+    homeCode: competitors[0]?.team?.abbreviation ?? null,
+    awayCode: competitors[1]?.team?.abbreviation ?? null,
+  };
   return {
     provider: CONFIG.travel.provider,
     externalId: e.id,
@@ -102,7 +109,7 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
     startMs,
     tag: CONFIG.travel.tags.espn,
     link: eventLink(e),
-    meta: local ? JSON.stringify(local) : null,
+    meta: JSON.stringify(meta),
   };
 }
 

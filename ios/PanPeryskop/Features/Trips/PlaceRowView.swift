@@ -58,17 +58,18 @@ struct PlaceRowView: View {
     }
 
     private var gallery: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 0) {
-                AsyncImage(url: URL(string: place.image)) { phase in
-                    switch phase {
-                    case .success(let img): img.resizable().scaledToFill()
-                    case .failure: Color(.systemGray5).overlay(Image(systemName: "photo").foregroundColor(.secondary))
-                    default: Color(.systemGray5)
+        GeometryReader { geo in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    AsyncImage(url: URL(string: place.image)) { phase in
+                        switch phase {
+                        case .success(let img): img.resizable().scaledToFill()
+                        case .failure: Color(.systemGray5).overlay(Image(systemName: "photo").foregroundColor(.secondary))
+                        default: Color(.systemGray5)
+                        }
                     }
+                    .frame(width: geo.size.width, height: 180)
                 }
-                .containerRelativeFrame(.horizontal)
-                .frame(height: 180)
             }
         }
         .frame(height: 180)

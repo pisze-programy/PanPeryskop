@@ -65,6 +65,15 @@ All notable changes to PanPeryskop. Format based on
   open underneath.
 - Soccer matches show the venue's local time and date (were shown in the app's
   timezone, so UK/Portugal were off by an hour). Existing matches were updated.
+- Soccer matches show the provider's team codes (BEL, FRA, …) on the crest
+  instead of generated initials; existing matches were re-fetched.
+- Wycieczki sheet no longer flashes full width before settling to its padding.
+- The flight CTA is always visible: it enables once at least one leg is picked
+  and disables when both are cleared. It buys a one-way outbound, a one-way
+  return, or both, and reads "Kup bilet" / "Kup bilety".
+- The destination-airport picker is a swipeable map rail (arc + route label +
+  dots) instead of the blue pills; swiping changes the airport.
+- Tapping the selected flight day again deselects it.
 
 ### Changed
 - Bottom navigation is now the category switch: Mapa (Wydarzenia), Samolot

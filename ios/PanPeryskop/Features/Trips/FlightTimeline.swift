@@ -46,7 +46,11 @@ struct FlightTimeline: View {
             : selectedReturn?.date == cell.date
         let best = isBest(cell, isOutbound: isOutbound)
         return Button {
-            if isOutbound { selectedOutbound = cell } else { selectedReturn = cell }
+            if isOutbound {
+                selectedOutbound = (selectedOutbound?.date == cell.date) ? nil : cell
+            } else {
+                selectedReturn = (selectedReturn?.date == cell.date) ? nil : cell
+            }
         } label: {
             VStack(spacing: 1) {
                 Text(Self.shortDay(cell.date))

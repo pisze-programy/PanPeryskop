@@ -1,14 +1,5 @@
 import SwiftUI
 
-private extension Airline {
-    var label: String {
-        switch self {
-        case .ryanair: return "Ryanair"
-        case .wizzair: return "Wizzair"
-        }
-    }
-}
-
 struct EventFlightSection: View {
     let event: TravelEvent
     let origin: Airport
@@ -30,11 +21,19 @@ struct EventFlightSection: View {
     private var shouldLoad: Bool { isActive && visible }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             TripsSectionHeader(
                 title: "Wybierz lotnisko docelowe",
                 info: "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska."
             )
+            if let destination, !reachableDestinations.isEmpty {
+                DestinationMapRail(
+                    origin: origin,
+                    destinations: reachableDestinations,
+                    selected: destination,
+                    onSelect: onSelectDestination
+                )
+            }
             card
         }
         .padding(.horizontal, Theme.Spacing.l)
@@ -47,9 +46,6 @@ struct EventFlightSection: View {
 
     private var card: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-            if let destination, !reachableDestinations.isEmpty {
-                destinationRail(destination)
-            }
             if loadFailed, window == nil {
                 ErrorState(message: "Nie udało się pobrać lotów") {
                     loadFailed = false
@@ -95,31 +91,6 @@ struct EventFlightSection: View {
         destinations.filter { reachableAirports?.contains($0.iata) ?? true }
     }
 
-    private func destinationRail(_ active: Destination) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Theme.Spacing.s) {
-                ForEach(reachableDestinations, id: \.iata) { dest in
-                    Button {
-                        onSelectDestination(dest)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("\(origin.iata) → \(dest.iata)")
-                                .font(.caption.weight(.bold))
-                            Text(dest.city)
-                                .font(.caption2)
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, Theme.Spacing.m)
-                        .padding(.vertical, Theme.Spacing.s)
-                        .background(Capsule().fill(active.iata == dest.iata ? Color.accentColor : Theme.Palette.surfaceRaised))
-                        .foregroundColor(active.iata == dest.iata ? .white : .primary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
     private func bestPair(_ window: FlightWindowResponse) -> FlightPair? {
         FlightScoring.findBestFlight(
             outbound: window.outbound.compactMap { $0.cell },
@@ -128,53 +99,69 @@ struct EventFlightSection: View {
         )
     }
 
-    @ViewBuilder
+    /// The CTA is always visible; it is enabled once at least one leg is picked.
     private func buyBar(_ destination: Destination) -> some View {
-        if let outbound = planner.outbound {
-            let ret = planner.returning
-            let total = Int((outbound.price ?? 0) + (ret?.price ?? 0))
-            CapsuleButton(
-                title: "\(airline.label) ✈ Lecimy",
-                trailingText: "\(total) zł",
-                fullWidth: true
-            ) {
-                if let url = buyURL(destination: destination.iata, outbound: outbound.date, returning: ret?.date) {
-                    UIApplication.shared.open(url)
-                }
+        let outbound = planner.outbound
+        let ret = planner.returning
+        let hasBoth = outbound != nil && ret != nil
+        let hasAny = outbound != nil || ret != nil
+        let total = Int((outbound?.price ?? 0) + (ret?.price ?? 0))
+        return CapsuleButton(
+            title: hasBoth ? "Kup bilety" : "Kup bilet",
+            trailingText: hasAny ? "\(total) zł" : nil,
+            fullWidth: true,
+            isEnabled: hasAny
+        ) {
+            if let url = buyURL(destination: destination.iata, outbound: outbound?.date, returning: ret?.date) {
+                UIApplication.shared.open(url)
             }
         }
     }
 
-    /// Ryanair deep link. Two days selected → round trip (isReturn=true, dateIn
-    /// set); one day (outbound only) → one-way (isReturn=false, dateIn/tpEndDate
-    /// empty). Mirrors the booking form's own query keys, incl. the tp* mirror.
-    private func buyURL(destination: String, outbound: String, returning: String?) -> URL? {
+    /// Ryanair deep link. Both legs → round trip (origin→destination). Outbound
+    /// only → one-way origin→destination. Return only → one-way destination→origin
+    /// (buy just the flight back from this airport).
+    private func buyURL(destination: String, outbound: String?, returning: String?) -> URL? {
+        let from: String
+        let to: String
+        let dateOut: String
+        let dateIn: String?
+        switch (outbound, returning) {
+        case let (o?, r?):
+            from = origin.iata; to = destination; dateOut = o; dateIn = r
+        case let (o?, nil):
+            from = origin.iata; to = destination; dateOut = o; dateIn = nil
+        case let (nil, r?):
+            from = destination; to = origin.iata; dateOut = r; dateIn = nil
+        default:
+            return nil
+        }
+        let isReturn = dateIn != nil
+        let dateInValue = dateIn ?? ""
         var components = URLComponents(string: "https://www.ryanair.com/pl/pl/trip/flights/select")!
-        let isReturn = returning != nil
-        let dateIn = returning ?? ""
         components.queryItems = [
             URLQueryItem(name: "adults", value: "1"),
             URLQueryItem(name: "teens", value: "0"),
             URLQueryItem(name: "children", value: "0"),
             URLQueryItem(name: "infants", value: "0"),
-            URLQueryItem(name: "dateOut", value: outbound),
-            URLQueryItem(name: "dateIn", value: dateIn),
+            URLQueryItem(name: "dateOut", value: dateOut),
+            URLQueryItem(name: "dateIn", value: dateInValue),
             URLQueryItem(name: "isConnectedFlight", value: "false"),
             URLQueryItem(name: "discount", value: "0"),
             URLQueryItem(name: "promoCode", value: ""),
             URLQueryItem(name: "isReturn", value: isReturn ? "true" : "false"),
-            URLQueryItem(name: "originIata", value: origin.iata),
-            URLQueryItem(name: "destinationIata", value: destination),
+            URLQueryItem(name: "originIata", value: from),
+            URLQueryItem(name: "destinationIata", value: to),
             URLQueryItem(name: "tpAdults", value: "1"),
             URLQueryItem(name: "tpTeens", value: "0"),
             URLQueryItem(name: "tpChildren", value: "0"),
             URLQueryItem(name: "tpInfants", value: "0"),
-            URLQueryItem(name: "tpStartDate", value: outbound),
-            URLQueryItem(name: "tpEndDate", value: dateIn),
+            URLQueryItem(name: "tpStartDate", value: dateOut),
+            URLQueryItem(name: "tpEndDate", value: dateInValue),
             URLQueryItem(name: "tpDiscount", value: "0"),
             URLQueryItem(name: "tpPromoCode", value: ""),
-            URLQueryItem(name: "tpOriginIata", value: origin.iata),
-            URLQueryItem(name: "tpDestinationIata", value: destination),
+            URLQueryItem(name: "tpOriginIata", value: from),
+            URLQueryItem(name: "tpDestinationIata", value: to),
         ]
         return components.url
     }

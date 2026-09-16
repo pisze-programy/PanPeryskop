@@ -14,6 +14,7 @@ struct TripsEventSheet: View {
     @State private var browserItem: BrowserItem?
     @State private var nights = 1
     @State private var airportCoordinate: CLLocationCoordinate2D?
+    @State private var pageWidth: CGFloat = UIScreen.main.bounds.width
 
     private var events: [TravelEvent] { viewModel.selectedEventGroup?.events ?? [] }
 
@@ -82,7 +83,7 @@ struct TripsEventSheet: View {
                                 }
                             )
                         }
-                        .containerRelativeFrame(.horizontal)
+                        .frame(width: pageWidth)
                         .id(event.id)
                     }
                 }
@@ -90,6 +91,9 @@ struct TripsEventSheet: View {
             }
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $activeIndex)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { _, width in
+                pageWidth = width
+            }
         }
     }
 

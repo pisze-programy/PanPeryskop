@@ -5,6 +5,7 @@ struct CapsuleButton: View {
     var trailingText: String? = nil
     var tint: Color = .accentColor
     var fullWidth: Bool = false
+    var isEnabled: Bool = true
     let action: () -> Void
 
     var body: some View {
@@ -22,7 +23,9 @@ struct CapsuleButton: View {
             .padding(.vertical, 10)
             .frame(maxWidth: fullWidth ? .infinity : nil)
             .background(Capsule().fill(tint))
+            .opacity(isEnabled ? 1 : 0.45)
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
     }
 }

@@ -15,6 +15,9 @@ struct TripsGamestrip: View {
     private static let rowBottomPadding: CGFloat = 6
     private static let badgeSpacing: CGFloat = 8
     private static let centerSpacing: CGFloat = 1
+    private static let detailSpacing: CGFloat = 4
+    private static let distancePreviewCount = 3
+    private static let separator = " · "
 
     private static let glowOpacity: Double = 0.5
     private static let glowFadeLocation: Double = 0.65
@@ -28,7 +31,6 @@ struct TripsGamestrip: View {
     private static let edgeShadowOpacity: Double = 0.1
 
     private static let versus = "vs"
-    private static let missingValue = "—"
 
     private var meta: TravelEventMeta? { event.metaData }
 
@@ -97,33 +99,64 @@ struct TripsGamestrip: View {
             Text(Self.versus)
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(.secondary)
-            dateTime
+            matchDateTime
         }
         .fixedSize()
     }
 
     private var runRow: some View {
-        HStack(spacing: Theme.Spacing.s) {
-            Image(systemName: "figure.run")
-                .font(.system(size: Self.runIconSize, weight: .semibold))
-                .foregroundColor(runColor)
-            Text(event.title)
-                .font(.subheadline.weight(.bold))
-                .lineLimit(1)
-            Spacer(minLength: Theme.Spacing.s)
-            dateTime
+        VStack(alignment: .trailing, spacing: Self.centerSpacing) {
+            HStack(spacing: Theme.Spacing.s) {
+                Image(systemName: "figure.run")
+                    .font(.system(size: Self.runIconSize, weight: .semibold))
+                    .foregroundColor(runColor)
+                Text(event.title)
+                    .font(.subheadline.weight(.bold))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            runDetail
         }
+        .frame(maxWidth: .infinity)
     }
 
-    private var dateTime: some View {
+    /// Distance, date and (when the provider gives one) the start time.
+    private var runDetail: some View {
+        HStack(spacing: Self.detailSpacing) {
+            if let distanceLabel {
+                Text(distanceLabel)
+                    .foregroundColor(runColor)
+                Text(Self.separator)
+                    .foregroundColor(.secondary)
+            }
+            Text(dateTimeText)
+        }
+        .font(.subheadline.weight(.semibold))
+        .lineLimit(1)
+    }
+
+    private var matchDateTime: some View {
         VStack(spacing: Self.centerSpacing) {
             Text(shortDate)
                 .font(.subheadline.weight(.semibold))
-            Text(event.displayTime ?? Self.missingValue)
-                .font(.subheadline.weight(.regular))
-                .foregroundColor(.secondary)
+            if let time = event.displayTime {
+                Text(time)
+                    .font(.subheadline.weight(.regular))
+                    .foregroundColor(.secondary)
+            }
         }
-        .lineLimit(1)
+    }
+
+    private var dateTimeText: String {
+        [shortDate, event.displayTime].compactMap { $0 }.joined(separator: Self.separator)
+    }
+
+    private var distanceLabel: String? {
+        if let distance = meta?.distance, !distance.isEmpty { return distance }
+        if let distances = meta?.distances, !distances.isEmpty {
+            return distances.prefix(Self.distancePreviewCount).joined(separator: Self.separator)
+        }
+        return nil
     }
 
     private var background: some View {

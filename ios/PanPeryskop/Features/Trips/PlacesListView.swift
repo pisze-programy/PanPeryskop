@@ -82,15 +82,9 @@ struct PlacesListView: View {
             .navigationTitle(kind.label)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Anuluj") {
                         onBack()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .fontWeight(.semibold)
-                            Text("Zamknij")
-                        }
                     }
                 }
             }

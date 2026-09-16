@@ -12,7 +12,6 @@ struct TripsEventDetail: View {
     private static let tagSpacing = Theme.Spacing.xs
     private static let tagHorizontalPadding = Theme.Spacing.s
     private static let tagVerticalPadding = Theme.Spacing.xs
-    private static let distancePreviewCount = 3
     private static let separator = ", "
 
     private var meta: TravelEventMeta? { event.metaData }
@@ -50,7 +49,6 @@ struct TripsEventDetail: View {
             if let headlineText {
                 Text(headlineText)
                     .font(.title3.weight(.bold))
-                    .foregroundColor(headlineColor)
                     .lineLimit(2)
             }
             if !tags.isEmpty {
@@ -73,19 +71,7 @@ struct TripsEventDetail: View {
     }
 
     private var headlineText: String? {
-        event.isRun ? distanceLabel : venueLabel
-    }
-
-    private var headlineColor: Color {
-        event.isRun ? RunPalette.color(for: event) : .primary
-    }
-
-    private var distanceLabel: String? {
-        if let distance = meta?.distance, !distance.isEmpty { return distance }
-        if let distances = meta?.distances, !distances.isEmpty {
-            return distances.prefix(Self.distancePreviewCount).joined(separator: Self.separator)
-        }
-        return nil
+        event.isRun ? nil : venueLabel
     }
 
     private var venueLabel: String {

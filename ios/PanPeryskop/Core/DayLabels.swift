@@ -6,13 +6,15 @@ enum DayLabels {
         AppConstants.warsawCalendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
     }
 
-    /// "Dziś", "Jutro", else full weekday and date ("Wtorek, 16.09").
+    /// "Dziś", "Jutro", else the day with the month name and the weekday
+    /// ("1 listopada, Czwartek").
     static func title(offset: Int) -> String {
         if offset == 0 { return "Dziś" }
         if offset == 1 { return "Jutro" }
         let date = date(offset: offset)
+        let day = AppConstants.dayMonthFormatter.string(from: date)
         let weekday = AppConstants.weekdayFullFormatter.string(from: date).capitalized
-        return "\(weekday), \(AppConstants.shortDayFormatter.string(from: date))"
+        return "\(day), \(weekday)"
     }
 
     /// "DD.MM" — for the rail slider.

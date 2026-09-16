@@ -6,9 +6,9 @@ import SwiftUI
 struct TripsDaySliderView: View {
     @ObservedObject var viewModel: TripsViewModel
 
-    private static let minDay = 0
-    private static let maxDay = 89
-    private static let minorDivisions = 2
+    private static let minDay = TripsViewModel.minDayOffset
+    private static let maxDay = TripsViewModel.maxDayOffset
+    private static let minorDivisions = 3
 
     var body: some View {
         RailSliderView(

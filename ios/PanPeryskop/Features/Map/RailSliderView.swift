@@ -63,7 +63,11 @@ struct RailSliderView: View {
         }
         .onAppear { offset = CGFloat(currentIndex) }
         .onChange(of: currentIndex) { _, newValue in
-            if !isScrubbing { offset = CGFloat(newValue) }
+            if !isScrubbing {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                    offset = CGFloat(newValue)
+                }
+            }
         }
     }
 
@@ -186,7 +190,9 @@ struct RailSliderView: View {
                     finalRaw = Int(clampedOffset.rounded())
                 }
                 let final = min(max(finalRaw, minIndex), maxIndex)
-                offset = CGFloat(final)
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                    offset = CGFloat(final)
+                }
                 isScrubbing = false
                 lastTickIndex = -2
                 lastDragDelta = 0

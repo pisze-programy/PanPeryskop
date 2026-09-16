@@ -7,33 +7,35 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     @Published var isLoading = false
     @Published var selectedCity: City = City.all[0]
     @Published var feedCategory: MapCategory = .events
-    /// Live filter — shows UGC recordings (posts.category=live) instead of events.
-    @Published var isLive = false
     /// Canonical event tags for the map filter chips (backend order).
     @Published var tags: [TagPill] = []
-    /// Active tag filter — nil = all approved events. Session-only (never persisted).
-    @Published var selectedTag: String?
+    /// Selected tag filter. All tags are selected by default; at least one stays on.
+    @Published private(set) var selectedTags: Set<String> = []
+    /// True once the user changes the selection — then it is persisted and wins
+    /// over the "all tags" default.
+    private var hasUserTagSelection = false
     // Selected day offset 0…3 (dziś / jutro / +2 / +3). Kept only as a live variable
     // (no persistence) — resets to today on a fresh launch, survives view switches.
     @Published var selectedDayOffset: Int = 0
     /// Event-count badge per tag id for the selected day+city (city scope, not viewport).
     /// Refreshed on app-start and city/day/category/tag change — seeds change rarely, never polled.
     @Published var tagCounts: [String: Int] = [:]
-    /// Total approved events for the selected day+city ("Wszystkie" badge).
-    @Published var tagTotalCount: Int = 0
-    /// Approved live posts in the city (Live chip badge) — TTL window, not day-scoped.
-    @Published var liveCount: Int = 0
 
     private var serverPosts: [Post] = []
-    /// Merged post cache per (category, day, tag) — panning/zooming never drops
+    /// Merged post cache per (category, day, tags) — panning/zooming never drops
     /// already-loaded pins; the 20s polling completes the cache and new pins appear.
     private var postsCache: [PostsCacheKey: [String: Post]] = [:]
+    /// nil = no tag filter (all tags selected, or not loaded yet).
+    private var tagFilterParam: String? {
+        let all = Set(tags.map(\.id))
+        guard !selectedTags.isEmpty, selectedTags != all else { return nil }
+        return selectedTags.sorted().joined(separator: ",")
+    }
     private var postsCacheKey: PostsCacheKey {
         PostsCacheKey(
             category: feedCategory,
-            isLive: isLive,
-            day: isLive ? nil : dayString(offset: selectedDayOffset),
-            tag: selectedTag
+            day: selectedDayOffset > 0 ? dayString(offset: selectedDayOffset) : nil,
+            tags: tagFilterParam ?? ""
         )
     }
     var currentUserId: String? {
@@ -49,6 +51,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
 
     private enum MapPrefs {
         static let cityId = "map.last_city_id"
+        static let selectedTags = "map.selected_tags"
         static let vpLat = "map.viewport.lat"
         static let vpLng = "map.viewport.lng"
         static let vpSpanLat = "map.viewport.span_lat"
@@ -60,6 +63,10 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     init() {
         let savedCityId = UserDefaults.standard.string(forKey: MapPrefs.cityId)
         selectedCity = City.all.first { $0.id == savedCityId } ?? City.all[0]
+        if let savedTags = UserDefaults.standard.array(forKey: MapPrefs.selectedTags) as? [String], !savedTags.isEmpty {
+            selectedTags = Set(savedTags)
+            hasUserTagSelection = true
+        }
         loadTags()
         loadTagCounts()
     }
@@ -77,12 +84,14 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
             if let cached = UserDefaults.standard.string(forKey: Self.tagsCacheKey),
                let data = cached.data(using: .utf8),
                let decoded = try? JSONDecoder().decode(TagsResponse.self, from: data),
-               !decoded.tags.isEmpty {
+                !decoded.tags.isEmpty {
                 tags = decoded.tags
+                syncTagSelection()
             }
             do {
                 let resp: TagsResponse = try await APIClient.get("/stories/tags")
                 tags = resp.tags
+                syncTagSelection()
                 if let data = try? JSONEncoder().encode(resp),
                    let json = String(data: data, encoding: .utf8) {
                     UserDefaults.standard.set(json, forKey: Self.tagsCacheKey)
@@ -93,31 +102,40 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         }
     }
 
-    /// Toggle a tag on/off — selecting the active tag returns to "all" (nil).
-    /// Session-only; survives category switches, profile/story navigation.
+    /// Toggle one tag. The last selected tag cannot be turned off.
     func toggleTag(_ id: String) {
-        isLive = false
-        selectedTag = (selectedTag == id) ? nil : id
+        if selectedTags.contains(id) {
+            guard selectedTags.count > 1 else { return }
+            selectedTags.remove(id)
+        } else {
+            selectedTags.insert(id)
+        }
+        hasUserTagSelection = true
+        persistSelectedTags()
         refreshCurrentRegion()
-        loadTagCounts()
     }
 
-    /// Back to "Wszystkie" (no tag, no Live). Already "all" → no-op.
-    func selectAll() {
-        guard isLive || selectedTag != nil else { return }
-        isLive = false
-        selectedTag = nil
-        refreshCurrentRegion()
-        loadTagCounts()
+    func isTagSelected(_ id: String) -> Bool { selectedTags.contains(id) }
+
+    /// Keep the selection in step with the loaded catalog: default to all tags,
+    /// drop tags that no longer exist, and fall back to all if nothing remains.
+    private func syncTagSelection() {
+        let all = Set(tags.map(\.id))
+        if !hasUserTagSelection {
+            selectedTags = all
+            persistSelectedTags()
+            return
+        }
+        selectedTags = selectedTags.intersection(all)
+        if selectedTags.isEmpty {
+            selectedTags = all
+            hasUserTagSelection = false
+        }
+        persistSelectedTags()
     }
 
-    /// Live filter — show UGC recordings instead of events.
-    func selectLive() {
-        guard !isLive else { return }
-        isLive = true
-        selectedTag = nil
-        refreshCurrentRegion()
-        loadTagCounts()
+    private func persistSelectedTags() {
+        UserDefaults.standard.set(Array(selectedTags), forKey: MapPrefs.selectedTags)
     }
 
     // MARK: - Tag count badges (events, per city+day)
@@ -134,9 +152,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
                 "/stories/tag-counts",
                 params: ["city": selectedCity.id, "day": dayString(offset: selectedDayOffset)]
             ) else { return }
-            tagTotalCount = resp.total
             tagCounts = Dictionary(uniqueKeysWithValues: resp.counts.map { ($0.tag, $0.count) })
-            liveCount = resp.live ?? 0
         }
     }
 
@@ -184,11 +200,10 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         // Day browsing (offset>0) skips the TTL/future window — the server already
         // scoped the response to the requested event_date (future days have
         // created_at in the future and would otherwise be dropped client-side).
-        let dayBrowse = !isLive && selectedDayOffset > 0
-        let backendCategory = isLive ? AppConstants.categoryLive : AppConstants.categoryEvents
+        let dayBrowse = selectedDayOffset > 0
         return serverPosts.filter {
             (dayBrowse ? true : $0.isStillValid)
-                && ($0.category ?? AppConstants.categoryEvents) == backendCategory
+                && ($0.category ?? AppConstants.categoryEvents) == AppConstants.categoryEvents
         }
     }
 
@@ -212,6 +227,21 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         return f.string(from: date)
     }
 
+    /// Day-browser range, shared by the slider and the day sheet.
+    static let minDayOffset = 0
+    static let maxDayOffset = 5
+    static var dayOffsets: [Int] { Array(minDayOffset...maxDayOffset) }
+
+    /// "Dziś", "Jutro", else the full weekday and date ("Wtorek, 16.09").
+    func dayLabel(offset: Int) -> String {
+        if offset == 0 { return "Dziś" }
+        if offset == 1 { return "Jutro" }
+        let calendar = AppConstants.warsawCalendar
+        let date = calendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
+        let weekday = AppConstants.weekdayFullFormatter.string(from: date).capitalized
+        return "\(weekday), \(AppConstants.shortDayFormatter.string(from: date))"
+    }
+
     /// Commit the selected day (called on slider release) → refetch the viewport.
     func commitDay(_ offset: Int) {
         guard selectedDayOffset != offset else { return }
@@ -227,7 +257,6 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
 
     func selectFeedCategory(_ category: MapCategory) {
         feedCategory = category
-        isLive = false
         refreshCurrentRegion()
         loadTagCounts()
     }
@@ -309,27 +338,21 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         // must NOT land in the current cache bucket (that leaked tomorrow/+2 pins
         // into "today"). Compare after the await and drop if the state changed.
         let key = postsCacheKey
-        let isLiveForRequest = isLive
         var params = [
             "sw_lat": String(swLat),
             "sw_lng": String(swLng),
             "ne_lat": String(neLat),
             "ne_lng": String(neLng),
         ]
-        if isLiveForRequest {
-            params["category"] = AppConstants.categoryLive
+        params["category"] = AppConstants.categoryEvents
+        // Day browsing: fetch that day's events (all pins; the map clusters them).
+        if selectedDayOffset > 0 {
+            params["day"] = dayString(offset: selectedDayOffset)
             params["limit"] = "1000"
-        } else {
-            params["category"] = AppConstants.categoryEvents
-            // Day browsing: fetch that day's events (all pins; the map clusters them).
-            if selectedDayOffset > 0 {
-                params["day"] = dayString(offset: selectedDayOffset)
-                params["limit"] = "1000"
-            }
-            // Tag filter — events only; the backend validates the tag + keeps status=approved.
-            if let selectedTag {
-                params["tag"] = selectedTag
-            }
+        }
+        // Tag filter — a comma list; the backend matches events with ANY of them.
+        if let tagFilterParam {
+            params["tags"] = tagFilterParam
         }
         do {
             let resp: PostListResponse = try await APIClient.get("/stories", params: params)

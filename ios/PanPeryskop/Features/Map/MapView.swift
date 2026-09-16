@@ -13,6 +13,7 @@ struct MapScreen: View {
 
     @State private var activeCategory: MapCategory = .events
     @State private var showCityList = false
+    @State private var showDayList = false
     @State private var showAirportList = false
     @State private var showTripsEventCard = false
 
@@ -43,7 +44,8 @@ struct MapScreen: View {
                     mapViewModel: mapViewModel,
                     tripsViewModel: tripsViewModel,
                     onCityTap: { showCityList = true },
-                    onAirportTap: { showAirportList = true }
+                    onAirportTap: { showAirportList = true },
+                    onDayTap: { showDayList = true }
                 )
                 Spacer()
             }
@@ -104,6 +106,9 @@ struct MapScreen: View {
                 cameraController.fly(to: city.region)
             }
         }
+        .sheet(isPresented: $showDayList) {
+            DayListView(viewModel: mapViewModel)
+        }
         .sheet(isPresented: $showAirportList) {
             AirportPickerView(selectedAirport: tripsViewModel.selectedAirport) { airport in
                 tripsViewModel.selectAirport(airport)
@@ -128,12 +133,10 @@ struct MapScreen: View {
     private var rightSlider: some View {
         switch activeCategory {
         case .events:
-            if !mapViewModel.isLive {
-                HStack {
-                    Spacer()
-                    DaySliderView(viewModel: mapViewModel)
-                        .padding(.trailing, 10)
-                }
+            HStack {
+                Spacer()
+                DaySliderView(viewModel: mapViewModel)
+                    .padding(.trailing, 10)
             }
         case .trips:
             HStack {

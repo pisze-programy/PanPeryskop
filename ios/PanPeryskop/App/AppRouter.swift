@@ -19,15 +19,11 @@ final class AppRouter {
         await present([post], map: map)
     }
 
-    /// A "new media nearby" push tap: switch the map to the Live feed and zoom to the
-    /// post location — no story, no fetch (the coordinate comes from the notification).
+    /// A "new media nearby" push tap: show the events feed and zoom to the post
+    /// location — no story, no fetch (the coordinate comes from the notification).
     func openPushPost(_ payload: PushPostPayload, map: MapViewModel) async {
         selectedTab = 0
-        if payload.category == AppConstants.categoryLive {
-            map.selectLive()
-        } else {
-            map.selectFeedCategory(.events)
-        }
+        map.selectFeedCategory(.events)
         NotificationCenter.default.post(
             name: .centerMapOnCoordinate,
             object: MapCenterPayload(lat: payload.lat, lng: payload.lng, zoomIn: true)

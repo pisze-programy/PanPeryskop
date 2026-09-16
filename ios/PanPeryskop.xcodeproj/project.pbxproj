@@ -106,6 +106,7 @@
 		B75E0DBA2194C2670F968BDD /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0C2297077E1CF861F55EF2 /* User.swift */; };
 		BBCD3606093C80EF805A22B6 /* TripsEventPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4272F73CBB4736D74B923499 /* TripsEventPlanner.swift */; };
 		BEEF2E09920E29B7B5715957 /* HTTPClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D934D4FFA1AEA8B9221837 /* HTTPClientTests.swift */; };
+		BF4FB01A65A743649020051F /* DayListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F2337425F105F30EC02BEDA /* DayListView.swift */; };
 		C0E44758121DAEDF631C5FA1 /* Post.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9FE43E3CC773AD637F3A523 /* Post.swift */; };
 		C7F65256927A31D898558C63 /* MapOverlayViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52BE58C2791255B2A36A2828 /* MapOverlayViews.swift */; };
 		C80A8E2C26F7DF70940D2A66 /* PanPeryskopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF363C9DF35DD8CFF0D626AB /* PanPeryskopApp.swift */; };
@@ -167,6 +168,7 @@
 		2C740357BF0D4C2010C53000 /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
 		2CC6FFCB08FB57A371173FF6 /* MapContentProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapContentProvider.swift; sourceTree = "<group>"; };
 		2F1EB481F59516E748139BF1 /* TagSorting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagSorting.swift; sourceTree = "<group>"; };
+		2F2337425F105F30EC02BEDA /* DayListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayListView.swift; sourceTree = "<group>"; };
 		3204020F5A7BA81E8BA92E7B /* SoccerMatchBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoccerMatchBoard.swift; sourceTree = "<group>"; };
 		32AB7CBE146D8583020F8DC3 /* MediaCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCaptureView.swift; sourceTree = "<group>"; };
 		346DA0596DA155F6593B75F7 /* AppCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCamera.swift; sourceTree = "<group>"; };
@@ -391,6 +393,7 @@
 			children = (
 				88D958DB4EABF432525E84D7 /* ArcBuilder.swift */,
 				CD4E014F459275D98EE0FC41 /* CityListView.swift */,
+				2F2337425F105F30EC02BEDA /* DayListView.swift */,
 				942107648DD5D43A6AFE02D1 /* DaySliderView.swift */,
 				F91D477AB9293FD289D6885B /* MapCameraController.swift */,
 				2CC6FFCB08FB57A371173FF6 /* MapContentProvider.swift */,
@@ -678,6 +681,7 @@
 				288824434B9765FEC9A39E4A /* CityListView.swift in Sources */,
 				2CF78395B0580F1D6FB70BFB /* Color+Hex.swift in Sources */,
 				9920ED1276D0819A568362B5 /* ContentView.swift in Sources */,
+				BF4FB01A65A743649020051F /* DayListView.swift in Sources */,
 				719D4037717F4D8B2AB3A264 /* DaySliderView.swift in Sources */,
 				E690CF9B87ED7460EF96B213 /* DeepLink.swift in Sources */,
 				86AFF281A5884F71C0D2E94E /* DescriptionStepView.swift in Sources */,

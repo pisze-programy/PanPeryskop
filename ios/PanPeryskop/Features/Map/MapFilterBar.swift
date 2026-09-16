@@ -7,22 +7,18 @@ struct MapFilterBar: View {
     @ObservedObject var tripsViewModel: TripsViewModel
     let onCityTap: () -> Void
     let onAirportTap: () -> Void
+    let onDayTap: () -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Theme.Spacing.s) {
                 switch category {
                 case .events:
+                    MapPickerPill(title: mapViewModel.dayLabel(offset: mapViewModel.selectedDayOffset), action: onDayTap)
                     MapPickerPill(title: mapViewModel.selectedCity.name, action: onCityTap)
-                    eventChip("Wszystkie", selected: !mapViewModel.isLive && mapViewModel.selectedTag == nil, badge: mapViewModel.tagTotalCount) {
-                        mapViewModel.selectAll()
-                    }
-                    .padding(.leading, 10)
-                    eventChip("Live", selected: mapViewModel.isLive, badge: mapViewModel.liveCount) {
-                        mapViewModel.selectLive()
-                    }
+                        .padding(.trailing, 12)
                     ForEach(mapViewModel.sortedTags) { tag in
-                        eventChip(tag.label, selected: !mapViewModel.isLive && mapViewModel.selectedTag == tag.id, badge: mapViewModel.tagCounts[tag.id] ?? 0) {
+                        eventChip(tag.label, selected: mapViewModel.isTagSelected(tag.id), badge: mapViewModel.tagCounts[tag.id] ?? 0) {
                             mapViewModel.toggleTag(tag.id)
                         }
                     }

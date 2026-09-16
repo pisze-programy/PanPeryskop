@@ -72,6 +72,9 @@ All notable changes to PanPeryskop. Format based on
   price.
 - Hotel and attraction previews load the full list, so "Zobacz więcej" stays
   after switching the hotel filter.
+- The "Open in" map picker no longer closes the event sheet; groups no longer
+  jump horizontally on first load; the event pager is off for a single event and
+  the airport rail is off for a single airport.
 - Soccer matches show the provider's team codes (BEL, FRA, …) on the crest
   instead of generated initials; existing matches were re-fetched.
 - Wycieczki sheet no longer flashes full width before settling to its padding.

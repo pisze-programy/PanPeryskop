@@ -14,12 +14,19 @@ private struct BrowserItem: Identifiable {
     let access: BrowserAccess
 }
 
+private struct MapPickerRequest: Identifiable {
+    let id = UUID()
+    let coordinate: CLLocationCoordinate2D
+    let title: String
+}
+
 struct TripsEventSheet: View {
     @ObservedObject var viewModel: TripsViewModel
     @State private var activeIndex: Int? = 0
     @State private var detent: PresentationDetent = .medium
     @State private var expanded: PlaceKind?
     @State private var browserItem: BrowserItem?
+    @State private var mapPicker: MapPickerRequest?
     @State private var nights = 1
     @State private var airportCoordinate: CLLocationCoordinate2D?
     @State private var pageWidth: CGFloat = UIScreen.main.bounds.width
@@ -61,6 +68,9 @@ struct TripsEventSheet: View {
             )
             .presentationDetents([.medium, .large])
         }
+        .sheet(item: $mapPicker) { request in
+            MapAppPickerSheet(coordinate: request.coordinate, title: request.title)
+        }
         .onChange(of: viewModel.selectedEventGroup?.id) { _, _ in
             activeIndex = 0
             expanded = nil
@@ -80,7 +90,7 @@ struct TripsEventSheet: View {
                 .opacity(events.count > 1 ? 1 : 0)
                 .padding(.top, 22)
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 0) {
+                HStack(spacing: 0) {
                     ForEach(Array(events.enumerated()), id: \.offset) { index, event in
                         TripsEventPage(
                             event: event,
@@ -89,6 +99,9 @@ struct TripsEventSheet: View {
                             isActive: (activeIndex ?? 0) == index,
                             scrollTopToken: scrollTopToken,
                             onOpenURL: openBrowser,
+                            onOpenMap: { coordinate, title in
+                                mapPicker = MapPickerRequest(coordinate: coordinate, title: title)
+                            },
                             onExpand: expandPlaces,
                             onScrolled: { isScrolled in
                                 guard (activeIndex ?? 0) == index else { return }
@@ -107,6 +120,7 @@ struct TripsEventSheet: View {
             }
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $activeIndex)
+            .scrollDisabled(events.count <= 1)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { _, width in
                 pageWidth = width
             }
@@ -142,6 +156,7 @@ struct TripsEventPage: View {
     let isActive: Bool
     let scrollTopToken: Int
     let onOpenURL: (URL, BrowserAccess) -> Void
+    let onOpenMap: (CLLocationCoordinate2D, String) -> Void
     let onExpand: (PlaceKind) -> Void
     let onScrolled: (Bool) -> Void
     let onPlannerChange: (Int, CLLocationCoordinate2D?) -> Void
@@ -272,9 +287,9 @@ struct TripsEventPage: View {
     @ViewBuilder
     private var hero: some View {
         if event.isRun {
-            RunEventBoard(event: event, onOpenURL: { onOpenURL($0, .open) })
+            RunEventBoard(event: event, onOpenURL: { onOpenURL($0, .open) }, onOpenMap: onOpenMap)
         } else {
-            SoccerMatchBoard(event: event, onOpenURL: { onOpenURL($0, .restricted) })
+            SoccerMatchBoard(event: event, onOpenURL: { onOpenURL($0, .restricted) }, onOpenMap: onOpenMap)
         }
     }
 

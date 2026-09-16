@@ -4,7 +4,7 @@ import CoreLocation
 struct RunEventBoard: View {
     let event: TravelEvent
     let onOpenURL: (URL) -> Void
-    @State private var showMapPicker = false
+    let onOpenMap: (CLLocationCoordinate2D, String) -> Void
 
     private var meta: TravelEventMeta? { event.metaData }
 
@@ -64,7 +64,7 @@ struct RunEventBoard: View {
             VenueMap(
                 coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
                 systemImage: "figure.run",
-                onTap: { showMapPicker = true }
+                onTap: { onOpenMap(CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng), event.title) }
             )
             if let ticketURL {
                 if let priceLabel {
@@ -82,12 +82,6 @@ struct RunEventBoard: View {
         .padding(.horizontal, Theme.Spacing.l)
         .padding(.top, Theme.Spacing.s)
         .padding(.bottom, Theme.Spacing.m)
-        .sheet(isPresented: $showMapPicker) {
-            MapAppPickerSheet(
-                coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
-                title: event.title
-            )
-        }
     }
 
     private var icon: some View {

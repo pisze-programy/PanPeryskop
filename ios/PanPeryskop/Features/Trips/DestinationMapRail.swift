@@ -28,6 +28,7 @@ struct DestinationMapRail: View {
                 }
                 .scrollTargetBehavior(.paging)
                 .scrollPosition(id: $activeIata)
+                .scrollDisabled(destinations.count <= 1)
             }
             .frame(height: 190)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))

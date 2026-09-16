@@ -4,7 +4,7 @@ import CoreLocation
 struct SoccerMatchBoard: View {
     let event: TravelEvent
     let onOpenURL: (URL) -> Void
-    @State private var showMapPicker = false
+    let onOpenMap: (CLLocationCoordinate2D, String) -> Void
 
     var body: some View {
         VStack(spacing: Theme.Spacing.m) {
@@ -24,7 +24,7 @@ struct SoccerMatchBoard: View {
                 VenueMap(
                     coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
                     systemImage: "sportscourt.fill",
-                    onTap: { showMapPicker = true }
+                    onTap: { onOpenMap(CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng), event.title) }
                 )
                 if let ticketURL {
                     CapsuleButton(title: "Zobacz więcej", fullWidth: true) {
@@ -37,12 +37,6 @@ struct SoccerMatchBoard: View {
         .frame(maxWidth: .infinity)
         .padding(.top, Theme.Spacing.s)
         .padding(.bottom, Theme.Spacing.m)
-        .sheet(isPresented: $showMapPicker) {
-            MapAppPickerSheet(
-                coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
-                title: event.title
-            )
-        }
     }
 
     /// Soft team-colour wash behind the crest row only (home left, away right),

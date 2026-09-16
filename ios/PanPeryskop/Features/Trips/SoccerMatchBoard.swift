@@ -13,7 +13,7 @@ struct SoccerMatchBoard: View {
                 centerStatus
                 teamColumn(event.away, code: event.metaData?.awayCode, color: event.metaData?.awayColor)
             }
-            Text("\(event.city), \(event.country)")
+            Text(venueLabel)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
@@ -28,8 +28,9 @@ struct SoccerMatchBoard: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity)
         .padding(.horizontal, Theme.Spacing.l)
+        .frame(maxWidth: .infinity)
+        .background(heroGradient)
         .padding(.top, Theme.Spacing.s)
         .padding(.bottom, Theme.Spacing.m)
         .sheet(isPresented: $showMapPicker) {
@@ -38,6 +39,28 @@ struct SoccerMatchBoard: View {
                 title: event.title
             )
         }
+    }
+
+    /// Soft team-colour wash across the full sheet width (home left, away right).
+    private var heroGradient: some View {
+        LinearGradient(
+            colors: [homeTint.opacity(0.18), .clear, awayTint.opacity(0.18)],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
+    private var homeTint: Color { tint(event.metaData?.homeColor, name: event.home) }
+    private var awayTint: Color { tint(event.metaData?.awayColor, name: event.away) }
+
+    private func tint(_ hex: String?, name: String?) -> Color {
+        if let hex, let color = Color(hexString: hex) { return color }
+        return TeamCrest.color(for: name ?? "")
+    }
+
+    private var venueLabel: String {
+        if let venue = event.metaData?.venue, !venue.isEmpty { return venue }
+        return "\(event.city), \(event.country)"
     }
 
     private var ticketURL: URL? {

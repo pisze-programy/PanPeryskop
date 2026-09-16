@@ -95,8 +95,10 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
   // abbreviations (BEL, FRA, …) come straight from ESPN — never generated.
   const local = localDateTime(startMs, geo.country, geo.city);
   const competitors = e.competitions?.[0]?.competitors ?? [];
+  const venueName = e.competitions?.[0]?.venue?.fullName ?? null;
   const meta = {
     ...(local ?? {}),
+    venue: venueName,
     homeCode: competitors[0]?.team?.abbreviation ?? null,
     awayCode: competitors[1]?.team?.abbreviation ?? null,
     homeColor: competitors[0]?.team?.color ?? null,

@@ -15,18 +15,20 @@ struct DestinationMapRail: View {
 
     var body: some View {
         VStack(spacing: Theme.Spacing.s) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 0) {
-                    ForEach(destinations) { dest in
-                        DestinationMapPage(origin: origin, destination: dest)
-                            .containerRelativeFrame(.horizontal)
-                            .id(dest.iata)
+            GeometryReader { geo in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 0) {
+                        ForEach(destinations) { dest in
+                            DestinationMapPage(origin: origin, destination: dest)
+                                .frame(width: geo.size.width)
+                                .id(dest.iata)
+                        }
                     }
+                    .scrollTargetLayout()
                 }
-                .scrollTargetLayout()
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: $activeIata)
             }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $activeIata)
             .frame(height: 190)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
             .overlay(
@@ -65,7 +67,7 @@ struct DestinationMapPage: View {
         Map(initialPosition: .region(region), interactionModes: []) {
             Marker(origin.iata, systemImage: "airplane.departure", coordinate: originCoord)
                 .tint(.black)
-            Marker(destination.iata, systemImage: "mappin", coordinate: destCoord)
+            Marker(destination.iata, systemImage: "airplane.arrival", coordinate: destCoord)
                 .tint(airlineColor)
             MapPolyline(coordinates: ArcBuilder.curve(from: originCoord, to: destCoord))
                 .stroke(airlineColor, lineWidth: 3)

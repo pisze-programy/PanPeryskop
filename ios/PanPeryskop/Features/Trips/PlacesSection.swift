@@ -11,7 +11,7 @@ final class PlacePreviewLoader: ObservableObject {
         if loadedKind == kind, !places.isEmpty { return }
         failed = false
         do {
-            let resp = try await APIClient.getTravelPlaces(kind: kind, lat: lat, lng: lng, limit: 10, offset: 0)
+            let resp = try await APIClient.getTravelPlaces(kind: kind, lat: lat, lng: lng, limit: 15, offset: 0)
             places = resp.places
             loadedKind = kind
         } catch {

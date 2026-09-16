@@ -59,6 +59,7 @@ struct TravelEventMeta: Decodable {
     let price: String?
     let time: String?
     let date: String?
+    let venue: String?
     let homeCode: String?
     let awayCode: String?
     let homeColor: String?

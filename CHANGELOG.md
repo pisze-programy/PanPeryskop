@@ -67,6 +67,11 @@ All notable changes to PanPeryskop. Format based on
   timezone, so UK/Portugal were off by an hour). Existing matches were updated.
 - Soccer crests use the club's real colour from the provider (was a generated
   colour); existing matches were updated.
+- The flight CTA is a full-width button like the hero: it reads "Wybierz lot aby
+  kupić bilet" until a leg is picked, then "Kup bilet" / "Kup bilety" with the
+  price.
+- Hotel and attraction previews load the full list, so "Zobacz więcej" stays
+  after switching the hotel filter.
 - Soccer matches show the provider's team codes (BEL, FRA, …) on the crest
   instead of generated initials; existing matches were re-fetched.
 - Wycieczki sheet no longer flashes full width before settling to its padding.
@@ -92,6 +97,9 @@ All notable changes to PanPeryskop. Format based on
 - The trips sheet shows a compact sticky header once the hero scrolls away —
   team crests (soccer) or the race distance (runs) plus the event time — and
   tapping it scrolls back to the top.
+- Soccer sheet shows the stadium name (from the provider) and a soft team-colour
+  gradient across the full sheet width; the destination map marks the arrival
+  airport with a landing-plane icon; the section heading reads "Wybierz lot".
 - Events download by 50 km squares: moving the map inside a downloaded square
   makes no request; leaving it downloads only the new squares (max 5 kept). The
   20s refresh downloads only the squares on screen.

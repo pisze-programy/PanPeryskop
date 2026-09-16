@@ -23,7 +23,7 @@ struct EventFlightSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             TripsSectionHeader(
-                title: "Wybierz lotnisko docelowe",
+                title: "Wybierz lot",
                 info: "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska."
             )
             if let destination, !reachableDestinations.isEmpty {
@@ -35,6 +35,13 @@ struct EventFlightSection: View {
                 )
             }
             card
+            if let destination {
+                if window != nil {
+                    buyBar(destination)
+                } else if !loadFailed {
+                    ctaPlaceholder
+                }
+            }
         }
         .padding(.horizontal, Theme.Spacing.l)
         .padding(.top, Theme.Spacing.section)
@@ -51,7 +58,7 @@ struct EventFlightSection: View {
                     loadFailed = false
                     fetchPrices()
                 }
-            } else if let destination, let window {
+            } else if let window {
                 FlightTimeline(
                     window: window,
                     eventDay: event.start_ms,
@@ -62,10 +69,8 @@ struct EventFlightSection: View {
                     selectedReturn: $planner.returning,
                     best: bestPair(window)
                 )
-                buyBar(destination)
             } else if destination != nil {
                 FlightTimelineSkeleton()
-                ctaPlaceholder
             }
         }
         .padding(Theme.Spacing.l)
@@ -99,7 +104,7 @@ struct EventFlightSection: View {
         )
     }
 
-    /// The CTA is always visible; it is enabled once at least one leg is picked.
+    /// The CTA lives outside the card so it is as wide as the hero button.
     private func buyBar(_ destination: Destination) -> some View {
         let outbound = planner.outbound
         let ret = planner.returning
@@ -107,7 +112,7 @@ struct EventFlightSection: View {
         let hasAny = outbound != nil || ret != nil
         let total = Int((outbound?.price ?? 0) + (ret?.price ?? 0))
         return CapsuleButton(
-            title: hasBoth ? "Kup bilety" : "Kup bilet",
+            title: hasAny ? (hasBoth ? "Kup bilety" : "Kup bilet") : "Wybierz lot aby kupić bilet",
             trailingText: hasAny ? "\(total) zł" : nil,
             fullWidth: true,
             isEnabled: hasAny

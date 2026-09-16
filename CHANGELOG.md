@@ -67,6 +67,9 @@ All notable changes to PanPeryskop. Format based on
   timezone, so UK/Portugal were off by an hour). Existing matches were updated.
 
 ### Changed
+- Bottom navigation is now the category switch: Mapa (Wydarzenia), Samolot
+  (Wycieczki), Profil. The floating category pill and the "+" UGC button are
+  gone; adding content is temporarily disabled (screen kept, no entry point).
 - Onboarding lists the real benefits: European trips (event, flights, stay,
   attractions), local events, and what is happening nearby.
 - Events download by 50 km squares: moving the map inside a downloaded square

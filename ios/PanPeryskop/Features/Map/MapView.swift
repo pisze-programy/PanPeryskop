@@ -3,6 +3,9 @@ import MapKit
 
 struct MapScreen: View {
     @StateObject private var mapViewModel = MapViewModel()
+    let category: MapCategory
+    let onSelectCategory: (MapCategory) -> Void
+    let onProfile: () -> Void
     @ObservedObject var tripsViewModel: TripsViewModel
     @StateObject private var cameraController = MapCameraController()
 
@@ -11,7 +14,6 @@ struct MapScreen: View {
     @Binding var storyPosts: [Post]
     @EnvironmentObject private var authManager: AuthManager
 
-    @State private var activeCategory: MapCategory = .events
     @State private var showCityList = false
     @State private var showDayList = false
     @State private var showAirportList = false
@@ -40,7 +42,7 @@ struct MapScreen: View {
 
             VStack(spacing: 0) {
                 MapFilterBar(
-                    category: activeCategory,
+                    category: category,
                     mapViewModel: mapViewModel,
                     tripsViewModel: tripsViewModel,
                     onCityTap: { showCityList = true },
@@ -50,19 +52,23 @@ struct MapScreen: View {
                 Spacer()
             }
 
-            VStack {
-                Spacer()
-                CategoryPill(
-                    selection: $activeCategory,
-                    eventsLoading: mapViewModel.isLoading,
-                    tripsLoading: tripsViewModel.isLoading
-                )
-                    .padding(.bottom, 112)
+            if !showStoryViewer {
+                VStack {
+                    Spacer()
+                    AppTabBar(
+                        category: category,
+                        eventsLoading: mapViewModel.isLoading,
+                        tripsLoading: tripsViewModel.isLoading,
+                        onSelectCategory: onSelectCategory,
+                        onProfile: onProfile
+                    )
+                    .padding(.bottom, 32)
+                }
             }
 
             rightSlider
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: activeCategory)
+        .animation(.spring(response: 0.35, dampingFraction: 0.82), value: category)
         .onAppear {
             mapViewModel.currentUserId = authManager.userId
             mapViewModel.startPolling()
@@ -89,7 +95,7 @@ struct MapScreen: View {
                 mapViewModel.stopPolling()
             }
         }
-        .onChange(of: activeCategory) { _, newCategory in
+        .onChange(of: category) { _, newCategory in
             // Deterministic fly: events → the selected city (never a stale viewport),
             // trips → the Europe overview.
             switch newCategory {
@@ -123,7 +129,7 @@ struct MapScreen: View {
     }
 
     private var activeProvider: MapContentProvider {
-        switch activeCategory {
+        switch category {
         case .events: return mapViewModel
         case .trips: return tripsViewModel
         }
@@ -131,7 +137,7 @@ struct MapScreen: View {
 
     @ViewBuilder
     private var rightSlider: some View {
-        switch activeCategory {
+        switch category {
         case .events:
             HStack {
                 Spacer()
@@ -151,7 +157,7 @@ struct MapScreen: View {
     private func handleTap(_ overlay: MapOverlay) {
         guard case .pin(let pin) = overlay else { return }
         let post = pin.post
-        if activeCategory == .trips {
+        if category == .trips {
             Haptics.impact(.medium)
             tripsViewModel.selectTravelEvent(postId: post.id, group: pin.group)
             cameraController.flyToAboveSheet(post.coordinate)

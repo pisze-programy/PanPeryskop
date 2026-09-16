@@ -1,3 +1,7 @@
+// TEMPORARILY DISABLED (orphan): the "+" UGC entry point was removed from the
+// bottom bar, so nothing presents this screen. Keep it (and PermissionGateView,
+// MediaCaptureView, DescriptionStepView, which are only used from here) for when
+// adding content returns.
 import SwiftUI
 import AVFoundation
 

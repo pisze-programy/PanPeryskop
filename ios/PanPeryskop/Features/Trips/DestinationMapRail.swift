@@ -4,7 +4,8 @@ import CoreLocation
 
 /// Horizontal map rail: one clean mini-map per reachable destination, an arc from
 /// the origin airport to the destination, a route label and page dots. Swiping the
-/// rail changes the destination.
+/// rail changes the destination. The stack is lazy, so only the pages near the
+/// screen hold a map.
 struct DestinationMapRail: View {
     let origin: Airport
     let destinations: [Destination]
@@ -12,6 +13,8 @@ struct DestinationMapRail: View {
     let onSelect: (Destination) -> Void
 
     @State private var activeIata: String?
+
+    private static let mapHeight: CGFloat = 190
 
     var body: some View {
         VStack(spacing: Theme.Spacing.s) {
@@ -30,7 +33,7 @@ struct DestinationMapRail: View {
                 .scrollPosition(id: $activeIata)
                 .scrollDisabled(destinations.count <= 1)
             }
-            .frame(height: 190)
+            .frame(height: Self.mapHeight)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
@@ -39,6 +42,10 @@ struct DestinationMapRail: View {
             .onChange(of: activeIata) { _, newValue in
                 guard let newValue, let dest = destinations.first(where: { $0.iata == newValue }) else { return }
                 onSelect(dest)
+            }
+            .onChange(of: selected?.iata) { _, newValue in
+                guard let newValue, newValue != activeIata else { return }
+                activeIata = newValue
             }
             .onAppear { activeIata = selected?.iata ?? destinations.first?.iata }
 

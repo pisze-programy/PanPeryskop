@@ -103,13 +103,24 @@ All notable changes to PanPeryskop. Format based on
 - Soccer sheet shows the stadium name (from the provider) and a soft team-colour
   gradient across the full sheet width; the destination map marks the arrival
   airport with a landing-plane icon; the section heading reads "Wybierz lot".
-- Trips sheet: the sticky header mirrors ESPN — neutral background, two soft
-  radial team-colour glows in the top corners, team crests and codes on the sides
-  with the date over the time in the centre. It is an overlay driven by the hero
-  scroll offset, so it grows out of the hero without moving the content, and the
-  group dots stay above the hero. No divider and no seam between the glows. The
-  hero gradient is limited to the crest row with a soft fade; the ticket strip is
-  full width with side fades.
+- Trips sheet: the gamestrip is a fixed top inset of the page (`safeAreaInset`),
+  so it stays glued to the top while the page scrolls under it and never leaves a
+  gap when the page overscrolls. One constant look, on an opaque background with
+  two soft radial team-colour glows and a soft bottom shadow.
+  Soccer puts the crests and names on the sides with "vs" and the date · time in
+  the centre; runs show the race name in the bar. The group dots sit at the bottom
+  of the bar. Below it both kinds use one shared detail layout: headline, optional
+  tags, city, map and ticket button, all left aligned. The run distance and tags
+  show here; soccer shows the stadium name.
+- Loading never resizes the sheet: the ticket strip, the buy button, the
+  destination rail and the place cards all keep a fixed height between their
+  skeleton and their loaded state.
+- Wycieczki sheet scrolls smoothly: event cards are built only as they come on
+  screen, the map behind stops refreshing while trips is open, the sheet is
+  opaque, hotels and attractions load once instead of every time the section
+  scrolls in, and the ticket strip no longer uses a mask.
+- The full hotel or attraction list opens as a sheet over the event card, so the
+  card underneath is not rebuilt and the chosen flights stay.
 - Run colour scales from light (short, asphalt) to dark (long, trail, ultra) from
   the provider's real distance, surface and difficulty.
 - Run surface and difficulty show Polish labels (Asfalt, pagórkowaty, …).

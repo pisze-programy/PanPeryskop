@@ -6,8 +6,11 @@ struct PlaceCard: View {
     let eventCoordinate: CLLocationCoordinate2D
     let airportCoordinate: CLLocationCoordinate2D?
     var nights: Int = 1
-    var width: CGFloat? = 200
+    var width: CGFloat? = PlaceCard.width
     var onTap: (() -> Void)? = nil
+
+    static let width: CGFloat = 200
+    static let height: CGFloat = 230
 
     var body: some View {
         Button {
@@ -44,7 +47,7 @@ struct PlaceCard: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(width: width, alignment: .leading)
+            .frame(width: width, height: Self.height, alignment: .topLeading)
         }
         .buttonStyle(.plain)
     }
@@ -64,7 +67,7 @@ struct PlaceCard: View {
 }
 
 struct PlaceSkeletonCard: View {
-    var width: CGFloat = 200
+    var width: CGFloat = PlaceCard.width
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -75,7 +78,7 @@ struct PlaceSkeletonCard: View {
             SkeletonBlock(width: 120, height: 9)
             SkeletonBlock(width: 160, height: 9)
         }
-        .frame(width: width, alignment: .leading)
+        .frame(width: width, height: PlaceCard.height, alignment: .topLeading)
         .skeletonPulse()
     }
 }

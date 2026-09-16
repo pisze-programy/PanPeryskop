@@ -1,6 +1,40 @@
 import SwiftUI
 import CoreLocation
 
+/// The full list as a sheet stacked over the event card, so the card underneath
+/// stays alive (its flight selection and content are not rebuilt).
+struct PlacesListSheet: View {
+    let kind: PlaceKind
+    let eventCoordinate: CLLocationCoordinate2D
+    let airportCoordinate: CLLocationCoordinate2D?
+    let nights: Int
+    let onClose: () -> Void
+
+    @State private var detent: PresentationDetent = .medium
+    @State private var browserItem: BrowserItem?
+
+    var body: some View {
+        SheetShell(detent: $detent) {
+            PlacesListView(
+                kind: kind,
+                eventCoordinate: eventCoordinate,
+                airportCoordinate: airportCoordinate,
+                nights: nights,
+                onBack: onClose,
+                onOpenURL: { url in browserItem = BrowserItem(url: url, access: .restricted) }
+            )
+        }
+        .sheet(item: $browserItem) { item in
+            InAppBrowserView(
+                url: item.url,
+                allowAnyHost: item.access == .open,
+                onClose: { browserItem = nil }
+            )
+            .presentationDetents([.medium, .large])
+        }
+    }
+}
+
 struct PlacesListView: View {
     let kind: PlaceKind
     let eventCoordinate: CLLocationCoordinate2D
@@ -55,7 +89,7 @@ struct PlacesListView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "chevron.left")
                                 .fontWeight(.semibold)
-                            Text("Wróć")
+                            Text("Zamknij")
                         }
                     }
                 }

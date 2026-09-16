@@ -23,11 +23,13 @@ struct TravelPlacesResponse: Codable {
     let hasMore: Bool
 }
 
-enum PlaceKind: String, Codable, CaseIterable {
+enum PlaceKind: String, Codable, CaseIterable, Identifiable {
     case hotel
     case attraction
     case car
     case insurance
+
+    var id: String { rawValue }
 
     var label: String {
         switch self {

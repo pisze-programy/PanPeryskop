@@ -60,9 +60,8 @@ struct PlacesSection: View {
             content
         }
         .padding(.top, Theme.Spacing.section)
-        .onScrollVisibilityChange(threshold: 0.1) { visible in
-            guard visible else { return }
-            Task { await loader.load(kind: kind, lat: event.lat, lng: event.lng) }
+        .task {
+            await loader.load(kind: kind, lat: event.lat, lng: event.lng)
         }
         .sheet(isPresented: $showFilter) {
             HotelFilterSheet(selection: $tier)

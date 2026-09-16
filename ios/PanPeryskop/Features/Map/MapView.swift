@@ -91,19 +91,21 @@ struct MapScreen: View {
             mapViewModel.currentUserId = newValue
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                mapViewModel.startPolling()
-            } else {
+            guard phase == .active, category == .events else {
                 mapViewModel.stopPolling()
+                return
             }
+            mapViewModel.startPolling()
         }
         .onChange(of: category) { _, newCategory in
             // Deterministic fly: events → the selected city (never a stale viewport),
             // trips → the Europe overview.
             switch newCategory {
             case .events:
+                mapViewModel.startPolling()
                 cameraController.fly(to: mapViewModel.selectedCity.region)
             case .trips:
+                mapViewModel.stopPolling()
                 cameraController.fly(to: tripsViewModel.initialRegion)
                 tripsViewModel.refresh()
             }

@@ -48,7 +48,7 @@ struct PlaceSlider: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            .frame(width: 200, height: 210)
+            .frame(width: PlaceCard.width, height: PlaceCard.height)
             .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
         }
         .buttonStyle(.plain)

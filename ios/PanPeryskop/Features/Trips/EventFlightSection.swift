@@ -19,6 +19,12 @@ struct EventFlightSection: View {
     private var loadKey: String { "\(event.id)|\(destination?.iata ?? "")" }
     private var loadTrigger: String { "\(loadKey)|\(isActive)" }
 
+    private static let sideFadeInset: CGFloat = 0.06
+    private static let sideFadeOutset: CGFloat = 0.94
+    private static let minimumSkeletonDuration: TimeInterval = 0.15
+    private static let nanosecondsPerSecond: UInt64 = 1_000_000_000
+    private static let stripHeight = FlightTimeline.cellHeight + 2 * Theme.Spacing.xs
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             TripsSectionHeader(
@@ -26,26 +32,9 @@ struct EventFlightSection: View {
                 info: "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska."
             )
             .padding(.horizontal, Theme.Spacing.l)
-            if let destination, !reachableDestinations.isEmpty {
-                DestinationMapRail(
-                    origin: origin,
-                    destinations: reachableDestinations,
-                    selected: destination,
-                    onSelect: onSelectDestination
-                )
-                .padding(.horizontal, Theme.Spacing.l)
-            }
+            mapRail
             card
-            if let destination {
-                Group {
-                    if window != nil {
-                        buyBar(destination)
-                    } else if !loadFailed {
-                        ctaPlaceholder
-                    }
-                }
-                .padding(.horizontal, Theme.Spacing.l)
-            }
+            buyArea
         }
         .padding(.top, Theme.Spacing.section)
         .task(id: loadTrigger) {
@@ -54,7 +43,30 @@ struct EventFlightSection: View {
         }
     }
 
-    /// Full-width ticket strip; the side gradients mask the hard cut.
+    @ViewBuilder
+    private var mapRail: some View {
+        if let selected = destination ?? reachableDestinations.first {
+            DestinationMapRail(
+                origin: origin,
+                destinations: reachableDestinations,
+                selected: selected,
+                onSelect: onSelectDestination
+            )
+            .padding(.horizontal, Theme.Spacing.l)
+        }
+    }
+
+    @ViewBuilder
+    private var buyArea: some View {
+        if let destination, window != nil {
+            buyBar(destination)
+                .padding(.horizontal, Theme.Spacing.l)
+        } else if !loadFailed {
+            ctaPlaceholder
+                .padding(.horizontal, Theme.Spacing.l)
+        }
+    }
+
     private var card: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             if loadFailed, window == nil {
@@ -63,20 +75,8 @@ struct EventFlightSection: View {
                     Task { await fetchPrices() }
                 }
                 .padding(.horizontal, Theme.Spacing.l)
-            } else if let window {
-                FlightTimeline(
-                    window: window,
-                    eventDay: event.start_ms,
-                    eventHour: event.displayTime,
-                    markerIcon: event.isRun ? "figure.run" : "sportscourt.fill",
-                    markerLabel: event.isRun ? "BIEG" : "MECZ",
-                    selectedOutbound: $planner.outbound,
-                    selectedReturn: $planner.returning,
-                    best: bestPair(window)
-                )
-                .mask(sideFade)
-            } else if destination != nil {
-                FlightTimelineSkeleton()
+            } else {
+                ticketStrip
             }
         }
         .padding(.vertical, Theme.Spacing.m)
@@ -91,23 +91,47 @@ struct EventFlightSection: View {
         }
     }
 
+    /// The strip keeps one height while it loads and after it loads, so the sheet
+    /// never resizes.
+    @ViewBuilder
+    private var ticketStrip: some View {
+        if let window {
+            FlightTimeline(
+                window: window,
+                eventDay: event.start_ms,
+                eventHour: event.displayTime,
+                markerIcon: event.isRun ? "figure.run" : "sportscourt.fill",
+                markerLabel: event.isRun ? "BIEG" : "MECZ",
+                selectedOutbound: $planner.outbound,
+                selectedReturn: $planner.returning,
+                best: bestPair(window)
+            )
+            .overlay(sideFade)
+            .frame(height: Self.stripHeight)
+        } else {
+            FlightTimelineSkeleton()
+                .frame(height: Self.stripHeight)
+        }
+    }
+
     private var sideFade: some View {
         LinearGradient(
             stops: [
-                .init(color: .clear, location: 0),
-                .init(color: .black, location: 0.06),
-                .init(color: .black, location: 0.94),
-                .init(color: .clear, location: 1),
+                .init(color: Theme.Palette.surface, location: 0),
+                .init(color: Theme.Palette.surface.opacity(0), location: Self.sideFadeInset),
+                .init(color: Theme.Palette.surface.opacity(0), location: Self.sideFadeOutset),
+                .init(color: Theme.Palette.surface, location: 1),
             ],
             startPoint: .leading,
             endPoint: .trailing
         )
+        .allowsHitTesting(false)
     }
 
     private var ctaPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 22)
+        Capsule()
             .fill(Theme.Palette.surfaceRaised)
-            .frame(height: 44)
+            .frame(height: CapsuleButton.height)
             .frame(maxWidth: .infinity)
             .skeletonPulse()
     }
@@ -203,21 +227,30 @@ struct EventFlightSection: View {
             airline: airline, origin: originIata, destination: destIata, eventDay: day
         )
         guard !Task.isCancelled else { return }
+        await keepSkeletonVisible(since: started)
+        apply(fetched)
+    }
+
+    private func keepSkeletonVisible(since started: Date) async {
         let elapsed = Date().timeIntervalSince(started)
-        if elapsed < 0.15 {
-            try? await Task.sleep(nanoseconds: UInt64((0.15 - elapsed) * 1_000_000_000))
+        guard elapsed < Self.minimumSkeletonDuration else { return }
+        let remaining = Self.minimumSkeletonDuration - elapsed
+        let nanoseconds = UInt64(remaining * Double(Self.nanosecondsPerSecond))
+        try? await Task.sleep(nanoseconds: nanoseconds)
+    }
+
+    private func apply(_ fetched: FlightWindowResponse?) {
+        guard let fetched else {
+            if window == nil { loadFailed = true }
+            return
         }
-        if let fetched {
-            window = fetched
-            if let best = bestPair(fetched) {
-                planner.outbound = fetched.outbound.first { $0.date == Self.dayKey(best.outbound.date) }
-                planner.returning = fetched.returning.first { $0.date == Self.dayKey(best.returning.date) }
-            } else {
-                planner.clearFlightSelection()
-            }
-        } else if window == nil {
-            loadFailed = true
+        window = fetched
+        guard let best = bestPair(fetched) else {
+            planner.clearFlightSelection()
+            return
         }
+        planner.outbound = fetched.outbound.first { $0.date == Self.dayKey(best.outbound.date) }
+        planner.returning = fetched.returning.first { $0.date == Self.dayKey(best.returning.date) }
     }
 
     private static func dayKey(_ date: Date) -> String {

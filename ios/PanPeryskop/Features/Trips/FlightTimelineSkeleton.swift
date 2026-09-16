@@ -3,22 +3,36 @@ import SwiftUI
 struct FlightTimelineSkeleton: View {
     var cells: Int = 7
 
+    private static let lineSpacing: CGFloat = 4
+    private static let firstLineWidth: CGFloat = 24
+    private static let firstLineHeight: CGFloat = 8
+    private static let secondLineWidth: CGFloat = 34
+    private static let secondLineHeight: CGFloat = 7
+    private static let thirdLineWidth: CGFloat = 28
+    private static let thirdLineHeight: CGFloat = 8
+    private static let fourthLineWidth: CGFloat = 30
+    private static let fourthLineHeight: CGFloat = 8
+
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: FlightTimeline.cellSpacing) {
             ForEach(0..<cells, id: \.self) { _ in
-                VStack(spacing: 4) {
-                    SkeletonBlock(width: 24, height: 8)
-                    SkeletonBlock(width: 34, height: 7)
-                    SkeletonBlock(width: 28, height: 8)
-                    SkeletonBlock(width: 30, height: 8)
-                }
-                .frame(width: 56, height: 66)
-                .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
+                cell
             }
         }
         .padding(.horizontal, Theme.Spacing.xs)
         .padding(.vertical, Theme.Spacing.xs)
         .skeletonPulse()
         .allowsHitTesting(false)
+    }
+
+    private var cell: some View {
+        VStack(spacing: Self.lineSpacing) {
+            SkeletonBlock(width: Self.firstLineWidth, height: Self.firstLineHeight)
+            SkeletonBlock(width: Self.secondLineWidth, height: Self.secondLineHeight)
+            SkeletonBlock(width: Self.thirdLineWidth, height: Self.thirdLineHeight)
+            SkeletonBlock(width: Self.fourthLineWidth, height: Self.fourthLineHeight)
+        }
+        .frame(width: FlightTimeline.cellWidth, height: FlightTimeline.cellHeight)
+        .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.chip))
     }
 }

@@ -15,9 +15,8 @@ struct RunEventBoard: View {
     }
 
     private var detail: String? {
-        let parts = [meta?.surface, meta?.difficulty]
+        let parts = [RunLabels.text(meta?.surface), RunLabels.text(meta?.difficulty)]
             .compactMap { $0 }
-            .filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 

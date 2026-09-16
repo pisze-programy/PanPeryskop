@@ -13,24 +13,28 @@ struct SoccerMatchBoard: View {
                 centerStatus
                 teamColumn(event.away, code: event.metaData?.awayCode, color: event.metaData?.awayColor)
             }
-            Text(venueLabel)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-            VenueMap(
-                coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
-                systemImage: "sportscourt.fill",
-                onTap: { showMapPicker = true }
-            )
-            if let ticketURL {
-                CapsuleButton(title: "Zobacz więcej", fullWidth: true) {
-                    onOpenURL(ticketURL)
+            .padding(.horizontal, Theme.Spacing.l)
+            .background(heroGradient)
+
+            VStack(spacing: Theme.Spacing.m) {
+                Text(venueLabel)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                VenueMap(
+                    coordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
+                    systemImage: "sportscourt.fill",
+                    onTap: { showMapPicker = true }
+                )
+                if let ticketURL {
+                    CapsuleButton(title: "Zobacz więcej", fullWidth: true) {
+                        onOpenURL(ticketURL)
+                    }
                 }
             }
+            .padding(.horizontal, Theme.Spacing.l)
         }
-        .padding(.horizontal, Theme.Spacing.l)
         .frame(maxWidth: .infinity)
-        .background(heroGradient)
         .padding(.top, Theme.Spacing.s)
         .padding(.bottom, Theme.Spacing.m)
         .sheet(isPresented: $showMapPicker) {
@@ -41,12 +45,20 @@ struct SoccerMatchBoard: View {
         }
     }
 
-    /// Soft team-colour wash across the full sheet width (home left, away right).
+    /// Soft team-colour wash behind the crest row only (home left, away right),
+    /// fading to nothing downward — never under the map or the button.
     private var heroGradient: some View {
         LinearGradient(
-            colors: [homeTint.opacity(0.18), .clear, awayTint.opacity(0.18)],
+            colors: [homeTint.opacity(0.2), .clear, awayTint.opacity(0.2)],
             startPoint: .leading,
             endPoint: .trailing
+        )
+        .mask(
+            LinearGradient(
+                colors: [.black, .black.opacity(0.5), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         )
     }
 

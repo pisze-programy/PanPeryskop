@@ -1,9 +1,17 @@
 import SwiftUI
 import CoreLocation
 
+/// Browser policy for an external link. Runs may leave the fixed allow-list
+/// because race websites redirect to arbitrary hosts.
+enum BrowserAccess {
+    case restricted
+    case open
+}
+
 private struct BrowserItem: Identifiable {
     let id = UUID()
     let url: URL
+    let access: BrowserAccess
 }
 
 struct TripsEventSheet: View {
@@ -15,6 +23,8 @@ struct TripsEventSheet: View {
     @State private var nights = 1
     @State private var airportCoordinate: CLLocationCoordinate2D?
     @State private var pageWidth: CGFloat = UIScreen.main.bounds.width
+    @State private var activePageScrolled = false
+    @State private var scrollTopToken = 0
 
     private var events: [TravelEvent] { viewModel.selectedEventGroup?.events ?? [] }
 
@@ -34,10 +44,9 @@ struct TripsEventSheet: View {
                     onBack: {
                         withAnimation(AppConstants.springStandard) {
                             self.expanded = nil
-                            detent = .medium
                         }
                     },
-                    onOpenURL: openBrowser
+                    onOpenURL: { url in openBrowser(url, access: .restricted) }
                 )
                 .id(expanded)
             } else {
@@ -45,14 +54,19 @@ struct TripsEventSheet: View {
             }
         }
         .sheet(item: $browserItem) { item in
-            InAppBrowserView(url: item.url, onClose: { browserItem = nil })
-                .presentationDetents([.medium, .large])
+            InAppBrowserView(
+                url: item.url,
+                allowAnyHost: item.access == .open,
+                onClose: { browserItem = nil }
+            )
+            .presentationDetents([.medium, .large])
         }
         .onChange(of: viewModel.selectedEventGroup?.id) { _, _ in
             activeIndex = 0
             expanded = nil
             detent = .medium
         }
+        .onChange(of: activeIndex) { _, _ in activePageScrolled = false }
     }
 
     private var currentCoordinate: CLLocationCoordinate2D {
@@ -73,8 +87,13 @@ struct TripsEventSheet: View {
                             origin: viewModel.selectedAirport,
                             viewModel: viewModel,
                             isActive: (activeIndex ?? 0) == index,
+                            scrollTopToken: scrollTopToken,
                             onOpenURL: openBrowser,
                             onExpand: expandPlaces,
+                            onScrolled: { isScrolled in
+                                guard (activeIndex ?? 0) == index else { return }
+                                activePageScrolled = isScrolled
+                            },
                             onPlannerChange: { newNights, coord in
                                 guard (activeIndex ?? 0) == index else { return }
                                 nights = newNights
@@ -82,7 +101,6 @@ struct TripsEventSheet: View {
                             }
                         )
                         .frame(width: pageWidth)
-                        .id(event.id)
                     }
                 }
                 .scrollTargetLayout()
@@ -92,6 +110,15 @@ struct TripsEventSheet: View {
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { _, width in
                 pageWidth = width
             }
+            .overlay(alignment: .top) {
+                if activePageScrolled, let event = currentEvent {
+                    TripsCompactHeader(event: event) {
+                        scrollTopToken += 1
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(AppConstants.springSnappy, value: activePageScrolled)
         }
     }
 
@@ -102,8 +129,8 @@ struct TripsEventSheet: View {
         }
     }
 
-    private func openBrowser(_ url: URL) {
-        browserItem = BrowserItem(url: url)
+    private func openBrowser(_ url: URL, access: BrowserAccess) {
+        browserItem = BrowserItem(url: url, access: access)
         detent = .large
     }
 }
@@ -113,12 +140,13 @@ struct TripsEventPage: View {
     let origin: Airport
     @ObservedObject var viewModel: TripsViewModel
     let isActive: Bool
-    let onOpenURL: (URL) -> Void
+    let scrollTopToken: Int
+    let onOpenURL: (URL, BrowserAccess) -> Void
     let onExpand: (PlaceKind) -> Void
+    let onScrolled: (Bool) -> Void
     let onPlannerChange: (Int, CLLocationCoordinate2D?) -> Void
     @StateObject private var planner = TripsEventPlanner()
     @State private var heroHeight: CGFloat = 320
-    @State private var scrolled = false
 
     private static let topId = "trips-page-top"
     private static let headerHeight: CGFloat = 48
@@ -150,19 +178,15 @@ struct TripsEventPage: View {
                 .id(Self.topId)
             }
             .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, offset in
-                scrolled = offset > max(heroHeight - Self.headerHeight, 80)
+                guard isActive else { return }
+                onScrolled(offset > max(heroHeight - Self.headerHeight, 80))
             }
-            .overlay(alignment: .top) {
-                if scrolled {
-                    TripsCompactHeader(event: event) {
-                        withAnimation(AppConstants.springStandard) {
-                            proxy.scrollTo(Self.topId, anchor: .top)
-                        }
-                    }
-                    .transition(.move(edge: .top).combined(with: .opacity))
+            .onChange(of: scrollTopToken) { _, _ in
+                guard isActive else { return }
+                withAnimation(AppConstants.springStandard) {
+                    proxy.scrollTo(Self.topId, anchor: .top)
                 }
             }
-            .animation(AppConstants.springSnappy, value: scrolled)
         }
         .onAppear { report() }
         .onChange(of: isActive) { _, _ in report() }
@@ -207,7 +231,7 @@ struct TripsEventPage: View {
                 airportCoordinate: airportCoordinate,
                 nights: planner.nights,
                 tiers: HotelTier.allCases,
-                onOpenURL: onOpenURL,
+                onOpenURL: { onOpenURL($0, .restricted) },
                 onExpand: onExpand
             )
         case .attractions:
@@ -215,7 +239,7 @@ struct TripsEventPage: View {
                 kind: .attraction,
                 event: event,
                 airportCoordinate: airportCoordinate,
-                onOpenURL: onOpenURL,
+                onOpenURL: { onOpenURL($0, .restricted) },
                 onExpand: onExpand
             )
         case .transport:
@@ -225,7 +249,7 @@ struct TripsEventPage: View {
                 kind: .car,
                 event: event,
                 airportCoordinate: airportCoordinate,
-                onOpenURL: onOpenURL,
+                onOpenURL: { onOpenURL($0, .restricted) },
                 onExpand: onExpand
             )
         case .insurance:
@@ -233,7 +257,7 @@ struct TripsEventPage: View {
                 kind: .insurance,
                 event: event,
                 airportCoordinate: airportCoordinate,
-                onOpenURL: onOpenURL,
+                onOpenURL: { onOpenURL($0, .restricted) },
                 onExpand: onExpand
             )
         }
@@ -248,9 +272,9 @@ struct TripsEventPage: View {
     @ViewBuilder
     private var hero: some View {
         if event.isRun {
-            RunEventBoard(event: event, onOpenURL: onOpenURL)
+            RunEventBoard(event: event, onOpenURL: { onOpenURL($0, .open) })
         } else {
-            SoccerMatchBoard(event: event, onOpenURL: onOpenURL)
+            SoccerMatchBoard(event: event, onOpenURL: { onOpenURL($0, .restricted) })
         }
     }
 

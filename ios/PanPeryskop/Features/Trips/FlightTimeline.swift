@@ -23,7 +23,6 @@ struct FlightTimeline: View {
                         dayCell(cell, isOutbound: false)
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.xs)
                 .padding(.vertical, Theme.Spacing.xs)
             }
             .onAppear { proxy.scrollTo(Self.markerId, anchor: .center) }

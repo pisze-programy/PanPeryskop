@@ -100,6 +100,15 @@ All notable changes to PanPeryskop. Format based on
 - Soccer sheet shows the stadium name (from the provider) and a soft team-colour
   gradient across the full sheet width; the destination map marks the arrival
   airport with a landing-plane icon; the section heading reads "Wybierz lot".
+- Trips sheet: the sticky header moved into the sheet's handle area and carries
+  the team colours (orange for runs); the hero gradient is limited to the crest
+  row with a soft fade; the ticket strip is full width with side fades.
+- Run surface and difficulty show Polish labels (Asfalt, pagórkowaty, …).
+- Race links stay in the in-app browser with a wider policy (they redirect to
+  external hosts); other links still use the fixed list.
+- The tapped map pin sits lower (0.40) so it is not hidden under the filters.
+- Swiping between events in a group no longer jumps, and returning from
+  "Zobacz więcej" keeps the sheet at full height.
 - Events download by 50 km squares: moving the map inside a downloaded square
   makes no request; leaving it downloads only the new squares (max 5 kept). The
   20s refresh downloads only the squares on screen.

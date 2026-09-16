@@ -52,6 +52,7 @@
 		4A6E4B698DEC1FF55B22C531 /* PlaceRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A583A3FD1B86291E17FDEAF /* PlaceRowView.swift */; };
 		4AE86C6C8DB73933CAC84BA1 /* TripsCompactHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72484DC0A713432C2B0D3254 /* TripsCompactHeader.swift */; };
 		4C0651523049450AC40E39FB /* MediaNearbyNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3257AF225A3FC46AC22646 /* MediaNearbyNotifier.swift */; };
+		4EED23412FB89FFAF2C34437 /* RunLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F41F73C824DFF4DE8B30A65 /* RunLabels.swift */; };
 		4F1DE6D265333AD7AC276477 /* YPImagePicker in Frameworks */ = {isa = PBXBuildFile; productRef = 5A701F52FD63A75ECBD6B80F /* YPImagePicker */; };
 		51739AEF329E613222A6397A /* DestinationMapRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = D676D24F12D7E46EE15AB3F9 /* DestinationMapRail.swift */; };
 		55EBE2081ED9DEEBD4935A52 /* SoccerMatchBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3204020F5A7BA81E8BA92E7B /* SoccerMatchBoard.swift */; };
@@ -222,6 +223,7 @@
 		7BBE6BAD918B485CFE74D1F2 /* APIClient+Travel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "APIClient+Travel.swift"; sourceTree = "<group>"; };
 		7D0C8634B24D5EF1F5BDC590 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		7D2D24DFFEAFBFF5BE1B0A31 /* PermissionGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGateView.swift; sourceTree = "<group>"; };
+		7F41F73C824DFF4DE8B30A65 /* RunLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunLabels.swift; sourceTree = "<group>"; };
 		81A1D27EF60659004BFCF63B /* InAppBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppBrowserView.swift; sourceTree = "<group>"; };
 		823DAF3FECAD28727A4D487F /* MapCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapCategory.swift; sourceTree = "<group>"; };
 		83B0228BBAE118833FA00D81 /* SurfaceCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceCard.swift; sourceTree = "<group>"; };
@@ -386,6 +388,7 @@
 				5CC3D5D50D1D5E23E9F0587F /* PlacesListView.swift */,
 				A5A18BF050D2634EC4EE2764 /* PlacesSection.swift */,
 				432D943812F0315D044D3228 /* RunEventBoard.swift */,
+				7F41F73C824DFF4DE8B30A65 /* RunLabels.swift */,
 				3204020F5A7BA81E8BA92E7B /* SoccerMatchBoard.swift */,
 				5FA307036755388922C7B5F8 /* TransportSection.swift */,
 				72484DC0A713432C2B0D3254 /* TripsCompactHeader.swift */,
@@ -753,6 +756,7 @@
 				07C0E84951D3E2FF925CC951 /* ProximityMonitor.swift in Sources */,
 				84D197577717604F47047F82 /* RailSliderView.swift in Sources */,
 				958B9F97F0F49D6E1849BFDD /* RunEventBoard.swift in Sources */,
+				4EED23412FB89FFAF2C34437 /* RunLabels.swift in Sources */,
 				CECE3357221FA0E0F7164F66 /* SettingsView.swift in Sources */,
 				5F1441DC9B82420DC0EAEDA1 /* SheetShell.swift in Sources */,
 				3534B66D1565F3397D89524D /* Skeleton.swift in Sources */,

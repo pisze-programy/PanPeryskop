@@ -26,6 +26,7 @@ struct EventFlightSection: View {
                 title: "Wybierz lot",
                 info: "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska."
             )
+            .padding(.horizontal, Theme.Spacing.l)
             if let destination, !reachableDestinations.isEmpty {
                 DestinationMapRail(
                     origin: origin,
@@ -33,17 +34,20 @@ struct EventFlightSection: View {
                     selected: destination,
                     onSelect: onSelectDestination
                 )
+                .padding(.horizontal, Theme.Spacing.l)
             }
             card
             if let destination {
-                if window != nil {
-                    buyBar(destination)
-                } else if !loadFailed {
-                    ctaPlaceholder
+                Group {
+                    if window != nil {
+                        buyBar(destination)
+                    } else if !loadFailed {
+                        ctaPlaceholder
+                    }
                 }
+                .padding(.horizontal, Theme.Spacing.l)
             }
         }
-        .padding(.horizontal, Theme.Spacing.l)
         .padding(.top, Theme.Spacing.section)
         .onScrollVisibilityChange(threshold: 0.1) { visible = $0 }
         .onAppear { if shouldLoad { fetchPrices() } }
@@ -51,6 +55,7 @@ struct EventFlightSection: View {
         .onChange(of: loadKey) { _, _ in if shouldLoad { fetchPrices() } }
     }
 
+    /// Full-width ticket strip; the side gradients mask the hard cut.
     private var card: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             if loadFailed, window == nil {
@@ -58,6 +63,7 @@ struct EventFlightSection: View {
                     loadFailed = false
                     fetchPrices()
                 }
+                .padding(.horizontal, Theme.Spacing.l)
             } else if let window {
                 FlightTimeline(
                     window: window,
@@ -69,12 +75,14 @@ struct EventFlightSection: View {
                     selectedReturn: $planner.returning,
                     best: bestPair(window)
                 )
+                .mask(sideFade)
             } else if destination != nil {
                 FlightTimelineSkeleton()
             }
         }
-        .padding(Theme.Spacing.l)
-        .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
+        .padding(.vertical, Theme.Spacing.m)
+        .frame(maxWidth: .infinity)
+        .background(Theme.Palette.surface)
         .overlay {
             if isLoading, window != nil {
                 ProgressView()
@@ -82,6 +90,19 @@ struct EventFlightSection: View {
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.Radius.chip))
             }
         }
+    }
+
+    private var sideFade: some View {
+        LinearGradient(
+            stops: [
+                .init(color: .clear, location: 0),
+                .init(color: .black, location: 0.06),
+                .init(color: .black, location: 0.94),
+                .init(color: .clear, location: 1),
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
     }
 
     private var ctaPlaceholder: some View {

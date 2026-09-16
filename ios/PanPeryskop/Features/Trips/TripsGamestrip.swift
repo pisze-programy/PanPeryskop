@@ -16,7 +16,6 @@ struct TripsGamestrip: View {
     private static let badgeSpacing: CGFloat = 8
     private static let centerSpacing: CGFloat = 1
     private static let detailSpacing: CGFloat = 4
-    private static let distancePreviewCount = 3
     private static let separator = " · "
 
     private static let glowOpacity: Double = 0.5
@@ -120,11 +119,11 @@ struct TripsGamestrip: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Distance, date and (when the provider gives one) the start time.
+    /// Distance range, date and (when the provider gives one) the start time.
     private var runDetail: some View {
         HStack(spacing: Self.detailSpacing) {
-            if let distanceLabel {
-                Text(distanceLabel)
+            if let range = RunDistances.range(meta) {
+                Text(range)
                     .foregroundColor(runColor)
                 Text(Self.separator)
                     .foregroundColor(.secondary)
@@ -149,14 +148,6 @@ struct TripsGamestrip: View {
 
     private var dateTimeText: String {
         [shortDate, event.displayTime].compactMap { $0 }.joined(separator: Self.separator)
-    }
-
-    private var distanceLabel: String? {
-        if let distance = meta?.distance, !distance.isEmpty { return distance }
-        if let distances = meta?.distances, !distances.isEmpty {
-            return distances.prefix(Self.distancePreviewCount).joined(separator: Self.separator)
-        }
-        return nil
     }
 
     private var background: some View {

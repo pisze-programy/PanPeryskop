@@ -121,6 +121,8 @@ All notable changes to PanPeryskop. Format based on
   scrolls in, and the ticket strip no longer uses a mask.
 - The full hotel or attraction list opens as a sheet over the event card, so the
   card underneath is not rebuilt and the chosen flights stay.
+- Run events show the distance range in the bar ("10 km – 21.1 km") and every
+  offered distance as "Dystans:" tags above the map, smallest first.
 - Run colour scales from light (short, asphalt) to dark (long, trail, ultra) from
   the provider's real distance, surface and difficulty.
 - Run surface and difficulty show Polish labels (Asfalt, pagórkowaty, …).

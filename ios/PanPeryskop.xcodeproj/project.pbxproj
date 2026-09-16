@@ -28,6 +28,7 @@
 		1BE065A7EEF27FD5D834156F /* MapFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0313275F54CAE52C1764934 /* MapFilterBar.swift */; };
 		2103FA41F46EB5711A6D39F8 /* TravelEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1DB588A3A33BFAD0FE5A20 /* TravelEvent.swift */; };
 		24B2FF9A64C3A7F84F3AD6C5 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 62E60A31C2421F71CE67D919 /* KeychainAccess */; };
+		25C1E006036F6170428ECAE1 /* RunDistances.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2E604C948E764A378B1CC45 /* RunDistances.swift */; };
 		2800584D74124C6854F92B91 /* AppFormatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86E0D24B8F1BE6BA90989AFD /* AppFormatters.swift */; };
 		288824434B9765FEC9A39E4A /* CityListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD4E014F459275D98EE0FC41 /* CityListView.swift */; };
 		2A8563B9966C62951A4E8D67 /* MediaCompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AF85F0B111F42C315E257A2 /* MediaCompressor.swift */; };
@@ -238,6 +239,7 @@
 		9E24106BABF1C88CC96C2B26 /* RunPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunPalette.swift; sourceTree = "<group>"; };
 		A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
 		A15F3F36A0E617633DA2A779 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A2E604C948E764A378B1CC45 /* RunDistances.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunDistances.swift; sourceTree = "<group>"; };
 		A31390352664649563409CC4 /* LoadingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingOverlay.swift; sourceTree = "<group>"; };
 		A5A18BF050D2634EC4EE2764 /* PlacesSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesSection.swift; sourceTree = "<group>"; };
 		AA3257AF225A3FC46AC22646 /* MediaNearbyNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaNearbyNotifier.swift; sourceTree = "<group>"; };
@@ -389,6 +391,7 @@
 				DE29E582EABB5B2FB291846E /* PlacesListModel.swift */,
 				5CC3D5D50D1D5E23E9F0587F /* PlacesListView.swift */,
 				A5A18BF050D2634EC4EE2764 /* PlacesSection.swift */,
+				A2E604C948E764A378B1CC45 /* RunDistances.swift */,
 				7F41F73C824DFF4DE8B30A65 /* RunLabels.swift */,
 				9E24106BABF1C88CC96C2B26 /* RunPalette.swift */,
 				ED579B795740245608314A73 /* TeamCrest.swift */,
@@ -758,6 +761,7 @@
 				6E5B07BCA8BBA1704D750129 /* ProfileView.swift in Sources */,
 				07C0E84951D3E2FF925CC951 /* ProximityMonitor.swift in Sources */,
 				84D197577717604F47047F82 /* RailSliderView.swift in Sources */,
+				25C1E006036F6170428ECAE1 /* RunDistances.swift in Sources */,
 				4EED23412FB89FFAF2C34437 /* RunLabels.swift in Sources */,
 				40B85FA43AC7AF792426E3F1 /* RunPalette.swift in Sources */,
 				CECE3357221FA0E0F7164F66 /* SettingsView.swift in Sources */,

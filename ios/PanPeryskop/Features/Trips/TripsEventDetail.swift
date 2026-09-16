@@ -13,6 +13,7 @@ struct TripsEventDetail: View {
     private static let tagHorizontalPadding = Theme.Spacing.s
     private static let tagVerticalPadding = Theme.Spacing.xs
     private static let separator = ", "
+    private static let distanceTitle = "Dystans:"
 
     private var meta: TravelEventMeta? { event.metaData }
 
@@ -27,6 +28,9 @@ struct TripsEventDetail: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
+            if !distanceTags.isEmpty {
+                distanceRow
+            }
             VenueMap(
                 coordinate: coordinate,
                 systemImage: mapIcon,
@@ -52,22 +56,37 @@ struct TripsEventDetail: View {
                     .lineLimit(2)
             }
             if !tags.isEmpty {
-                tagRow
+                chipRow(tags)
             }
         }
     }
 
-    private var tagRow: some View {
-        HStack(spacing: Self.tagSpacing) {
-            ForEach(Array(tags.enumerated()), id: \.offset) { _, tag in
-                Text(tag)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, Self.tagHorizontalPadding)
-                    .padding(.vertical, Self.tagVerticalPadding)
-                    .background(Theme.Palette.surface, in: Capsule())
+    private var distanceRow: some View {
+        VStack(alignment: .leading, spacing: Self.tagSpacing) {
+            Text(Self.distanceTitle)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(.secondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                chipRow(distanceTags)
             }
         }
+    }
+
+    private func chipRow(_ values: [String]) -> some View {
+        HStack(spacing: Self.tagSpacing) {
+            ForEach(Array(values.enumerated()), id: \.offset) { _, value in
+                chip(value)
+            }
+        }
+    }
+
+    private func chip(_ value: String) -> some View {
+        Text(value)
+            .font(.caption.weight(.semibold))
+            .foregroundColor(.secondary)
+            .padding(.horizontal, Self.tagHorizontalPadding)
+            .padding(.vertical, Self.tagVerticalPadding)
+            .background(Theme.Palette.surface, in: Capsule())
     }
 
     private var headlineText: String? {
@@ -82,6 +101,11 @@ struct TripsEventDetail: View {
     private var tags: [String] {
         guard event.isRun else { return [] }
         return [RunLabels.text(meta?.surface), RunLabels.text(meta?.difficulty)].compactMap { $0 }
+    }
+
+    private var distanceTags: [String] {
+        guard event.isRun else { return [] }
+        return RunDistances.tags(meta)
     }
 
     private var placeLabel: String {

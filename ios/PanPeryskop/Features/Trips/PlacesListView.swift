@@ -5,8 +5,6 @@ struct PlacesListView: View {
     let kind: PlaceKind
     let eventCoordinate: CLLocationCoordinate2D
     let eventDay: String
-    let airportCoordinate: CLLocationCoordinate2D?
-    let nights: Int
     let onBack: () -> Void
     let onOpenURL: (URL) -> Void
 
@@ -44,16 +42,9 @@ struct PlacesListView: View {
         case .loading:
             PlaceRowsSkeleton()
         case .empty:
-            PlacesEmptyState(kind: kind)
+            EmptyState(icon: "ticket", title: "Brak atrakcji w tym mieście")
         case .loaded:
-            PlaceRowsList(
-                model: model,
-                kind: kind,
-                eventCoordinate: eventCoordinate,
-                airportCoordinate: airportCoordinate,
-                nights: nights,
-                onOpenURL: onOpenURL
-            )
+            PlaceRowsList(model: model, onOpenURL: onOpenURL)
         }
     }
 

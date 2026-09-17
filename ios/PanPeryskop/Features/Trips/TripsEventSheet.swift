@@ -27,10 +27,11 @@ struct TripsEventSheet: View {
     @State private var expanded: PlaceKind?
     @State private var browserItem: BrowserItem?
     @State private var mapPicker: MapPickerRequest?
-    @State private var nights = 1
     @State private var airportCoordinate: CLLocationCoordinate2D?
     @State private var pageWidth: CGFloat = UIScreen.main.bounds.width
     @State private var scrollTopToken = 0
+
+    private static let warmupDelayMilliseconds = 600
 
     private var events: [TravelEvent] { viewModel.selectedEventGroup?.events ?? [] }
 
@@ -43,13 +44,15 @@ struct TripsEventSheet: View {
         SheetShell(detent: $detent) {
             pager
         }
+        .task {
+            try? await Task.sleep(for: .milliseconds(Self.warmupDelayMilliseconds))
+            WebKitWarmup.warm()
+        }
         .sheet(item: $expanded) { kind in
             PlacesListSheet(
                 kind: kind,
                 eventCoordinate: currentCoordinate,
                 eventDay: currentEvent?.isoDay ?? "",
-                airportCoordinate: airportCoordinate,
-                nights: nights,
                 onClose: { expanded = nil }
             )
         }
@@ -94,9 +97,8 @@ struct TripsEventSheet: View {
                             mapPicker = MapPickerRequest(coordinate: coordinate, title: title)
                         },
                         onExpand: expandPlaces,
-                        onPlannerChange: { newNights, coord in
+                        onPlannerChange: { coord in
                             guard (activeIndex ?? 0) == index else { return }
-                            nights = newNights
                             airportCoordinate = coord
                         }
                     )
@@ -135,7 +137,7 @@ struct TripsEventPage: View {
     let onOpenURL: (URL, BrowserAccess) -> Void
     let onOpenMap: (CLLocationCoordinate2D, String) -> Void
     let onExpand: (PlaceKind) -> Void
-    let onPlannerChange: (Int, CLLocationCoordinate2D?) -> Void
+    let onPlannerChange: (CLLocationCoordinate2D?) -> Void
     @StateObject private var planner = TripsEventPlanner()
 
     private static let topId = "trips-page-top"
@@ -157,7 +159,7 @@ struct TripsEventPage: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
+                LazyVStack(spacing: 0) {
                     Color.clear
                         .frame(height: 0)
                         .id(Self.topId)
@@ -192,7 +194,7 @@ struct TripsEventPage: View {
 
     private func report() {
         guard isActive else { return }
-        onPlannerChange(planner.nights, airportCoordinate)
+        onPlannerChange(airportCoordinate)
     }
 
     @ViewBuilder
@@ -217,38 +219,16 @@ struct TripsEventPage: View {
                 )
             }
         case .stays:
-            PlacesSection(
-                kind: .hotel,
+            StaysSection(
                 event: event,
                 airportCoordinate: airportCoordinate,
-                nights: planner.nights,
-                tiers: HotelTier.allCases,
-                onOpenURL: { onOpenURL($0, .restricted) },
-                onExpand: onExpand
+                checkin: planner.outbound?.date,
+                checkout: planner.returning?.date
             )
         case .attractions:
             PlacesSection(
                 kind: .attraction,
                 event: event,
-                airportCoordinate: airportCoordinate,
-                onOpenURL: { onOpenURL($0, .restricted) },
-                onExpand: onExpand
-            )
-        case .transport:
-            TransportSection(planner: planner)
-        case .cars:
-            PlacesSection(
-                kind: .car,
-                event: event,
-                airportCoordinate: airportCoordinate,
-                onOpenURL: { onOpenURL($0, .restricted) },
-                onExpand: onExpand
-            )
-        case .insurance:
-            PlacesSection(
-                kind: .insurance,
-                event: event,
-                airportCoordinate: airportCoordinate,
                 onOpenURL: { onOpenURL($0, .restricted) },
                 onExpand: onExpand
             )

@@ -42,4 +42,25 @@ extension APIClient {
         }
         return try await get("/travel/places", params: params)
     }
+
+    /// Stay22 hotel map widget URL for one anchor, date window and listing options.
+    static func getStaysWidgetURL(_ query: StaysWidgetQuery) async throws -> URL? {
+        var params = [
+            "checkin": query.checkin,
+            "checkout": query.checkout,
+            "theme": query.theme,
+            "view": query.view.rawValue,
+        ]
+        if let lat = query.point.lat, let lng = query.point.lng {
+            params["lat"] = String(lat)
+            params["lng"] = String(lng)
+        } else if let address = query.point.address {
+            params["address"] = address
+        }
+        if let priceper = query.priceper { params["priceper"] = priceper }
+        if let minstars = query.minstars { params["minstars"] = String(minstars) }
+        if let minguest = query.minguest { params["minguest"] = String(minguest) }
+        let response: StaysWidgetResponse = try await get("/travel/stays-widget", params: params)
+        return URL(string: response.url)
+    }
 }

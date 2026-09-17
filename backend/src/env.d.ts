@@ -24,8 +24,12 @@ interface Env {
   EBILET_TD_TOKEN?: string;
   // kupbilecik official partner API token (api/?token=...).
   KUPBILECIK_API_TOKEN?: string;
-  // Stay22 affiliate id (aid) — hotel map widgets + OTA deeplinks (booking.com).
+  // Stay22 affiliate id (aid) — hotel map widget + Allez deeplinks. Public value
+  // (it appears in the map URL); the map needs nothing else.
   STAY22_AID?: string;
+  // Stay22 Hub "HUB DATA REPORTING API" token (X-API-KEY) — transactions only,
+  // separate from the map. NOT the same value as STAY22_AID.
+  STAY22_REPORTING_KEY?: string;
   // Viator affiliate API (tours & activities). Keys are secrets
   // (wrangler secret put VIATOR_API_KEY / VIATOR_API_KEY_SANDBOX); VIATOR_ENV
   // picks the host: 'sandbox' | 'production' (default).

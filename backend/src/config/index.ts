@@ -30,4 +30,4 @@ export const CONFIG = {
   travel,
 } as const;
 
-export type { TravelTag, TravelRunType, PlaceKind, HotelTier } from './travel';
+export type { TravelTag, TravelRunType, PlaceKind } from './travel';

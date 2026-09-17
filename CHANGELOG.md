@@ -121,6 +121,16 @@ All notable changes to PanPeryskop. Format based on
   scrolls in, and the ticket strip no longer uses a mask.
 - The full hotel or attraction list opens as a sheet over the event card, so the
   card underneath is not rebuilt and the chosen flights stay.
+- "Noclegi" shows live hotel prices on a Stay22 map widget instead of invented
+  cards: Booking.com hotels only, pick the area (Przy wydarzeniu / Centrum /
+  Przy lotnisku), the dates follow the chosen flights, and a tap opens a
+  full-height sheet with the chosen date range under the title and one
+  "Dostosuj" list (Lokalizacja, Cena — "Za noc" by default or "Za całość (3 noce,
+  11-14 listopada)", Standard, Ocena gości). Hotel cards open Booking in the
+  system browser. Before a flight pair is chosen the dates default to the night
+  before the event. The map loads only when the section scrolls into view, and
+  WebKit is warmed up in the background. The fake hotel, car and insurance
+  catalogues are gone.
 - The "Atrakcje" section shows real tours and activities from Viator for the
   event's city: photo, title, rating, duration, free cancellation and a
   "Sprawdź dostępność" link that opens the Viator page in the in-app browser.

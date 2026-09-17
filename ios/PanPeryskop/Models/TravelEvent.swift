@@ -48,6 +48,12 @@ struct TravelEvent: Codable, Identifiable, Equatable {
 
     /// The trip day the backend uses for availability windows.
     var isoDay: String { AppConstants.isoDayFormatter.string(from: displayDate) }
+
+    /// Default night before the event, used for hotels until a flight pair is set.
+    var nightBeforeCheckin: String {
+        guard let day = Calendar.current.date(byAdding: .day, value: -1, to: displayDate) else { return isoDay }
+        return AppConstants.isoDayFormatter.string(from: day)
+    }
 }
 
 struct TravelEventsResponse: Codable {

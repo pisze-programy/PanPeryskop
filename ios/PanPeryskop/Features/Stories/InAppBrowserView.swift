@@ -141,29 +141,12 @@ private struct BrowserWebView: UIViewRepresentable {
         configuration.userContentController.addUserScript(
             WKUserScript(source: permissionStub, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         )
-        let noZoom = """
-        (function () {
-          var scale = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
-          var meta = document.querySelector('meta[name=viewport]');
-          if (!meta) {
-            meta = document.createElement('meta');
-            meta.setAttribute('name', 'viewport');
-            document.head.appendChild(meta);
-          }
-          meta.setAttribute('content', scale);
-        })();
-        """
-        configuration.userContentController.addUserScript(
-            WKUserScript(source: noZoom, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-        )
+        configuration.userContentController.addUserScript(NoZoomWebView.userScript())
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.uiDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
-        // Pinch zoom fights the sheet drag, so the in-app browser stays at 100%.
-        webView.scrollView.minimumZoomScale = 1
-        webView.scrollView.maximumZoomScale = 1
-        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
+        NoZoomWebView.lock(webView)
         context.coordinator.attach(webView)
         webView.load(URLRequest(url: url))
         return webView
@@ -219,17 +202,35 @@ private struct BrowserWebView: UIViewRepresentable {
             model.webView = webView
             observations = [
                 webView.observe(\.canGoBack, options: [.new]) { [weak self] webView, _ in
-                    self?.model.canGoBack = webView.canGoBack
+                    self?.publishBack(from: webView)
                 },
                 webView.observe(\.canGoForward, options: [.new]) { [weak self] webView, _ in
-                    self?.model.canGoForward = webView.canGoForward
+                    self?.publishForward(from: webView)
                 },
                 webView.observe(\.url, options: [.new]) { [weak self] webView, _ in
-                    self?.model.currentURL = webView.url
+                    self?.publishURL(from: webView)
                 },
             ]
-            model.canGoBack = webView.canGoBack
-            model.canGoForward = webView.canGoForward
+            publishBack(from: webView)
+            publishForward(from: webView)
+            publishURL(from: webView)
+        }
+
+        private func publishBack(from webView: WKWebView) {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.model.canGoBack != webView.canGoBack else { return }
+                self.model.canGoBack = webView.canGoBack
+            }
+        }
+
+        private func publishForward(from webView: WKWebView) {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.model.canGoForward != webView.canGoForward else { return }
+                self.model.canGoForward = webView.canGoForward
+            }
+        }
+
+        private func publishURL(from webView: WKWebView) {
             model.currentURL = webView.url
         }
 
@@ -266,7 +267,7 @@ private struct BrowserWebView: UIViewRepresentable {
 final class BrowserModel: ObservableObject {
     @Published var canGoBack = false
     @Published var canGoForward = false
-    @Published var currentURL: URL?
+    var currentURL: URL?
 
     weak var webView: WKWebView?
 

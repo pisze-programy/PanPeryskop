@@ -1,32 +1,18 @@
 import SwiftUI
-import CoreLocation
 
 struct PlaceCard: View {
     let place: TravelPlace
-    let eventCoordinate: CLLocationCoordinate2D
-    let airportCoordinate: CLLocationCoordinate2D?
-    var nights: Int = 1
     var width: CGFloat? = PlaceCard.width
     var onTap: (() -> Void)? = nil
 
     @Environment(\.colorScheme) private var colorScheme
 
     static let width: CGFloat = 200
-    static let partnerHeight: CGFloat = 288
-    static let legacyHeight: CGFloat = 230
+    static let height: CGFloat = 288
 
-    private static let partnerImageHeight: CGFloat = 133
-    private static let legacyImageHeight: CGFloat = 92
+    private static let imageHeight: CGFloat = 133
     private static let starSize: CGFloat = 12
     private static let featureIconSize: CGFloat = 14
-
-    static func height(for place: TravelPlace) -> CGFloat {
-        place.isPartner ? partnerHeight : legacyHeight
-    }
-
-    static func skeletonHeight(for kind: PlaceKind) -> CGFloat {
-        kind == .attraction ? partnerHeight : legacyHeight
-    }
 
     var body: some View {
         Button {
@@ -37,49 +23,46 @@ struct PlaceCard: View {
         .buttonStyle(.plain)
     }
 
-    @ViewBuilder
     private var card: some View {
-        if place.isPartner {
-            partnerTile
-        } else {
-            legacyTile
-        }
-    }
-
-    // MARK: - Partner tile
-
-    private var partnerTile: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .topLeading) {
-                image
-                    .frame(width: width, height: Self.partnerImageHeight)
-                if let badge = place.badgeLabel {
-                    badgePill(badge)
-                        .padding(Theme.Spacing.s)
-                }
-            }
-            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-                Text(place.name)
-                    .font(.subheadline.weight(.bold))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                features
-                Spacer(minLength: 0)
-                HStack(alignment: .bottom, spacing: Theme.Spacing.s) {
-                    rating
-                    Spacer(minLength: 0)
-                    partnerPrice
-                }
-            }
-            .padding(Theme.Spacing.m)
+            imageBlock
+            details
         }
-        .frame(width: width, height: Self.partnerHeight, alignment: .topLeading)
+        .frame(width: width, height: Self.height, alignment: .topLeading)
         .background(place.isBestSeller ? Theme.Palette.partnerMint(colorScheme) : Theme.Palette.surface)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .stroke(Theme.Palette.hairline, lineWidth: 0.5)
         )
+    }
+
+    private var imageBlock: some View {
+        ZStack(alignment: .topLeading) {
+            image
+                .frame(width: width, height: Self.imageHeight)
+            if let badge = place.badgeLabel {
+                badgePill(badge)
+                    .padding(Theme.Spacing.s)
+            }
+        }
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            Text(place.name)
+                .font(.subheadline.weight(.bold))
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            features
+            Spacer(minLength: 0)
+            HStack(alignment: .bottom, spacing: Theme.Spacing.s) {
+                rating
+                Spacer(minLength: 0)
+                partnerPrice
+            }
+        }
+        .padding(Theme.Spacing.m)
     }
 
     private var features: some View {
@@ -135,43 +118,6 @@ struct PlaceCard: View {
             .background(Theme.Palette.partnerMint(colorScheme), in: Capsule())
     }
 
-    // MARK: - Local catalogue tile
-
-    private var legacyTile: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            image
-            Text(place.name)
-                .font(.subheadline.weight(.bold))
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-            if let rating = place.rating {
-                Text("★ \(String(format: "%.1f", rating)) · \(place.reviews ?? 0) opinii")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            if place.kind == .hotel {
-                Text(place.nightlyPriceLabel)
-                    .font(.subheadline.weight(.bold))
-                Text(place.totalPriceLabel(nights: nights))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            } else {
-                Text(place.priceLabel)
-                    .font(.subheadline.weight(.bold))
-            }
-            Text(place.address)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-            Text(place.distancesLabel(event: eventCoordinate, airport: airportCoordinate))
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(width: width, height: Self.legacyHeight, alignment: .topLeading)
-    }
-
     private var image: some View {
         AsyncImage(url: URL(string: place.image)) { phase in
             switch phase {
@@ -180,7 +126,7 @@ struct PlaceCard: View {
             default: Color(.systemGray5)
             }
         }
-        .frame(height: place.isPartner ? Self.partnerImageHeight : Self.legacyImageHeight)
+        .frame(height: Self.imageHeight)
         .frame(maxWidth: .infinity)
         .clipped()
     }

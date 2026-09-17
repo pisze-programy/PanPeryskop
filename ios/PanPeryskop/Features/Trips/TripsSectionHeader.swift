@@ -16,18 +16,7 @@ struct TripsSectionHeader: View {
                     .foregroundColor(.secondary)
                 Spacer(minLength: 0)
                 if let filterLabel, let onFilter {
-                    Button {
-                        Haptics.selection()
-                        onFilter()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(filterLabel)
-                                .font(.subheadline.weight(.semibold))
-                            Image(systemName: "chevron.down")
-                                .font(.caption2.weight(.semibold))
-                        }
-                    }
-                    .buttonStyle(.plain)
+                    FilterButton(label: filterLabel, action: onFilter)
                 }
                 if let info {
                     TipButton(text: info)

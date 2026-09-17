@@ -2,12 +2,9 @@ import { queue } from './queue';
 
 export type TravelTag = 'citybreak' | 'pilka-nozna' | 'biegi';
 export type TravelRunType = 'backfill' | 'replenish';
-export type PlaceKind = 'hotel' | 'attraction' | 'car' | 'insurance';
-export type HotelTier = 'economy' | 'recommended' | 'premium';
+export type PlaceKind = 'attraction';
 
 const travelTagValues: TravelTag[] = ['citybreak', 'pilka-nozna', 'biegi'];
-const placeKinds: PlaceKind[] = ['hotel', 'attraction', 'car', 'insurance'];
-const hotelTiers: HotelTier[] = ['economy', 'recommended', 'premium'];
 
 export const travel = {
   provider: 'espn',
@@ -134,16 +131,6 @@ export const travel = {
       returnWindow: [1, 7] as [number, number],
     },
   },
-  places: {
-    kinds: placeKinds,
-    tiers: hotelTiers,
-    linkBase: {
-      hotel: 'https://www.booking.com/searchresults.html?ss=',
-      attraction: 'https://www.getyourguide.com/s/?q=',
-      car: 'https://www.booking.com/cars/index.html?ss=',
-      insurance: 'https://www.getyourguide.com/s/?q=',
-    } as Record<PlaceKind, string>,
-  },
   viator: {
     provider: 'viator',
     hosts: {
@@ -172,6 +159,62 @@ export const travel = {
       ['private', 'PRIVATE_TOUR'],
       ['new', 'NEW_ON_VIATOR'],
     ] as [string, string][],
+  },
+  stay22: {
+    provider: 'stay22',
+    embedBase: 'https://www.stay22.com/embed/gm',
+    campaign: 'panperyskop-trips',
+    currency: 'PLN',
+    language: 'pl',
+    unitsystem: 'metric',
+    invmode: 'accommodation',
+    hotelsapi: 'booking',
+    limits: { mini: 10, full: 50 },
+    // Lower zoom keeps the hotel pins inside the frame; the widget default (16)
+    // shows a single building.
+    zoom: { mini: 11, full: 13 },
+    hidden: [
+      'hidebrandlogo',
+      'hidesettings',
+      'hidecurrency',
+      'hidelanguage',
+      'hidefooter',
+      'hideextmaplinking',
+      'hidemappanels',
+      'hideppn',
+      'hidespatial',
+      'hidecentermap',
+      'hideshare',
+      'hidenavimage',
+      'showhotels',
+      'disablerentals',
+    ],
+    // The mini map only previews prices: the app takes the taps, so every
+    // interactive part of the widget goes away, including the Allez button.
+    miniHidden: [
+      'hideenlargemap',
+      'hidesearchbar',
+      'hidefilters',
+      'hidecheckinout',
+      'hideguestpicker',
+      'hidemodeswitcher',
+      'hidenavbuttons',
+      'hideallezbutton',
+    ],
+    // The full sheet has its own header for the area and the filters, so the
+    // widget keeps only the map and its markers.
+    fullHidden: [
+      'hideenlargemap',
+      'hidesearchbar',
+      'hidefilters',
+      'hidepricefilter',
+      'hideroomtypefilter',
+      'hidecheckinout',
+      'hideguestpicker',
+      'hidemodeswitcher',
+      'hidenavbuttons',
+      'hideallezbutton',
+    ],
   },
   api: {
     maxWindowMs: 370 * 24 * 3_600_000,

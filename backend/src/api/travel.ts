@@ -1,9 +1,11 @@
 import { CONFIG, type TravelTag } from '../config/index';
 import { Hono } from 'hono';
-import { buildPlaces, isPlaceKind, paginatePlaces, type TravelPlace } from '../travel/places';
+import { isPlaceKind, type TravelPlace } from '../travel/places';
 import { fetchRyanairWindow, fetchWizzairWindow } from '../travel/flightsApi';
 import { reachableEvents, type TravelEventRow } from '../travel/reachability';
 import { viatorRandomCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
+import { staysWidgetUrl, type StayTheme, type StayView } from '../travel/stay22';
+import { addDaysWarsaw } from '../seed/core/dates';
 
 export const travelRoutes = new Hono<{ Bindings: Env }>();
 
@@ -101,7 +103,7 @@ travelRoutes.get('/places', async (c) => {
   const q = c.req.query();
   const kind = q.kind ?? '';
   if (!isPlaceKind(kind)) {
-    return c.json({ error: 'kind must be hotel|attraction|car|insurance' }, 400);
+    return c.json({ error: 'kind must be attraction' }, 400);
   }
   const lat = Number(q.lat);
   const lng = Number(q.lng);
@@ -110,12 +112,8 @@ travelRoutes.get('/places', async (c) => {
   }
   const offset = Math.max(0, Number(q.offset) || 0);
   const limit = Number(q.limit) > 0 ? Math.floor(Number(q.limit)) : 15;
-  if (kind === 'attraction') {
-    const viator = await viatorAttractions(c.env, lat, lng, q.day, offset, limit);
-    return c.json(viator);
-  }
-  const all = buildPlaces(kind, lat, lng);
-  return c.json(paginatePlaces(all, offset, limit));
+  const viator = await viatorAttractions(c.env, lat, lng, q.day, offset, limit);
+  return c.json(viator);
 });
 
 const noPlaces = { places: [] as TravelPlace[], total: 0, hasMore: false };
@@ -187,3 +185,51 @@ async function flightHandler(c: any, airline: 'ryanair' | 'wizzair'): Promise<Re
 
 travelRoutes.get('/flights/ryanair', (c) => flightHandler(c, 'ryanair'));
 travelRoutes.get('/flights/wizzair', (c) => flightHandler(c, 'wizzair'));
+
+// Stay22 hotel map widget URL. The app opens the URL, the widget does the rest.
+travelRoutes.get('/stays-widget', (c) => {
+  const q = c.req.query();
+  const aid = c.env.STAY22_AID;
+  if (!aid) return c.json({ error: 'STAY22_AID is not configured' }, 500);
+
+  const day = /^\d{4}-\d{2}-\d{2}$/;
+  if (!day.test(q.checkin ?? '') || !day.test(q.checkout ?? '')) {
+    return c.json({ error: 'checkin and checkout must be YYYY-MM-DD' }, 400);
+  }
+  const checkin = q.checkin as string;
+  const checkout = (q.checkout as string) > checkin ? (q.checkout as string) : addDaysWarsaw(checkin, 1);
+
+  const lat = Number(q.lat);
+  const lng = Number(q.lng);
+  const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  const address = (q.address ?? '').trim().slice(0, 120);
+  if (!hasCoordinates && !address) {
+    return c.json({ error: 'lat/lng or address required' }, 400);
+  }
+
+  const theme: StayTheme = q.theme === 'dark' ? 'dark' : 'light';
+  const view: StayView = q.view === 'full' ? 'full' : 'mini';
+  const priceper = q.priceper === 'total' ? 'total' : q.priceper === 'nightly' ? 'nightly' : undefined;
+  const minstars = clampInt(q.minstars, 0, 5);
+  const minguest = clampInt(q.minguest, 0, 10);
+  const url = staysWidgetUrl(aid, {
+    lat: hasCoordinates ? lat : undefined,
+    lng: hasCoordinates ? lng : undefined,
+    address: hasCoordinates ? undefined : address,
+    checkin,
+    checkout,
+    theme,
+    view,
+    priceper,
+    minstars,
+    minguest,
+  });
+  return c.json({ url });
+});
+
+function clampInt(raw: string | undefined, min: number, max: number): number | undefined {
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return undefined;
+  const rounded = Math.round(value);
+  return rounded > min && rounded <= max ? rounded : undefined;
+}

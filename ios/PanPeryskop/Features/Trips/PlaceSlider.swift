@@ -1,11 +1,7 @@
 import SwiftUI
-import CoreLocation
 
 struct PlaceSlider: View {
     let places: [TravelPlace]
-    let eventCoordinate: CLLocationCoordinate2D
-    let airportCoordinate: CLLocationCoordinate2D?
-    var nights: Int = 1
     var maxVisible: Int = 3
     var onOpen: (TravelPlace) -> Void
     var onSeeMore: () -> Void
@@ -13,22 +9,11 @@ struct PlaceSlider: View {
     private var visible: [TravelPlace] { Array(places.prefix(maxVisible)) }
     private var hasMore: Bool { places.count > maxVisible }
 
-    // Shared with the "see more" tile so the row keeps one height.
-    private var cardHeight: CGFloat {
-        places.first.map(PlaceCard.height(for:)) ?? PlaceCard.legacyHeight
-    }
-
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: Theme.Spacing.m) {
                 ForEach(visible) { place in
-                    PlaceCard(
-                        place: place,
-                        eventCoordinate: eventCoordinate,
-                        airportCoordinate: airportCoordinate,
-                        nights: nights,
-                        onTap: { onOpen(place) }
-                    )
+                    PlaceCard(place: place, onTap: { onOpen(place) })
                 }
                 if hasMore {
                     seeMoreTile
@@ -53,7 +38,7 @@ struct PlaceSlider: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            .frame(width: PlaceCard.width, height: cardHeight)
+            .frame(width: PlaceCard.width, height: PlaceCard.height)
             .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
         }
         .buttonStyle(.plain)

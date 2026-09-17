@@ -5,8 +5,6 @@ struct PlacesListSheet: View {
     let kind: PlaceKind
     let eventCoordinate: CLLocationCoordinate2D
     let eventDay: String
-    let airportCoordinate: CLLocationCoordinate2D?
-    let nights: Int
     let onClose: () -> Void
 
     @State private var detent: PresentationDetent = .medium
@@ -18,8 +16,6 @@ struct PlacesListSheet: View {
                 kind: kind,
                 eventCoordinate: eventCoordinate,
                 eventDay: eventDay,
-                airportCoordinate: airportCoordinate,
-                nights: nights,
                 onBack: onClose,
                 onOpenURL: { url in browserItem = BrowserItem(url: url, access: .restricted) }
             )

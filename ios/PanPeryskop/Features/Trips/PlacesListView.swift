@@ -4,8 +4,7 @@ import CoreLocation
 struct PlacesListView: View {
     let kind: PlaceKind
     let eventCoordinate: CLLocationCoordinate2D
-    let airportCoordinate: CLLocationCoordinate2D?
-    let nights: Int
+    let eventDay: String
     let onBack: () -> Void
     let onOpenURL: (URL) -> Void
 
@@ -14,56 +13,51 @@ struct PlacesListView: View {
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: Theme.Spacing.l) {
-                    if model.isReady {
-                        ForEach(model.places) { place in
-                            PlaceRowView(
-                                place: place,
-                                kind: kind,
-                                eventCoordinate: eventCoordinate,
-                                airportCoordinate: airportCoordinate,
-                                nights: nights,
-                                onOpen: {
-                                    if let url = place.url { onOpenURL(url) }
-                                }
-                            )
-                            .onAppear {
-                                if place.id == model.places.last?.id {
-                                    Task { await model.loadMore() }
-                                }
-                            }
-                        }
-                        if model.isLoading {
-                            ProgressView()
-                                .padding(.vertical, Theme.Spacing.l)
-                        }
-                    } else {
-                        ForEach(0..<4, id: \.self) { _ in
-                            PlaceRowSkeleton()
-                        }
-                    }
-                }
-                .padding(Theme.Spacing.l)
+                content
+                    .padding(Theme.Spacing.l)
             }
             .navigationTitle(kind.label)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Anuluj") {
                         onBack()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .fontWeight(.semibold)
-                            Text("Wróć")
-                        }
                     }
                 }
             }
         }
         .task {
             guard !model.isReady else { return }
-            await model.start(kind: kind, lat: eventCoordinate.latitude, lng: eventCoordinate.longitude)
+            await model.start(kind: kind, lat: eventCoordinate.latitude, lng: eventCoordinate.longitude, day: eventDay)
         }
     }
+
+    @ViewBuilder
+    private var content: some View {
+        switch state {
+        case .failed:
+            ErrorState(message: "Nie udało się pobrać: \(kind.label)") {
+                Task { await model.start(kind: kind, lat: eventCoordinate.latitude, lng: eventCoordinate.longitude, day: eventDay) }
+            }
+        case .loading:
+            PlaceRowsSkeleton()
+        case .empty:
+            EmptyState(icon: "ticket", title: "Brak atrakcji w tym mieście")
+        case .loaded:
+            PlaceRowsList(model: model, onOpenURL: onOpenURL)
+        }
+    }
+
+    private var state: PlacesListState {
+        if model.failed { return .failed }
+        guard model.isReady else { return .loading }
+        return model.places.isEmpty ? .empty : .loaded
+    }
+}
+
+private enum PlacesListState {
+    case loading
+    case failed
+    case empty
+    case loaded
 }

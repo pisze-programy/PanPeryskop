@@ -63,7 +63,11 @@ struct RailSliderView: View {
         }
         .onAppear { offset = CGFloat(currentIndex) }
         .onChange(of: currentIndex) { _, newValue in
-            if !isScrubbing { offset = CGFloat(newValue) }
+            if !isScrubbing {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                    offset = CGFloat(newValue)
+                }
+            }
         }
     }
 
@@ -75,6 +79,7 @@ struct RailSliderView: View {
             .padding(.vertical, 3)
             .background(.ultraThinMaterial)
             .clipShape(Capsule())
+            .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
             .frame(height: 26)
             .animation(.spring(response: 0.28, dampingFraction: 0.8), value: labelIndex)
     }
@@ -87,6 +92,7 @@ struct RailSliderView: View {
             .padding(.vertical, 3)
             .background(.ultraThinMaterial)
             .clipShape(Capsule())
+            .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
             .frame(height: 26)
             .animation(.spring(response: 0.28, dampingFraction: 0.8), value: labelIndex)
     }
@@ -100,14 +106,15 @@ struct RailSliderView: View {
             let centerY = geo.size.height / 2
             ZStack {
                 Capsule()
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 26, height: geo.size.height)
-                    .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
+                    .fill(.regularMaterial)
+                    .frame(width: 34, height: geo.size.height)
+                    .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.18), radius: 8, x: 0, y: 3)
 
                 ForEach(minorPositions, id: \.self) { pos in
                     Capsule()
                         .fill(Color.primary.opacity(0.25))
-                        .frame(width: 5, height: 1.5)
+                        .frame(width: 6, height: 1.5)
                         .position(x: geo.size.width / 2, y: y(for: pos, centerY: centerY))
                 }
 
@@ -119,18 +126,18 @@ struct RailSliderView: View {
 
                 Capsule()
                     .fill(Color.primary.opacity(isScrubbing ? 0.95 : 0.7))
-                    .frame(width: 16, height: 3)
+                    .frame(width: 20, height: 3)
             }
             .clipped()
             .frame(width: geo.size.width, height: geo.size.height)
         }
-        .frame(width: 44, height: Self.railHeight)
+        .frame(width: 52, height: Self.railHeight)
         .contentShape(Rectangle())
         .gesture(drag)
     }
 
     private func tickWidth(for index: Int) -> CGFloat {
-        index == selectedIndex ? 18 : 14
+        index == selectedIndex ? 20 : 16
     }
 
     private func majorTick(for index: Int) -> some View {
@@ -183,7 +190,9 @@ struct RailSliderView: View {
                     finalRaw = Int(clampedOffset.rounded())
                 }
                 let final = min(max(finalRaw, minIndex), maxIndex)
-                offset = CGFloat(final)
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                    offset = CGFloat(final)
+                }
                 isScrubbing = false
                 lastTickIndex = -2
                 lastDragDelta = 0

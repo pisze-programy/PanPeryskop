@@ -8,6 +8,8 @@ struct VenueMap: View {
     var pitch: Double = 50
     var onTap: (() -> Void)? = nil
 
+    private static let height: CGFloat = 140
+
     var body: some View {
         Map(
             initialPosition: .camera(MapCamera(centerCoordinate: coordinate, distance: distance, heading: 0, pitch: pitch)),
@@ -16,7 +18,7 @@ struct VenueMap: View {
             Marker("", systemImage: systemImage, coordinate: coordinate)
                 .tint(.red)
         }
-        .frame(height: 140)
+        .frame(height: Self.height)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)

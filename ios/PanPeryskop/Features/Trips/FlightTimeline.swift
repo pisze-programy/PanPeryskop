@@ -3,7 +3,6 @@ import SwiftUI
 struct FlightTimeline: View {
     let window: FlightWindowResponse
     let eventDay: Int64
-    /// nil = unknown start time (runs without a provider time) → "—".
     var eventHour: String? = nil
     var markerIcon: String = "sportscourt.fill"
     var markerLabel: String = "MECZ"
@@ -11,10 +10,30 @@ struct FlightTimeline: View {
     @Binding var selectedReturn: FlightWindowCell?
     let best: FlightPair?
 
+    private static let markerId = "flight-event-marker"
+    static let cellWidth: CGFloat = 56
+    static let cellHeight: CGFloat = 66
+    static let cellSpacing: CGFloat = 6
+    private static let cellLineSpacing: CGFloat = 1
+    private static let markerLineSpacing: CGFloat = 2
+    private static let cellCornerRadius: CGFloat = 8
+    private static let selectionBorderWidth: CGFloat = 2
+    private static let disabledOpacity: Double = 0.4
+    private static let selectedBackgroundOpacity: Double = 0.18
+    private static let markerBackgroundOpacity: Double = 0.12
+    private static let weekdaySize: CGFloat = 9
+    private static let timeSize: CGFloat = 10
+    private static let markerLabelSize: CGFloat = 8
+    private static let markerDaySize: CGFloat = 9
+    private static let topPadding: CGFloat = 7
+    private static let bestStarSize: CGFloat = 8
+    private static let missingValue = "—"
+    private static let millisecondsPerSecond = 1000.0
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
+                HStack(spacing: Self.cellSpacing) {
                     ForEach(window.outbound, id: \.date) { cell in
                         dayCell(cell, isOutbound: true)
                     }
@@ -23,7 +42,6 @@ struct FlightTimeline: View {
                         dayCell(cell, isOutbound: false)
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.xs)
                 .padding(.vertical, Theme.Spacing.xs)
             }
             .onAppear { proxy.scrollTo(Self.markerId, anchor: .center) }
@@ -33,65 +51,104 @@ struct FlightTimeline: View {
         }
     }
 
-    private static let markerId = "flight-event-marker"
-
-    private func isToday(_ dateStr: String) -> Bool {
-        dateStr == Self.dayKey(Int64(Date().timeIntervalSince1970 * 1000))
-    }
-
     private func dayCell(_ cell: FlightWindowCell, isOutbound: Bool) -> some View {
-        let disabled = cell.price == nil
-        let selected = isOutbound
-            ? selectedOutbound?.date == cell.date
-            : selectedReturn?.date == cell.date
-        let best = isBest(cell, isOutbound: isOutbound)
+        let selected = isSelected(cell, isOutbound: isOutbound)
         return Button {
-            if isOutbound { selectedOutbound = cell } else { selectedReturn = cell }
+            toggle(cell, isOutbound: isOutbound)
         } label: {
-            VStack(spacing: 1) {
-                Text(Self.shortDay(cell.date))
-                    .font(.caption2.weight(.semibold))
-                Text(isToday(cell.date) ? "dziś" : Self.weekday(cell.date))
-                    .font(.system(size: 9))
-                    .foregroundColor(isToday(cell.date) ? .accentColor : .secondary)
-                Text(cell.hour ?? "—")
-                    .font(.system(size: 10))
-                Text(priceLabel(cell))
-                    .font(.caption2.weight(.bold))
-                    .foregroundColor(cell.price == nil ? .secondary : .primary)
-            }
-            .padding(.top, 7)
-            .frame(width: 56, height: 66)
-            .background(selected ? Color.accentColor.opacity(0.18) : Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(selected ? Color.accentColor : (best ? Color.orange : Color.clear), lineWidth: selected || best ? 2 : 0))
-            .overlay(alignment: .top) {
-                if best {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 8))
-                        .foregroundColor(.orange)
-                }
-            }
-            .opacity(disabled ? 0.4 : 1)
+            dayCellLabel(cell, selected: selected, highlighted: isBest(cell, isOutbound: isOutbound))
         }
         .buttonStyle(.plain)
-        .disabled(disabled)
+        .disabled(cell.price == nil)
+    }
+
+    private func dayCellLabel(_ cell: FlightWindowCell, selected: Bool, highlighted: Bool) -> some View {
+        VStack(spacing: Self.cellLineSpacing) {
+            Text(Self.shortDay(cell.date))
+                .font(.caption2.weight(.semibold))
+            weekdayText(cell)
+            Text(cell.hour ?? Self.missingValue)
+                .font(.system(size: Self.timeSize))
+            Text(priceLabel(cell))
+                .font(.caption2.weight(.bold))
+                .foregroundColor(cell.price == nil ? .secondary : .primary)
+        }
+        .padding(.top, Self.topPadding)
+        .frame(width: Self.cellWidth, height: Self.cellHeight)
+        .background(background(selected: selected), in: cellShape)
+        .overlay(cellBorder(selected: selected, highlighted: highlighted))
+        .overlay(alignment: .top) { bestStar(highlighted: highlighted) }
+        .opacity(cell.price == nil ? Self.disabledOpacity : 1)
+    }
+
+    private var cellShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: Self.cellCornerRadius)
+    }
+
+    private func background(selected: Bool) -> Color {
+        selected ? Color.accentColor.opacity(Self.selectedBackgroundOpacity) : Theme.Palette.surface
+    }
+
+    @ViewBuilder
+    private func cellBorder(selected: Bool, highlighted: Bool) -> some View {
+        if selected || highlighted {
+            cellShape.stroke(borderColor(selected: selected, highlighted: highlighted), lineWidth: Self.selectionBorderWidth)
+        }
+    }
+
+    private func borderColor(selected: Bool, highlighted: Bool) -> Color {
+        if selected { return .accentColor }
+        return highlighted ? .orange : .clear
+    }
+
+    @ViewBuilder
+    private func bestStar(highlighted: Bool) -> some View {
+        if highlighted {
+            Image(systemName: "star.fill")
+                .font(.system(size: Self.bestStarSize))
+                .foregroundColor(.orange)
+        }
+    }
+
+    private func weekdayText(_ cell: FlightWindowCell) -> some View {
+        Text(isToday(cell.date) ? "dziś" : Self.weekday(cell.date))
+            .font(.system(size: Self.weekdaySize))
+            .foregroundColor(isToday(cell.date) ? .accentColor : .secondary)
     }
 
     private var eventMarker: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: Self.markerLineSpacing) {
             Image(systemName: markerIcon)
                 .font(.caption2)
             Text(markerLabel)
-                .font(.system(size: 8, weight: .heavy))
+                .font(.system(size: Self.markerLabelSize, weight: .heavy))
             Text(Self.shortDay(Self.dayKey(eventDay)))
-                .font(.system(size: 9, weight: .bold))
-            Text(eventHour ?? "—")
-                .font(.system(size: 10))
+                .font(.system(size: Self.markerDaySize, weight: .bold))
+            Text(eventHour ?? Self.missingValue)
+                .font(.system(size: Self.timeSize))
         }
         .foregroundColor(.purple)
-        .frame(width: 56, height: 66)
-        .background(Color.purple.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.purple, lineWidth: 2))
+        .frame(width: Self.cellWidth, height: Self.cellHeight)
+        .background(Color.purple.opacity(Self.markerBackgroundOpacity), in: cellShape)
+        .overlay(cellShape.stroke(Color.purple, lineWidth: Self.selectionBorderWidth))
+    }
+
+    private func isSelected(_ cell: FlightWindowCell, isOutbound: Bool) -> Bool {
+        isOutbound ? selectedOutbound?.date == cell.date : selectedReturn?.date == cell.date
+    }
+
+    private func toggle(_ cell: FlightWindowCell, isOutbound: Bool) {
+        let isDeselecting = isSelected(cell, isOutbound: isOutbound)
+        let newValue = isDeselecting ? nil : cell
+        if isOutbound {
+            selectedOutbound = newValue
+        } else {
+            selectedReturn = newValue
+        }
+    }
+
+    private func isToday(_ dateString: String) -> Bool {
+        dateString == Self.dayKey(Int64(Date().timeIntervalSince1970 * Self.millisecondsPerSecond))
     }
 
     private func isBest(_ cell: FlightWindowCell, isOutbound: Bool) -> Bool {
@@ -105,20 +162,20 @@ struct FlightTimeline: View {
     }
 
     static func dayKey(_ ms: Int64) -> String {
-        AppConstants.isoDayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / 1000))
+        AppConstants.isoDayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / millisecondsPerSecond))
     }
 
-    static func date(from dateStr: String) -> Date? {
-        AppConstants.isoDayFormatter.date(from: dateStr)
+    static func date(from dateString: String) -> Date? {
+        AppConstants.isoDayFormatter.date(from: dateString)
     }
 
-    static func shortDay(_ dateStr: String) -> String {
-        guard let d = date(from: dateStr) else { return dateStr }
-        return AppConstants.shortDayFormatter.string(from: d)
+    static func shortDay(_ dateString: String) -> String {
+        guard let date = date(from: dateString) else { return dateString }
+        return AppConstants.shortDayFormatter.string(from: date)
     }
 
-    static func weekday(_ dateStr: String) -> String {
-        guard let d = date(from: dateStr) else { return "" }
-        return AppConstants.weekdayFullFormatter.string(from: d)
+    static func weekday(_ dateString: String) -> String {
+        guard let date = date(from: dateString) else { return "" }
+        return AppConstants.weekdayFullFormatter.string(from: date)
     }
 }

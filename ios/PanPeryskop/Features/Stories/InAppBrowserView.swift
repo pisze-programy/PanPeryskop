@@ -15,6 +15,7 @@ enum AllowedWebDomains {
         "lu.ma", "luma.com",
         "ebilet.pl", "tradedoubler.com",
         "booking.com", "airbnb.com", "espn.com",
+        "viator.com",
     ]
 
     /// Exact host or a subdomain of a registrable domain, e.g. "bilety.helios.pl".
@@ -31,6 +32,9 @@ struct InAppBrowserView: View {
     let url: URL
     /// Bottom safe-area inset (home indicator) so the toolbar lifts above it.
     var bottomInset: CGFloat = 0
+    /// True for links that may leave the fixed allow-list (race websites with
+    /// external redirects) — any http(s) host is kept in-app.
+    var allowAnyHost: Bool = false
     /// Called when the user closes the browser (X button).
     var onClose: () -> Void = {}
 
@@ -38,7 +42,7 @@ struct InAppBrowserView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            BrowserWebView(url: url, model: model)
+            BrowserWebView(url: url, model: model, allowAnyHost: allowAnyHost)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             Divider()
             toolbar
@@ -102,9 +106,10 @@ struct InAppBrowserView: View {
 private struct BrowserWebView: UIViewRepresentable {
     let url: URL
     @ObservedObject var model: BrowserModel
+    var allowAnyHost: Bool = false
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(model: model)
+        Coordinator(model: model, allowAnyHost: allowAnyHost)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -136,10 +141,12 @@ private struct BrowserWebView: UIViewRepresentable {
         configuration.userContentController.addUserScript(
             WKUserScript(source: permissionStub, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         )
+        configuration.userContentController.addUserScript(NoZoomWebView.userScript())
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.uiDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
+        NoZoomWebView.lock(webView)
         context.coordinator.attach(webView)
         webView.load(URLRequest(url: url))
         return webView
@@ -149,10 +156,12 @@ private struct BrowserWebView: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate {
         let model: BrowserModel
+        let allowAnyHost: Bool
         private var observations: [NSKeyValueObservation] = []
 
-        init(model: BrowserModel) {
+        init(model: BrowserModel, allowAnyHost: Bool) {
             self.model = model
+            self.allowAnyHost = allowAnyHost
         }
 
         /// In-app browsing stays on the allow-list; any other main-frame navigation
@@ -179,6 +188,7 @@ private struct BrowserWebView: UIViewRepresentable {
         private func isAllowedWebNavigation(to url: URL) -> Bool {
             let scheme = url.scheme?.lowercased()
             guard scheme == "http" || scheme == "https" else { return false }
+            if allowAnyHost { return true }
             return url.host.map(AllowedWebDomains.isAllowed) == true
         }
 
@@ -192,17 +202,35 @@ private struct BrowserWebView: UIViewRepresentable {
             model.webView = webView
             observations = [
                 webView.observe(\.canGoBack, options: [.new]) { [weak self] webView, _ in
-                    self?.model.canGoBack = webView.canGoBack
+                    self?.publishBack(from: webView)
                 },
                 webView.observe(\.canGoForward, options: [.new]) { [weak self] webView, _ in
-                    self?.model.canGoForward = webView.canGoForward
+                    self?.publishForward(from: webView)
                 },
                 webView.observe(\.url, options: [.new]) { [weak self] webView, _ in
-                    self?.model.currentURL = webView.url
+                    self?.publishURL(from: webView)
                 },
             ]
-            model.canGoBack = webView.canGoBack
-            model.canGoForward = webView.canGoForward
+            publishBack(from: webView)
+            publishForward(from: webView)
+            publishURL(from: webView)
+        }
+
+        private func publishBack(from webView: WKWebView) {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.model.canGoBack != webView.canGoBack else { return }
+                self.model.canGoBack = webView.canGoBack
+            }
+        }
+
+        private func publishForward(from webView: WKWebView) {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.model.canGoForward != webView.canGoForward else { return }
+                self.model.canGoForward = webView.canGoForward
+            }
+        }
+
+        private func publishURL(from webView: WKWebView) {
             model.currentURL = webView.url
         }
 
@@ -239,7 +267,7 @@ private struct BrowserWebView: UIViewRepresentable {
 final class BrowserModel: ObservableObject {
     @Published var canGoBack = false
     @Published var canGoForward = false
-    @Published var currentURL: URL?
+    var currentURL: URL?
 
     weak var webView: WKWebView?
 

@@ -8,12 +8,12 @@ class ToastManager: ObservableObject {
 
     private var hideTask: Task<Void, Never>?
 
-    func show(_ msg: String) {
+    func show(_ msg: String, seconds: Double = 2.5) {
         hideTask?.cancel()
         message = msg
         withAnimation(.easeInOut(duration: 0.3)) { isVisible = true }
         hideTask = Task {
-            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
             withAnimation(.easeInOut(duration: 0.3)) { isVisible = false }
         }
     }

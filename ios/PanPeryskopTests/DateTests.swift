@@ -31,4 +31,23 @@ final class DateTests: XCTestCase {
         let expected = cal.date(byAdding: .day, value: 3, to: today)!
         XCTAssertEqual(from, Int64(expected.timeIntervalSince1970 * 1000))
     }
+
+    func testRelativeWords() {
+        XCTAssertEqual(DayLabels.relative(offset: 0), "Dziś")
+        XCTAssertEqual(DayLabels.relative(offset: 1), "Jutro")
+        XCTAssertNil(DayLabels.relative(offset: 2))
+    }
+
+    func testPillUsesShortDates() {
+        XCTAssertEqual(DayLabels.pill(offset: 0), "Dziś")
+        XCTAssertEqual(DayLabels.pill(offset: 1), "Jutro")
+        let expected = AppConstants.shortDayFormatter.string(from: DayLabels.date(offset: 5))
+        XCTAssertEqual(DayLabels.pill(offset: 5), expected)
+    }
+
+    func testTitleKeepsTheFullDate() {
+        let date = DayLabels.date(offset: 5)
+        let expected = "\(AppConstants.dayMonthFormatter.string(from: date)), \(AppConstants.weekdayFullFormatter.string(from: date).capitalized)"
+        XCTAssertEqual(DayLabels.title(offset: 5), expected)
+    }
 }

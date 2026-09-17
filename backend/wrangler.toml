@@ -25,7 +25,7 @@ enabled = true
 # 02:00 daily seed; 04:00 daily audit cleanup (4-day retention); hourly liveness
 # watchdog (marks batches stuck in created/fetching/ingesting as failed).
 [triggers]
-crons = [ "0 2 * * *", "0 4 * * *", "0 * * * *" ]
+crons = [ "0 2 * * *", "0 4 * * *", "0 * * * *", "0 3 * * 1" ]
 
 # Queue wake-ups for the v2 seed pipeline. The queue is NOT the state: seed_units
 # (D1) is the durable work-list. A { type:'unit' } message drains the pending
@@ -83,6 +83,9 @@ ALGOLIA_APP_ID = "FAFFKUSLK0"
 AWIN_PUBLISHER_ID = "3071193"
 AWIN_ADVERTISER_ID = "19044"
 AWIN_FEED_ID = "99885"
+# Viator affiliate API host switch. The API keys are secrets
+# (wrangler secret put VIATOR_API_KEY / VIATOR_API_KEY_SANDBOX).
+VIATOR_ENV = "production"
 # GOOGLE_CLIENT_ID = ""  # removed with Google Sign-In (Apple-only login)
 
 # Production entrypoint — single worker served on the custom domain. Media URLs are

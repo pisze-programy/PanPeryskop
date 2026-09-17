@@ -24,11 +24,22 @@ interface Env {
   EBILET_TD_TOKEN?: string;
   // kupbilecik official partner API token (api/?token=...).
   KUPBILECIK_API_TOKEN?: string;
+  // Stay22 affiliate id (aid) — hotel map widget + Allez deeplinks. Public value
+  // (it appears in the map URL); the map needs nothing else.
+  STAY22_AID?: string;
+  // Stay22 Hub "HUB DATA REPORTING API" token (X-API-KEY) — transactions only,
+  // separate from the map. NOT the same value as STAY22_AID.
+  STAY22_REPORTING_KEY?: string;
+  // Viator affiliate API (tours & activities). Keys are secrets
+  // (wrangler secret put VIATOR_API_KEY / VIATOR_API_KEY_SANDBOX); VIATOR_ENV
+  // picks the host: 'sandbox' | 'production' (default).
+  VIATOR_API_KEY?: string;
+  VIATOR_API_KEY_SANDBOX?: string;
+  VIATOR_ENV?: string;
   // cf-snitch email service (seed digest) — see docs/seed-digest.md.
   SNITCH_URL?: string;
   SNITCH_TOKEN?: string;
-  ENVIRONMENT?: string;
-  CORS_ORIGIN?: string;
+  ENVIRONMENT?: string;  CORS_ORIGIN?: string;
   MEDIA_R2_DEV?: string;
   APPLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_ID?: string;

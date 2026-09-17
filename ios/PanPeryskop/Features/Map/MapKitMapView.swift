@@ -43,7 +43,7 @@ struct MapKitMapView: View {
 
     private static let pitchDegrees: Double = 60
     /// Screen fraction where a tapped pin is placed (see `MapCameraController.flyToAboveSheet`).
-    private static let sheetAvoidFraction = CGPoint(x: 0.5, y: 0.25)
+    private static let sheetAvoidFraction = CGPoint(x: 0.5, y: 0.40)
     /// City fly framing distance — the city map's default camera height.
     private static let cityFlyDistance: CLLocationDistance = 60_000
     private static let clusterPixels: Double = 48

@@ -11,13 +11,15 @@ final class PlacesListModel: ObservableObject {
     private var kind: PlaceKind?
     private var lat = 0.0
     private var lng = 0.0
+    private var day = ""
     private var offset = 0
     private let batch = 15
 
-    func start(kind: PlaceKind, lat: Double, lng: Double) async {
+    func start(kind: PlaceKind, lat: Double, lng: Double, day: String) async {
         self.kind = kind
         self.lat = lat
         self.lng = lng
+        self.day = day
         places = []
         offset = 0
         hasMore = true
@@ -33,7 +35,7 @@ final class PlacesListModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            let resp = try await APIClient.getTravelPlaces(kind: kind, lat: lat, lng: lng, limit: batch, offset: offset)
+            let resp = try await APIClient.getTravelPlaces(kind: kind, lat: lat, lng: lng, limit: batch, offset: offset, day: day)
             places.append(contentsOf: resp.places)
             offset += resp.places.count
             hasMore = resp.hasMore

@@ -1,9 +1,23 @@
 import SwiftUI
 import CoreLocation
 
-private struct BrowserItem: Identifiable {
+/// Browser policy for an external link. Runs may leave the fixed allow-list
+/// because race websites redirect to arbitrary hosts.
+enum BrowserAccess {
+    case restricted
+    case open
+}
+
+struct BrowserItem: Identifiable {
     let id = UUID()
     let url: URL
+    let access: BrowserAccess
+}
+
+private struct MapPickerRequest: Identifiable {
+    let id = UUID()
+    let coordinate: CLLocationCoordinate2D
+    let title: String
 }
 
 struct TripsEventSheet: View {
@@ -12,8 +26,12 @@ struct TripsEventSheet: View {
     @State private var detent: PresentationDetent = .medium
     @State private var expanded: PlaceKind?
     @State private var browserItem: BrowserItem?
-    @State private var nights = 1
+    @State private var mapPicker: MapPickerRequest?
     @State private var airportCoordinate: CLLocationCoordinate2D?
+    @State private var pageWidth: CGFloat = UIScreen.main.bounds.width
+    @State private var scrollTopToken = 0
+
+    private static let warmupDelayMilliseconds = 600
 
     private var events: [TravelEvent] { viewModel.selectedEventGroup?.events ?? [] }
 
@@ -24,28 +42,30 @@ struct TripsEventSheet: View {
 
     var body: some View {
         SheetShell(detent: $detent) {
-            if let expanded {
-                PlacesListView(
-                    kind: expanded,
-                    eventCoordinate: currentCoordinate,
-                    airportCoordinate: airportCoordinate,
-                    nights: nights,
-                    onBack: {
-                        withAnimation(AppConstants.springStandard) {
-                            self.expanded = nil
-                            detent = .medium
-                        }
-                    },
-                    onOpenURL: openBrowser
-                )
-                .id(expanded)
-            } else {
-                pager
-            }
+            pager
+        }
+        .task {
+            try? await Task.sleep(for: .milliseconds(Self.warmupDelayMilliseconds))
+            WebKitWarmup.warm()
+        }
+        .sheet(item: $expanded) { kind in
+            PlacesListSheet(
+                kind: kind,
+                eventCoordinate: currentCoordinate,
+                eventDay: currentEvent?.isoDay ?? "",
+                onClose: { expanded = nil }
+            )
         }
         .sheet(item: $browserItem) { item in
-            InAppBrowserView(url: item.url, onClose: { browserItem = nil })
-                .presentationDetents([.medium, .large])
+            InAppBrowserView(
+                url: item.url,
+                allowAnyHost: item.access == .open,
+                onClose: { browserItem = nil }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $mapPicker) { request in
+            MapAppPickerSheet(coordinate: request.coordinate, title: request.title)
         }
         .onChange(of: viewModel.selectedEventGroup?.id) { _, _ in
             activeIndex = 0
@@ -60,48 +80,47 @@ struct TripsEventSheet: View {
     }
 
     private var pager: some View {
-        VStack(spacing: 0) {
-            PageDots(count: max(events.count, 1), index: activeIndex ?? 0)
-                .opacity(events.count > 1 ? 1 : 0)
-                .padding(.top, 22)
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 0) {
-                    ForEach(Array(events.enumerated()), id: \.offset) { index, event in
-                        ScrollView(showsIndicators: false) {
-                            TripsEventPage(
-                                event: event,
-                                origin: viewModel.selectedAirport,
-                                viewModel: viewModel,
-                                isActive: (activeIndex ?? 0) == index,
-                                onOpenURL: openBrowser,
-                                onExpand: expandPlaces,
-                                onPlannerChange: { newNights, coord in
-                                    guard (activeIndex ?? 0) == index else { return }
-                                    nights = newNights
-                                    airportCoordinate = coord
-                                }
-                            )
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: 0) {
+                ForEach(Array(events.enumerated()), id: \.offset) { index, event in
+                    TripsEventPage(
+                        event: event,
+                        origin: viewModel.selectedAirport,
+                        viewModel: viewModel,
+                        isActive: (activeIndex ?? 0) == index,
+                        dotsCount: events.count,
+                        dotsIndex: index,
+                        scrollTopToken: scrollTopToken,
+                        onTapHeader: { scrollTopToken += 1 },
+                        onOpenURL: openBrowser,
+                        onOpenMap: { coordinate, title in
+                            mapPicker = MapPickerRequest(coordinate: coordinate, title: title)
+                        },
+                        onExpand: expandPlaces,
+                        onPlannerChange: { coord in
+                            guard (activeIndex ?? 0) == index else { return }
+                            airportCoordinate = coord
                         }
-                        .containerRelativeFrame(.horizontal)
-                        .id(event.id)
-                    }
+                    )
+                    .frame(width: pageWidth)
                 }
-                .scrollTargetLayout()
             }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $activeIndex)
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $activeIndex)
+        .scrollDisabled(events.count <= 1)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { _, width in
+            pageWidth = width
         }
     }
 
     private func expandPlaces(_ kind: PlaceKind) {
-        withAnimation(AppConstants.springStandard) {
-            expanded = kind
-            detent = .large
-        }
+        expanded = kind
     }
 
-    private func openBrowser(_ url: URL) {
-        browserItem = BrowserItem(url: url)
+    private func openBrowser(_ url: URL, access: BrowserAccess) {
+        browserItem = BrowserItem(url: url, access: access)
         detent = .large
     }
 }
@@ -111,10 +130,17 @@ struct TripsEventPage: View {
     let origin: Airport
     @ObservedObject var viewModel: TripsViewModel
     let isActive: Bool
-    let onOpenURL: (URL) -> Void
+    let dotsCount: Int
+    let dotsIndex: Int
+    let scrollTopToken: Int
+    let onTapHeader: () -> Void
+    let onOpenURL: (URL, BrowserAccess) -> Void
+    let onOpenMap: (CLLocationCoordinate2D, String) -> Void
     let onExpand: (PlaceKind) -> Void
-    let onPlannerChange: (Int, CLLocationCoordinate2D?) -> Void
+    let onPlannerChange: (CLLocationCoordinate2D?) -> Void
     @StateObject private var planner = TripsEventPlanner()
+
+    private static let topId = "trips-page-top"
 
     private var destinations: [Destination] { viewModel.nearbyDestinations(for: event) }
     private var reachableAirports: Set<String>? { event.reachableAirports.map(Set.init) }
@@ -131,13 +157,34 @@ struct TripsEventPage: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(TripsSheetSection.sections(for: event)) { section in
-                sectionView(section)
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                LazyVStack(spacing: 0) {
+                    Color.clear
+                        .frame(height: 0)
+                        .id(Self.topId)
+                    ForEach(TripsSheetSection.sections(for: event)) { section in
+                        sectionView(section)
+                    }
+                    priceFooter
+                }
+                .padding(.bottom, Theme.Spacing.xl)
             }
-            priceFooter
+            .safeAreaInset(edge: .top, spacing: 0) {
+                TripsGamestrip(
+                    event: event,
+                    dotsCount: dotsCount,
+                    dotsIndex: dotsIndex,
+                    onTap: { onTapHeader() }
+                )
+            }
+            .onChange(of: scrollTopToken) { _, _ in
+                guard isActive else { return }
+                withAnimation(AppConstants.springStandard) {
+                    proxy.scrollTo(Self.topId, anchor: .top)
+                }
+            }
         }
-        .padding(.bottom, Theme.Spacing.xl)
         .onAppear { report() }
         .onChange(of: isActive) { _, _ in report() }
         .onChange(of: planner.outbound?.date) { _, _ in report() }
@@ -147,14 +194,14 @@ struct TripsEventPage: View {
 
     private func report() {
         guard isActive else { return }
-        onPlannerChange(planner.nights, airportCoordinate)
+        onPlannerChange(airportCoordinate)
     }
 
     @ViewBuilder
     private func sectionView(_ section: TripsSheetSection) -> some View {
         switch section {
         case .hero:
-            hero
+            heroDetails
         case .flights:
             if destinations.isEmpty {
                 noAirportHint
@@ -172,39 +219,17 @@ struct TripsEventPage: View {
                 )
             }
         case .stays:
-            PlacesSection(
-                kind: .hotel,
+            StaysSection(
                 event: event,
                 airportCoordinate: airportCoordinate,
-                nights: planner.nights,
-                tiers: HotelTier.allCases,
-                onOpenURL: onOpenURL,
-                onExpand: onExpand
+                checkin: planner.outbound?.date,
+                checkout: planner.returning?.date
             )
         case .attractions:
             PlacesSection(
                 kind: .attraction,
                 event: event,
-                airportCoordinate: airportCoordinate,
-                onOpenURL: onOpenURL,
-                onExpand: onExpand
-            )
-        case .transport:
-            TransportSection(planner: planner)
-        case .cars:
-            PlacesSection(
-                kind: .car,
-                event: event,
-                airportCoordinate: airportCoordinate,
-                onOpenURL: onOpenURL,
-                onExpand: onExpand
-            )
-        case .insurance:
-            PlacesSection(
-                kind: .insurance,
-                event: event,
-                airportCoordinate: airportCoordinate,
-                onOpenURL: onOpenURL,
+                onOpenURL: { onOpenURL($0, .restricted) },
                 onExpand: onExpand
             )
         }
@@ -216,22 +241,21 @@ struct TripsEventPage: View {
             .padding(.top, Theme.Spacing.section)
     }
 
-    @ViewBuilder
-    private var hero: some View {
-        if event.isRun {
-            RunEventBoard(event: event, onOpenURL: onOpenURL)
-        } else {
-            SoccerMatchBoard(event: event, onOpenURL: onOpenURL)
-        }
+    private var heroDetails: some View {
+        TripsEventDetail(event: event, onOpenURL: onOpenURL, onOpenMap: onOpenMap)
     }
 
     private var noAirportHint: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Self.emptyHintSpacing) {
             Image(systemName: "airplane.slash")
-            Text("Brak lotniska w zasięgu 200 km")
+            Text("Brak lotniska w zasięgu \(Self.nearbyRadiusKilometers) km")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
         .padding(.vertical, Theme.Spacing.xl)
     }
+
+    private static let emptyHintSpacing: CGFloat = 6
+    private static let metersPerKilometer = 1000.0
+    private static let nearbyRadiusKilometers = Int(AppConstants.nearbyAirportRadiusMeters / metersPerKilometer)
 }

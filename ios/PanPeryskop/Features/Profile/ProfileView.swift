@@ -16,7 +16,7 @@ struct ProfileView: View {
                 VStack(spacing: 24) {
                     HStack {
                         Button(action: onBack) {
-                            Image(systemName: "map.fill")
+                            Image(systemName: "chevron.left")
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.primary)
                                 .frame(width: 36, height: 36)
@@ -117,6 +117,19 @@ struct ProfileView: View {
                     title: "Ustawienia"
                 )
             }
+
+            Spacer().frame(height: 12)
+
+            Button {
+                Task { await authManager.logout() }
+            } label: {
+                ProfileMenuRow(
+                    icon: "rectangle.portrait.and.arrow.right",
+                    title: "Wyloguj się",
+                    showsChevron: false
+                )
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal)
     }
@@ -151,6 +164,7 @@ struct ProfileMenuRow: View {
     let icon: String
     let title: String
     var subtitle: String? = nil
+    var showsChevron: Bool = true
 
     var body: some View {
         HStack(spacing: 12) {
@@ -173,9 +187,11 @@ struct ProfileMenuRow: View {
 
             Spacer()
 
-            Image(systemName: "chevron.right")
-                .font(.footnote)
-                .foregroundColor(.secondary)
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding(12)
         .background(.regularMaterial)

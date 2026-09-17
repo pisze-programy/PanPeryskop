@@ -1,17 +1,17 @@
 import SwiftUI
 
-/// App-level navigation/presentation state (tabs, add-content sheet, story viewer).
+/// App-level navigation/presentation state (category, profile, story viewer).
 @Observable
 @MainActor
 final class AppRouter {
-    var selectedTab = 0
-    var showAddContent = false
+    var category: MapCategory = .events
+    var showProfile = false
     var showStoryViewer = false
     var selectedStoryIndex = 0
     var storyPosts: [Post] = []
 
     func openStory(id: String, map: MapViewModel) async {
-        selectedTab = 0
+        showProfile = false
         guard let post = await map.ensurePost(id: id) else {
             ToastManager.shared.show("Błąd: Spróbuj ponownie")
             return
@@ -19,15 +19,12 @@ final class AppRouter {
         await present([post], map: map)
     }
 
-    /// A "new media nearby" push tap: switch the map to the Live feed and zoom to the
-    /// post location — no story, no fetch (the coordinate comes from the notification).
+    /// A "new media nearby" push tap: show the events feed and zoom to the post
+    /// location — no story, no fetch (the coordinate comes from the notification).
     func openPushPost(_ payload: PushPostPayload, map: MapViewModel) async {
-        selectedTab = 0
-        if payload.category == AppConstants.categoryLive {
-            map.selectLive()
-        } else {
-            map.selectFeedCategory(.events)
-        }
+        showProfile = false
+        category = .events
+        map.selectFeedCategory(.events)
         NotificationCenter.default.post(
             name: .centerMapOnCoordinate,
             object: MapCenterPayload(lat: payload.lat, lng: payload.lng, zoomIn: true)

@@ -7,6 +7,12 @@ All notable changes to PanPeryskop. Format based on
 ## [1.3.0] — 2026-09-11
 
 ### Added
+- Wizzair flights in Wycieczki next to Ryanair: every destination served by both
+  carriers gets its own flight board (prices, hours, best pair) sorted cheapest
+  first, with its own brand-coloured "Kup w Wizzair" / "Kup w Ryanair" button and
+  its own booking link. The route rail names every carrier that flies it.
+- Wycieczki has no invented fares left: a failed or empty live lookup shows "Nie
+  udało się pobrać lotów" with a "Spróbuj ponownie" retry.
 - Wycieczki (Trips) category on the map: pick a Polish origin airport, browse
   European soccer + running events per day (0–89 day slider), native bottom
   sheet with a Ryanair-style flight calendar (outbound before / return after the
@@ -26,6 +32,28 @@ All notable changes to PanPeryskop. Format based on
   (`GET /travel/tag-counts`, Europe-wide for the selected day).
 
 ### Changed
+- Wycieczki events show up immediately and refine themselves: the map pins come
+  from D1 at once, the flight-reachability filter lands a moment later (the
+  response says `enriched: false` and the app asks again). Reachability now walks
+  the routes with a two-at-a-time pool, retries each route twice, caches Wizzair
+  timetables per route and month for 24 h and failed routes for 5 minutes, and
+  never invents a result: a route that fails simply does not count, and when every
+  route fails the app shows the retry toast. Cold month: 2.2 s for the pins,
+  filtered answer right after (0.2 s), cached after that (0.08 s).
+- Wycieczki match header shows the league (ESPN league id → name, stored at
+  ingest), the "vs" label is gone, and the bar has room above the sheet handle.
+  The hero leads with the stadium name (bold) and the city, left-aligned above
+  the map.
+- Wycieczki run hero drops the provider surface/difficulty tags; the distances
+  read inline ("Dystans: 5 km, 10 km") and the sticky header keeps the run title
+  with the distance under it and the date on the right.
+- A match whose location is only the city airport (10% of matches, no venue
+  geocode) hides the map and says so instead of pinning the wrong place; a real
+  stadium coordinate zooms in to the 3D stadium.
+- Best-flight pick now trades the fare against the hotel nights a trip forces
+  (350 zł per night, 500 zł on a Saturday): a cheap fare a week before the event
+  loses to a dearer one the day before, because the extra nights cost more than
+  the fare saves.
 - Story card badges (SPONSOROWANE / tags / source) moved to the bottom so they
   no longer crowd the title.
 - Event tag chips always show their count (zero included); chips sort by count
@@ -50,6 +78,13 @@ All notable changes to PanPeryskop. Format based on
   section no longer jumps while prices load.
 
 ### Fixed
+- Wycieczki: changing the airport no longer wipes the map. The previous pins stay
+  until the new ones arrive, a new choice always cancels the request in flight,
+  and a failed or too-slow load (10 s) shows a short "Coś poszło nie tak, spróbuj
+  ponownie" toast instead of a dead spinner.
+- Wycieczki reachability now looks up fares only for the airports near the day's
+  events (2-8 instead of 89-208 routes): the first load on a new airport drops
+  from 10-27 s to 1-3 s. The event list is unchanged.
 - Run events use the provider's local date and time (was UTC): the date no
   longer shifts by a day and an unknown start time is hidden instead of shown as
   a wrong hour (e.g. 22:00).
@@ -65,13 +100,96 @@ All notable changes to PanPeryskop. Format based on
   open underneath.
 - Soccer matches show the venue's local time and date (were shown in the app's
   timezone, so UK/Portugal were off by an hour). Existing matches were updated.
+- Soccer crests use the club's real colour from the provider (was a generated
+  colour); existing matches were updated.
+- The flight CTA is a full-width button like the hero: it reads "Wybierz lot aby
+  kupić bilet" until a leg is picked, then "Kup bilet" / "Kup bilety" with the
+  price.
+- Hotel and attraction previews load the full list, so "Zobacz więcej" stays
+  after switching the hotel filter.
+- The "Open in" map picker no longer closes the event sheet; groups no longer
+  jump horizontally on first load; the event pager is off for a single event and
+  the airport rail is off for a single airport.
+- Soccer matches show the provider's team codes (BEL, FRA, …) on the crest
+  instead of generated initials; existing matches were re-fetched.
+- Wycieczki sheet no longer flashes full width before settling to its padding.
+- The flight CTA is always visible: it enables once at least one leg is picked
+  and disables when both are cleared. It buys a one-way outbound, a one-way
+  return, or both, and reads "Kup bilet" / "Kup bilety".
+- The destination-airport picker is a swipeable map rail (arc + route label +
+  dots) instead of the blue pills; swiping changes the airport.
+- Tapping the selected flight day again deselects it.
 
 ### Changed
+- Bottom navigation is now the category switch: Mapa (Wydarzenia), Samolot
+  (Wycieczki), Profil. The floating category pill and the "+" UGC button are
+  gone; adding content is temporarily disabled (screen kept, no entry point).
+- "Wyloguj się" moved to the Profile screen; Settings keeps only account
+  deletion. The events icon in the bottom bar is a home icon.
+- Events and Trips: tags are multi-select (all by default, the last one stays
+  on, the choice is remembered) and the "Wszystkie" chip is gone. A Data chip
+  opens a day sheet (0–5 days for events, 0–89 for trips) synced with the day
+  rail; a past day falls back to today on launch.
 - Onboarding lists the real benefits: European trips (event, flights, stay,
   attractions), local events, and what is happening nearby.
-- Wycieczki sheet loads lazily: flights only for the active, visible page, and
-  place sections only when they scroll into view. The full list loads on
-  "Zobacz więcej" and fetches more as you scroll.
+- The trips sheet shows a compact sticky header once the hero scrolls away —
+  team crests (soccer) or the race distance (runs) plus the event time — and
+  tapping it scrolls back to the top.
+- Soccer sheet shows the stadium name (from the provider) and a soft team-colour
+  gradient across the full sheet width; the destination map marks the arrival
+  airport with a landing-plane icon; the section heading reads "Wybierz lot".
+- Trips sheet: the gamestrip is a fixed top inset of the page (`safeAreaInset`),
+  so it stays glued to the top while the page scrolls under it and never leaves a
+  gap when the page overscrolls. One constant look, on an opaque background with
+  two soft radial team-colour glows and a soft bottom shadow.
+  Soccer puts the crests and names on the sides with "vs" and the date · time in
+  the centre; runs show the race name in the bar. The group dots sit at the bottom
+  of the bar. Below it both kinds use one shared detail layout: headline, optional
+  tags, city, map and ticket button, all left aligned. The run distance and tags
+  show here; soccer shows the stadium name.
+- Loading never resizes the sheet: the ticket strip, the buy button, the
+  destination rail and the place cards all keep a fixed height between their
+  skeleton and their loaded state.
+- Wycieczki sheet scrolls smoothly: event cards are built only as they come on
+  screen, the map behind stops refreshing while trips is open, the sheet is
+  opaque, hotels and attractions load once instead of every time the section
+  scrolls in, and the ticket strip no longer uses a mask.
+- The full hotel or attraction list opens as a sheet over the event card, so the
+  card underneath is not rebuilt and the chosen flights stay.
+- "Noclegi" shows live hotel prices on a Stay22 map widget instead of invented
+  cards: Booking.com hotels only, pick the area (Przy wydarzeniu / Centrum /
+  Przy lotnisku), the dates follow the chosen flights, and a tap opens a
+  full-height sheet with the chosen date range under the title and one
+  "Dostosuj" list (Lokalizacja, Cena — "Za noc" by default or "Za całość (3 noce,
+  11-14 listopada)", Standard, Ocena gości). Hotel cards open Booking in the
+  system browser. Before a flight pair is chosen the dates default to the night
+  before the event. The map loads only when the section scrolls into view, and
+  WebKit is warmed up in the background. The fake hotel, car and insurance
+  catalogues are gone.
+- The "Atrakcje" section shows real tours and activities from Viator for the
+  event's city: photo, title, rating, duration, free cancellation and a
+  "Sprawdź dostępność" link that opens the Viator page in the in-app browser.
+  Hotels and other local rows stay as they were. The Viator destination
+  catalogue is refreshed weekly and products are cached per city for a week.
+- Run events show the distance range in the bar ("10 km – 21.1 km") and every
+  offered distance as "Dystans:" tags above the map, smallest first.
+- Run colour scales from light (short, asphalt) to dark (long, trail, ultra) from
+  the provider's real distance, surface and difficulty.
+- Run surface and difficulty show Polish labels (Asfalt, pagórkowaty, …).
+- Race links stay in the in-app browser with a wider policy (they redirect to
+  external hosts); other links still use the fixed list.
+- The tapped map pin sits lower (0.40) so it is not hidden under the filters.
+- Swiping between events in a group no longer jumps, and returning from
+  "Zobacz więcej" keeps the sheet at full height.
+- Events download by 50 km squares: moving the map inside a downloaded square
+  makes no request; leaving it downloads only the new squares (max 5 kept). The
+  20s refresh downloads only the squares on screen.
+- Wycieczki sheet loads lazily: flights only for the active page, and place
+  sections only when they scroll into view. The flight loader re-runs when the
+  page comes back from the hotel list, so it never spins forever. The buy button
+  reserves its exact height while loading, so the content does not jump when the
+  prices arrive. The full list loads on "Zobacz więcej" and fetches more as you
+  scroll.
 - "Zobacz więcej" expands the same sheet to large and shows the list inline, with
   a native back button and a loading skeleton.
 - The expanded list shows the details first and a full-width image below, with a

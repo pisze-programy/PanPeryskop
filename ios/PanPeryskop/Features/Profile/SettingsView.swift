@@ -103,29 +103,6 @@ struct SettingsView: View {
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 4)
-
-            Divider()
-                .padding(.vertical, 8)
-
-            Button {
-                Task { await authManager.logout() }
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .font(.title3)
-                        .foregroundColor(.primary)
-                        .frame(width: 32)
-                    Text("Wyloguj się")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    Spacer()
-                }
-                .padding(12)
-                .background(.regularMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal)
     }

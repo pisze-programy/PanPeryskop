@@ -1,12 +1,14 @@
 import { CONFIG } from '../config/index';
-// Flight availability — live Ryanair (farefinder, NO auth/bot-wall) with a
-// deterministic-mock fallback so the grid always renders. Wizzair stays mock
-// (its timetable is Akamai KPSDK bot-walled — separate effort).
+// Flight availability — live Ryanair (farefinder) and live Wizzair (timetable),
+// both without auth or bot walls, both cached in D1 `flight_cache`. A live
+// failure throws: the app shows "try again" instead of invented fares.
 //
-// Live sources (verified): 
+// Ryanair (verified):
 //   /farfnd/3/oneWayFares/{o}/{d}/availabilities   → dates the route flies (schedule)
 //   /farfnd/3/oneWayFares/{o}/{d}/cheapestPerDay   → per-day cheapest price+hour
-// Both cached in D1 `flight_cache` (availabilities ~24h, prices ~12h).
+// Wizzair (verified):
+//   POST {api}/search/timetable with both directions, 7 days each, price+hours.
+//   The API path is versioned and the version lives in the site HTML (24 h cache).
 import { addDaysWarsaw } from '../seed/core/dates';
 
 export interface FlightCell {
@@ -20,65 +22,16 @@ export interface FlightWindow {
   returning: FlightCell[];
 }
 
-// ---- Deterministic mock (fallback + Wizzair) ----
-
-function hash(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-
-function seededPrice(seed: number, dayOffset: number): number | null {
-  const r = (seed + dayOffset * 2654435761) >>> 0;
-  if ((r & CONFIG.travel.flights.sim.noFareMask) === 0) return null;
-  const base = CONFIG.travel.flights.sim.basePriceMin + (r % CONFIG.travel.flights.sim.basePriceRange);
-  const spike = (r >>> 8) % CONFIG.travel.flights.sim.priceSpikeRange;
-  return Math.round((base + spike) * 100) / 100;
-}
-
-function mockHour(seed: number, dayOffset: number): string {
-  const hour = CONFIG.travel.flights.sim.hourStart + ((seed + dayOffset) % CONFIG.travel.flights.sim.hourRange);
-  const minute = ((seed >>> 4) + dayOffset) % 60;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
-function dayCells(origin: string, dest: string, eventDay: string, range: [number, number]): FlightCell[] {
-  const seed = hash(`${origin}|${dest}|${eventDay}`);
-  const cells: FlightCell[] = [];
-  for (let d = range[0]; d <= range[1]; d++) {
-    const price = seededPrice(seed, d);
-    cells.push({
-      date: addDaysWarsaw(eventDay, d),
-      hour: price === null ? null : mockHour(seed, d),
-      price,
-    });
-  }
-  if (cells.every((c) => c.price === null)) {
-    const last = cells[cells.length - 1];
-    last.price = CONFIG.travel.flights.sim.fallbackPriceMin + (seed % CONFIG.travel.flights.sim.fallbackPriceRange);
-    last.hour = mockHour(seed, range[1]);
-  }
-  return cells;
-}
-
-export function mockFlightWindow(origin: string, dest: string, eventDay: string): FlightWindow {
-  return {
-    outbound: dayCells(origin, dest, eventDay, CONFIG.travel.flights.sim.outboundWindow),
-    returning: dayCells(origin, dest, eventDay, CONFIG.travel.flights.sim.returnWindow),
-  };
-}
-
 // ---- Live Ryanair (farefinder) ----
 
 
 
 /** Raw farefinder GET. 404 → null (no such route); any other non-2xx throws. */
 async function fetchFareJson(url: string): Promise<any | null> {
-  const res = await fetch(url, { headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'application/json' } });
+  const res = await fetch(url, {
+    headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'application/json' },
+    signal: AbortSignal.timeout(CONFIG.travel.flights.timeoutMs),
+  });
   if (res.status === 404) return null;
   if (res.status === 429 || res.status >= 500) {
     throw new Error(`Ryanair farefinder ${res.status}`);
@@ -87,22 +40,55 @@ async function fetchFareJson(url: string): Promise<any | null> {
   return await res.json();
 }
 
-async function cachedJson(db: D1Database, key: string, ttlMs: number, fetchFn: () => Promise<any | null>): Promise<any | null> {
+export async function readFlightCache(db: D1Database, key: string): Promise<any | null> {
+  const row = await db
+    .prepare('SELECT payload FROM flight_cache WHERE cache_key = ? AND expires_at > ?')
+    .bind(key, Date.now())
+    .first<{ payload: string }>();
+  if (!row) return null;
+  const parsed = safeParse(row.payload);
+  return parsed === undefined ? null : parsed;
+}
+
+export async function writeFlightCache(db: D1Database, key: string, value: unknown, ttlMs: number): Promise<void> {
+  await writeCache(db, key, value, ttlMs);
+}
+
+async function cachedJson(db: D1Database, key: string, ttlMs: number, fetchFn: () => Promise<any | null>, failureTtlMs = 0): Promise<any | null> {
   const row = await db
     .prepare('SELECT payload FROM flight_cache WHERE cache_key = ? AND expires_at > ?')
     .bind(key, Date.now())
     .first<{ payload: string }>();
   if (row) {
-    try { return JSON.parse(row.payload); } catch { /* corrupt → refetch */ }
+    const parsed = safeParse(row.payload);
+    if (isFailedMarker(parsed)) throw new Error('cached upstream failure');
+    if (parsed !== undefined) return parsed;
   }
-  const value = await fetchFn();
-  if (value === null) return null;
+  try {
+    const value = await fetchFn();
+    if (value === null) return null;
+    await writeCache(db, key, value, ttlMs);
+    return value;
+  } catch (error) {
+    if (failureTtlMs > 0) await writeCache(db, key, { __failed: true }, failureTtlMs);
+    throw error;
+  }
+}
+
+function safeParse(payload: string): any {
+  try { return JSON.parse(payload); } catch { return undefined; }
+}
+
+function isFailedMarker(value: any): boolean {
+  return Boolean(value) && typeof value === 'object' && value.__failed === true;
+}
+
+async function writeCache(db: D1Database, key: string, value: unknown, ttlMs: number): Promise<void> {
   await db
     .prepare('INSERT INTO flight_cache (cache_key, payload, expires_at) VALUES (?, ?, ?) ON CONFLICT(cache_key) DO UPDATE SET payload = excluded.payload, expires_at = excluded.expires_at')
     .bind(key, JSON.stringify(value), Date.now() + ttlMs)
     .run()
     .catch(() => { /* cache write is best-effort */ });
-  return value;
 }
 
 export interface CheapestDay {
@@ -115,8 +101,9 @@ export interface CheapestDay {
 
 /** Dates the origin→dest route flies (whole booking horizon), cached. */
 export async function fetchRyanairAvailabilities(db: D1Database, origin: string, dest: string): Promise<string[]> {
-  const data = await cachedJson(db, `avail:${origin}:${dest}`, CONFIG.travel.flights.availabilityTtlMs, () =>
-    fetchFareJson(`${CONFIG.travel.flights.fareBase}/${origin}/${dest}/availabilities`));
+  const cfg = CONFIG.travel.flights;
+  const data = await cachedJson(db, `avail:${origin}:${dest}`, cfg.availabilityTtlMs, () =>
+    fetchFareJson(`${cfg.fareBase}/${origin}/${dest}/availabilities`), cfg.failureTtlMs);
   return Array.isArray(data) ? data.filter((d): d is string => typeof d === 'string') : [];
 }
 
@@ -163,8 +150,9 @@ export function buildWindowFromCheapest(
   outboundPrices: Map<string, CheapestDay>,
   returnPrices: Map<string, CheapestDay>,
 ): FlightWindow {
-  const outDays = Array.from({ length: CONFIG.travel.flights.sim.outboundWindow[1] - CONFIG.travel.flights.sim.outboundWindow[0] + 1 }, (_, i) => addDaysWarsaw(eventDay, CONFIG.travel.flights.sim.outboundWindow[0] + i));
-  const retDays = Array.from({ length: CONFIG.travel.flights.sim.returnWindow[1] - CONFIG.travel.flights.sim.returnWindow[0] + 1 }, (_, i) => addDaysWarsaw(eventDay, CONFIG.travel.flights.sim.returnWindow[0] + i));
+  const windows = CONFIG.travel.flights.windows;
+  const outDays = Array.from({ length: windows.outbound[1] - windows.outbound[0] + 1 }, (_, i) => addDaysWarsaw(eventDay, windows.outbound[0] + i));
+  const retDays = Array.from({ length: windows.return[1] - windows.return[0] + 1 }, (_, i) => addDaysWarsaw(eventDay, windows.return[0] + i));
   return {
     outbound: outDays.map((d) => buildCell(d, outboundPrices)),
     returning: retDays.map((d) => buildCell(d, returnPrices)),
@@ -174,7 +162,7 @@ export function buildWindowFromCheapest(
 /** Live window: fetch per-day prices for the months the window spans, both directions. */
 export async function liveRyanairWindow(db: D1Database, origin: string, dest: string, eventDay: string): Promise<FlightWindow> {
   const months = new Set<string>();
-  for (let o = CONFIG.travel.flights.sim.outboundWindow[0]; o <= CONFIG.travel.flights.sim.returnWindow[1]; o++) {
+  for (let o = CONFIG.travel.flights.windows.outbound[0]; o <= CONFIG.travel.flights.windows.return[1]; o++) {
     months.add(monthKey(addDaysWarsaw(eventDay, o)));
   }
   const outPrices = new Map<string, CheapestDay>();
@@ -186,15 +174,153 @@ export async function liveRyanairWindow(db: D1Database, origin: string, dest: st
   return buildWindowFromCheapest(eventDay, outPrices, retPrices);
 }
 
-/** Ryanair window — live; falls back to the deterministic mock on any live failure. */
 export async function fetchRyanairWindow(origin: string, dest: string, eventDay: string, db: D1Database): Promise<FlightWindow> {
-  try {
-    return await liveRyanairWindow(db, origin, dest, eventDay);
-  } catch {
-    return mockFlightWindow(origin, dest, eventDay);
-  }
+  return liveRyanairWindow(db, origin, dest, eventDay);
 }
 
-export async function fetchWizzairWindow(origin: string, dest: string, eventDay: string): Promise<FlightWindow> {
-  return mockFlightWindow(origin, dest, eventDay);
+// ---- Live Wizzair (timetable) ----
+
+const WIZZAIR_VERSION_KEY = 'wizz:version';
+
+interface WizzairFlight {
+  price?: { amount?: number } | null;
+  priceType?: string;
+  departureDate?: string;
+  departureDates?: string[] | null;
+}
+
+interface WizzairTimetable {
+  outboundFlights?: WizzairFlight[];
+  returnFlights?: WizzairFlight[];
+  noMarket?: boolean;
+}
+
+export function parseWizzairVersion(html: string): string | null {
+  const match = new RegExp(CONFIG.travel.flights.wizzair.versionPattern).exec(html);
+  return match ? match[1] : null;
+}
+
+async function dropCachedJson(db: D1Database, key: string): Promise<void> {
+  await db.prepare('DELETE FROM flight_cache WHERE cache_key = ?').bind(key).run().catch(() => { /* best effort */ });
+}
+
+async function wizzairApiBase(db: D1Database): Promise<string> {
+  const cfg = CONFIG.travel.flights.wizzair;
+  const version = await cachedJson(db, WIZZAIR_VERSION_KEY, cfg.versionTtlMs, async () => {
+    const res = await fetch(cfg.pageUrl, {
+      headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'text/html' },
+      signal: AbortSignal.timeout(CONFIG.travel.flights.timeoutMs * 4),
+    });
+    if (!res.ok) throw new Error(`Wizzair site ${res.status}`);
+    return parseWizzairVersion(await res.text());
+  });
+  return `${cfg.apiHost}/${typeof version === 'string' ? version : cfg.fallbackVersion}/Api`;
+}
+
+async function postWizzairTimetable(apiBase: string, origin: string, dest: string, fromDay: string, toDay: string): Promise<Response> {
+  const body = {
+    flightList: [
+      { departureStation: origin, arrivalStation: dest, from: fromDay, to: toDay },
+      { departureStation: dest, arrivalStation: origin, from: fromDay, to: toDay },
+    ],
+    priceType: 'regular',
+    adultCount: 1,
+    childCount: 0,
+    infantCount: 0,
+  };
+  return await fetch(`${apiBase}/search/timetable`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'User-Agent': CONFIG.travel.flights.userAgent,
+      Origin: 'https://www.wizzair.com',
+      Referer: 'https://www.wizzair.com/',
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(CONFIG.travel.flights.timeoutMs),
+  });
+}
+
+async function fetchWizzairTimetable(db: D1Database, origin: string, dest: string, fromDay: string, toDay: string): Promise<WizzairTimetable> {
+  const attempt = async (): Promise<Response> => await postWizzairTimetable(await wizzairApiBase(db), origin, dest, fromDay, toDay);
+  let res = await attempt();
+  if (res.status === 404) {
+    await dropCachedJson(db, WIZZAIR_VERSION_KEY);
+    res = await attempt();
+  }
+  if (res.status === 400 || res.status === 404) return { noMarket: true };
+  if (!res.ok) throw new Error(`Wizzair timetable ${res.status}`);
+  return (await res.json()) as WizzairTimetable;
+}
+
+function wizzairCell(flight: WizzairFlight | undefined, day: string): FlightCell {
+  if (!flight || flight.priceType !== 'price') return { date: day, hour: null, price: null };
+  const amount = flight.price?.amount;
+  if (typeof amount !== 'number' || amount <= 0) return { date: day, hour: null, price: null };
+  const first = flight.departureDates?.[0];
+  const hour = typeof first === 'string' ? (/T(\d{2}:\d{2})/.exec(first)?.[1] ?? null) : null;
+  return { date: day, hour, price: amount };
+}
+
+function wizzairDays(flights: WizzairFlight[], range: [number, number], eventDay: string): FlightCell[] {
+  const byDay = new Map<string, WizzairFlight>();
+  for (const f of flights) {
+    if (typeof f.departureDate === 'string') byDay.set(f.departureDate.slice(0, 10), f);
+  }
+  const days: string[] = [];
+  for (let o = range[0]; o <= range[1]; o++) days.push(addDaysWarsaw(eventDay, o));
+  return days.map((day) => wizzairCell(byDay.get(day), day));
+}
+
+export function buildWizzairWindow(data: WizzairTimetable, eventDay: string): FlightWindow {
+  if (data.noMarket) return { outbound: [], returning: [] };
+  return {
+    outbound: wizzairDays(data.outboundFlights ?? [], CONFIG.travel.flights.windows.outbound, eventDay),
+    returning: wizzairDays(data.returnFlights ?? [], CONFIG.travel.flights.windows.return, eventDay),
+  };
+}
+
+export function monthsInWindow(eventDay: string): string[] {
+  const windows = CONFIG.travel.flights.windows;
+  const first = addDaysWarsaw(eventDay, windows.outbound[0]);
+  const last = addDaysWarsaw(eventDay, windows.return[1]);
+  return [...new Set([monthKey(first), monthKey(last)])];
+}
+
+export function mergeWizzairMonths(months: WizzairTimetable[]): WizzairTimetable {
+  return {
+    outboundFlights: months.flatMap((m) => m.outboundFlights ?? []),
+    returnFlights: months.flatMap((m) => m.returnFlights ?? []),
+    noMarket: months.length > 0 && months.every((m) => m.noMarket),
+  };
+}
+
+async function wizzairMonth(db: D1Database, origin: string, dest: string, month: string): Promise<WizzairTimetable> {
+  const cfg = CONFIG.travel.flights;
+  const key = `wizz:${origin}:${dest}:${month}`;
+  const cached = await cachedJson(db, key, cfg.wizzair.windowTtlMs, async () =>
+    await fetchWizzairTimetable(db, origin, dest, month, addDaysWarsaw(month, 30)), cfg.failureTtlMs);
+  return (cached ?? {}) as WizzairTimetable;
+}
+
+async function cachedWizzairTimetable(db: D1Database, origin: string, dest: string, eventDay: string): Promise<WizzairTimetable> {
+  const months = monthsInWindow(eventDay);
+  const loaded: WizzairTimetable[] = [];
+  for (const month of months) loaded.push(await wizzairMonth(db, origin, dest, month));
+  return mergeWizzairMonths(loaded);
+}
+
+export async function fetchWizzairWindow(origin: string, dest: string, eventDay: string, db: D1Database): Promise<FlightWindow> {
+  return buildWizzairWindow(await cachedWizzairTimetable(db, origin, dest, eventDay), eventDay);
+}
+
+export async function fetchWizzairFlyingDays(origin: string, dest: string, eventDay: string, db: D1Database): Promise<string[]> {
+  const data = await cachedWizzairTimetable(db, origin, dest, eventDay);
+  if (data.noMarket) return [];
+  const days = new Set<string>();
+  for (const flight of [...(data.outboundFlights ?? []), ...(data.returnFlights ?? [])]) {
+    if (typeof flight.departureDate === 'string') days.add(flight.departureDate.slice(0, 10));
+  }
+  return [...days];
 }

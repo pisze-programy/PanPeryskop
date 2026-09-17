@@ -242,13 +242,25 @@ storiesRoutes.get('/', async (c) => {
   const windowStart = now - TTL_MS;
   const category = q.category && POST_CATEGORY_SET.has(q.category) ? q.category : null;
   const catCond = category ? 'AND p.category = ?' : '';
-  // Tag filter (map chips) — events only. An unknown tag is not an error: the app
-  // can hold a stale cached chip (a tag removed or renamed on the backend), so we
-  // return an empty list instead of 400 — the map simply shows no pins for it.
-  const tag = q.tag ? String(q.tag) : null;
-  if (tag && !(await tagIdSet(db)).has(tag)) return c.json({ stories: [] });
-  const tagCond = tag ? 'AND p.tags LIKE ?' : '';
-  const tagBind = tag ? `%"${tag}"%` : null;
+  // Tag filter (map chips) — events only. The app sends a comma list of the
+  // selected tags; a post matches if it carries ANY of them. Unknown tags are
+  // dropped; if none is valid we return an empty list instead of 400 (the app can
+  // hold a stale chip after a tag is renamed or removed).
+  const hasTagFilter = q.tags !== undefined || q.tag !== undefined;
+  let tagCond = '';
+  let tagBinds: string[] = [];
+  if (hasTagFilter) {
+    const requested = String(q.tags ?? q.tag ?? '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const valid = await tagIdSet(db);
+    const tags = requested.filter((t) => valid.has(t));
+    if (tags.length === 0) return c.json({ stories: [] });
+    tagCond = 'AND (' + tags.map(() => 'p.tags LIKE ?').join(' OR ') + ')';
+    tagBinds = tags.map((t) => `%"${t}"%`);
+  }
+
   // Seen (watched) media is hidden from the Live feed entirely — the map removes
   // it locally and future fetches must not return it either.
   const hideWatchedLive = category === CATEGORY_LIVE;
@@ -290,7 +302,7 @@ storiesRoutes.get('/', async (c) => {
             ORDER BY ${popularityExpr()} DESC
             LIMIT ${limit}`
         )
-        .bind(user.id, user.id, swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []), ...(tag ? [tagBind] : []))
+        .bind(user.id, user.id, swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []), ...tagBinds)
         .all<StoryRow>();
 
 const live = results.filter(applyEventLiveness);
@@ -316,7 +328,7 @@ const live = results.filter(applyEventLiveness);
         ORDER BY ${popularityExpr()} DESC
         LIMIT ${limit}`
     )
-    .bind(swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []), ...(tag ? [tagBind] : []))
+    .bind(swLat, neLat, swLng, neLng, ...timeBinds, ...(category ? [category] : []), ...tagBinds)
     .all<StoryRow>();
 
   const live = results.filter(applyEventLiveness);

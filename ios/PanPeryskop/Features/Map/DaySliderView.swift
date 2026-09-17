@@ -5,8 +5,8 @@ import SwiftUI
 struct DaySliderView: View {
     @ObservedObject var viewModel: MapViewModel
 
-    private static let minDay = 0
-    private static let maxDay = 5
+    private static let minDay = MapViewModel.minDayOffset
+    private static let maxDay = MapViewModel.maxDayOffset
     private static let minorDivisions = 3
 
     // Calendar.weekday: 1 = Sunday … 7 = Saturday.

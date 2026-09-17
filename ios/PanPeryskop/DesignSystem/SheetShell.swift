@@ -9,6 +9,6 @@ struct SheetShell<Content: View>: View {
         content()
             .presentationDetents(detents, selection: $detent)
             .presentationDragIndicator(.visible)
-            .presentationBackground(.regularMaterial)
+            .presentationBackground(Color(.systemBackground))
     }
 }

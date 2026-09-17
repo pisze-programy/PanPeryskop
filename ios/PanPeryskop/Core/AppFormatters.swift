@@ -34,11 +34,37 @@ extension AppConstants {
         return f
     }()
 
+    /// "d MMMM" — day with the month name in the genitive (e.g. "1 listopada").
+    static let dayMonthFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = warsawCalendar
+        f.locale = Locale(identifier: "pl_PL")
+        f.dateFormat = "d MMMM"
+        return f
+    }()
+
+    static let dayOnlyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = warsawCalendar
+        f.locale = Locale(identifier: "pl_PL")
+        f.dateFormat = "d"
+        return f
+    }()
+
     static let fullDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.calendar = warsawCalendar
         f.locale = Locale(identifier: "pl_PL")
         f.dateFormat = "d MMM yyyy"
+        return f
+    }()
+
+    /// "LLLL yyyy" — month section header (e.g. "wrzesień 2026").
+    static let monthYearFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = warsawCalendar
+        f.locale = Locale(identifier: "pl_PL")
+        f.dateFormat = "LLLL yyyy"
         return f
     }()
 

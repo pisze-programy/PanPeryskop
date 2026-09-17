@@ -2,12 +2,9 @@ import { queue } from './queue';
 
 export type TravelTag = 'citybreak' | 'pilka-nozna' | 'biegi';
 export type TravelRunType = 'backfill' | 'replenish';
-export type PlaceKind = 'hotel' | 'attraction' | 'car' | 'insurance';
-export type HotelTier = 'economy' | 'recommended' | 'premium';
+export type PlaceKind = 'attraction';
 
 const travelTagValues: TravelTag[] = ['citybreak', 'pilka-nozna', 'biegi'];
-const placeKinds: PlaceKind[] = ['hotel', 'attraction', 'car', 'insurance'];
-const hotelTiers: HotelTier[] = ['economy', 'recommended', 'premium'];
 
 export const travel = {
   provider: 'espn',
@@ -112,6 +109,7 @@ export const travel = {
   batchCap: queue.d1BatchCap,
   reachability: {
     nearbyKm: 200,
+    airportMatchKm: 1,
     outboundOffsets: [-3, -2, -1],
     returnOffsets: [1, 2, 3],
   },
@@ -121,28 +119,110 @@ export const travel = {
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
     availabilityTtlMs: 24 * 3_600_000,
     priceTtlMs: 12 * 3_600_000,
-    sim: {
-      noFareMask: 3,
-      basePriceMin: 20,
-      basePriceRange: 180,
-      priceSpikeRange: 25,
-      hourStart: 8,
-      hourRange: 11,
-      fallbackPriceMin: 50,
-      fallbackPriceRange: 60,
-      outboundWindow: [-7, -1] as [number, number],
-      returnWindow: [1, 7] as [number, number],
+    timeoutMs: 3_000,
+    deadlineMs: 8_000,
+    failureTtlMs: 5 * 60_000,
+    routeConcurrency: 2,
+    routeRetries: 2,
+    enrichWaitMs: 2_000,
+    enrichTtlMs: 12 * 3_600_000,
+    windows: {
+      outbound: [-7, -1] as [number, number],
+      return: [1, 7] as [number, number],
+    },
+    wizzair: {
+      pageUrl: 'https://wizzair.com/en-gb',
+      apiHost: 'https://be.wizzair.com',
+      versionPattern: 'be\\.wizzair\\.com/(\\d+\\.\\d+\\.\\d+)/Api',
+      fallbackVersion: '29.16.1',
+      versionTtlMs: 24 * 3_600_000,
+      windowTtlMs: 12 * 3_600_000,
     },
   },
-  places: {
-    kinds: placeKinds,
-    tiers: hotelTiers,
-    linkBase: {
-      hotel: 'https://www.booking.com/searchresults.html?ss=',
-      attraction: 'https://www.getyourguide.com/s/?q=',
-      car: 'https://www.booking.com/cars/index.html?ss=',
-      insurance: 'https://www.getyourguide.com/s/?q=',
-    } as Record<PlaceKind, string>,
+  viator: {
+    provider: 'viator',
+    hosts: {
+      production: 'https://api.viator.com/partner',
+      sandbox: 'https://api.sandbox.viator.com/partner',
+    },
+    apiVersion: '2.0',
+    // The partner API has no Polish content; English is the only usable language.
+    language: 'en-US',
+    currency: 'PLN',
+    // Verified live: pagination.count is silently capped at 50 (count=100 → 50).
+    pageSize: 50,
+    // Availability window around the trip day, in days.
+    windowDaysBefore: 1,
+    windowDaysAfter: 1,
+    cacheTtlMs: 7 * 24 * 3_600_000,
+    timeoutMs: 20_000,
+    retries: 2,
+    retryDelayMs: 2_000,
+    // Flags we surface in the UI, in badge priority order.
+    badgeFlags: [
+      ['best_seller', 'LIKELY_TO_SELL_OUT'],
+      ['free_cancellation', 'FREE_CANCELLATION'],
+      ['special_offer', 'SPECIAL_OFFER'],
+      ['skip_line', 'SKIP_THE_LINE'],
+      ['private', 'PRIVATE_TOUR'],
+      ['new', 'NEW_ON_VIATOR'],
+    ] as [string, string][],
+  },
+  stay22: {
+    provider: 'stay22',
+    embedBase: 'https://www.stay22.com/embed/gm',
+    campaign: 'panperyskop-trips',
+    currency: 'PLN',
+    language: 'pl',
+    unitsystem: 'metric',
+    invmode: 'accommodation',
+    hotelsapi: 'booking',
+    limits: { mini: 10, full: 50 },
+    // Lower zoom keeps the hotel pins inside the frame; the widget default (16)
+    // shows a single building.
+    zoom: { mini: 11, full: 13 },
+    hidden: [
+      'hidebrandlogo',
+      'hidesettings',
+      'hidecurrency',
+      'hidelanguage',
+      'hidefooter',
+      'hideextmaplinking',
+      'hidemappanels',
+      'hideppn',
+      'hidespatial',
+      'hidecentermap',
+      'hideshare',
+      'hidenavimage',
+      'showhotels',
+      'disablerentals',
+    ],
+    // The mini map only previews prices: the app takes the taps, so every
+    // interactive part of the widget goes away, including the Allez button.
+    miniHidden: [
+      'hideenlargemap',
+      'hidesearchbar',
+      'hidefilters',
+      'hidecheckinout',
+      'hideguestpicker',
+      'hidemodeswitcher',
+      'hidenavbuttons',
+      'hideallezbutton',
+    ],
+    // The full sheet has its own header for the area and the filters, so the
+    // widget keeps only the map and its markers.
+    fullHidden: [
+      'hideenlargemap',
+      'hidesearchbar',
+      'hidefilters',
+      'hidepricefilter',
+      'hideroomtypefilter',
+      'hidecheckinout',
+      'hideguestpicker',
+      'hidemodeswitcher',
+      'hidenavbuttons',
+      'hideallezbutton',
+    ],
   },
   api: {
     maxWindowMs: 370 * 24 * 3_600_000,

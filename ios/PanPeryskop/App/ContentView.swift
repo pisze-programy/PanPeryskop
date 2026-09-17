@@ -11,17 +11,20 @@ struct ContentView: View {
     var body: some View {
         @Bindable var router = router
         return ZStack(alignment: .bottom) {
-            if router.selectedTab == 0 {
+            if router.showProfile {
+                ProfileView(onBack: { router.showProfile = false })
+                    .environmentObject(authManager)
+            } else {
                 MapScreen(
+                    category: router.category,
+                    onSelectCategory: { router.category = $0 },
+                    onProfile: { router.showProfile = true },
                     tripsViewModel: tripsViewModel,
                     showStoryViewer: $router.showStoryViewer,
                     selectedStoryIndex: $router.selectedStoryIndex,
                     storyPosts: $router.storyPosts
                 )
                 .environmentObject(authManager)
-            } else {
-                ProfileView(onBack: { router.selectedTab = 0 })
-                    .environmentObject(authManager)
             }
 
             if router.showStoryViewer {
@@ -35,19 +38,13 @@ struct ContentView: View {
                 .transition(.opacity)
             }
 
-            if router.selectedTab == 0 && !router.showStoryViewer {
-                VStack(spacing: 0) {
-                    Spacer()
-                    AppTabBar(selectedTab: $router.selectedTab, onAdd: { router.showAddContent = true })
-                        .padding(.bottom, 32)
-                }
-            }
-
             ToastView()
         }
         .ignoresSafeArea(.keyboard)
         .task {
-            PostUploader.shared.start()
+            // UGC adding is temporarily disabled — the "+" entry point is gone, so the
+            // uploader stays off. Re-enable together with AddContentView.
+            // PostUploader.shared.start()
             await authManager.refreshMe()
             if let pushPost = NotificationDelegate.consumePendingPushPost() {
                 await router.openPushPost(pushPost, map: mapViewModel)
@@ -64,11 +61,6 @@ struct ContentView: View {
             guard let newId else { return }
             pendingStoryId = nil
             Task { await router.openStory(id: newId, map: mapViewModel) }
-        }
-        .sheet(isPresented: $router.showAddContent) {
-            AddContentView()
-                .environmentObject(authManager)
-                .onDisappear { mapViewModel.refreshCurrentRegion() }
         }
     }
 }

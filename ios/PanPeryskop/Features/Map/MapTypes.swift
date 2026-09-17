@@ -11,11 +11,3 @@ struct MapBBox {
         lat >= swLat && lat <= neLat && lng >= swLng && lng <= neLng
     }
 }
-
-/// Typed cache key for the merged post cache — replaces the old stringly key.
-struct PostsCacheKey: Hashable {
-    let category: MapCategory
-    let isLive: Bool
-    let day: String?
-    let tag: String?
-}

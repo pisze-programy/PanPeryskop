@@ -16,6 +16,8 @@ struct TravelEvent: Codable, Identifiable, Equatable {
     /// Nearby airport IATAs (≤200 km) that actually have flights from the chosen
     /// origin around the event day — computed by the backend; nil = not filtered.
     let reachableAirports: [String]?
+    /// True when the backend had no venue coordinate and used the city airport.
+    var venueIsAirport: Bool? = nil
 
     var id: String { "\(provider):\(external_id)" }
 
@@ -45,10 +47,19 @@ struct TravelEvent: Codable, Identifiable, Equatable {
         }
         return Date(timeIntervalSince1970: TimeInterval(start_ms) / 1000)
     }
+
+    /// The trip day the backend uses for availability windows.
+    var isoDay: String { AppConstants.isoDayFormatter.string(from: displayDate) }
+
+    var nightBeforeCheckin: String {
+        guard let day = Calendar.current.date(byAdding: .day, value: -1, to: displayDate) else { return isoDay }
+        return AppConstants.isoDayFormatter.string(from: day)
+    }
 }
 
 struct TravelEventsResponse: Codable {
     let events: [TravelEvent]
+    let enriched: Bool?
 }
 
 struct TravelEventMeta: Decodable {
@@ -59,6 +70,12 @@ struct TravelEventMeta: Decodable {
     let price: String?
     let time: String?
     let date: String?
+    let venue: String?
+    let league: String?
+    let homeCode: String?
+    let awayCode: String?
+    let homeColor: String?
+    let awayColor: String?
     let website: String?
     let countryCode: String?
 }

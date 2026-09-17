@@ -1,6 +1,7 @@
 import { CONFIG } from '../config/index';
 import { GeoStore } from '../seed/core/geo';
 import { keepEuropeanCityEvent } from './airports';
+import espnLeaguesJson from './data/espn-leagues.json';
 import { resolveTravelGeo } from './geo';
 import { localDateTime } from './localTime';
 import { TravelEvent } from './store';
@@ -8,13 +9,23 @@ import type { TravelSource } from './run';
 
 interface EspnCompetition {
   venue?: { fullName?: string; address?: { city?: string; country?: string } } | null;
-  competitors?: Array<{ team?: { displayName?: string } }>;
+  competitors?: Array<{ team?: { displayName?: string; abbreviation?: string; color?: string } }>;
 }
 interface EspnEvent {
   id: string;
+  uid?: string;
   date?: string;
   links?: Array<{ rel?: string[]; href?: string }>;
   competitions?: EspnCompetition[];
+}
+
+const espnLeagues = espnLeaguesJson as Record<string, string>;
+
+/** The event uid carries the league id: `s:600~l:775~e:401915444`. */
+export function leagueName(uid: string | undefined): string | null {
+  const match = /~l:(\d+)~/.exec(uid ?? '');
+  if (!match) return null;
+  return espnLeagues[match[1]] ?? null;
 }
 
 export interface EspnFetchOptions {
@@ -91,8 +102,20 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
   const startMs = eventStartMs(e);
   if (startMs === null) return null;
   // ESPN dates are UTC. Store the local date/hour of the venue so the app shows
-  // the time where the match is played, not the app's own timezone.
+  // the time where the match is played, not the app's own timezone. The team
+  // abbreviations (BEL, FRA, …) come straight from ESPN — never generated.
   const local = localDateTime(startMs, geo.country, geo.city);
+  const competitors = e.competitions?.[0]?.competitors ?? [];
+  const venueName = e.competitions?.[0]?.venue?.fullName ?? null;
+  const meta = {
+    ...(local ?? {}),
+    venue: venueName,
+    league: leagueName(e.uid),
+    homeCode: competitors[0]?.team?.abbreviation ?? null,
+    awayCode: competitors[1]?.team?.abbreviation ?? null,
+    homeColor: competitors[0]?.team?.color ?? null,
+    awayColor: competitors[1]?.team?.color ?? null,
+  };
   return {
     provider: CONFIG.travel.provider,
     externalId: e.id,
@@ -102,7 +125,7 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
     startMs,
     tag: CONFIG.travel.tags.espn,
     link: eventLink(e),
-    meta: local ? JSON.stringify(local) : null,
+    meta: JSON.stringify(meta),
   };
 }
 

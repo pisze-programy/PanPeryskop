@@ -14,7 +14,7 @@ final class FlightPricesService {
 
     func flights(airline: Airline, origin: String, destination: String, eventDay: Date) async -> FlightWindowResponse? {
         let day = Self.dayKey(eventDay)
-        let key = "\(origin)|\(destination)|\(day)"
+        let key = "\(airline.rawValue)|\(origin)|\(destination)|\(day)"
         if let hit = cache[key], Date().timeIntervalSince(hit.fetchedAt) < 30 * 60 {
             return hit.window
         }

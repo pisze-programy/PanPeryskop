@@ -26,6 +26,10 @@ All notable changes to PanPeryskop. Format based on
   (`GET /travel/tag-counts`, Europe-wide for the selected day).
 
 ### Changed
+- Best-flight pick now trades the fare against the hotel nights a trip forces
+  (350 zł per night, 500 zł on a Saturday): a cheap fare a week before the event
+  loses to a dearer one the day before, because the extra nights cost more than
+  the fare saves.
 - Story card badges (SPONSOROWANE / tags / source) moved to the bottom so they
   no longer crowd the title.
 - Event tag chips always show their count (zero included); chips sort by count

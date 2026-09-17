@@ -39,6 +39,13 @@ enum AppConstants {
     /// Travel tag for running races (backend worldsmarathons.ts).
     static let runTag = "biegi"
 
+    /// Hotel money the flight picker trades against the fare. A night the trip
+    /// forces costs this much, so a cheaper fare further from the event loses.
+    static let hotelNightlyEstimate: Double = 350
+    static let hotelSaturdayNightlyEstimate: Double = 500
+    static let saturdayWeekday = 7
+    static let secondsPerDay: TimeInterval = 24 * secondsPerHour
+
     /// Springs — the app's three animation configs (was inline magic).
     static let springStandard = Animation.spring(response: 0.35, dampingFraction: 0.82)
     static let springSoft = Animation.spring(response: 0.35, dampingFraction: 0.8)

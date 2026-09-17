@@ -12,52 +12,61 @@ struct FlightPair: Equatable {
     let outbound: FlightCell
     let returning: FlightCell
     let total: Double
-    let durationDays: Int
-    let distanceToEventDays: Int
+    let nights: Int
+    let hotelCost: Double
+    let generalizedCost: Double
 }
 
-/// Port of run-travel-club's `findBestFlight`: among all out×return pairs that
-/// strictly span the event date (out < event < ret), keep only pairs within
-/// 1.2× the minimum total, then pick the shortest trip, then the closest to the
-/// event, then the cheapest. "Spanning the event" = avoid extra hotel nights.
+/// Picks the pair with the lowest generalized cost: the two fares plus the hotel
+/// nights the trip forces. A cheap fare a week before the event loses to a dearer
+/// one the day before, because the extra nights cost more than the fare saves.
 enum FlightScoring {
-    private static let bestPairBudgetMultiplier = 1.2
-    static let secondsPerDay: Double = 24 * AppConstants.secondsPerHour
-
     static func findBestFlight(outbound: [FlightCell], returning: [FlightCell], eventDate: Date) -> FlightPair? {
-        let calendar = AppConstants.warsawCalendar
-        var pairs: [FlightPair] = []
-        for o in outbound {
-            guard let outPrice = o.price else { continue }
-            guard o.date < eventDate else { continue }
-            for r in returning {
-                guard let retPrice = r.price else { continue }
-                guard r.date > eventDate else { continue }
-                pairs.append(FlightPair(
-                    outbound: o,
-                    returning: r,
-                    total: outPrice + retPrice,
-                    durationDays: calendar.daysBetween(o.date, r.date),
-                    distanceToEventDays: abs(calendar.daysBetween(o.date, eventDate)) + abs(calendar.daysBetween(eventDate, r.date))
-                ))
-            }
+        allPairs(outbound: outbound, returning: returning, eventDate: eventDate).min(by: isBetter)
+    }
+
+    private static func isBetter(_ lhs: FlightPair, _ rhs: FlightPair) -> Bool {
+        if lhs.generalizedCost != rhs.generalizedCost { return lhs.generalizedCost < rhs.generalizedCost }
+        if lhs.nights != rhs.nights { return lhs.nights < rhs.nights }
+        if lhs.total != rhs.total { return lhs.total < rhs.total }
+        return lhs.outbound.date > rhs.outbound.date
+    }
+
+    private static func allPairs(outbound: [FlightCell], returning: [FlightCell], eventDate: Date) -> [FlightPair] {
+        outbound.flatMap { start in
+            returning.compactMap { end in pair(start, end, eventDate: eventDate) }
         }
-        guard !pairs.isEmpty, let minTotal = pairs.map(\.total).min() else { return nil }
-        let withinBudget = pairs.filter { $0.total <= minTotal * Self.bestPairBudgetMultiplier }
-        return withinBudget
-            .sorted { lhs, rhs in
-                if lhs.durationDays != rhs.durationDays { return lhs.durationDays < rhs.durationDays }
-                if lhs.distanceToEventDays != rhs.distanceToEventDays { return lhs.distanceToEventDays < rhs.distanceToEventDays }
-                return lhs.total < rhs.total
-            }
-            .first
+    }
+
+    private static func pair(_ start: FlightCell, _ end: FlightCell, eventDate: Date) -> FlightPair? {
+        guard let startPrice = start.price, let endPrice = end.price else { return nil }
+        guard start.date < eventDate, end.date > eventDate else { return nil }
+        let nights = max(0, AppConstants.warsawCalendar.daysBetween(start.date, end.date))
+        let hotel = hotelCost(from: start.date, nights: nights)
+        return FlightPair(
+            outbound: start,
+            returning: end,
+            total: startPrice + endPrice,
+            nights: nights,
+            hotelCost: hotel,
+            generalizedCost: startPrice + endPrice + hotel
+        )
+    }
+
+    private static func hotelCost(from start: Date, nights: Int) -> Double {
+        let calendar = AppConstants.warsawCalendar
+        return (0..<nights).reduce(0) { total, offset in
+            let night = calendar.date(byAdding: .day, value: offset, to: start) ?? start
+            let isSaturday = calendar.component(.weekday, from: night) == AppConstants.saturdayWeekday
+            return total + (isSaturday ? AppConstants.hotelSaturdayNightlyEstimate : AppConstants.hotelNightlyEstimate)
+        }
     }
 }
 
-private extension Calendar {
+extension Calendar {
     func daysBetween(_ a: Date, _ b: Date) -> Int {
         let startOfA = startOfDay(for: a)
         let startOfB = startOfDay(for: b)
-        return Int(round(startOfB.timeIntervalSince(startOfA) / FlightScoring.secondsPerDay))
+        return Int(round(startOfB.timeIntervalSince(startOfA) / AppConstants.secondsPerDay))
     }
 }

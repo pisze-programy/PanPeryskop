@@ -45,6 +45,9 @@ struct TravelEvent: Codable, Identifiable, Equatable {
         }
         return Date(timeIntervalSince1970: TimeInterval(start_ms) / 1000)
     }
+
+    /// The trip day the backend uses for availability windows.
+    var isoDay: String { AppConstants.isoDayFormatter.string(from: displayDate) }
 }
 
 struct TravelEventsResponse: Codable {

@@ -18,6 +18,7 @@ import {produceSeedWindow, runQueue, SeedQueueMessage, watchdogUnits} from './se
 import {pruneSeedData, pruneSeedManifests} from './seed/pipeline/cleanup';
 import {alertFailedUnits, daysReadyToReconcile, sweepStuckRaw} from './seed/reconcile';
 import {getLastSeedDay, setLastSeedDay, seedDue} from './seed/cadence';
+import {refreshViatorDestinations} from './travel/viator';
 // Nominatim pace per executor: the Worker egresses from Cloudflare's shared
 // datacenter IPs — the OSM policy caps regular (daily cron) bulk geocoding at
 // 4 req/min (the VPS rotates residential IPs via Webshare and keeps 1/s).
@@ -27,6 +28,7 @@ configureNominatimPace(15_000);
 const SEED_CRON = '0 2 * * *';        // 02:00 UTC daily — roll the seed window one day forward
 const CLEANUP_CRON = '0 4 * * *';     // 04:00 UTC daily — audit cleanup (4-day retention)
 const WATCHDOG_CRON = '0 * * * *';    // hourly — mark stuck batches failed
+const VIATOR_CRON = '0 3 * * 1';      // Monday 03:00 UTC — refresh the Viator destination catalogue
 // The app browses [today, today+SEED_DAYS_AHEAD]; the morning cron seeds the
 // new far edge (today+SEED_DAYS_AHEAD). Single-flight skips already-active days.
 
@@ -125,6 +127,16 @@ export default {
     await runQueue(env, batch);
   },
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (controller.cron === VIATOR_CRON) {
+      // Weekly copy of the Viator destination catalogue (their recommended cadence);
+      // the product pages themselves are cached lazily per city.
+      ctx.waitUntil(
+        refreshViatorDestinations(env.DB, env)
+          .then((n) => console.log(`viator cron: ${n} destinations refreshed`))
+          .catch((e) => console.error(`viator cron failed: ${(e as Error).message}`))
+      );
+      return;
+    }
     if (controller.cron === CLEANUP_CRON) {
       // Daily audit cleanup: drop seed audit older than 4 days (venues kept).
       ctx.waitUntil(

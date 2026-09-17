@@ -37,5 +37,15 @@ enum Theme {
         static let surfaceRaised = Color(.systemGray5)
         static let hairline = Color.white.opacity(0.2)
         static let shadow = Color.black.opacity(0.15)
+
+        /// Viator colours (green star, mint badge).
+        static let partnerGreen = Color(red: 0.23, green: 0.70, blue: 0.49)
+        static let partnerMintText = Color(red: 0.05, green: 0.36, blue: 0.23)
+
+        static func partnerMint(_ scheme: ColorScheme) -> Color {
+            scheme == .dark
+                ? Color(red: 0.09, green: 0.18, blue: 0.14)
+                : Color(red: 0.85, green: 0.94, blue: 0.88)
+        }
     }
 }

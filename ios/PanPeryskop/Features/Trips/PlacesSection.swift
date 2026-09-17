@@ -1,25 +1,6 @@
 import SwiftUI
 import CoreLocation
 
-@MainActor
-final class PlacePreviewLoader: ObservableObject {
-    @Published var places: [TravelPlace] = []
-    @Published var failed = false
-    private var loadedKind: PlaceKind?
-
-    func load(kind: PlaceKind, lat: Double, lng: Double) async {
-        if loadedKind == kind, !places.isEmpty { return }
-        failed = false
-        do {
-            let resp = try await APIClient.getTravelPlaces(kind: kind, lat: lat, lng: lng, limit: 15, offset: 0)
-            places = resp.places
-            loadedKind = kind
-        } catch {
-            failed = true
-        }
-    }
-}
-
 struct PlacesSection: View {
     let kind: PlaceKind
     let event: TravelEvent
@@ -61,7 +42,7 @@ struct PlacesSection: View {
         }
         .padding(.top, Theme.Spacing.section)
         .task {
-            await loader.load(kind: kind, lat: event.lat, lng: event.lng)
+            await loader.load(kind: kind, lat: event.lat, lng: event.lng, day: event.isoDay)
         }
         .sheet(isPresented: $showFilter) {
             HotelFilterSheet(selection: $tier)
@@ -70,14 +51,13 @@ struct PlacesSection: View {
 
     @ViewBuilder
     private var content: some View {
-        if loader.failed {
+        switch state {
+        case .failed:
             ErrorState(message: "Nie udało się pobrać: \(kind.label)") {
-                Task { await loader.load(kind: kind, lat: event.lat, lng: event.lng) }
+                Task { await loader.load(kind: kind, lat: event.lat, lng: event.lng, day: event.isoDay) }
             }
             .padding(.horizontal, Theme.Spacing.l)
-        } else if loader.places.isEmpty {
-            skeleton
-        } else {
+        case .loaded:
             PlaceSlider(
                 places: places,
                 eventCoordinate: eventCoordinate,
@@ -88,55 +68,24 @@ struct PlacesSection: View {
                 },
                 onSeeMore: { onExpand(kind) }
             )
+        case .empty:
+            PlacesEmptyState(kind: kind)
+                .padding(.horizontal, Theme.Spacing.l)
+        case .loading:
+            PlacesCardSkeleton(kind: kind)
         }
     }
 
-    private var skeleton: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: Theme.Spacing.m) {
-                ForEach(0..<3, id: \.self) { _ in
-                    PlaceSkeletonCard()
-                }
-            }
-            .padding(.horizontal, Theme.Spacing.l)
-            .padding(.vertical, Theme.Spacing.s)
-        }
-        .disabled(true)
+    private var state: PlacesContentState {
+        if loader.failed { return .failed }
+        if !loader.places.isEmpty { return .loaded }
+        return loader.didLoad ? .empty : .loading
     }
 }
 
-struct HotelFilterSheet: View {
-    @Binding var selection: HotelTier
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Text("Filtruj noclegi")
-                .font(Theme.Typo.sectionTitle)
-                .padding(Theme.Spacing.l)
-            ForEach(HotelTier.allCases, id: \.self) { tier in
-                Button {
-                    Haptics.selection()
-                    selection = tier
-                    dismiss()
-                } label: {
-                    HStack {
-                        Text(tier.label)
-                            .font(.body)
-                        Spacer()
-                        if selection == tier {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.accentColor)
-                        }
-                    }
-                    .padding(.horizontal, Theme.Spacing.l)
-                    .padding(.vertical, Theme.Spacing.m)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                Divider()
-            }
-        }
-        .presentationDetents([.height(240)])
-    }
+private enum PlacesContentState {
+    case loading
+    case failed
+    case empty
+    case loaded
 }

@@ -12,6 +12,7 @@ import { ingestWinnersForDay } from '../seed/reconcile';
 import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
 import { getLastSeedDay, seedDue } from '../seed/cadence';
 import { upsertTravelEvents, sanitizeManifest, TravelManifest, TravelEvent } from '../travel/store';
+import { refreshViatorDestinations } from '../travel/viator';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -519,4 +520,15 @@ adminRoutes.post('/travel/ingest', async (c) => {
   }
   await upsertTravelEvents(c.env.DB, events);
   return c.json({ ok: true, provider: manifest.provider, ingested: events.length });
+});
+
+// Refresh our copy of the Viator destination catalogue (also runs weekly on cron).
+adminRoutes.post('/travel/viator/refresh', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  try {
+    const destinations = await refreshViatorDestinations(c.env.DB, c.env);
+    return c.json({ ok: true, destinations });
+  } catch (e) {
+    return c.json({ error: (e as Error).message }, 502);
+  }
 });

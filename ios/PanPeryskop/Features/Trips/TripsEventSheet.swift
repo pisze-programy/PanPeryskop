@@ -47,6 +47,7 @@ struct TripsEventSheet: View {
             PlacesListSheet(
                 kind: kind,
                 eventCoordinate: currentCoordinate,
+                eventDay: currentEvent?.isoDay ?? "",
                 airportCoordinate: airportCoordinate,
                 nights: nights,
                 onClose: { expanded = nil }

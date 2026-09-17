@@ -121,6 +121,11 @@ All notable changes to PanPeryskop. Format based on
   scrolls in, and the ticket strip no longer uses a mask.
 - The full hotel or attraction list opens as a sheet over the event card, so the
   card underneath is not rebuilt and the chosen flights stay.
+- The "Atrakcje" section shows real tours and activities from Viator for the
+  event's city: photo, title, rating, duration, free cancellation and a
+  "Sprawdź dostępność" link that opens the Viator page in the in-app browser.
+  Hotels and other local rows stay as they were. The Viator destination
+  catalogue is refreshed weekly and products are cached per city for a week.
 - Run events show the distance range in the bar ("10 km – 21.1 km") and every
   offered distance as "Dystans:" tags above the map, smallest first.
 - Run colour scales from light (short, asphalt) to dark (long, trail, ultra) from

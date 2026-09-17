@@ -1,8 +1,9 @@
 import { CONFIG, type TravelTag } from '../config/index';
 import { Hono } from 'hono';
-import { buildPlaces, isPlaceKind, paginatePlaces } from '../travel/places';
+import { buildPlaces, isPlaceKind, paginatePlaces, type TravelPlace } from '../travel/places';
 import { fetchRyanairWindow, fetchWizzairWindow } from '../travel/flightsApi';
 import { reachableEvents, type TravelEventRow } from '../travel/reachability';
+import { viatorRandomCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
 
 export const travelRoutes = new Hono<{ Bindings: Env }>();
 
@@ -96,7 +97,7 @@ function parseLimit(raw: string | undefined): number {
   return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), CONFIG.travel.api.maxLimit) : CONFIG.travel.api.maxLimit;
 }
 
-travelRoutes.get('/places', (c) => {
+travelRoutes.get('/places', async (c) => {
   const q = c.req.query();
   const kind = q.kind ?? '';
   if (!isPlaceKind(kind)) {
@@ -107,9 +108,60 @@ travelRoutes.get('/places', (c) => {
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
     return c.json({ error: 'valid lat and lng required' }, 400);
   }
+  const offset = Math.max(0, Number(q.offset) || 0);
+  const limit = Number(q.limit) > 0 ? Math.floor(Number(q.limit)) : 15;
+  if (kind === 'attraction') {
+    const viator = await viatorAttractions(c.env, lat, lng, q.day, offset, limit);
+    return c.json(viator);
+  }
   const all = buildPlaces(kind, lat, lng);
-  return c.json(paginatePlaces(all, Number(q.offset) || 0, Number(q.limit)));
+  return c.json(paginatePlaces(all, offset, limit));
 });
+
+const noPlaces = { places: [] as TravelPlace[], total: 0, hasMore: false };
+
+// Attractions never fall back to the local catalogue: invented places with
+// GetYourGuide links are worse than an empty section.
+async function viatorAttractions(
+  env: Env,
+  lat: number,
+  lng: number,
+  day: string | undefined,
+  offset: number,
+  limit: number,
+): Promise<{ places: TravelPlace[]; total: number; hasMore: boolean }> {
+  if (!viatorConfigured(env)) return noPlaces;
+  try {
+    const city = await viatorRandomCity(env.DB, lat, lng);
+    if (!city) return noPlaces;
+    const window = viatorWindowFor(day);
+    const { places, total } = await viatorProductsForCity(env.DB, env, city.destinationId, window, offset, limit);
+    return {
+      places: places.map((p) => ({
+        id: p.productCode,
+        kind: 'attraction' as const,
+        name: p.title,
+        image: p.imageUrl ?? '',
+        price: p.fromPrice === null ? 0 : Math.round(p.fromPrice),
+        currency: p.currency ?? CONFIG.travel.viator.currency,
+        address: city.name,
+        lat: city.lat ?? lat,
+        lng: city.lng ?? lng,
+        link: p.productUrl,
+        rating: p.rating ?? undefined,
+        reviews: p.reviewCount ?? undefined,
+        source: CONFIG.travel.viator.provider,
+        durationMinutes: p.durationMinutes ?? undefined,
+        badges: p.badges,
+      })),
+      total,
+      hasMore: offset + places.length < total,
+    };
+  } catch (error) {
+    console.error(`viator places failed: ${(error as Error).message}`);
+    return noPlaces;
+  }
+}
 
 function flightParams(q: Record<string, string | undefined>): { origin: string; destination: string; eventDay: string } | null {
   const origin = q.origin?.toUpperCase() ?? '';

@@ -144,6 +144,35 @@ export const travel = {
       insurance: 'https://www.getyourguide.com/s/?q=',
     } as Record<PlaceKind, string>,
   },
+  viator: {
+    provider: 'viator',
+    hosts: {
+      production: 'https://api.viator.com/partner',
+      sandbox: 'https://api.sandbox.viator.com/partner',
+    },
+    apiVersion: '2.0',
+    // The partner API has no Polish content; English is the only usable language.
+    language: 'en-US',
+    currency: 'PLN',
+    // Verified live: pagination.count is silently capped at 50 (count=100 → 50).
+    pageSize: 50,
+    // Availability window around the trip day, in days.
+    windowDaysBefore: 1,
+    windowDaysAfter: 1,
+    cacheTtlMs: 7 * 24 * 3_600_000,
+    timeoutMs: 20_000,
+    retries: 2,
+    retryDelayMs: 2_000,
+    // Flags we surface in the UI, in badge priority order.
+    badgeFlags: [
+      ['best_seller', 'LIKELY_TO_SELL_OUT'],
+      ['free_cancellation', 'FREE_CANCELLATION'],
+      ['special_offer', 'SPECIAL_OFFER'],
+      ['skip_line', 'SKIP_THE_LINE'],
+      ['private', 'PRIVATE_TOUR'],
+      ['new', 'NEW_ON_VIATOR'],
+    ] as [string, string][],
+  },
   api: {
     maxWindowMs: 370 * 24 * 3_600_000,
     maxLimit: 1000,

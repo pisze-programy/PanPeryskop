@@ -13,6 +13,11 @@ struct PlaceSlider: View {
     private var visible: [TravelPlace] { Array(places.prefix(maxVisible)) }
     private var hasMore: Bool { places.count > maxVisible }
 
+    // Shared with the "see more" tile so the row keeps one height.
+    private var cardHeight: CGFloat {
+        places.first.map(PlaceCard.height(for:)) ?? PlaceCard.legacyHeight
+    }
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: Theme.Spacing.m) {
@@ -48,7 +53,7 @@ struct PlaceSlider: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            .frame(width: PlaceCard.width, height: PlaceCard.height)
+            .frame(width: PlaceCard.width, height: cardHeight)
             .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
         }
         .buttonStyle(.plain)

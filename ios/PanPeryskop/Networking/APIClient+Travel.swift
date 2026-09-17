@@ -27,14 +27,19 @@ extension APIClient {
         return try await get(path, params: ["origin": origin, "destination": destination, "eventDay": eventDay])
     }
 
-    /// Places for one Wycieczki section around the event coordinates.
-    static func getTravelPlaces(kind: PlaceKind, lat: Double, lng: Double, limit: Int = 15, offset: Int = 0) async throws -> TravelPlacesResponse {
-        try await get("/travel/places", params: [
+    /// Places for one Wycieczki section around the event coordinates. `day` is the
+    /// trip day (YYYY-MM-DD); the partner filters availability around it.
+    static func getTravelPlaces(kind: PlaceKind, lat: Double, lng: Double, limit: Int = 15, offset: Int = 0, day: String? = nil) async throws -> TravelPlacesResponse {
+        var params = [
             "kind": kind.rawValue,
             "lat": String(lat),
             "lng": String(lng),
             "limit": String(limit),
             "offset": String(offset),
-        ])
+        ]
+        if let day {
+            params["day"] = day
+        }
+        return try await get("/travel/places", params: params)
     }
 }

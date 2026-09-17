@@ -21,6 +21,11 @@ export interface TravelPlace {
   tier?: HotelTier;
   rating?: number;
   reviews?: number;
+  /** 'viator' marks a row from the partner API (real tours & activities). */
+  source?: string;
+  durationMinutes?: number;
+  /** UI badges, priority ordered: best_seller, free_cancellation, … */
+  badges?: string[];
 }
 
 export function isPlaceKind(raw: string): raw is PlaceKind {

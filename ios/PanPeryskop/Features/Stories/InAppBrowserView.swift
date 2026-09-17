@@ -15,6 +15,7 @@ enum AllowedWebDomains {
         "lu.ma", "luma.com",
         "ebilet.pl", "tradedoubler.com",
         "booking.com", "airbnb.com", "espn.com",
+        "viator.com",
     ]
 
     /// Exact host or a subdomain of a registrable domain, e.g. "bilety.helios.pl".
@@ -140,10 +141,29 @@ private struct BrowserWebView: UIViewRepresentable {
         configuration.userContentController.addUserScript(
             WKUserScript(source: permissionStub, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         )
+        let noZoom = """
+        (function () {
+          var scale = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+          var meta = document.querySelector('meta[name=viewport]');
+          if (!meta) {
+            meta = document.createElement('meta');
+            meta.setAttribute('name', 'viewport');
+            document.head.appendChild(meta);
+          }
+          meta.setAttribute('content', scale);
+        })();
+        """
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: noZoom, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        )
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.uiDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
+        // Pinch zoom fights the sheet drag, so the in-app browser stays at 100%.
+        webView.scrollView.minimumZoomScale = 1
+        webView.scrollView.maximumZoomScale = 1
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         context.coordinator.attach(webView)
         webView.load(URLRequest(url: url))
         return webView

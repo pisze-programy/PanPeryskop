@@ -118,6 +118,8 @@ export const travel = {
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
     availabilityTtlMs: 24 * 3_600_000,
     priceTtlMs: 12 * 3_600_000,
+    timeoutMs: 3_000,
+    deadlineMs: 8_000,
     sim: {
       noFareMask: 3,
       basePriceMin: 20,

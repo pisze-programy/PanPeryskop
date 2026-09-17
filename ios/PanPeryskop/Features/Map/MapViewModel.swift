@@ -200,9 +200,6 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     static let maxDayOffset = 5
     static var dayOffsets: [Int] { Array(minDayOffset...maxDayOffset) }
 
-    func dayLabel(offset: Int) -> String { DayLabels.title(offset: offset) }
-
-    /// Commit the selected day (called on slider release) → refetch visible squares.
     func commitDay(_ offset: Int) {
         guard selectedDayOffset != offset else { return }
         selectedDayOffset = offset

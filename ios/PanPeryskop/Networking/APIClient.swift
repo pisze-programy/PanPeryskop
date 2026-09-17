@@ -8,8 +8,8 @@ struct APIClient {
 
     static func authHeaders() -> [String: String] { http.authHeaders() }
 
-    static func get<T: Decodable>(_ path: String, params: [String: String] = [:]) async throws -> T {
-        try await http.get(path, params: params)
+    static func get<T: Decodable>(_ path: String, params: [String: String] = [:], timeout: TimeInterval? = nil) async throws -> T {
+        try await http.get(path, params: params, timeout: timeout)
     }
 
     static func post<T: Decodable, B: Encodable>(_ path: String, body: B) async throws -> T {

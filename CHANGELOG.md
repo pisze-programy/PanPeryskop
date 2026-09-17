@@ -54,6 +54,13 @@ All notable changes to PanPeryskop. Format based on
   section no longer jumps while prices load.
 
 ### Fixed
+- Wycieczki: changing the airport no longer wipes the map. The previous pins stay
+  until the new ones arrive, a new choice always cancels the request in flight,
+  and a failed or too-slow load (10 s) shows a short "Coś poszło nie tak, spróbuj
+  ponownie" toast instead of a dead spinner.
+- Wycieczki reachability now looks up fares only for the airports near the day's
+  events (2-8 instead of 89-208 routes): the first load on a new airport drops
+  from 10-27 s to 1-3 s. The event list is unchanged.
 - Run events use the provider's local date and time (was UTC): the date no
   longer shifts by a day and an unknown start time is hidden instead of shown as
   a wrong hour (e.g. 22:00).

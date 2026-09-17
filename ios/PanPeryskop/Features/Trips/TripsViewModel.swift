@@ -23,6 +23,9 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     /// True while a user-triggered fetch (day/airport/tag) is in flight — drives the
     /// Wycieczki pill loader. Trips has no polling, so every load qualifies.
     @Published private(set) var isLoading = false
+    private var loadTask: Task<Void, Never>?
+    private var loadGeneration = 0
+    private static let loadErrorMessage = "Coś poszło nie tak, spróbuj ponownie"
     private var cachedOriginAirlines: [Airline] = []
     private var cachedPosts: [Post] = []
 
@@ -170,8 +173,6 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         selectedAirport = airport
         UserDefaults.standard.set(airport.iata, forKey: TripsPrefs.airportIata)
         cachedOriginAirlines = Self.airlines(for: destinations)
-        eventsCache = [:]
-        cachedPosts = []
         clearSelection()
         refresh()
         loadTagCounts()
@@ -212,48 +213,68 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     }
 
     func refresh() {
-        guard !isLoading else { return }
+        loadTask?.cancel()
+        loadGeneration += 1
+        let generation = loadGeneration
         let startedAt = Date()
         isLoading = true
-        Task { [weak self] in
-            await self?.loadEvents()
-            // Keep the pill loader up for at least the min duration.
-            let minS = Double(AppConstants.minLoadingIndicatorMs) / 1000
-            let elapsed = Date().timeIntervalSince(startedAt)
-            if elapsed < minS {
-                try? await Task.sleep(nanoseconds: UInt64((minS - elapsed) * 1_000_000_000))
-            }
-            self?.isLoading = false
+        loadTask = Task { [weak self] in
+            await self?.runLoad(generation: generation, startedAt: startedAt)
         }
     }
 
-    private func loadEvents() async {
+    private func runLoad(generation: Int, startedAt: Date) async {
+        let failed = await loadEvents(generation: generation)
+        guard loadGeneration == generation else { return }
+        await holdLoader(since: startedAt)
+        guard loadGeneration == generation else { return }
+        isLoading = false
+        guard failed else { return }
+        ToastManager.shared.show(Self.loadErrorMessage, seconds: AppConstants.travelErrorToastSeconds)
+    }
+
+    private func holdLoader(since startedAt: Date) async {
+        let minS = Double(AppConstants.minLoadingIndicatorMs) / 1000
+        let elapsed = Date().timeIntervalSince(startedAt)
+        guard elapsed < minS else { return }
+        try? await Task.sleep(nanoseconds: UInt64((minS - elapsed) * 1_000_000_000))
+    }
+
+    private func loadEvents(generation: Int) async -> Bool {
         let (from, to) = dayRange(offset: selectedDayOffset)
         let region = initialRegion
         let swLat = region.center.latitude - region.span.latitudeDelta / 2
         let swLng = region.center.longitude - region.span.longitudeDelta / 2
         let neLat = region.center.latitude + region.span.latitudeDelta / 2
         let neLng = region.center.longitude + region.span.longitudeDelta / 2
-        let key = "\(selectedAirport.iata)|\(from)-\(to)|\(tagSelection.param(all: Set(TravelTag.allCases.map(\.rawValue))) ?? "")"
+        let tags = tagSelection.param(all: Set(TravelTag.allCases.map(\.rawValue)))
+        let key = "\(selectedAirport.iata)|\(from)-\(to)|\(tags ?? "")"
         if let cached = eventsCache[key], !cached.isEmpty {
-            apply(Array(cached.values))
-            return
+            apply(cached, generation: generation)
+            return false
         }
-        guard let resp = try? await APIClient.getTravelEvents(
-            swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng,
-            from: from, to: to,
-            tags: tagSelection.param(all: Set(TravelTag.allCases.map(\.rawValue))),
-            origin: selectedAirport.iata
-        ) else { return }
-        var bucket: [String: TravelEvent] = [:]
-        for e in resp.events { bucket[e.id] = e }
-        eventsCache[key] = bucket
-        apply(Array(bucket.values))
+        do {
+            let resp = try await APIClient.getTravelEvents(
+                swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng,
+                from: from, to: to,
+                tags: tags,
+                origin: selectedAirport.iata
+            )
+            guard loadGeneration == generation else { return false }
+            let bucket = Dictionary(resp.events.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            eventsCache[key] = bucket
+            apply(bucket, generation: generation)
+            return false
+        } catch {
+            guard !(error is CancellationError) else { return false }
+            return true
+        }
     }
 
-    private func apply(_ newEvents: [TravelEvent]) {
-        events = newEvents.sorted { $0.start_ms < $1.start_ms }
-        cachedPosts = events.compactMap { $0.asPost }
+    private func apply(_ bucket: [String: TravelEvent], generation: Int) {
+        guard loadGeneration == generation else { return }
+        events = bucket.values.sorted { $0.start_ms < $1.start_ms }
+        cachedPosts = events.compactMap(\.asPost)
     }
 
     /// (from, to) epoch ms for a day offset (0..89), 0 = today. Per-day fetch —

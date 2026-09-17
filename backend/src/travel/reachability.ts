@@ -8,7 +8,7 @@ import { CONFIG } from '../config/index';
 // window [D+1,D+3] (strictly around the event day — matches FlightScoring).
 // On live failure it degrades to static route existence so filtering still works.
 import { addDaysWarsaw, warsawDateOf } from '../seed/core/dates';
-import { destinationsFrom } from './airports';
+import { destinationsFrom, type Destination } from './airports';
 import { fetchRyanairAvailabilities } from './flightsApi';
 
 
@@ -46,6 +46,17 @@ export function windowHasFlights(flyingDays: Set<string>, eventDay: string): boo
   return anyDay([...CONFIG.travel.reachability.outboundOffsets]) && anyDay([...CONFIG.travel.reachability.returnOffsets]);
 }
 
+/** The airports near the day's events — the only ones worth a live fare lookup. */
+export function nearbyCandidates(candidates: Destination[], events: TravelEventRow[]): Destination[] {
+  const byIata = new Map<string, Destination>();
+  for (const e of events) {
+    for (const d of candidates) {
+      if (haversineKm(e.lat, e.lng, d.lat, d.lng) <= CONFIG.travel.reachability.nearbyKm) byIata.set(d.iata, d);
+    }
+  }
+  return [...byIata.values()];
+}
+
 /**
  * Filter events to those reachable from `origin` by air, tagging each with the
  * IATAs that make it reachable. `liveFailed` switches the whole pass to static
@@ -59,7 +70,12 @@ export async function reachableEvents(
   const candidates = destinationsFrom(origin).filter((d) => d.providers.has('ryanair'));
   const availByIata = new Map<string, Set<string>>();
   let liveFailed = false;
-  for (const d of candidates) {
+  const deadline = Date.now() + CONFIG.travel.flights.deadlineMs;
+  for (const d of nearbyCandidates(candidates, events)) {
+    if (Date.now() > deadline) {
+      liveFailed = true;
+      break;
+    }
     try {
       availByIata.set(d.iata, new Set(await fetchRyanairAvailabilities(db, origin, d.iata)));
     } catch {

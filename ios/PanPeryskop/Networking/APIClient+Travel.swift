@@ -17,7 +17,7 @@ extension APIClient {
         ]
         if let tags { params["tags"] = tags }
         if let origin { params["origin"] = origin }
-        return try await get("/travel/events", params: params)
+        return try await get("/travel/events", params: params, timeout: AppConstants.travelRequestTimeout)
     }
 
     /// Flight availability for a route around an event day — shape

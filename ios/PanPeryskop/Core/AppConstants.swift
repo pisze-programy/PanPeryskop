@@ -46,6 +46,11 @@ enum AppConstants {
     static let saturdayWeekday = 7
     static let secondsPerDay: TimeInterval = 24 * secondsPerHour
 
+    /// The trip-events request may take a slow first pass on a new origin; a
+    /// longer wait than this shows nothing useful, so the loader stops instead.
+    static let travelRequestTimeout: TimeInterval = 10
+    static let travelErrorToastSeconds: Double = 1
+
     /// Springs — the app's three animation configs (was inline magic).
     static let springStandard = Animation.spring(response: 0.35, dampingFraction: 0.82)
     static let springSoft = Animation.spring(response: 0.35, dampingFraction: 0.8)

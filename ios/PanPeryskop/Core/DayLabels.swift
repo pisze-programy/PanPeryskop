@@ -1,28 +1,34 @@
 import Foundation
 
-/// Shared day-browser labels for events and trips.
 enum DayLabels {
     static func date(offset: Int) -> Date {
         AppConstants.warsawCalendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
     }
 
-    /// "Dziś", "Jutro", else the day with the month name and the weekday
-    /// ("1 listopada, Czwartek").
+    static func relative(offset: Int) -> String? {
+        switch offset {
+        case 0: return "Dziś"
+        case 1: return "Jutro"
+        default: return nil
+        }
+    }
+
     static func title(offset: Int) -> String {
-        if offset == 0 { return "Dziś" }
-        if offset == 1 { return "Jutro" }
+        if let relative = relative(offset: offset) { return relative }
         let date = date(offset: offset)
         let day = AppConstants.dayMonthFormatter.string(from: date)
         let weekday = AppConstants.weekdayFullFormatter.string(from: date).capitalized
         return "\(day), \(weekday)"
     }
 
-    /// "DD.MM" — for the rail slider.
     static func short(offset: Int) -> String {
         AppConstants.shortDayFormatter.string(from: date(offset: offset))
     }
 
-    /// "Wrzesień 2026" — month section header for the day sheet.
+    static func pill(offset: Int) -> String {
+        relative(offset: offset) ?? short(offset: offset)
+    }
+
     static func monthTitle(offset: Int) -> String {
         AppConstants.monthYearFormatter.string(from: date(offset: offset)).capitalized
     }

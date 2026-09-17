@@ -78,7 +78,10 @@ export function mockFlightWindow(origin: string, dest: string, eventDay: string)
 
 /** Raw farefinder GET. 404 → null (no such route); any other non-2xx throws. */
 async function fetchFareJson(url: string): Promise<any | null> {
-  const res = await fetch(url, { headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'application/json' } });
+  const res = await fetch(url, {
+    headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'application/json' },
+    signal: AbortSignal.timeout(CONFIG.travel.flights.timeoutMs),
+  });
   if (res.status === 404) return null;
   if (res.status === 429 || res.status >= 500) {
     throw new Error(`Ryanair farefinder ${res.status}`);

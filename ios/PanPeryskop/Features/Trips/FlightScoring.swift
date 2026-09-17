@@ -1,13 +1,11 @@
 import Foundation
 
-/// One flight-day cell in the grid.
 struct FlightCell: Equatable {
     let date: Date
     let hour: String?
     let price: Double?
 }
 
-/// A chosen outbound+return pair spanning an event.
 struct FlightPair: Equatable {
     let outbound: FlightCell
     let returning: FlightCell

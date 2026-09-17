@@ -1,6 +1,5 @@
 import Foundation
 
-/// Stay length and date range labels for the hotel sheet.
 enum StayRange {
     static func nights(from checkin: String, to checkout: String) -> Int {
         guard let start = day(checkin), let end = day(checkout) else { return 1 }
@@ -8,13 +7,11 @@ enum StayRange {
         return max(1, count)
     }
 
-    /// "3 noce, 11-14 listopada".
     static func label(from checkin: String, to checkout: String) -> String {
         let count = nights(from: checkin, to: checkout)
         return "\(count) \(nightsWord(count)), \(dates(checkin, checkout))"
     }
 
-    /// "Za całość (3 noce, 11-14 listopada)".
     static func totalPriceLabel(from checkin: String, to checkout: String) -> String {
         "Za całość (\(label(from: checkin, to: checkout)))"
     }

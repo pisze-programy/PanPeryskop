@@ -36,8 +36,10 @@ struct HTTPClient {
         return request
     }
 
-    func get<T: Decodable>(_ path: String, params: [String: String] = [:]) async throws -> T {
-        let (data, response) = try await session.data(for: authorizedRequest(path, params: params))
+    func get<T: Decodable>(_ path: String, params: [String: String] = [:], timeout: TimeInterval? = nil) async throws -> T {
+        var request = authorizedRequest(path, params: params)
+        if let timeout { request.timeoutInterval = timeout }
+        let (data, response) = try await session.data(for: request)
         try validate(response: response, data: data)
         return try decoder.decode(T.self, from: data)
     }

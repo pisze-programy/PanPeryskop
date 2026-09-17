@@ -43,7 +43,6 @@ extension AppConstants {
         return f
     }()
 
-    /// "11" — day number only.
     static let dayOnlyFormatter: DateFormatter = {
         let f = DateFormatter()
         f.calendar = warsawCalendar

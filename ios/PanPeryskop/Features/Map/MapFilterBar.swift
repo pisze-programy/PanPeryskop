@@ -15,7 +15,7 @@ struct MapFilterBar: View {
             HStack(spacing: Theme.Spacing.s) {
                 switch category {
                 case .events:
-                    MapPickerPill(title: mapViewModel.dayLabel(offset: mapViewModel.selectedDayOffset), action: onDayTap)
+                    MapPickerPill(title: DayLabels.pill(offset: mapViewModel.selectedDayOffset), action: onDayTap)
                     MapPickerPill(title: mapViewModel.selectedCity.name, action: onCityTap)
                         .padding(.trailing, 12)
                     ForEach(mapViewModel.sortedTags) { tag in
@@ -24,7 +24,7 @@ struct MapFilterBar: View {
                         }
                     }
                 case .trips:
-                    MapPickerPill(title: DayLabels.title(offset: tripsViewModel.selectedDayOffset), action: onTripDayTap)
+                    MapPickerPill(title: DayLabels.pill(offset: tripsViewModel.selectedDayOffset), action: onTripDayTap)
                     MapPickerPill(
                         title: "\(tripsViewModel.selectedAirport.iata) · \(tripsViewModel.selectedAirport.city)",
                         action: onAirportTap

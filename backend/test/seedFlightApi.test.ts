@@ -1,7 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildWindowFromCheapest, type CheapestDay } from '../src/travel/flightsApi';
-import { haversineKm, windowHasFlights } from '../src/travel/reachability';
+import { haversineKm, nearbyCandidates, windowHasFlights, type TravelEventRow } from '../src/travel/reachability';
+import type { Destination } from '../src/travel/airports';
+
+function dest(iata: string, lat: number, lng: number): Destination {
+  return { iata, name: iata, city: iata, country: '', countryCode: '', lat, lng, providers: new Set(['ryanair']) };
+}
+
+function event(lat: number, lng: number): TravelEventRow {
+  return { provider: 'test', external_id: '1', title: 'x', lat, lng, city: 'x', country: 'x', start_ms: 0, tag: 'x', link: null };
+}
 
 function day(day: string, price: number | null, opts: Partial<CheapestDay> = {}): CheapestDay {
   return { day, departureDate: `${day}T09:30:00`, price, unavailable: false, soldOut: false, ...opts };
@@ -67,4 +76,25 @@ test('windowHasFlights: needs ≥1 day before AND ≥1 day after the event (stri
   assert.equal(windowHasFlights(new Set(['2026-09-07']), event), false);          // no return day
   assert.equal(windowHasFlights(new Set(['2026-09-11']), event), false);          // no outbound day
   assert.equal(windowHasFlights(new Set(['2026-09-10', '2026-09-11']), event), false); // event-day flight alone is not enough
+});
+
+test('nearbyCandidates: only airports within 200 km of an event, once each', () => {
+  const candidates = [
+    dest('LCJ', 51.7219, 19.3981),   // ~120 km from Warsaw
+    dest('BER', 52.3667, 13.5033),   // ~520 km from Warsaw
+    dest('WMI', 52.4511, 20.6517),   // ~40 km from Warsaw
+  ];
+  const nearby = nearbyCandidates(candidates, [event(52.1657, 20.9671)]);
+  assert.deepEqual(nearby.map((d) => d.iata).sort(), ['LCJ', 'WMI']);
+});
+
+test('nearbyCandidates: a distant-only day needs no fare lookup at all', () => {
+  const candidates = [dest('BER', 52.3667, 13.5033)];
+  assert.deepEqual(nearbyCandidates(candidates, [event(35.33, 25.1)]), []);
+});
+
+test('nearbyCandidates: two events sharing an airport keep it once', () => {
+  const candidates = [dest('WMI', 52.4511, 20.6517)];
+  const nearby = nearbyCandidates(candidates, [event(52.1657, 20.9671), event(52.4, 16.9)]);
+  assert.equal(nearby.length, 1);
 });

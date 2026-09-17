@@ -2,13 +2,12 @@ import SwiftUI
 import CoreLocation
 
 /// Everything under the gamestrip on a trips page. Both event kinds use this one
-/// layout; only the texts, the tags and the button differ.
+/// layout; only the texts, the distance chips and the button differ.
 struct TripsEventDetail: View {
     let event: TravelEvent
     let onOpenURL: (URL, BrowserAccess) -> Void
     let onOpenMap: (CLLocationCoordinate2D, String) -> Void
 
-    private static let headlineSpacing: CGFloat = 4
     private static let tagSpacing = Theme.Spacing.xs
     private static let tagHorizontalPadding = Theme.Spacing.s
     private static let tagVerticalPadding = Theme.Spacing.xs
@@ -21,21 +20,25 @@ struct TripsEventDetail: View {
         CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
     }
 
+    private var guessesVenue: Bool { event.venueIsAirport == true }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-            headline
-            Text(placeLabel)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
             if !distanceTags.isEmpty {
                 distanceRow
             }
-            VenueMap(
-                coordinate: coordinate,
-                systemImage: mapIcon,
-                onTap: { onOpenMap(coordinate, event.title) }
-            )
+            venueCaption
+            if guessesVenue {
+                venueUnknownHint
+            } else {
+                VenueMap(
+                    coordinate: coordinate,
+                    systemImage: mapIcon,
+                    distance: mapDistance,
+                    pitch: mapPitch,
+                    onTap: { onOpenMap(coordinate, event.title) }
+                )
+            }
             if let url = linkURL {
                 CapsuleButton(title: buttonTitle, trailingText: buttonTrailing, fullWidth: true) {
                     onOpenURL(url, linkAccess)
@@ -48,36 +51,38 @@ struct TripsEventDetail: View {
         .padding(.bottom, Theme.Spacing.m)
     }
 
-    private var headline: some View {
-        VStack(alignment: .leading, spacing: Self.headlineSpacing) {
-            if let headlineText {
-                Text(headlineText)
-                    .font(.title3.weight(.bold))
-                    .lineLimit(2)
-            }
-            if !tags.isEmpty {
-                chipRow(tags)
-            }
-        }
-    }
-
     private var distanceRow: some View {
-        VStack(alignment: .leading, spacing: Self.tagSpacing) {
+        HStack(spacing: Self.tagSpacing) {
             Text(Self.distanceTitle)
                 .font(.caption.weight(.semibold))
                 .foregroundColor(.secondary)
-            ScrollView(.horizontal, showsIndicators: false) {
-                chipRow(distanceTags)
+            ForEach(Array(distanceTags.enumerated()), id: \.offset) { _, value in
+                chip(value)
             }
         }
     }
 
-    private func chipRow(_ values: [String]) -> some View {
-        HStack(spacing: Self.tagSpacing) {
-            ForEach(Array(values.enumerated()), id: \.offset) { _, value in
-                chip(value)
+    private var venueCaption: some View {
+        Group {
+            if let venue = venueName {
+                Text(venue).font(.subheadline.weight(.semibold))
+                    + Text(Self.separator).foregroundColor(.secondary)
+                    + Text(placeLabel).foregroundColor(.secondary)
+            } else {
+                Text(placeLabel).foregroundColor(.secondary)
             }
         }
+        .font(.caption)
+        .lineLimit(2)
+    }
+
+    private var venueUnknownHint: some View {
+        Text("Nie znamy dokładnej lokalizacji stadionu")
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Theme.Spacing.l)
+            .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
     }
 
     private func chip(_ value: String) -> some View {
@@ -89,18 +94,9 @@ struct TripsEventDetail: View {
             .background(Theme.Palette.surface, in: Capsule())
     }
 
-    private var headlineText: String? {
-        event.isRun ? nil : venueLabel
-    }
-
-    private var venueLabel: String {
-        if let venue = meta?.venue, !venue.isEmpty { return venue }
-        return placeLabel
-    }
-
-    private var tags: [String] {
-        guard event.isRun else { return [] }
-        return [RunLabels.text(meta?.surface), RunLabels.text(meta?.difficulty)].compactMap { $0 }
+    private var venueName: String? {
+        guard !event.isRun, let venue = meta?.venue, !venue.isEmpty else { return nil }
+        return venue
     }
 
     private var distanceTags: [String] {
@@ -114,6 +110,14 @@ struct TripsEventDetail: View {
 
     private var mapIcon: String {
         event.isRun ? "figure.run" : "sportscourt.fill"
+    }
+
+    private var mapDistance: CLLocationDistance {
+        event.isRun ? 9_000 : 420
+    }
+
+    private var mapPitch: Double {
+        event.isRun ? 50 : 60
     }
 
     private var linkURL: URL? {

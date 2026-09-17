@@ -11,8 +11,8 @@ struct TripsGamestrip: View {
     private static let crestSize: CGFloat = 44
     private static let runIconSize: CGFloat = 22
     private static let rowHeight: CGFloat = 58
-    private static let rowTopPadding: CGFloat = 10
-    private static let rowBottomPadding: CGFloat = 6
+    private static let rowTopPadding: CGFloat = 18
+    private static let rowBottomPadding: CGFloat = 10
     private static let badgeSpacing: CGFloat = 8
     private static let centerSpacing: CGFloat = 1
     private static let detailSpacing: CGFloat = 4
@@ -28,8 +28,6 @@ struct TripsGamestrip: View {
 
     private static let edgeShadowHeight: CGFloat = 5
     private static let edgeShadowOpacity: Double = 0.1
-
-    private static let versus = "vs"
 
     private var meta: TravelEventMeta? { event.metaData }
 
@@ -95,40 +93,43 @@ struct TripsGamestrip: View {
 
     private var centerStatus: some View {
         VStack(spacing: Self.centerSpacing) {
-            Text(Self.versus)
-                .font(.caption2.weight(.semibold))
-                .foregroundColor(.secondary)
+            if let league = meta?.league, !league.isEmpty {
+                Text(league)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+            }
             matchDateTime
         }
         .fixedSize()
     }
 
     private var runRow: some View {
-        VStack(alignment: .trailing, spacing: Self.centerSpacing) {
-            HStack(spacing: Theme.Spacing.s) {
-                Image(systemName: "figure.run")
-                    .font(.system(size: Self.runIconSize, weight: .semibold))
-                    .foregroundColor(runColor)
+        HStack(spacing: Theme.Spacing.s) {
+            Image(systemName: "figure.run")
+                .font(.system(size: Self.runIconSize, weight: .semibold))
+                .foregroundColor(runColor)
+            VStack(alignment: .leading, spacing: Self.centerSpacing) {
                 Text(event.title)
                     .font(.subheadline.weight(.bold))
                     .lineLimit(1)
-                Spacer(minLength: 0)
+                runDetail
             }
-            runDetail
+            Spacer(minLength: Theme.Spacing.s)
+            Text(dateTimeText)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .fixedSize()
         }
         .frame(maxWidth: .infinity)
     }
 
-    /// Distance range, date and (when the provider gives one) the start time.
     private var runDetail: some View {
         HStack(spacing: Self.detailSpacing) {
             if let range = RunDistances.range(meta) {
                 Text(range)
                     .foregroundColor(runColor)
-                Text(Self.separator)
-                    .foregroundColor(.secondary)
             }
-            Text(dateTimeText)
         }
         .font(.subheadline.weight(.semibold))
         .lineLimit(1)

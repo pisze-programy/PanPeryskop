@@ -26,6 +26,8 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     private var loadTask: Task<Void, Never>?
     private var loadGeneration = 0
     private static let loadErrorMessage = "Coś poszło nie tak, spróbuj ponownie"
+    private static let refinementAttempts = 3
+    private static let refinementDelayMilliseconds = 1_500
     private var cachedOriginAirlines: [Airline] = []
     private var cachedPosts: [Post] = []
 
@@ -262,12 +264,22 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
             )
             guard loadGeneration == generation else { return false }
             let bucket = Dictionary(resp.events.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-            eventsCache[key] = bucket
+            if resp.enriched ?? true { eventsCache[key] = bucket }
             apply(bucket, generation: generation)
+            if resp.enriched == false { scheduleRefinement(generation: generation, attempt: 1) }
             return false
         } catch {
             guard !(error is CancellationError) else { return false }
             return true
+        }
+    }
+
+    private func scheduleRefinement(generation: Int, attempt: Int) {
+        guard attempt <= Self.refinementAttempts else { return }
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(Self.refinementDelayMilliseconds * attempt))
+            guard let self, self.loadGeneration == generation else { return }
+            _ = await self.loadEvents(generation: generation)
         }
     }
 

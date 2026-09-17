@@ -79,6 +79,57 @@ final class FlightScoringTests: XCTestCase {
     }
 }
 
+final class AirlineBookingTests: XCTestCase {
+    func testRyanairRoundTripCarriesBothDates() {
+        let url = Airline.ryanair.bookingURL(origin: "WAW", destination: "LTN", outbound: "2026-10-17", returning: "2026-10-19")
+        let items = URLComponents(url: url!, resolvingAgainstBaseURL: false)!.queryItems!
+        let value = { (name: String) in items.first { $0.name == name }?.value }
+        XCTAssertEqual(url?.host, "www.ryanair.com")
+        XCTAssertEqual(value("originIata"), "WAW")
+        XCTAssertEqual(value("destinationIata"), "LTN")
+        XCTAssertEqual(value("dateOut"), "2026-10-17")
+        XCTAssertEqual(value("dateIn"), "2026-10-19")
+        XCTAssertEqual(value("isReturn"), "true")
+    }
+
+    func testRyanairOutboundOnlyIsOneWay() {
+        let url = Airline.ryanair.bookingURL(origin: "WAW", destination: "LTN", outbound: "2026-10-17", returning: nil)
+        let items = URLComponents(url: url!, resolvingAgainstBaseURL: false)!.queryItems!
+        let value = { (name: String) in items.first { $0.name == name }?.value }
+        XCTAssertEqual(value("isReturn"), "false")
+        XCTAssertEqual(value("dateIn"), "")
+        XCTAssertEqual(value("originIata"), "WAW")
+    }
+
+    func testRyanairReturnOnlyFlipsTheDirection() {
+        let url = Airline.ryanair.bookingURL(origin: "WAW", destination: "LTN", outbound: nil, returning: "2026-10-19")
+        let items = URLComponents(url: url!, resolvingAgainstBaseURL: false)!.queryItems!
+        let value = { (name: String) in items.first { $0.name == name }?.value }
+        XCTAssertEqual(value("originIata"), "LTN")
+        XCTAssertEqual(value("destinationIata"), "WAW")
+        XCTAssertEqual(value("dateOut"), "2026-10-19")
+    }
+
+    func testWizzairRoundTripUsesTheBookingPath() {
+        let url = Airline.wizzair.bookingURL(origin: "WAW", destination: "LTN", outbound: "2026-10-17", returning: "2026-10-19")
+        XCTAssertEqual(url?.absoluteString, "https://wizzair.com/pl-pl/booking/select-flight/WAW/LTN/2026-10-17/2026-10-19")
+    }
+
+    func testWizzairReturnOnlyFlipsTheDirection() {
+        let url = Airline.wizzair.bookingURL(origin: "WAW", destination: "LTN", outbound: nil, returning: "2026-10-19")
+        XCTAssertEqual(url?.absoluteString, "https://wizzair.com/pl-pl/booking/select-flight/LTN/WAW/2026-10-19")
+    }
+
+    func testNoLegsMeansNoURL() {
+        XCTAssertNil(Airline.wizzair.bookingURL(origin: "WAW", destination: "LTN", outbound: nil, returning: nil))
+    }
+
+    func testDisplayNames() {
+        XCTAssertEqual(Airline.ryanair.displayName, "Ryanair")
+        XCTAssertEqual(Airline.wizzair.displayName, "Wizzair")
+    }
+}
+
 final class TagSortingTests: XCTestCase {
     private func tag(_ id: String, _ label: String) -> TagPill { TagPill(id: id, label: label) }
 

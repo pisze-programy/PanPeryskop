@@ -1,13 +1,25 @@
 import { CONFIG, type TravelTag } from '../config/index';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { isPlaceKind, type TravelPlace } from '../travel/places';
-import { fetchRyanairWindow, fetchWizzairWindow } from '../travel/flightsApi';
-import { reachableEvents, type TravelEventRow } from '../travel/reachability';
+import { airportForCity } from '../travel/airports';
+import { fetchRyanairWindow, fetchWizzairWindow, readFlightCache, writeFlightCache } from '../travel/flightsApi';
+import { haversineKm, reachableEvents, type ReachableEvent, type TravelEventRow } from '../travel/reachability';
 import { viatorRandomCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
 import { staysWidgetUrl, type StayTheme, type StayView } from '../travel/stay22';
 import { addDaysWarsaw } from '../seed/core/dates';
 
 export const travelRoutes = new Hono<{ Bindings: Env }>();
+
+export function isAirportGeo(tag: string, city: string, lat: number, lng: number): boolean {
+  if (tag !== CONFIG.travel.tags.espn) return false;
+  const airport = airportForCity(city);
+  if (!airport) return false;
+  return haversineKm(lat, lng, airport.lat, airport.lng) < CONFIG.travel.reachability.airportMatchKm;
+}
+
+function withVenueFlag(e: TravelEventRow): TravelEventRow & { venueIsAirport: boolean } {
+  return { ...e, venueIsAirport: isAirportGeo(e.tag, e.city, e.lat, e.lng) };
+}
 
 
 interface BBox {
@@ -67,14 +79,72 @@ travelRoutes.get('/events', async (c) => {
     .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, from, to, ...tagBinds)
     .all<{ city: string }>();
 
-  const events = (results ?? []) as TravelEventRow[];
+  const events = ((results ?? []) as TravelEventRow[]).map(withVenueFlag);
 
-  if (origin) {
-    const reachable = await reachableEvents(origin, events, c.env.DB);
-    return c.json({ events: reachable });
+  if (!origin) {
+    return c.json({ events, enriched: true });
   }
-  return c.json({ events });
+  return await enrichedEvents(c, events, origin, bbox, from, to);
 });
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+interface Enrichment {
+  airports: Record<string, string[]>;
+  okRoutes: number;
+  failedRoutes: number;
+}
+
+function reachCacheKey(origin: string, bbox: BBox, from: number, to: number): string {
+  const box = [bbox.swLat, bbox.swLng, bbox.neLat, bbox.neLng].map((v) => v.toFixed(1)).join(',');
+  return `reach:${origin}:${box}:${from}:${to}`;
+}
+
+async function enrich(origin: string, events: TravelEventRow[], db: D1Database): Promise<Enrichment> {
+  const { events: reachable, okRoutes, failedRoutes } = await reachableEvents(origin, events, db);
+  const airports: Record<string, string[]> = {};
+  for (const event of events) airports[`${event.provider}:${event.external_id}`] = [];
+  for (const event of reachable) airports[`${event.provider}:${event.external_id}`] = event.reachableAirports;
+  return { airports, okRoutes, failedRoutes };
+}
+
+function applyEnrichment(events: TravelEventRow[], airports: Record<string, string[]>): ReachableEvent[] {
+  const out: ReachableEvent[] = [];
+  for (const event of events) {
+    const found = airports[`${event.provider}:${event.external_id}`];
+    if (found && found.length > 0) out.push({ ...event, reachableAirports: found });
+  }
+  return out;
+}
+
+async function enrichedEvents(
+  c: Context<{ Bindings: Env }>,
+  events: TravelEventRow[],
+  origin: string,
+  bbox: BBox,
+  from: number,
+  to: number,
+): Promise<Response> {
+  const db = c.env.DB;
+  const cacheKey = reachCacheKey(origin, bbox, from, to);
+  const cached = await readFlightCache(db, cacheKey);
+  if (cached) return c.json({ events: applyEnrichment(events, cached as Record<string, string[]>), enriched: true });
+
+  const pending = enrich(origin, events, db).then(async (result) => {
+    await writeFlightCache(db, cacheKey, result.airports, CONFIG.travel.flights.enrichTtlMs);
+    return result;
+  });
+  const settled = await Promise.race([pending, sleep(CONFIG.travel.flights.enrichWaitMs).then(() => null)]);
+
+  if (!settled) {
+    c.executionCtx.waitUntil(pending);
+    return c.json({ events, enriched: false });
+  }
+  if (settled.okRoutes === 0 && settled.failedRoutes > 0) {
+    return c.json({ error: 'Flight reachability is unavailable' }, 502);
+  }
+  return c.json({ events: applyEnrichment(events, settled.airports), enriched: true });
+}
 
 // Europe-wide per-day tag counts for the Wycieczki filter chips. Scope is the
 // WHOLE of Europe (no bbox) for the requested day window, independent of the
@@ -176,7 +246,7 @@ async function flightHandler(c: any, airline: 'ryanair' | 'wizzair'): Promise<Re
   try {
     const window = airline === 'ryanair'
       ? await fetchRyanairWindow(params.origin, params.destination, params.eventDay, c.env.DB)
-      : await fetchWizzairWindow(params.origin, params.destination, params.eventDay);
+      : await fetchWizzairWindow(params.origin, params.destination, params.eventDay, c.env.DB);
     return c.json(window);
   } catch (e) {
     return c.json({ error: (e as Error).message }, 502);

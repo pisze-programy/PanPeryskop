@@ -7,6 +7,12 @@ All notable changes to PanPeryskop. Format based on
 ## [1.3.0] — 2026-09-11
 
 ### Added
+- Wizzair flights in Wycieczki next to Ryanair: every destination served by both
+  carriers gets its own flight board (prices, hours, best pair) sorted cheapest
+  first, with its own brand-coloured "Kup w Wizzair" / "Kup w Ryanair" button and
+  its own booking link. The route rail names every carrier that flies it.
+- Wycieczki has no invented fares left: a failed or empty live lookup shows "Nie
+  udało się pobrać lotów" with a "Spróbuj ponownie" retry.
 - Wycieczki (Trips) category on the map: pick a Polish origin airport, browse
   European soccer + running events per day (0–89 day slider), native bottom
   sheet with a Ryanair-style flight calendar (outbound before / return after the
@@ -26,6 +32,24 @@ All notable changes to PanPeryskop. Format based on
   (`GET /travel/tag-counts`, Europe-wide for the selected day).
 
 ### Changed
+- Wycieczki events show up immediately and refine themselves: the map pins come
+  from D1 at once, the flight-reachability filter lands a moment later (the
+  response says `enriched: false` and the app asks again). Reachability now walks
+  the routes with a two-at-a-time pool, retries each route twice, caches Wizzair
+  timetables per route and month for 24 h and failed routes for 5 minutes, and
+  never invents a result: a route that fails simply does not count, and when every
+  route fails the app shows the retry toast. Cold month: 2.2 s for the pins,
+  filtered answer right after (0.2 s), cached after that (0.08 s).
+- Wycieczki match header shows the league (ESPN league id → name, stored at
+  ingest), the "vs" label is gone, and the bar has room above the sheet handle.
+  The hero leads with the stadium name (bold) and the city, left-aligned above
+  the map.
+- Wycieczki run hero drops the provider surface/difficulty tags; the distances
+  read inline ("Dystans: 5 km, 10 km") and the sticky header keeps the run title
+  with the distance under it and the date on the right.
+- A match whose location is only the city airport (10% of matches, no venue
+  geocode) hides the map and says so instead of pinning the wrong place; a real
+  stadium coordinate zooms in to the 3D stadium.
 - Best-flight pick now trades the fare against the hotel nights a trip forces
   (350 zł per night, 500 zł on a Saturday): a cheap fare a week before the event
   loses to a dearer one the day before, because the extra nights cost more than

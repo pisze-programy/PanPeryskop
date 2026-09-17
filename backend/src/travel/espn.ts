@@ -1,6 +1,7 @@
 import { CONFIG } from '../config/index';
 import { GeoStore } from '../seed/core/geo';
 import { keepEuropeanCityEvent } from './airports';
+import espnLeaguesJson from './data/espn-leagues.json';
 import { resolveTravelGeo } from './geo';
 import { localDateTime } from './localTime';
 import { TravelEvent } from './store';
@@ -12,9 +13,19 @@ interface EspnCompetition {
 }
 interface EspnEvent {
   id: string;
+  uid?: string;
   date?: string;
   links?: Array<{ rel?: string[]; href?: string }>;
   competitions?: EspnCompetition[];
+}
+
+const espnLeagues = espnLeaguesJson as Record<string, string>;
+
+/** The event uid carries the league id: `s:600~l:775~e:401915444`. */
+export function leagueName(uid: string | undefined): string | null {
+  const match = /~l:(\d+)~/.exec(uid ?? '');
+  if (!match) return null;
+  return espnLeagues[match[1]] ?? null;
 }
 
 export interface EspnFetchOptions {
@@ -99,6 +110,7 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
   const meta = {
     ...(local ?? {}),
     venue: venueName,
+    league: leagueName(e.uid),
     homeCode: competitors[0]?.team?.abbreviation ?? null,
     awayCode: competitors[1]?.team?.abbreviation ?? null,
     homeColor: competitors[0]?.team?.color ?? null,

@@ -3,14 +3,16 @@ import { CONFIG } from '../config/index';
 // option are worth showing ("disappointment hurts"). Geo-based (event→airport
 // ≤200km, identical to the iOS rail radius) — never a fragile city-name join.
 //
-// Reachable = for some Ryanair-served airport within 200km of the event, the
-// route flies on ≥1 day in the outbound window [D-3,D-1] AND ≥1 in the return
-// window [D+1,D+3] (strictly around the event day — matches FlightScoring).
-// On live failure it degrades to static route existence so filtering still works.
+// Reachable = for some airport within 200km of the event that Ryanair OR Wizzair
+// serves from the origin, the route flies on ≥1 day in the outbound window
+// [D-3,D-1] AND ≥1 in the return window [D+1,D+3] (strictly around the event day
+// — matches FlightScoring). The two carriers' days are pooled: one-way legs from
+// different carriers still get the traveller there and back.
 import { addDaysWarsaw, warsawDateOf } from '../seed/core/dates';
 import { destinationsFrom, type Destination } from './airports';
-import { fetchRyanairAvailabilities } from './flightsApi';
+import { fetchRyanairAvailabilities, fetchWizzairFlyingDays } from './flightsApi';
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -41,13 +43,19 @@ export interface ReachableEvent extends TravelEventRow {
   reachableAirports: string[];
 }
 
+export interface ReachabilityResult {
+  events: ReachableEvent[];
+  okRoutes: number;
+  failedRoutes: number;
+}
+
 export function windowHasFlights(flyingDays: Set<string>, eventDay: string): boolean {
   const anyDay = (offsets: number[]) => offsets.some((o) => flyingDays.has(addDaysWarsaw(eventDay, o)));
   return anyDay([...CONFIG.travel.reachability.outboundOffsets]) && anyDay([...CONFIG.travel.reachability.returnOffsets]);
 }
 
 /** The airports near the day's events — the only ones worth a live fare lookup. */
-export function nearbyCandidates(candidates: Destination[], events: TravelEventRow[]): Destination[] {
+export function nearbyCandidates(candidates: Destination[], events: { lat: number; lng: number }[]): Destination[] {
   const byIata = new Map<string, Destination>();
   for (const e of events) {
     for (const d of candidates) {
@@ -57,44 +65,97 @@ export function nearbyCandidates(candidates: Destination[], events: TravelEventR
   return [...byIata.values()];
 }
 
-/**
- * Filter events to those reachable from `origin` by air, tagging each with the
- * IATAs that make it reachable. `liveFailed` switches the whole pass to static
- * route existence so a Ryanair outage degrades consistently (grid → mock).
- */
-export async function reachableEvents(
-  origin: string,
-  events: TravelEventRow[],
-  db: D1Database,
-): Promise<ReachableEvent[]> {
-  const candidates = destinationsFrom(origin).filter((d) => d.providers.has('ryanair'));
-  const availByIata = new Map<string, Set<string>>();
-  let liveFailed = false;
-  const deadline = Date.now() + CONFIG.travel.flights.deadlineMs;
-  for (const d of nearbyCandidates(candidates, events)) {
-    if (Date.now() > deadline) {
-      liveFailed = true;
-      break;
-    }
+interface Route {
+  dest: Destination;
+  eventDay: string;
+}
+
+export function routeKey(route: Route): string {
+  return `${route.dest.iata}|${route.eventDay}`;
+}
+
+async function routeFlyingDays(origin: string, route: Route, db: D1Database): Promise<Set<string>> {
+  const days = new Set<string>();
+  if (route.dest.providers.has('ryanair')) {
+    for (const day of await fetchRyanairAvailabilities(db, origin, route.dest.iata)) days.add(day);
+  }
+  if (route.dest.providers.has('wizzair')) {
+    for (const day of await fetchWizzairFlyingDays(origin, route.dest.iata, route.eventDay, db)) days.add(day);
+  }
+  return days;
+}
+
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < CONFIG.travel.flights.routeRetries; attempt++) {
     try {
-      availByIata.set(d.iata, new Set(await fetchRyanairAvailabilities(db, origin, d.iata)));
-    } catch {
-      liveFailed = true;
-      break;
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < CONFIG.travel.flights.routeRetries - 1) await sleep(300 * (attempt + 1) + Math.random() * 200);
     }
   }
+  throw lastError;
+}
+
+async function mapPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
+  let cursor = 0;
+  const runner = async () => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      await worker(items[index]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runner));
+}
+
+function routesFor(origin: string, events: TravelEventRow[]): { routes: Route[]; nearbyByEvent: Map<TravelEventRow, Destination[]> } {
+  const candidates = destinationsFrom(origin).filter((d) => d.providers.has('ryanair') || d.providers.has('wizzair'));
+  const nearbyByEvent = new Map<TravelEventRow, Destination[]>();
+  const routes: Route[] = [];
+  const seen = new Set<string>();
+  for (const event of events) {
+    const nearby = nearbyCandidates(candidates, [event]);
+    if (nearby.length === 0) continue;
+    nearbyByEvent.set(event, nearby);
+    const eventDay = warsawDateOf(event.start_ms);
+    for (const dest of nearby) {
+      const route: Route = { dest, eventDay };
+      const key = routeKey(route);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      routes.push(route);
+    }
+  }
+  return { routes, nearbyByEvent };
+}
+
+export async function reachableEvents(origin: string, events: TravelEventRow[], db: D1Database): Promise<ReachabilityResult> {
+  const { routes, nearbyByEvent } = routesFor(origin, events);
+  const flyingByRoute = new Map<string, Set<string> | null>();
+  let okRoutes = 0;
+  let failedRoutes = 0;
+
+  await mapPool(routes, CONFIG.travel.flights.routeConcurrency, async (route) => {
+    try {
+      flyingByRoute.set(routeKey(route), await withRetry(() => routeFlyingDays(origin, route, db)));
+      okRoutes++;
+    } catch {
+      flyingByRoute.set(routeKey(route), null);
+      failedRoutes++;
+    }
+  });
 
   const out: ReachableEvent[] = [];
-  for (const e of events) {
-    const nearby = candidates.filter((d) => haversineKm(e.lat, e.lng, d.lat, d.lng) <= CONFIG.travel.reachability.nearbyKm);
-    if (nearby.length === 0) continue;
-    const eventDay = warsawDateOf(e.start_ms);
-    const reachable = liveFailed
-      ? nearby.map((d) => d.iata)
-      : nearby
-          .filter((d) => windowHasFlights(availByIata.get(d.iata) ?? new Set(), eventDay))
-          .map((d) => d.iata);
-    if (reachable.length > 0) out.push({ ...e, reachableAirports: reachable });
+  for (const [event, nearby] of nearbyByEvent) {
+    const eventDay = warsawDateOf(event.start_ms);
+    const reachable = nearby
+      .filter((dest) => {
+        const days = flyingByRoute.get(routeKey({ dest, eventDay }));
+        return days ? windowHasFlights(days, eventDay) : false;
+      })
+      .map((dest) => dest.iata);
+    if (reachable.length > 0) out.push({ ...event, reachableAirports: reachable });
   }
-  return out;
+  return { events: out, okRoutes, failedRoutes };
 }

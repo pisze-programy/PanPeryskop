@@ -16,6 +16,8 @@ struct TravelEvent: Codable, Identifiable, Equatable {
     /// Nearby airport IATAs (≤200 km) that actually have flights from the chosen
     /// origin around the event day — computed by the backend; nil = not filtered.
     let reachableAirports: [String]?
+    /// True when the backend had no venue coordinate and used the city airport.
+    var venueIsAirport: Bool? = nil
 
     var id: String { "\(provider):\(external_id)" }
 
@@ -57,6 +59,7 @@ struct TravelEvent: Codable, Identifiable, Equatable {
 
 struct TravelEventsResponse: Codable {
     let events: [TravelEvent]
+    let enriched: Bool?
 }
 
 struct TravelEventMeta: Decodable {
@@ -68,6 +71,7 @@ struct TravelEventMeta: Decodable {
     let time: String?
     let date: String?
     let venue: String?
+    let league: String?
     let homeCode: String?
     let awayCode: String?
     let homeColor: String?

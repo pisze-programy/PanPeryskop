@@ -1,6 +1,7 @@
 import WebKit
 
 /// The non-interactive previews must not fight the sheet drag, so they stay at 100%.
+@MainActor
 enum NoZoomWebView {
     static func userScript() -> WKUserScript {
         let source = """

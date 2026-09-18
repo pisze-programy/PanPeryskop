@@ -5,7 +5,7 @@ import MapKit
 class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     @Published var posts: [Post] = []
     @Published var isLoading = false
-    @Published var selectedCity: City = City.all[0]
+    @Published var selectedCity: City = CatalogueStore.shared.defaultCity
     /// Canonical event tags for the map filter chips (backend order).
     @Published var tags: [TagPill] = []
     /// Selected tag filter (all by default, at least one stays on), persisted.
@@ -21,9 +21,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     private var tagFilterParam: String? {
         tagSelection.param(all: Set(tags.map(\.id)))
     }
-    var currentUserId: String? {
-        didSet { MediaNearbyNotifier.persistCurrentUserId(currentUserId) }
-    }
+    var currentUserId: String?
     private var viewport: MapBBox?
     /// Downloaded 50 km squares, newest first (max `maxSquares`). Moving inside a
     /// square never refetches; leaving it downloads only the new squares. Cleared
@@ -55,7 +53,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
 
     init() {
         let savedCityId = UserDefaults.standard.string(forKey: MapPrefs.cityId)
-        selectedCity = City.all.first { $0.id == savedCityId } ?? City.all[0]
+        selectedCity = CatalogueStore.shared.city(id: savedCityId ?? "") ?? CatalogueStore.shared.defaultCity
         selectedDayOffset = min(StoredDay.loadOffset(key: MapPrefs.selectedDay) ?? 0, Self.maxDayOffset)
         loadTags()
         loadTagCounts()
@@ -214,13 +212,12 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         fetchStories(swLat: box.swLat, swLng: box.swLng, neLat: box.neLat, neLng: box.neLng)
     }
 
-    func selectFeedCategory(_ category: MapCategory) {
-        clearFeed()
-        refreshCurrentRegion()
-        loadTagCounts()
-    }
-
     private var debounceTask: Task<Void, Never>?
+
+    /// Re-resolve the selected city after the catalogue changes (refresh).
+    func reloadCities() {
+        selectedCity = CatalogueStore.shared.city(id: selectedCity.id) ?? CatalogueStore.shared.defaultCity
+    }
 
     func selectCity(_ city: City) {
         selectedCity = city
@@ -234,7 +231,6 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         let neLng = region.center.longitude + region.span.longitudeDelta / 2
         fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
         startCityTransition()
-        runMediaNearbyCheck()
         loadTagCounts()
     }
 
@@ -405,9 +401,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
                 try? await Task.sleep(nanoseconds: Self.pollInterval)
                 guard !Task.isCancelled else { return }
                 guard let self else { return }
-                ProximityMonitor.shared.updateLocationTrackingIfNeeded()
-                let mediaDelivered = await MediaNearbyNotifier.shared.pollForeground(city: self.selectedCity)
-                await self.pollStories(suppressToast: mediaDelivered)
+                await self.pollStories()
             }
         }
     }
@@ -417,16 +411,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         pollingTask = nil
     }
 
-    /// Immediate media-nearby check (map appear / city switch) + location tracking sync.
-    func runMediaNearbyCheck() {
-        ProximityMonitor.shared.updateLocationTrackingIfNeeded()
-        Task { [weak self] in
-            guard let self else { return }
-            await MediaNearbyNotifier.shared.pollForeground(city: self.selectedCity)
-        }
-    }
-
-    private func pollStories(suppressToast: Bool = false) async {
+    private func pollStories() async {
         guard viewport != nil, !isRegionFetchPending, !isCityTransitionPending else { return }
         let fetched = await fetchVisibleSquares(refresh: true, trackLoad: false)
         guard !Task.isCancelled, !fetched.isEmpty else { return }
@@ -435,7 +420,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
                 && $0.user_id != currentUserId
         }
         knownPostIds.formUnion(fetched.map(\.id))
-        if hasNew && !suppressToast {
+        if hasNew {
             ToastManager.shared.show("Nowe!")
         }
     }

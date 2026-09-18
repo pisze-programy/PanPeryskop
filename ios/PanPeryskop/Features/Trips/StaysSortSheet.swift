@@ -3,6 +3,7 @@ import SwiftUI
 struct StaysSortSheet: View {
     @Binding var sort: StaysSort
     @Binding var anchor: StaysAnchor
+    var venueIsAirport: Bool = false
     let checkin: String
     let checkout: String
 
@@ -12,7 +13,7 @@ struct StaysSortSheet: View {
         NavigationStack {
             List {
                 Section("Lokalizacja") {
-                    ForEach(StaysAnchor.allCases) { option in
+                    ForEach(StaysAnchor.options(venueIsAirport: venueIsAirport)) { option in
                         SheetOptionRow(title: option.label, isSelected: anchor == option) {
                             anchor = option
                         }

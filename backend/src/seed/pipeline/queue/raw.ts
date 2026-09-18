@@ -43,6 +43,11 @@ function stripQuery(u: string | null | undefined): string {
   return u.split('#')[0].split('?')[0];
 }
 
+// Round to ~1 m so tiny geocoder jitter never counts as a content change.
+function roundCoord(v: number | null): number | null {
+  return v === null ? null : Math.round(v * 1e5) / 1e5;
+}
+
 export function normHashInput(c: SeedCandidate): string {
   // Explicit absent→null/[] normalization ONLY (never a substituted value):
   // undefined is not JSON-serializable, so it must collapse to null/[] for a
@@ -55,6 +60,8 @@ export function normHashInput(c: SeedCandidate): string {
     id: c.externalId,
     title: c.title,
     startMs: c.startMs,
+    lat: roundCoord(c.lat),
+    lng: roundCoord(c.lng),
     venue: c.venue,
     city: c.city,
     link: stripQuery(c.link),

@@ -3,6 +3,7 @@ import SwiftUI
 @MainActor
 final class PlacePreviewLoader: ObservableObject {
     @Published var places: [TravelPlace] = []
+    @Published var total = 0
     @Published var failed = false
     @Published private(set) var didLoad = false
     private var loadedKind: PlaceKind?
@@ -14,6 +15,7 @@ final class PlacePreviewLoader: ObservableObject {
         do {
             let resp = try await APIClient.getTravelPlaces(kind: kind, lat: lat, lng: lng, limit: 15, offset: 0, day: day)
             places = resp.places
+            total = resp.total
             loadedKind = kind
             loadedDay = day
             didLoad = true

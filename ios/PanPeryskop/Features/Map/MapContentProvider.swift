@@ -37,7 +37,11 @@ struct FlightArc: Identifiable {
     let id: String
     let from: CLLocationCoordinate2D
     let to: CLLocationCoordinate2D
-    let airline: Airline
+    var airlines: [Airline]
+    /// Draw progress 0…1. 1 for a finished route.
+    var progress: Double = 1
+    /// Sideways bow shift. Dual-carrier routes draw two arcs, one per side.
+    var bowOffset: Double = 0
 }
 
 enum Airline: String, Codable {

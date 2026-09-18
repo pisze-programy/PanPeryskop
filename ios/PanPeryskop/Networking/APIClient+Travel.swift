@@ -3,21 +3,28 @@ import Foundation
 // MARK: - Travel (Wycieczki)
 
 extension APIClient {
-    /// Travel events within a bbox + day window, optionally reachable from an
-    /// origin airport. `from`/`to` are epoch ms.
-    static func getTravelEvents(swLat: Double, swLng: Double, neLat: Double, neLng: Double, from: Int64, to: Int64, tags: String?, origin: String? = nil) async throws -> TravelEventsResponse {
+    /// Travel events for a day window, optionally reachable from an origin
+    /// airport. `from`/`to` are epoch ms. No bbox: reachability scopes the set.
+    static func getTravelEvents(from: Int64, to: Int64, tags: String? = nil, origins: [String] = []) async throws -> TravelEventsResponse {
         var params = [
-            "sw_lat": String(swLat),
-            "sw_lng": String(swLng),
-            "ne_lat": String(neLat),
-            "ne_lng": String(neLng),
             "from": String(from),
             "to": String(to),
             "limit": "1000",
         ]
         if let tags { params["tags"] = tags }
-        if let origin { params["origin"] = origin }
+        if !origins.isEmpty { params["origins"] = origins.joined(separator: ",") }
         return try await get("/travel/events", params: params, timeout: AppConstants.travelRequestTimeout)
+    }
+
+    /// Travel catalogue for the current content version. Returns `nil` on 304
+    /// (the caller's copy is still current).
+    static func getCatalogue(etag: String?) async throws -> TravelCatalogue? {
+        guard let data = try await HTTPClient.shared.getConditional(
+            "/travel/catalogue",
+            etag: etag,
+            timeout: AppConstants.travelRequestTimeout
+        ) else { return nil }
+        return try JSONDecoder().decode(TravelCatalogue.self, from: data)
     }
 
     /// Flight availability for a route around an event day — shape
@@ -60,6 +67,10 @@ extension APIClient {
         if let priceper = query.priceper { params["priceper"] = priceper }
         if let minstars = query.minstars { params["minstars"] = String(minstars) }
         if let minguest = query.minguest { params["minguest"] = String(minguest) }
+        if let nearLat = query.nearLat, let nearLng = query.nearLng {
+            params["nearLat"] = String(nearLat)
+            params["nearLng"] = String(nearLng)
+        }
         let response: StaysWidgetResponse = try await get("/travel/stays-widget", params: params)
         return URL(string: response.url)
     }

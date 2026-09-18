@@ -1,5 +1,56 @@
 import SwiftUI
 
+/// Scope capsule above the bottom bar. Shows a small loader on the side
+/// that is loading.
+struct CategoryPill: View {
+    let selection: MapCategory
+    var eventsLoading: Bool = false
+    var tripsLoading: Bool = false
+    let onSelect: (MapCategory) -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(MapCategory.visibleCases) { cat in
+                Button {
+                    guard selection != cat else { return }
+                    Haptics.selection()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                        onSelect(cat)
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        if cat == .events && eventsLoading { loader }
+                        Text(cat.label)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        if cat == .trips && tripsLoading { loader }
+                    }
+                    .padding(.horizontal, Theme.Spacing.l)
+                    .padding(.vertical, Theme.Spacing.s)
+                    .background {
+                        if selection == cat {
+                            Capsule()
+                                .fill(Theme.Palette.surfaceRaised)
+                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
+        .shadow(color: Theme.Palette.shadow, radius: 10, x: 0, y: 4)
+    }
+
+    private var loader: some View {
+        ProgressView()
+            .controlSize(.mini)
+            .tint(.secondary)
+    }
+}
+
 /// Map picker pill (city / airport) — opens a picker sheet.
 struct MapPickerPill: View {
     let title: String

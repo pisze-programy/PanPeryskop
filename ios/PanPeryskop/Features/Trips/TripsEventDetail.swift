@@ -28,9 +28,7 @@ struct TripsEventDetail: View {
                 distanceRow
             }
             venueCaption
-            if guessesVenue {
-                venueUnknownHint
-            } else {
+            if !guessesVenue {
                 VenueMap(
                     coordinate: coordinate,
                     systemImage: mapIcon,
@@ -56,9 +54,14 @@ struct TripsEventDetail: View {
             Text(Self.distanceTitle)
                 .font(.caption.weight(.semibold))
                 .foregroundColor(.secondary)
-            ForEach(Array(distanceTags.enumerated()), id: \.offset) { _, value in
-                chip(value)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Self.tagSpacing) {
+                    ForEach(Array(distanceTags.enumerated()), id: \.offset) { _, value in
+                        chip(value)
+                    }
+                }
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
     }
 
@@ -76,19 +79,12 @@ struct TripsEventDetail: View {
         .lineLimit(2)
     }
 
-    private var venueUnknownHint: some View {
-        Text("Nie znamy dokładnej lokalizacji stadionu")
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Theme.Spacing.l)
-            .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
-    }
-
     private func chip(_ value: String) -> some View {
         Text(value)
             .font(.caption.weight(.semibold))
             .foregroundColor(.secondary)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, Self.tagHorizontalPadding)
             .padding(.vertical, Self.tagVerticalPadding)
             .background(Theme.Palette.surface, in: Capsule())

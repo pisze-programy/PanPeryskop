@@ -16,6 +16,9 @@ struct TravelEvent: Codable, Identifiable, Equatable {
     /// Nearby airport IATAs (≤200 km) that actually have flights from the chosen
     /// origin around the event day — computed by the backend; nil = not filtered.
     let reachableAirports: [String]?
+    /// Per destination IATA: the carriers with a valid window around the event
+    /// day. nil = backend did not send it (unenriched or an older backend).
+    let reachableCarriers: [String: [String]]?
     /// True when the backend had no venue coordinate and used the city airport.
     var venueIsAirport: Bool? = nil
 

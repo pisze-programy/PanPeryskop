@@ -1,14 +1,9 @@
 import SwiftUI
-import UserNotifications
 
 @main
 struct PanPeryskopApp: App {
     @StateObject private var authManager = AuthManager()
     @State private var pendingStoryId: String?
-
-    init() {
-        UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
-    }
 
     var body: some Scene {
         WindowGroup {

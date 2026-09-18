@@ -37,10 +37,13 @@ export interface TravelEventRow {
   tag: string;
   link: string | null;
   reachableAirports?: string[];
+  /** Per destination: the carriers with a valid window around the event day. */
+  reachableCarriers?: Record<string, string[]>;
 }
 
 export interface ReachableEvent extends TravelEventRow {
   reachableAirports: string[];
+  reachableCarriers: Record<string, string[]>;
 }
 
 export interface ReachabilityResult {
@@ -74,15 +77,29 @@ export function routeKey(route: Route): string {
   return `${route.dest.iata}|${route.eventDay}`;
 }
 
-async function routeFlyingDays(origin: string, route: Route, db: D1Database): Promise<Set<string>> {
-  const days = new Set<string>();
+interface RouteDays {
+  ryanair: Set<string>;
+  wizzair: Set<string>;
+}
+
+/** Carriers whose own flight days satisfy both the outbound and return window. */
+export function reachableCarriers(days: RouteDays, eventDay: string): Array<'ryanair' | 'wizzair'> {
+  const out: Array<'ryanair' | 'wizzair'> = [];
+  if (windowHasFlights(days.ryanair, eventDay)) out.push('ryanair');
+  if (windowHasFlights(days.wizzair, eventDay)) out.push('wizzair');
+  return out;
+}
+
+async function routeFlyingDays(origin: string, route: Route, db: D1Database): Promise<RouteDays> {
+  const ryanair = new Set<string>();
+  const wizzair = new Set<string>();
   if (route.dest.providers.has('ryanair')) {
-    for (const day of await fetchRyanairAvailabilities(db, origin, route.dest.iata)) days.add(day);
+    for (const day of await fetchRyanairAvailabilities(db, origin, route.dest.iata)) ryanair.add(day);
   }
   if (route.dest.providers.has('wizzair')) {
-    for (const day of await fetchWizzairFlyingDays(origin, route.dest.iata, route.eventDay, db)) days.add(day);
+    for (const day of await fetchWizzairFlyingDays(origin, route.dest.iata, route.eventDay, db)) wizzair.add(day);
   }
-  return days;
+  return { ryanair, wizzair };
 }
 
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
@@ -132,7 +149,7 @@ function routesFor(origin: string, events: TravelEventRow[]): { routes: Route[];
 
 export async function reachableEvents(origin: string, events: TravelEventRow[], db: D1Database): Promise<ReachabilityResult> {
   const { routes, nearbyByEvent } = routesFor(origin, events);
-  const flyingByRoute = new Map<string, Set<string> | null>();
+  const flyingByRoute = new Map<string, RouteDays | null>();
   let okRoutes = 0;
   let failedRoutes = 0;
 
@@ -149,13 +166,19 @@ export async function reachableEvents(origin: string, events: TravelEventRow[], 
   const out: ReachableEvent[] = [];
   for (const [event, nearby] of nearbyByEvent) {
     const eventDay = warsawDateOf(event.start_ms);
-    const reachable = nearby
-      .filter((dest) => {
-        const days = flyingByRoute.get(routeKey({ dest, eventDay }));
-        return days ? windowHasFlights(days, eventDay) : false;
-      })
-      .map((dest) => dest.iata);
-    if (reachable.length > 0) out.push({ ...event, reachableAirports: reachable });
+    const reachable: string[] = [];
+    const carriers: Record<string, string[]> = {};
+    for (const dest of nearby) {
+      const days = flyingByRoute.get(routeKey({ dest, eventDay }));
+      if (!days) continue;
+      const serving = reachableCarriers(days, eventDay);
+      if (serving.length === 0) continue;
+      reachable.push(dest.iata);
+      carriers[dest.iata] = serving;
+    }
+    if (reachable.length > 0) {
+      out.push({ ...event, reachableAirports: reachable, reachableCarriers: carriers });
+    }
   }
   return { events: out, okRoutes, failedRoutes };
 }

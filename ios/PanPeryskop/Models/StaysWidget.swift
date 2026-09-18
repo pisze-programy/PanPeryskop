@@ -18,6 +18,9 @@ struct StaysWidgetQuery {
     var priceper: String?
     var minstars: Int?
     var minguest: Int?
+    /// Event coordinates, used to resolve an address-only point to coordinates.
+    var nearLat: Double?
+    var nearLng: Double?
 
     var key: String {
         [
@@ -29,6 +32,8 @@ struct StaysWidgetQuery {
             String(minstars ?? 0),
             String(minguest ?? 0),
             point.key,
+            String(nearLat ?? 0),
+            String(nearLng ?? 0),
         ].joined(separator: "|")
     }
 }

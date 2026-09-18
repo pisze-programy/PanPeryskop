@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildWindowFromCheapest, type CheapestDay } from '../src/travel/flightsApi';
-import { haversineKm, nearbyCandidates, windowHasFlights, type TravelEventRow } from '../src/travel/reachability';
+import { haversineKm, nearbyCandidates, reachableCarriers, windowHasFlights, type TravelEventRow } from '../src/travel/reachability';
 import type { Destination } from '../src/travel/airports';
 
 function dest(iata: string, lat: number, lng: number): Destination {
@@ -68,6 +68,17 @@ test('haversineKm: nearby vs distant airports', () => {
   assert.ok(haversineKm(52.1657, 20.9671, 51.7592, 19.456) < 200);
   // WAW → Berlin ≈ 520 km
   assert.ok(haversineKm(52.1657, 20.9671, 52.3667, 13.5033) > 200);
+});
+
+test('reachableCarriers: only carriers with both outbound and return days', () => {
+  const both = { ryanair: new Set(['2026-09-07', '2026-09-11']), wizzair: new Set(['2026-09-07', '2026-09-11']) };
+  assert.deepEqual(reachableCarriers(both, '2026-09-10'), ['ryanair', 'wizzair']);
+
+  const outboundOnly = { ryanair: new Set(['2026-09-07']), wizzair: new Set(['2026-09-07', '2026-09-11']) };
+  assert.deepEqual(reachableCarriers(outboundOnly, '2026-09-10'), ['wizzair']);
+
+  const none = { ryanair: new Set(['2026-09-10']), wizzair: new Set<string>() };
+  assert.deepEqual(reachableCarriers(none, '2026-09-10'), []);
 });
 
 test('windowHasFlights: needs ≥1 day before AND ≥1 day after the event (strict)', () => {

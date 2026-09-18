@@ -8,7 +8,17 @@ struct StaysSection: View {
     let checkout: String?
 
     @Environment(\.colorScheme) private var colorScheme
-    @State private var anchor: StaysAnchor = .event
+    @State private var anchor: StaysAnchor
+
+    private var venueIsAirport: Bool { event.venueIsAirport == true }
+
+    init(event: TravelEvent, airportCoordinate: CLLocationCoordinate2D?, checkin: String?, checkout: String?) {
+        self.event = event
+        self.airportCoordinate = airportCoordinate
+        self.checkin = checkin
+        self.checkout = checkout
+        _anchor = State(initialValue: event.venueIsAirport == true ? .centre : .event)
+    }
     @State private var showsFullSheet = false
     @State private var showsAnchorSheet = false
     @State private var webFailed = false
@@ -41,7 +51,9 @@ struct StaysSection: View {
             checkin: stayDates.checkin,
             checkout: stayDates.checkout,
             theme: theme,
-            view: .mini
+            view: .mini,
+            nearLat: event.lat,
+            nearLng: event.lng
         )
     }
 
@@ -72,13 +84,14 @@ struct StaysSection: View {
                 event: event,
                 airportCoordinate: airportCoordinate,
                 anchor: $anchor,
+                venueIsAirport: venueIsAirport,
                 checkin: stayDates.checkin,
                 checkout: stayDates.checkout,
                 onClose: { showsFullSheet = false }
             )
         }
         .sheet(isPresented: $showsAnchorSheet) {
-            StaysAnchorSheet(anchor: $anchor)
+            StaysAnchorSheet(anchor: $anchor, venueIsAirport: venueIsAirport)
         }
     }
 

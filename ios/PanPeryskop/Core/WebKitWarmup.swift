@@ -1,31 +1,51 @@
 import WebKit
 
 /// The first web view in the process pays WebKit's start-up cost (framework and
-/// web content process). Warm it while the user reads the event details, then
-/// hand the same view to the first hotel map — no second start-up, and no early
-/// teardown for the system to log.
+/// web content process). Keep a small pool warm while the user reads the event
+/// details, so the mini map and the full sheet never start cold. The warmed page
+/// preconnects to the map host, so DNS/TLS are ready too.
 @MainActor
 enum WebKitWarmup {
-    private static var warmed: WKWebView?
-    private static var didWarm = false
+    private static var pool: [WKWebView] = []
+    private static let capacity = 2
+    private static var isRefilling = false
 
     static func warm() {
-        guard !didWarm else { return }
-        didWarm = true
-        let webView = WKWebView(
-            frame: CGRect(x: 0, y: 0, width: warmupSide, height: warmupSide),
-            configuration: WKWebViewConfiguration()
-        )
-        webView.isHidden = true
-        webView.loadHTMLString("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">", baseURL: nil)
-        warmed = webView
+        refill()
     }
 
     static func take() -> WKWebView? {
-        let webView = warmed
-        warmed = nil
+        let webView = pool.popLast()
+        refill()
         return webView
     }
 
-    private static let warmupSide: CGFloat = 1
+    private static func refill() {
+        guard !isRefilling, pool.count < capacity else { return }
+        isRefilling = true
+        Task { @MainActor in
+            while pool.count < capacity {
+                pool.append(make())
+                await Task.yield()
+            }
+            isRefilling = false
+        }
+    }
+
+    private static func make() -> WKWebView {
+        let webView = WKWebView(
+            frame: CGRect(x: 0, y: 0, width: 1, height: 1),
+            configuration: WKWebViewConfiguration()
+        )
+        webView.isHidden = true
+        webView.loadHTMLString(preconnectHTML, baseURL: nil)
+        return webView
+    }
+
+    private static let preconnectHTML = """
+    <html><head>
+    <link rel="preconnect" href="https://www.stay22.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.stay22.com">
+    </head><body></body></html>
+    """
 }

@@ -1,10 +1,10 @@
 import { queue } from './queue';
 
-export type TravelTag = 'citybreak' | 'pilka-nozna' | 'biegi';
+export type TravelTag = 'pilka-nozna' | 'biegi';
 export type TravelRunType = 'backfill' | 'replenish';
 export type PlaceKind = 'attraction';
 
-const travelTagValues: TravelTag[] = ['citybreak', 'pilka-nozna', 'biegi'];
+const travelTagValues: TravelTag[] = ['pilka-nozna', 'biegi'];
 
 export const travel = {
   provider: 'espn',
@@ -117,8 +117,8 @@ export const travel = {
     fareBase: 'https://www.ryanair.com/api/farfnd/3/oneWayFares',
     userAgent:
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-    availabilityTtlMs: 24 * 3_600_000,
-    priceTtlMs: 12 * 3_600_000,
+    availabilityTtlMs: 72 * 3_600_000,
+    priceTtlMs: 24 * 3_600_000,
     timeoutMs: 3_000,
     deadlineMs: 8_000,
     failureTtlMs: 5 * 60_000,
@@ -126,6 +126,7 @@ export const travel = {
     routeRetries: 2,
     enrichWaitMs: 2_000,
     enrichTtlMs: 12 * 3_600_000,
+    alertThrottleMs: 6 * 3_600_000,
     windows: {
       outbound: [-7, -1] as [number, number],
       return: [1, 7] as [number, number],
@@ -134,9 +135,9 @@ export const travel = {
       pageUrl: 'https://wizzair.com/en-gb',
       apiHost: 'https://be.wizzair.com',
       versionPattern: 'be\\.wizzair\\.com/(\\d+\\.\\d+\\.\\d+)/Api',
-      fallbackVersion: '29.16.1',
-      versionTtlMs: 24 * 3_600_000,
-      windowTtlMs: 12 * 3_600_000,
+      fallbackVersion: '29.17.0',
+      versionTtlMs: 7 * 24 * 3_600_000,
+      windowTtlMs: 24 * 3_600_000,
     },
   },
   viator: {
@@ -228,5 +229,11 @@ export const travel = {
     maxWindowMs: 370 * 24 * 3_600_000,
     maxLimit: 1000,
     iataPattern: /^[A-Z]{3}$/,
+  },
+  catalogue: {
+    // Bump on any breaking change to the catalogue JSON shape.
+    schemaVersion: 1,
+    // Oldest iOS build that can still read the current catalogue.
+    minAppBuild: 36,
   },
 } as const;

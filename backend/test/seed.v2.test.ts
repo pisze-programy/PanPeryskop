@@ -38,6 +38,14 @@ test('normHashInput: null price and 0 price are DISTINCT (no 0 substitution)', (
   assert.notEqual(normHashInput(cand({ price: null })), normHashInput(cand({ price: 0 })));
 });
 
+test('normHashInput: a coordinate change changes the hash (stale pins re-ingest)', () => {
+  assert.notEqual(normHashInput(cand()), normHashInput(cand({ lat: 52.41, lng: 16.91 })));
+});
+
+test('normHashInput: sub-metre float jitter does NOT change the hash', () => {
+  assert.equal(normHashInput(cand({ lat: 52.4, lng: 16.9 })), normHashInput(cand({ lat: 52.40000001, lng: 16.90000001 })));
+});
+
 // ---------- producer ----------
 
 class MockProducerDB {

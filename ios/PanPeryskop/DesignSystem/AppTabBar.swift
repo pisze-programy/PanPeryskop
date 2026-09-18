@@ -1,17 +1,16 @@
 import SwiftUI
 
-/// Bottom navigation: category switch (Wydarzenia / Wycieczki) + Profile.
+/// Bottom navigation: local scope + Profile. The Europe scope moves to the
+/// Lokalne | Europa segment above the bar.
 struct AppTabBar: View {
     let category: MapCategory
     var eventsLoading: Bool = false
-    var tripsLoading: Bool = false
     let onSelectCategory: (MapCategory) -> Void
     let onProfile: () -> Void
 
     var body: some View {
         HStack(spacing: 40) {
             categoryButton(.events, icon: "house.fill", loading: eventsLoading)
-            categoryButton(.trips, icon: "airplane.departure", loading: tripsLoading)
 
             Button {
                 Haptics.selection()

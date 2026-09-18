@@ -182,32 +182,18 @@ export async function refreshViatorDestinations(db: D1Database, env: ViatorEnv):
   return rows.length;
 }
 
-/**
- * TEMPORARY: returns a pseudo-random city (stable per anchor, so the same event
- * keeps the same city between opens). The real anchor → city matcher comes later;
- * this exists so the section can be built and reviewed end to end.
- */
-export async function viatorRandomCity(db: D1Database, lat: number, lng: number): Promise<ViatorCity | null> {
-  const count = await db
-    .prepare(`SELECT COUNT(*) AS n FROM viator_destinations WHERE type = 'CITY' AND iata_codes IS NOT NULL`)
-    .first<{ n: number }>();
-  const total = count?.n ?? 0;
-  if (total === 0) return null;
-  let hash = 2166136261;
-  for (const char of `${lat.toFixed(3)},${lng.toFixed(3)}`) {
-    hash ^= char.charCodeAt(0);
-    hash = Math.imul(hash, 16777619);
-  }
-  const offset = (hash >>> 0) % total;
+/** The catalogue city nearest to the given coordinates — deterministic. */
+export async function viatorNearestCity(db: D1Database, lat: number, lng: number): Promise<ViatorCity | null> {
   return db
     .prepare(
       `SELECT destination_id AS destinationId, name, lat, lng
          FROM viator_destinations
         WHERE type = 'CITY' AND iata_codes IS NOT NULL
-        ORDER BY destination_id
-        LIMIT 1 OFFSET ?1`,
+          AND lat IS NOT NULL AND lng IS NOT NULL
+        ORDER BY (lat - ?1) * (lat - ?1) + (lng - ?2) * (lng - ?2)
+        LIMIT 1`,
     )
-    .bind(offset)
+    .bind(lat, lng)
     .first<ViatorCity>();
 }
 

@@ -54,9 +54,6 @@ enum MediaCompressor {
     }
 
     private static func encode(from sourceURL: URL, bitrate: Int) async throws -> URL {
-        let outputURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("mp4")
         let config = FYVideoCompressor.CompressionConfig(
             videoBitrate: bitrate,
             videomaxKeyFrameInterval: 30,

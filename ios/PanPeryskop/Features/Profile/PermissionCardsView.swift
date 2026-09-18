@@ -2,7 +2,6 @@ import SwiftUI
 import AVFoundation
 import Photos
 import CoreLocation
-import UserNotifications
 
 enum PermissionState {
     case authorized
@@ -40,6 +39,7 @@ struct PermissionCardData {
 struct PermissionCardsView: View {
     var showsHeader: Bool = true
     @State private var cards: [PermissionCardData] = []
+    private let locationManager = CLLocationManager()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -85,35 +85,11 @@ struct PermissionCardsView: View {
             state: locationState,
             detail: locationDetail
         )
-        let base: [PermissionCardData] = [camera, mic, library, location]
-
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            let notifications = PermissionCardData(
-                icon: "bell.badge.fill",
-                title: "Powiadomienia",
-                description: "Powiadomienia o nowych mediach i prośbach o podgląd w okolicy.",
-                state: Self.notificationState(settings)
-            )
-            var all = base
-            all.append(notifications)
-            let cards = all
-            Task { @MainActor in
-                self.cards = cards
-            }
-        }
-    }
-
-    nonisolated private static func notificationState(_ settings: UNNotificationSettings) -> PermissionState {
-        switch settings.authorizationStatus {
-        case .authorized, .provisional, .ephemeral: return .authorized
-        case .denied: return .denied
-        case .notDetermined: return .notDetermined
-        @unknown default: return .notDetermined
-        }
+        cards = [camera, mic, library, location]
     }
 
     private var locationDetail: String? {
-        switch CLLocationManager.authorizationStatus() {
+        switch locationManager.authorizationStatus {
         case .authorizedAlways: return "Zawsze"
         case .authorizedWhenInUse: return "Tylko podczas używania"
         default: return nil
@@ -151,7 +127,7 @@ struct PermissionCardsView: View {
     }
 
     private var locationState: PermissionState {
-        switch CLLocationManager.authorizationStatus() {
+        switch locationManager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways: return .authorized
         case .denied: return .denied
         case .notDetermined: return .notDetermined

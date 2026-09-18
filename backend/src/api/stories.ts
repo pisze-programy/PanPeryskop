@@ -261,10 +261,6 @@ storiesRoutes.get('/', async (c) => {
     tagBinds = tags.map((t) => `%"${t}"%`);
   }
 
-  // Seen (watched) media is hidden from the Live feed entirely — the map removes
-  // it locally and future fetches must not return it either.
-  const hideWatchedLive = category === CATEGORY_LIVE;
-
   // Day browser: `day=YYYY-MM-DD` shows pins for that day regardless of the live
   // TTL window (future days are otherwise hidden by created_at <= now). Live posts
   // have event_date NULL so they never match a day query.
@@ -298,7 +294,6 @@ storiesRoutes.get('/', async (c) => {
             AND ${timeCond}
             ${catCond}
             ${tagCond}
-            ${hideWatchedLive ? 'AND v.post_id IS NULL' : ''}
             ORDER BY ${popularityExpr()} DESC
             LIMIT ${limit}`
         )

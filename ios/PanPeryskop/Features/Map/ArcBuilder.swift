@@ -4,7 +4,8 @@ enum ArcBuilder {
     static func curve(
         from: CLLocationCoordinate2D,
         to: CLLocationCoordinate2D,
-        steps: Int = 48
+        steps: Int = 48,
+        bowOffset: Double = 0
     ) -> [CLLocationCoordinate2D] {
         let dLat = to.latitude - from.latitude
         let dLng = to.longitude - from.longitude
@@ -15,7 +16,7 @@ enum ArcBuilder {
         // fine at European distances). Bow = 25% of the chord, capped.
         let nx = -dLng / chord
         let ny = dLat / chord
-        let bow = min(chord * 0.25, 2.0)
+        let bow = min(chord * 0.25, 2.0) + bowOffset
         let midLat = (from.latitude + to.latitude) / 2
         let midLng = (from.longitude + to.longitude) / 2
         let control = CLLocationCoordinate2D(

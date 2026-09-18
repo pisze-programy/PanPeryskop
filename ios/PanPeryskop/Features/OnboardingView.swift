@@ -49,7 +49,6 @@ struct OnboardingView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Label("Wycieczki w Europie – wydarzenie, loty, nocleg i atrakcje!", systemImage: "airplane")
                     Label("Lokalnie? Koncerty, kino, teatr, spotkania i więcej!", systemImage: "map")
-                    Label("Zobacz, co się dzieje w Twojej okolicy!", systemImage: "location.fill")
                 }
                 .font(.subheadline)
                 .foregroundColor(.secondary)

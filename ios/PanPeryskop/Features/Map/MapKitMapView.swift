@@ -210,10 +210,6 @@ struct MapKitMapView: View {
                         ))
                     }
                 }
-                // Cold-launch push: the tap arrived before this view existed.
-                if let payload = NotificationDelegate.consumePendingCenter() {
-                    centerOnCoordinate(payload)
-                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .scrollToPost)) { note in
                 guard let post = note.object as? Post else { return }
@@ -227,7 +223,6 @@ struct MapKitMapView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .centerMapOnCoordinate)) { note in
                 guard let payload = note.object as? MapCenterPayload else { return }
-                _ = NotificationDelegate.consumePendingCenter() // warm path: clear the cold-launch fallback
                 centerOnCoordinate(payload)
             }
             }

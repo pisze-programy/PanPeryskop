@@ -42,7 +42,7 @@ struct PlacesListView: View {
         case .loading:
             PlaceRowsSkeleton()
         case .empty:
-            EmptyState(icon: "ticket", title: "Brak atrakcji w tym mieście")
+            EmptyView()
         case .loaded:
             PlaceRowsList(model: model, onOpenURL: onOpenURL)
         }

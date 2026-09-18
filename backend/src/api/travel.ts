@@ -4,8 +4,10 @@ import { isPlaceKind, type TravelPlace } from '../travel/places';
 import { airportForCity } from '../travel/airports';
 import { fetchRyanairWindow, fetchWizzairWindow, readFlightCache, writeFlightCache } from '../travel/flightsApi';
 import { haversineKm, reachableEvents, type ReachableEvent, type TravelEventRow } from '../travel/reachability';
-import { viatorRandomCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
+import { buildCatalogue } from '../travel/catalogue';
+import { viatorNearestCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
 import { staysWidgetUrl, type StayTheme, type StayView } from '../travel/stay22';
+import { alertFlightFailure } from '../travel/alerts';
 import { addDaysWarsaw } from '../seed/core/dates';
 
 export const travelRoutes = new Hono<{ Bindings: Env }>();
@@ -42,10 +44,21 @@ function parseBBox(q: Record<string, string | undefined>): BBox | null {
   return { swLat, swLng, neLat, neLng };
 }
 
+const CATALOGUE = buildCatalogue(new Date().toISOString());
+const CATALOGUE_ETAG = `"${CATALOGUE.version}"`;
+
+travelRoutes.get('/catalogue', (c) => {
+  if (c.req.header('If-None-Match') === CATALOGUE_ETAG) return c.body(null, 304);
+  c.header('ETag', CATALOGUE_ETAG);
+  c.header('Cache-Control', 'no-cache');
+  return c.json(CATALOGUE);
+});
+
 travelRoutes.get('/events', async (c) => {
   const q = c.req.query();
-  const bbox = parseBBox(q);
-  if (!bbox) return c.json({ error: 'Invalid or missing bbox' }, 400);
+  const wantsBbox = ['sw_lat', 'sw_lng', 'ne_lat', 'ne_lng'].some((k) => q[k] !== undefined);
+  const bbox = wantsBbox ? parseBBox(q) : null;
+  if (wantsBbox && !bbox) return c.json({ error: 'Invalid bbox' }, 400);
   const from = Number(q.from);
   const to = Number(q.to);
   if (!isFinite(from) || !isFinite(to) || to <= from) return c.json({ error: 'Invalid or missing from/to (epoch ms)' }, 400);
@@ -64,55 +77,94 @@ travelRoutes.get('/events', async (c) => {
     tagBinds = tags;
   }
   const limit = parseLimit(q.limit);
-  const origin = q.origin && CONFIG.travel.api.iataPattern.test(q.origin) ? q.origin.toUpperCase() : null;
+  const origins = parseOrigins(q.origins ?? q.origin);
 
+  const bboxCond = bbox ? 'AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?' : '';
+  const bboxBinds = bbox ? [bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng] : [];
   const { results } = await c.env.DB
     .prepare(
       `SELECT provider, external_id, title, lat, lng, city, country, start_ms, tag, link, meta
        FROM travel_events
-       WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
+       WHERE 1=1 ${bboxCond}
        AND start_ms >= ? AND start_ms <= ?
        ${tagCond}
        ORDER BY start_ms
        LIMIT ${limit}`
     )
-    .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, from, to, ...tagBinds)
+    .bind(...bboxBinds, from, to, ...tagBinds)
     .all<{ city: string }>();
 
   const events = ((results ?? []) as TravelEventRow[]).map(withVenueFlag);
 
-  if (!origin) {
+  if (origins.length === 0) {
     return c.json({ events, enriched: true });
   }
-  return await enrichedEvents(c, events, origin, bbox, from, to);
+  return await enrichedEvents(c, events, origins, from, to);
 });
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface Enrichment {
   airports: Record<string, string[]>;
+  carriers: Record<string, Record<string, string[]>>;
   okRoutes: number;
   failedRoutes: number;
 }
 
-function reachCacheKey(origin: string, bbox: BBox, from: number, to: number): string {
-  const box = [bbox.swLat, bbox.swLng, bbox.neLat, bbox.neLng].map((v) => v.toFixed(1)).join(',');
-  return `reach:${origin}:${box}:${from}:${to}`;
+function parseOrigins(raw: string | undefined): string[] {
+  if (!raw) return [];
+  const seen = new Set<string>();
+  for (const part of raw.split(',')) {
+    const code = part.trim().toUpperCase();
+    if (CONFIG.travel.api.iataPattern.test(code)) seen.add(code);
+  }
+  return [...seen];
 }
 
-async function enrich(origin: string, events: TravelEventRow[], db: D1Database): Promise<Enrichment> {
-  const { events: reachable, okRoutes, failedRoutes } = await reachableEvents(origin, events, db);
+function reachCacheKey(origins: string[], from: number, to: number): string {
+  return `reach2:${origins.join('+')}:${from}:${to}`;
+}
+
+interface ReachCache {
+  airports: Record<string, string[]>;
+  carriers: Record<string, Record<string, string[]>>;
+}
+
+async function enrich(origins: string[], events: TravelEventRow[], db: D1Database): Promise<Enrichment> {
   const airports: Record<string, string[]> = {};
-  for (const event of events) airports[`${event.provider}:${event.external_id}`] = [];
-  for (const event of reachable) airports[`${event.provider}:${event.external_id}`] = event.reachableAirports;
-  return { airports, okRoutes, failedRoutes };
+  const carriers: Record<string, Record<string, string[]>> = {};
+  for (const event of events) {
+    const key = `${event.provider}:${event.external_id}`;
+    airports[key] = [];
+    carriers[key] = {};
+  }
+  let okRoutes = 0;
+  let failedRoutes = 0;
+  for (const origin of origins) {
+    const result = await reachableEvents(origin, events, db);
+    okRoutes += result.okRoutes;
+    failedRoutes += result.failedRoutes;
+    for (const event of result.events) {
+      const key = `${event.provider}:${event.external_id}`;
+      airports[key] = [...new Set([...(airports[key] ?? []), ...event.reachableAirports])];
+      const merged = carriers[key] ?? {};
+      for (const [iata, list] of Object.entries(event.reachableCarriers)) {
+        merged[iata] = [...new Set([...(merged[iata] ?? []), ...list])];
+      }
+      carriers[key] = merged;
+    }
+  }
+  return { airports, carriers, okRoutes, failedRoutes };
 }
 
-function applyEnrichment(events: TravelEventRow[], airports: Record<string, string[]>): ReachableEvent[] {
+function applyEnrichment(events: TravelEventRow[], cache: ReachCache): ReachableEvent[] {
   const out: ReachableEvent[] = [];
   for (const event of events) {
-    const found = airports[`${event.provider}:${event.external_id}`];
-    if (found && found.length > 0) out.push({ ...event, reachableAirports: found });
+    const key = `${event.provider}:${event.external_id}`;
+    const found = cache.airports[key];
+    if (found && found.length > 0) {
+      out.push({ ...event, reachableAirports: found, reachableCarriers: cache.carriers[key] ?? {} });
+    }
   }
   return out;
 }
@@ -120,18 +172,18 @@ function applyEnrichment(events: TravelEventRow[], airports: Record<string, stri
 async function enrichedEvents(
   c: Context<{ Bindings: Env }>,
   events: TravelEventRow[],
-  origin: string,
-  bbox: BBox,
+  origins: string[],
   from: number,
   to: number,
 ): Promise<Response> {
   const db = c.env.DB;
-  const cacheKey = reachCacheKey(origin, bbox, from, to);
+  const cacheKey = reachCacheKey(origins, from, to);
   const cached = await readFlightCache(db, cacheKey);
-  if (cached) return c.json({ events: applyEnrichment(events, cached as Record<string, string[]>), enriched: true });
+  if (cached) return c.json({ events: applyEnrichment(events, cached as ReachCache), enriched: true });
 
-  const pending = enrich(origin, events, db).then(async (result) => {
-    await writeFlightCache(db, cacheKey, result.airports, CONFIG.travel.flights.enrichTtlMs);
+  const pending = enrich(origins, events, db).then(async (result) => {
+    const payload: ReachCache = { airports: result.airports, carriers: result.carriers };
+    await writeFlightCache(db, cacheKey, payload, CONFIG.travel.flights.enrichTtlMs);
     return result;
   });
   const settled = await Promise.race([pending, sleep(CONFIG.travel.flights.enrichWaitMs).then(() => null)]);
@@ -141,28 +193,11 @@ async function enrichedEvents(
     return c.json({ events, enriched: false });
   }
   if (settled.okRoutes === 0 && settled.failedRoutes > 0) {
+    await alertFlightFailure(c.env, 'all', `every route failed (${settled.failedRoutes})`);
     return c.json({ error: 'Flight reachability is unavailable' }, 502);
   }
-  return c.json({ events: applyEnrichment(events, settled.airports), enriched: true });
+  return c.json({ events: applyEnrichment(events, { airports: settled.airports, carriers: settled.carriers }), enriched: true });
 }
-
-// Europe-wide per-day tag counts for the Wycieczki filter chips. Scope is the
-// WHOLE of Europe (no bbox) for the requested day window, independent of the
-// currently selected tag — mirrors /stories/tag-counts for the Events chips.
-travelRoutes.get('/tag-counts', async (c) => {
-  const q = c.req.query();
-  const from = Number(q.from);
-  const to = Number(q.to);
-  if (!isFinite(from) || !isFinite(to) || to <= from) return c.json({ error: 'Invalid or missing from/to (epoch ms)' }, 400);
-  if (to - from > CONFIG.travel.api.maxWindowMs) return c.json({ error: 'Window too large' }, 400);
-  const { results } = await c.env.DB
-    .prepare(`SELECT tag, COUNT(*) AS count FROM travel_events WHERE start_ms >= ? AND start_ms <= ? GROUP BY tag`)
-    .bind(from, to)
-    .all<{ tag: string; count: number }>();
-  const counts = (results ?? []).filter((r) => CONFIG.travel.tags.set.has(r.tag as TravelTag));
-  const total = counts.reduce((a, r) => a + r.count, 0);
-  return c.json({ total, counts });
-});
 
 function parseLimit(raw: string | undefined): number {
   const n = Number(raw);
@@ -200,7 +235,7 @@ async function viatorAttractions(
 ): Promise<{ places: TravelPlace[]; total: number; hasMore: boolean }> {
   if (!viatorConfigured(env)) return noPlaces;
   try {
-    const city = await viatorRandomCity(env.DB, lat, lng);
+    const city = await viatorNearestCity(env.DB, lat, lng);
     if (!city) return noPlaces;
     const window = viatorWindowFor(day);
     const { places, total } = await viatorProductsForCity(env.DB, env, city.destinationId, window, offset, limit);
@@ -239,7 +274,7 @@ function flightParams(q: Record<string, string | undefined>): { origin: string; 
   return { origin, destination, eventDay };
 }
 
-async function flightHandler(c: any, airline: 'ryanair' | 'wizzair'): Promise<Response> {
+async function flightHandler(c: Context<{ Bindings: Env }>, airline: 'ryanair' | 'wizzair'): Promise<Response> {
   const q = c.req.query();
   const params = flightParams(q);
   if (!params) return c.json({ error: 'origin, destination, eventDay required (IATA, YYYY-MM-DD)' }, 400);
@@ -249,6 +284,7 @@ async function flightHandler(c: any, airline: 'ryanair' | 'wizzair'): Promise<Re
       : await fetchWizzairWindow(params.origin, params.destination, params.eventDay, c.env.DB);
     return c.json(window);
   } catch (e) {
+    await alertFlightFailure(c.env, airline, (e as Error).message);
     return c.json({ error: (e as Error).message }, 502);
   }
 }
@@ -257,7 +293,7 @@ travelRoutes.get('/flights/ryanair', (c) => flightHandler(c, 'ryanair'));
 travelRoutes.get('/flights/wizzair', (c) => flightHandler(c, 'wizzair'));
 
 // Stay22 hotel map widget URL. The app opens the URL, the widget does the rest.
-travelRoutes.get('/stays-widget', (c) => {
+travelRoutes.get('/stays-widget', async (c) => {
   const q = c.req.query();
   const aid = c.env.STAY22_AID;
   if (!aid) return c.json({ error: 'STAY22_AID is not configured' }, 500);
@@ -277,15 +313,34 @@ travelRoutes.get('/stays-widget', (c) => {
     return c.json({ error: 'lat/lng or address required' }, 400);
   }
 
+  // An address-only anchor ("Centrum") is resolved to the nearest catalogue city,
+  // so the widget always has coordinates and shows its marker.
+  let resolvedLat = hasCoordinates ? lat : undefined;
+  let resolvedLng = hasCoordinates ? lng : undefined;
+  let resolvedAddress = hasCoordinates ? undefined : address;
+  if (!hasCoordinates && address) {
+    const nearLat = Number(q.nearLat);
+    const nearLng = Number(q.nearLng);
+    const near = Number.isFinite(nearLat) && Number.isFinite(nearLng) && Math.abs(nearLat) <= 90 && Math.abs(nearLng) <= 180;
+    if (near) {
+      const city = await viatorNearestCity(c.env.DB, nearLat, nearLng);
+      if (city?.lat != null && city?.lng != null) {
+        resolvedLat = city.lat;
+        resolvedLng = city.lng;
+        resolvedAddress = undefined;
+      }
+    }
+  }
+
   const theme: StayTheme = q.theme === 'dark' ? 'dark' : 'light';
   const view: StayView = q.view === 'full' ? 'full' : 'mini';
   const priceper = q.priceper === 'total' ? 'total' : q.priceper === 'nightly' ? 'nightly' : undefined;
   const minstars = clampInt(q.minstars, 0, 5);
   const minguest = clampInt(q.minguest, 0, 10);
   const url = staysWidgetUrl(aid, {
-    lat: hasCoordinates ? lat : undefined,
-    lng: hasCoordinates ? lng : undefined,
-    address: hasCoordinates ? undefined : address,
+    lat: resolvedLat,
+    lng: resolvedLng,
+    address: resolvedAddress,
     checkin,
     checkout,
     theme,

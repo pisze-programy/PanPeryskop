@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import AVFoundation
 
+@MainActor
 struct ProfileView: View {
     @EnvironmentObject private var authManager: AuthManager
     let onBack: () -> Void
@@ -70,7 +71,8 @@ struct ProfileView: View {
     }
 
     private var avatarSection: some View {
-        ZStack(alignment: .bottomTrailing) {
+        let isUploading = uploadingAvatar
+        return ZStack(alignment: .bottomTrailing) {
             AvatarView(url: authManager.avatarDisplayURL, size: 100)
 
             PhotosPicker(selection: $avatarItem, matching: .images) {
@@ -78,7 +80,7 @@ struct ProfileView: View {
                     Circle()
                         .fill(Color.accentColor)
                         .frame(width: 30, height: 30)
-                    if uploadingAvatar {
+                    if isUploading {
                         ProgressView().tint(.white).scaleEffect(0.7)
                     } else {
                         Image(systemName: "pencil")

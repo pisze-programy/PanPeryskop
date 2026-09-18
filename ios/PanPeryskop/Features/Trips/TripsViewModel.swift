@@ -2,11 +2,12 @@ import SwiftUI
 import MapKit
 
 /// Wycieczki content provider — airports + flight arcs + travel events over Europe.
-/// Data: Polish airports + destinations are hardcoded (TripsData); events come from
-/// GET /travel/events. Category switch picks this provider; the map shell is shared.
+/// Data: airports + destinations come from the travel catalogue (CatalogueStore);
+/// events come from GET /travel/events. Category switch picks this provider; the
+/// map shell is shared.
 @MainActor
 final class TripsViewModel: ObservableObject, MapContentProvider {
-    @Published var selectedAirport: Airport
+    @Published var selectedCity: City
     @Published var selectedDayOffset: Int = 0
     /// Selected tag filter (all by default, at least one stays on), persisted.
     @Published private var tagSelection = MultiTagSelection(prefsKey: TripsPrefs.selectedTags)
@@ -30,18 +31,34 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     private static let refinementDelayMilliseconds = 1_500
     private var cachedOriginAirlines: [Airline] = []
     private var cachedPosts: [Post] = []
+    /// Loading scene: origin→airport connections drawn while the events load.
+    @Published private(set) var loadingArcs: [MapOverlay] = []
+    /// Pins enter only after the loading scene ends. Data is always kept in
+    /// `cachedPosts`, so a fast response can never leave the map empty.
+    @Published private(set) var showPins = false
+    private var loaderTask: Task<Void, Never>?
+    private var loaderStartedAt: Date?
+    /// The scene may only render while this is true. A stale scene can never leak
+    /// into `overlays` just because `loadingArcs` still holds a frame.
+    private var isLoaderActive = false
+    private var loaderAnimationFinished = false
+    /// Bumped per scene. A cancelled animation can never paint an old frame.
+    private var loaderGeneration = 0
+    /// The loading scene runs to the end even when the events arrive sooner; a
+    /// cut-off arc looks like a glitch. Pins appear after the fade-out.
+    private static let loaderAnimationMs = 1_650
+    /// Destinations and airports of the current city. Computed only when the city
+    /// changes — both are read on every map render.
+    private var mergedDestinations: [Destination] = []
+    private var cachedOriginAirports: [Airport] = []
 
     enum TravelTag: String, CaseIterable, Identifiable {
-        // rawValues must match backend TRAVEL_TAGS (constants.ts).
-        // Fixed display/selection order — independent of tag counts.
-        case cityBreak = "citybreak"
         case runs = "biegi"
         case football = "pilka-nozna"
 
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .cityBreak: return "City-break"
             case .runs: return "Biegi"
             case .football: return "Piłka nożna"
             }
@@ -49,7 +66,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     }
 
     private enum TripsPrefs {
-        static let airportIata = "trips.last_airport_iata"
+        static let cityId = "trips.last_city_id"
         static let selectedTags = "trips.selected_tags"
         static let selectedDay = "trips.selected_day"
     }
@@ -60,39 +77,104 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     static var dayOffsets: [Int] { Array(minDayOffset...maxDayOffset) }
 
     init() {
-        let savedIata = UserDefaults.standard.string(forKey: TripsPrefs.airportIata)
-        selectedAirport = TripsData.polishAirports.first { $0.iata == savedIata } ?? TripsData.polishAirports[0]
+        selectedCity = Self.restoreCity()
         selectedDayOffset = min(StoredDay.loadOffset(key: TripsPrefs.selectedDay) ?? 0, Self.maxDayOffset)
         tagSelection.sync(all: Set(TravelTag.allCases.map(\.rawValue)))
-        cachedOriginAirlines = Self.airlines(for: destinations)
-        loadTagCounts()
+        recomputeDestinations()
     }
 
+    private func recomputeDestinations() {
+        cachedOriginAirports = Self.airports(for: selectedCity)
+        mergedDestinations = Self.mergeDestinations(cachedOriginAirports)
+        cachedOriginAirlines = Self.airlines(for: mergedDestinations)
+    }
+
+    /// Restores the origin city. Falls back to the retired airport preference so
+    /// an existing user keeps their city after the airport → city move.
+    private static func restoreCity() -> City {
+        let defaults = UserDefaults.standard
+        let store = CatalogueStore.shared
+        if let id = defaults.string(forKey: TripsPrefs.cityId), let city = store.city(id: id) {
+            return city
+        }
+        if let iata = defaults.string(forKey: Self.legacyAirportPref),
+           let city = store.cities.first(where: { $0.airports.contains(iata) })?.city {
+            return city
+        }
+        return store.defaultCity
+    }
+
+    private static let legacyAirportPref = "trips.last_airport_iata"
+
     var overlays: [MapOverlay] {
-        let origin = selectedAirport
-        var result: [MapOverlay] = []
+        var result: [MapOverlay] = isLoaderActive ? loadingArcs : []
         if showFlightLayer, let selected = selectedTravelEvent {
             for dest in reachableDestinations(for: selected) {
-                result.append(.arc(FlightArc(
-                    id: "\(origin.iata)-\(dest.iata)-\(dest.providers.map(\.rawValue).joined(separator: "+"))",
-                    from: CLLocationCoordinate2D(latitude: origin.lat, longitude: origin.lng),
-                    to: CLLocationCoordinate2D(latitude: dest.lat, longitude: dest.lng),
-                    airline: dest.providers.contains(.wizzair) ? .wizzair : .ryanair
-                )))
+                result.append(contentsOf: arcs(for: dest, allowed: selected.reachableCarriers?[dest.iata]))
                 result.append(.airport(AirportPin(iata: dest.iata, coord: CLLocationCoordinate2D(latitude: dest.lat, longitude: dest.lng), airlines: dest.providers)))
             }
         }
-        // Origin pin is the category anchor — always visible in trips mode.
-        result.append(.airport(AirportPin(
-            iata: origin.iata,
-            coord: CLLocationCoordinate2D(latitude: origin.lat, longitude: origin.lng),
-            isOrigin: true,
-            airlines: cachedOriginAirlines
-        )))
-        for post in cachedPosts {
-            result.append(.pin(MapPin(post: post)))
+        // Origin pins are the category anchor — always visible in trips mode.
+        for origin in originAirports {
+            result.append(.airport(AirportPin(
+                iata: origin.iata,
+                coord: CLLocationCoordinate2D(latitude: origin.lat, longitude: origin.lng),
+                isOrigin: true,
+                airlines: cachedOriginAirlines
+            )))
+        }
+        if showPins {
+            for post in cachedPosts where post.tags?.contains(where: isTagSelected) ?? false {
+                result.append(.pin(MapPin(post: post)))
+            }
         }
         return result
+    }
+
+    /// The airports of the selected city. Warszawa has two; the rest have one.
+    /// Cached per city — read on every map render.
+    var originAirports: [Airport] { cachedOriginAirports }
+
+    private static func airports(for city: City) -> [Airport] {
+        let catalogue = CatalogueStore.shared.catalogue
+        let airports = catalogue.originAirports(for: city.id)
+        if !airports.isEmpty { return airports }
+        return catalogue.airports.first.map { [$0] } ?? []
+    }
+
+    var originIatas: [String] { originAirports.map(\.iata) }
+
+    private func originAirport(nearestTo dest: Destination) -> Airport {
+        let target = CLLocation(latitude: dest.lat, longitude: dest.lng)
+        return originAirports.min { lhs, rhs in
+            CLLocation(latitude: lhs.lat, longitude: lhs.lng).distance(from: target)
+                < CLLocation(latitude: rhs.lat, longitude: rhs.lng).distance(from: target)
+        } ?? originAirports[0]
+    }
+
+    /// Arcs from the serving origin to a destination. A route flown by both
+    /// carriers draws two parallel arcs, one per colour.
+    private func arcs(
+        for dest: Destination,
+        progress: Double = 1,
+        scene: String = "",
+        allowed: [String]? = nil
+    ) -> [MapOverlay] {
+        let providers = allowed.map { allow in dest.providers.filter { allow.contains($0.rawValue) } } ?? dest.providers
+        guard !providers.isEmpty else { return [] }
+        let origin = originAirport(nearestTo: dest)
+        let from = CLLocationCoordinate2D(latitude: origin.lat, longitude: origin.lng)
+        let to = CLLocationCoordinate2D(latitude: dest.lat, longitude: dest.lng)
+        let prefix = scene.isEmpty ? "" : "\(scene)-"
+        let base = "\(prefix)\(origin.iata)-\(dest.iata)"
+        if providers.contains(.ryanair) && providers.contains(.wizzair) {
+            return [
+                .arc(FlightArc(id: "\(base)-R", from: from, to: to, airlines: [.ryanair], progress: progress, bowOffset: 0.35)),
+                .arc(FlightArc(id: "\(base)-W", from: from, to: to, airlines: [.wizzair], progress: progress, bowOffset: -0.35)),
+            ]
+        }
+        let carrier: Airline = providers.contains(.wizzair) ? .wizzair : .ryanair
+        return [.arc(FlightArc(id: base, from: from, to: to, airlines: [carrier], progress: progress))]
     }
 
     private static func airlines(for destinations: [Destination]) -> [Airline] {
@@ -128,13 +210,18 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     /// Select an event pin (by post id, with its tapped cluster group): shows nearby
     /// airports + arcs and opens the bottom card. No story viewer for trips.
-    func selectTravelEvent(postId: String, group: [Post] = []) {
-        guard let event = events.first(where: { $0.id == postId }) else { return }
+    /// Returns false when the tapped pin is no longer in `events` (a background
+    /// refinement replaced them). The caller must not open the sheet then.
+    @discardableResult
+    func selectTravelEvent(postId: String, group: [Post] = []) -> Bool {
+        guard let event = events.first(where: { $0.id == postId }) else { return false }
+        clearLoadingScene()
         selectedTravelEvent = event
         showFlightLayer = true
         let groupEvents = group
             .compactMap { p in events.first { $0.id == p.id } }
         selectedEventGroup = EventGroup(events: groupEvents.isEmpty ? [event] : groupEvents)
+        return true
     }
 
     private func clearSelection() {
@@ -148,14 +235,64 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         clearSelection()
     }
 
-    /// All destinations for the selected origin (hardcoded route data).
-    var destinations: [Destination] {
-        TripsData.destinations[selectedAirport.iata] ?? []
+    /// All destinations of the selected city, merged across its airports. A
+    /// destination served from two airports keeps one entry with the union of
+    /// its carriers.
+    var destinations: [Destination] { mergedDestinations }
+
+    static func mergeDestinations(
+        _ airports: [Airport],
+        catalogue: TravelCatalogue = CatalogueStore.shared.catalogue
+    ) -> [Destination] {
+        var byIata: [String: Destination] = [:]
+        for airport in airports {
+            for dest in catalogue.destinations[airport.iata] ?? [] {
+                guard let existing = byIata[dest.iata] else {
+                    byIata[dest.iata] = dest
+                    continue
+                }
+                let providers = existing.providers + dest.providers.filter { !existing.providers.contains($0) }
+                byIata[dest.iata] = Destination(
+                    iata: existing.iata, name: existing.name, city: existing.city,
+                    country: existing.country, lat: existing.lat, lng: existing.lng,
+                    providers: providers
+                )
+            }
+        }
+        return Array(byIata.values)
+    }
+
+    /// One option per destination and carrier. A route served by both carriers
+    /// yields two options, so the rail shows one carrier at a time.
+    static func flightOptions(for destinations: [Destination]) -> [FlightOption] {
+        destinations.flatMap { destination in
+            destination.providers
+                .sorted { $0.rawValue < $1.rawValue }
+                .map { FlightOption(destination: destination, carrier: $0) }
+        }
+    }
+
+    /// The origin airport that serves this destination (Warszawa has two); the
+    /// first origin when none matches the catalogue route data.
+    static func origin(
+        for destination: Destination,
+        among origins: [Airport],
+        catalogue: TravelCatalogue = CatalogueStore.shared.catalogue
+    ) -> Airport {
+        origins.first { airport in
+            catalogue.destinations[airport.iata]?.contains { $0.iata == destination.iata } ?? false
+        } ?? origins[0]
+    }
+
+    /// Recompute after the catalogue changes (refresh).
+    func reloadCatalogue() {
+        selectedCity = CatalogueStore.shared.city(id: selectedCity.id) ?? CatalogueStore.shared.defaultCity
+        recomputeDestinations()
     }
 
     var initialRegion: MKCoordinateRegion {
         MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: selectedAirport.lat, longitude: selectedAirport.lng),
+            center: selectedCity.center,
             span: MKCoordinateSpan(latitudeDelta: 60, longitudeDelta: 60)
         )
     }
@@ -171,20 +308,32 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     func onCameraSettled(_ region: MKCoordinateRegion) {}
 
-    func selectAirport(_ airport: Airport) {
-        selectedAirport = airport
-        UserDefaults.standard.set(airport.iata, forKey: TripsPrefs.airportIata)
-        cachedOriginAirlines = Self.airlines(for: destinations)
+    /// Adopt the shared city without a fetch — the scope switch refreshes.
+    /// Drops the previous city's pins at once, so the map never shows events from
+    /// the old city while the new ones are still loading.
+    func syncCity(_ city: City) {
+        guard city.id != selectedCity.id else { return }
+        selectedCity = city
+        UserDefaults.standard.set(city.id, forKey: TripsPrefs.cityId)
+        recomputeDestinations()
         clearSelection()
-        refresh()
-        loadTagCounts()
+        clearLoadingScene()
+        events = []
+        cachedPosts = []
+        showPins = false
+        tagCounts = [:]
     }
 
-    /// Toggle one travel tag. The last selected tag cannot be turned off.
+    func selectCity(_ city: City) {
+        syncCity(city)
+        refresh(showLoader: true)
+    }
+
+    /// Toggle one travel tag. The last selected tag cannot be turned off. Filtering
+    /// is local: the day's events are fetched for every tag, so no network call.
     func toggleTag(_ id: String) {
         tagSelection.toggle(id)
         clearSelection()
-        refresh()
     }
 
     func isTagSelected(_ id: String) -> Bool { tagSelection.isSelected(id) }
@@ -195,31 +344,23 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         StoredDay.save(offset: offset, key: TripsPrefs.selectedDay)
         clearSelection()
         refresh()
-        loadTagCounts()
     }
 
-    /// Fetch per-tag event counts for the selected day, Europe-wide (no bbox) —
-    /// independent of the active tag, mirroring the Events chips.
-    @MainActor
-    func loadTagCounts() {
-        Task {
-            struct TagCount: Decodable { let tag: String; let count: Int }
-            struct TagCountsResponse: Decodable { let total: Int; let counts: [TagCount] }
-            let (from, to) = dayRange(offset: selectedDayOffset)
-            guard let resp: TagCountsResponse = try? await APIClient.get(
-                "/travel/tag-counts",
-                params: ["from": String(from), "to": String(to)]
-            ) else { return }
-            tagCounts = Dictionary(uniqueKeysWithValues: resp.counts.map { ($0.tag, $0.count) })
-        }
-    }
-
-    func refresh() {
+    /// `showLoader` draws the connections scene (entering Europe, city change).
+    /// Day changes refresh silently.
+    func refresh(showLoader: Bool = false) {
         loadTask?.cancel()
+        // Every refresh drops any previous scene first, so no stale frame survives.
+        clearLoadingScene()
         loadGeneration += 1
         let generation = loadGeneration
         let startedAt = Date()
         isLoading = true
+        if showLoader {
+            cachedPosts = []
+            showPins = false
+            startLoadingScene()
+        }
         loadTask = Task { [weak self] in
             await self?.runLoad(generation: generation, startedAt: startedAt)
         }
@@ -230,9 +371,121 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         guard loadGeneration == generation else { return }
         await holdLoader(since: startedAt)
         guard loadGeneration == generation else { return }
+        await holdLoaderAnimation()
+        guard loadGeneration == generation else { return }
+        await waitForLoaderAnimation()
+        guard loadGeneration == generation else { return }
         isLoading = false
-        guard failed else { return }
-        ToastManager.shared.show(Self.loadErrorMessage, seconds: AppConstants.travelErrorToastSeconds)
+        if failed {
+            withAnimation(.easeOut(duration: 0.2)) { clearLoadingScene() }
+            events = []
+            cachedPosts = []
+            showPins = false
+            tagCounts = [:]
+            ToastManager.shared.show(Self.loadErrorMessage, seconds: AppConstants.travelErrorToastSeconds)
+            return
+        }
+        if isLoaderActive {
+            withAnimation(.easeOut(duration: 0.3)) { clearLoadingScene() }
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard loadGeneration == generation else { return }
+        } else {
+            clearLoadingScene()
+        }
+        if cachedPosts.isEmpty {
+            ToastManager.shared.show("Brak wydarzeń", seconds: 2)
+        }
+        showPins = true
+    }
+
+    // MARK: - Loading scene
+
+    private func startLoadingScene() {
+        loaderTask?.cancel()
+        loaderGeneration += 1
+        let scene = "load\(loaderGeneration)"
+        isLoaderActive = true
+        loaderAnimationFinished = false
+        // Remove the previous scene first, so SwiftUI diffs remove-then-add and
+        // never morph an old arc into a new one.
+        loadingArcs = []
+        let picks = Self.randomLoaderDestinations(from: destinations, count: Int.random(in: 10...20))
+        guard !picks.isEmpty else {
+            clearLoadingScene()
+            return
+        }
+        ToastManager.shared.show("Trwa ładowanie…", seconds: 1.5)
+        loaderStartedAt = Date()
+        loadingArcs = loaderOverlays(picks: picks, progress: 0, scene: scene)
+        let generation = loaderGeneration
+        loaderTask = Task { [weak self] in
+            await self?.animateLoader(picks, scene: scene, generation: generation)
+        }
+    }
+
+    private func animateLoader(_ picks: [Destination], scene: String, generation: Int) async {
+        let steps = 30
+        for step in 1...steps {
+            guard !Task.isCancelled, generation == loaderGeneration else { return }
+            let progress = Double(step) / Double(steps)
+            loadingArcs = loaderOverlays(picks: picks, progress: progress, scene: scene)
+            try? await Task.sleep(nanoseconds: 1_500_000_000 / UInt64(steps))
+            guard generation == loaderGeneration else { return }
+        }
+        if generation == loaderGeneration { loaderAnimationFinished = true }
+    }
+
+    private func clearLoadingScene() {
+        loaderTask?.cancel()
+        loaderTask = nil
+        loaderGeneration += 1
+        loaderStartedAt = nil
+        loaderAnimationFinished = false
+        isLoaderActive = false
+        loadingArcs = []
+    }
+
+    /// Scene-scoped overlays: arcs and the destination airport pins, with the
+    /// scene id in every identity so a stale frame can never match the current one.
+    private func loaderOverlays(picks: [Destination], progress: Double, scene: String) -> [MapOverlay] {
+        picks.flatMap { dest -> [MapOverlay] in
+            let pin = MapOverlay.airport(AirportPin(
+                iata: dest.iata,
+                coord: CLLocationCoordinate2D(latitude: dest.lat, longitude: dest.lng),
+                airlines: dest.providers
+            ))
+            return arcs(for: dest, progress: progress, scene: scene) + [pin]
+        }
+    }
+
+    /// Waits for the scene to finish drawing. The wall-clock minimum alone can cut
+    /// the animation when a frame is delayed, so the animation itself signals the end.
+    private func waitForLoaderAnimation() async {
+        guard isLoaderActive else { return }
+        let deadline = Date().addingTimeInterval(3)
+        while !loaderAnimationFinished, Date() < deadline, !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+
+    private func holdLoaderAnimation() async {
+        guard let start = loaderStartedAt else { return }
+        let remaining = Double(Self.loaderAnimationMs) / 1000 - Date().timeIntervalSince(start)
+        guard remaining > 0 else { return }
+        try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+    }
+
+    /// 10–20 destinations with a wide spread, so the loading scene fills the map.
+    static func randomLoaderDestinations(from all: [Destination], count: Int) -> [Destination] {
+        var picked: [Destination] = []
+        for candidate in all.shuffled() where picked.count < count {
+            let spread = picked.allSatisfy { abs($0.lat - candidate.lat) + abs($0.lng - candidate.lng) > 6 }
+            if spread { picked.append(candidate) }
+        }
+        for candidate in all.shuffled() where picked.count < count {
+            if !picked.contains(where: { $0.iata == candidate.iata }) { picked.append(candidate) }
+        }
+        return picked
     }
 
     private func holdLoader(since startedAt: Date) async {
@@ -244,23 +497,15 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     private func loadEvents(generation: Int) async -> Bool {
         let (from, to) = dayRange(offset: selectedDayOffset)
-        let region = initialRegion
-        let swLat = region.center.latitude - region.span.latitudeDelta / 2
-        let swLng = region.center.longitude - region.span.longitudeDelta / 2
-        let neLat = region.center.latitude + region.span.latitudeDelta / 2
-        let neLng = region.center.longitude + region.span.longitudeDelta / 2
-        let tags = tagSelection.param(all: Set(TravelTag.allCases.map(\.rawValue)))
-        let key = "\(selectedAirport.iata)|\(from)-\(to)|\(tags ?? "")"
+        let key = "\(originIatas.joined(separator: ","))|\(from)-\(to)"
         if let cached = eventsCache[key], !cached.isEmpty {
             apply(cached, generation: generation)
             return false
         }
         do {
             let resp = try await APIClient.getTravelEvents(
-                swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng,
                 from: from, to: to,
-                tags: tags,
-                origin: selectedAirport.iata
+                origins: originIatas
             )
             guard loadGeneration == generation else { return false }
             let bucket = Dictionary(resp.events.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -286,6 +531,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     private func apply(_ bucket: [String: TravelEvent], generation: Int) {
         guard loadGeneration == generation else { return }
         events = bucket.values.sorted { $0.start_ms < $1.start_ms }
+        tagCounts = Dictionary(grouping: events, by: \.tag).mapValues(\.count)
         cachedPosts = events.compactMap(\.asPost)
     }
 
@@ -318,12 +564,11 @@ extension TravelEvent {
 }
 
 extension Post {
-    /// Pin glyph for a travel event, derived from its tag (football vs running vs citybreak).
+    /// Pin glyph for a travel event, derived from its tag (football vs running).
     var travelPinSymbol: String? {
         guard let tags else { return nil }
         if tags.contains(TripsViewModel.TravelTag.runs.rawValue) { return "figure.run" }
         if tags.contains(TripsViewModel.TravelTag.football.rawValue) { return "soccerball" }
-        if tags.contains(TripsViewModel.TravelTag.cityBreak.rawValue) { return "building.2.fill" }
         return "airplane"
     }
 }

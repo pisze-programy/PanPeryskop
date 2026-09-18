@@ -81,11 +81,11 @@ struct TripsEventSheet: View {
 
     private var pager: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 0) {
+            HStack(spacing: 0) {
                 ForEach(Array(events.enumerated()), id: \.offset) { index, event in
                     TripsEventPage(
                         event: event,
-                        origin: viewModel.selectedAirport,
+                        origins: viewModel.originAirports,
                         viewModel: viewModel,
                         isActive: (activeIndex ?? 0) == index,
                         dotsCount: events.count,
@@ -127,7 +127,7 @@ struct TripsEventSheet: View {
 
 struct TripsEventPage: View {
     let event: TravelEvent
-    let origin: Airport
+    let origins: [Airport]
     @ObservedObject var viewModel: TripsViewModel
     let isActive: Bool
     let dotsCount: Int
@@ -170,6 +170,7 @@ struct TripsEventPage: View {
                 }
                 .padding(.bottom, Theme.Spacing.xl)
             }
+            .scrollBounceBehavior(.basedOnSize)
             .safeAreaInset(edge: .top, spacing: 0) {
                 TripsGamestrip(
                     event: event,
@@ -208,10 +209,11 @@ struct TripsEventPage: View {
             } else {
                 EventFlightSection(
                     event: event,
-                    origin: origin,
+                    origins: origins,
                     destinations: destinations,
                     destination: destination,
                     reachableAirports: reachableAirports,
+                    reachableCarriers: event.reachableCarriers,
                     onSelectDestination: { planner.destination = $0 },
                     planner: planner,
                     viewModel: viewModel,

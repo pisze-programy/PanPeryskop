@@ -2,10 +2,12 @@ import SwiftUI
 
 struct EventFlightSection: View {
     let event: TravelEvent
-    let origin: Airport
+    let origins: [Airport]
     let destinations: [Destination]
     let destination: Destination?
     var reachableAirports: Set<String>? = nil
+    /// Per destination IATA: carriers with flights around the event day. nil = show all.
+    var reachableCarriers: [String: [String]]? = nil
     let onSelectDestination: (Destination) -> Void
     @ObservedObject var planner: TripsEventPlanner
     @ObservedObject var viewModel: TripsViewModel
@@ -17,11 +19,14 @@ struct EventFlightSection: View {
     @State private var selectedId: String?
 
     private var allOptions: [FlightOption] {
-        reachableDestinations.flatMap { destination in
-            destination.providers
+        let options = reachableDestinations.flatMap { destination -> [FlightOption] in
+            let allowed = reachableCarriers?[destination.iata]
+            return destination.providers
+                .filter { allowed?.contains($0.rawValue) ?? true }
                 .sorted { $0.rawValue < $1.rawValue }
                 .map { FlightOption(destination: destination, carrier: $0) }
         }
+        return options
     }
 
     private var options: [FlightOption] {
@@ -56,7 +61,7 @@ struct EventFlightSection: View {
     private var mapRail: some View {
         if let selected = selectedOption {
             DestinationMapRail(
-                origin: origin,
+                origin: origin(for: selected.destination),
                 options: options,
                 selected: selected,
                 onSelect: { option in
@@ -74,7 +79,7 @@ struct EventFlightSection: View {
             CarrierFlightCard(
                 carrier: option.carrier,
                 event: event,
-                originIata: origin.iata,
+                originIata: origin(for: option.destination).iata,
                 destinationIata: option.destination.iata,
                 window: windows[option.id],
                 isFailed: failed.contains(option.id),
@@ -87,6 +92,10 @@ struct EventFlightSection: View {
 
     private var reachableDestinations: [Destination] {
         destinations.filter { reachableAirports?.contains($0.iata) ?? true }
+    }
+
+    private func origin(for destination: Destination) -> Airport {
+        TripsViewModel.origin(for: destination, among: origins)
     }
 
     private func retry(_ option: FlightOption) {
@@ -103,7 +112,7 @@ struct EventFlightSection: View {
         let day = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
         let window = await FlightPricesService.shared.flights(
             airline: option.carrier,
-            origin: origin.iata,
+            origin: origin(for: option.destination).iata,
             destination: option.destination.iata,
             eventDay: day
         )

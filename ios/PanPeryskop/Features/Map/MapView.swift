@@ -17,7 +17,6 @@ struct MapScreen: View {
     @State private var showCityList = false
     @State private var showDayList = false
     @State private var showTripsDayList = false
-    @State private var showAirportList = false
     @State private var showTripsEventCard = false
 
     @Environment(\.scenePhase) private var scenePhase
@@ -47,7 +46,6 @@ struct MapScreen: View {
                     mapViewModel: mapViewModel,
                     tripsViewModel: tripsViewModel,
                     onCityTap: { showCityList = true },
-                    onAirportTap: { showAirportList = true },
                     onDayTap: { showDayList = true },
                     onTripDayTap: { showTripsDayList = true }
                 )
@@ -55,12 +53,17 @@ struct MapScreen: View {
             }
 
             if !showStoryViewer {
-                VStack {
+                VStack(spacing: 12) {
                     Spacer()
+                    CategoryPill(
+                        selection: category,
+                        eventsLoading: mapViewModel.isLoading,
+                        tripsLoading: tripsViewModel.isLoading,
+                        onSelect: onSelectCategory
+                    )
                     AppTabBar(
                         category: category,
                         eventsLoading: mapViewModel.isLoading,
-                        tripsLoading: tripsViewModel.isLoading,
                         onSelectCategory: onSelectCategory,
                         onProfile: onProfile
                     )
@@ -74,8 +77,6 @@ struct MapScreen: View {
         .onAppear {
             mapViewModel.currentUserId = authManager.userId
             mapViewModel.startPolling()
-            mapViewModel.runMediaNearbyCheck()
-            ProximityMonitor.shared.requestNotificationPermissionIfNeeded()
             let region = mapViewModel.initialRegion
             mapViewModel.fetchStories(
                 swLat: region.center.latitude - region.span.latitudeDelta / 2,
@@ -106,14 +107,15 @@ struct MapScreen: View {
                 cameraController.fly(to: mapViewModel.selectedCity.region)
             case .trips:
                 mapViewModel.stopPolling()
+                tripsViewModel.syncCity(mapViewModel.selectedCity)
                 cameraController.fly(to: tripsViewModel.initialRegion)
-                tripsViewModel.refresh()
+                Task { await CatalogueStore.shared.refresh() }
+                tripsViewModel.refresh(showLoader: true)
             }
         }
         .sheet(isPresented: $showCityList) {
-            CityListView(selectedCity: mapViewModel.selectedCity) { city in
-                mapViewModel.selectCity(city)
-                cameraController.fly(to: city.region)
+            CityListView(selectedCity: sharedCity) { city in
+                selectCity(city)
             }
         }
         .sheet(isPresented: $showDayList) {
@@ -132,12 +134,6 @@ struct MapScreen: View {
                 onSelect: { tripsViewModel.commitDay($0) }
             )
         }
-        .sheet(isPresented: $showAirportList) {
-            AirportPickerView(selectedAirport: tripsViewModel.selectedAirport) { airport in
-                tripsViewModel.selectAirport(airport)
-                cameraController.fly(to: tripsViewModel.initialRegion)
-            }
-        }
         .sheet(isPresented: $showTripsEventCard, onDismiss: {
             tripsViewModel.clearSelectionPublic()
         }) {
@@ -145,10 +141,27 @@ struct MapScreen: View {
         }
     }
 
-    private var activeProvider: MapContentProvider {
+    private var activeProvider: any MapContentProvider {
         switch category {
         case .events: return mapViewModel
         case .trips: return tripsViewModel
+        }
+    }
+
+    /// One selected city for both scopes — picking it in the local scope also
+    /// sets the departure city.
+    private var sharedCity: City {
+        category == .trips ? tripsViewModel.selectedCity : mapViewModel.selectedCity
+    }
+
+    private func selectCity(_ city: City) {
+        mapViewModel.selectCity(city)
+        switch category {
+        case .events:
+            cameraController.fly(to: city.region)
+        case .trips:
+            tripsViewModel.selectCity(city)
+            cameraController.fly(to: tripsViewModel.initialRegion)
         }
     }
 
@@ -176,7 +189,7 @@ struct MapScreen: View {
         let post = pin.post
         if category == .trips {
             Haptics.impact(.medium)
-            tripsViewModel.selectTravelEvent(postId: post.id, group: pin.group)
+            guard tripsViewModel.selectTravelEvent(postId: post.id, group: pin.group) else { return }
             cameraController.flyToAboveSheet(post.coordinate)
             showTripsEventCard = true
             return

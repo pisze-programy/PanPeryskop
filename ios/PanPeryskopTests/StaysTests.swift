@@ -44,7 +44,8 @@ final class StaysAnchorPointTests: XCTestCase {
         tag: "soccer",
         link: nil,
         meta: nil,
-        reachableAirports: nil
+        reachableAirports: nil,
+        reachableCarriers: nil
     )
 
     func testEventAnchorUsesEventCoordinates() {
@@ -88,7 +89,8 @@ final class StaysDefaultDatesTests: XCTestCase {
             tag: "soccer",
             link: nil,
             meta: "{\"date\":\"\(day)\"}",
-            reachableAirports: nil
+            reachableAirports: nil,
+            reachableCarriers: nil
         )
     }
 

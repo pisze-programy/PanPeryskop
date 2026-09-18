@@ -14,4 +14,10 @@ enum StaysAnchor: String, CaseIterable, Identifiable {
         case .airport: return "Przy lotnisku"
         }
     }
+
+    /// The event point duplicates the airport when the venue geo is the airport,
+    /// so it is not offered then.
+    static func options(venueIsAirport: Bool) -> [StaysAnchor] {
+        venueIsAirport ? allCases.filter { $0 != .event } : allCases
+    }
 }

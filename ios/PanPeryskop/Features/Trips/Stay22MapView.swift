@@ -15,8 +15,12 @@ struct Stay22MapView: UIViewRepresentable {
         let webView = WebKitWarmup.take() ?? makeWebView()
         configure(webView, context: context)
         context.coordinator.loaded = url
-        webView.load(URLRequest(url: url))
+        webView.load(request(url))
         return webView
+    }
+
+    private func request(_ url: URL) -> URLRequest {
+        URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 30)
     }
 
     private func makeWebView() -> WKWebView {
@@ -26,8 +30,8 @@ struct Stay22MapView: UIViewRepresentable {
     private func configure(_ webView: WKWebView, context: Context) {
         webView.isHidden = false
         webView.isUserInteractionEnabled = isInteractive
-        webView.isOpaque = false
-        webView.backgroundColor = .clear
+        webView.isOpaque = true
+        webView.backgroundColor = .systemBackground
         webView.uiDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
         lockZoom(on: webView)
@@ -43,9 +47,10 @@ struct Stay22MapView: UIViewRepresentable {
         webView.isUserInteractionEnabled = isInteractive
         guard context.coordinator.loaded != url else { return }
         context.coordinator.loaded = url
-        webView.load(URLRequest(url: url))
+        webView.load(request(url))
     }
 
+    @MainActor
     final class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate {
         private let onFailure: () -> Void
         var loaded: URL?
@@ -57,7 +62,7 @@ struct Stay22MapView: UIViewRepresentable {
         func webView(
             _ webView: WKWebView,
             decidePolicyFor navigationAction: WKNavigationAction,
-            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+            decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
         ) {
             guard let url = navigationAction.request.url,
                   navigationAction.targetFrame?.isMainFrame == true else {

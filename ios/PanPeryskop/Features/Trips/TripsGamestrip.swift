@@ -31,6 +31,11 @@ struct TripsGamestrip: View {
 
     private var meta: TravelEventMeta? { event.metaData }
 
+    private var league: String? {
+        guard !event.isRun, let league = meta?.league, !league.isEmpty else { return nil }
+        return league
+    }
+
     var body: some View {
         Button(action: onTap) {
             bar
@@ -40,10 +45,19 @@ struct TripsGamestrip: View {
 
     private var bar: some View {
         VStack(spacing: 0) {
+            if let league {
+                Text(league)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, Theme.Spacing.l)
+                    .padding(.top, Self.rowTopPadding)
+            }
             row
                 .frame(height: Self.rowHeight)
                 .padding(.horizontal, Theme.Spacing.l)
-                .padding(.top, Self.rowTopPadding)
+                .padding(.top, league == nil ? Self.rowTopPadding : Self.badgeSpacing)
                 .padding(.bottom, Self.rowBottomPadding)
                 .frame(maxWidth: .infinity)
             dots
@@ -92,15 +106,8 @@ struct TripsGamestrip: View {
     }
 
     private var centerStatus: some View {
-        VStack(spacing: Self.centerSpacing) {
-            if let league = meta?.league, !league.isEmpty {
-                Text(league)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-            }
-            matchDateTime
-        }
-        .fixedSize()
+        matchDateTime
+            .fixedSize()
     }
 
     private var runRow: some View {

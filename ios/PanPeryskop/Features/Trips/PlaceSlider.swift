@@ -2,12 +2,14 @@ import SwiftUI
 
 struct PlaceSlider: View {
     let places: [TravelPlace]
+    var total: Int = 0
     var maxVisible: Int = 3
     var onOpen: (TravelPlace) -> Void
     var onSeeMore: () -> Void
 
     private var visible: [TravelPlace] { Array(places.prefix(maxVisible)) }
     private var hasMore: Bool { places.count > maxVisible }
+    private var totalCount: Int { total > 0 ? total : places.count }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -34,7 +36,7 @@ struct PlaceSlider: View {
                     .font(.title)
                 Text("Zobacz więcej")
                     .font(.subheadline.weight(.semibold))
-                Text("\(places.count)")
+                Text("\(totalCount)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

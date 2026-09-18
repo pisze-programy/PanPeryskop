@@ -2,11 +2,13 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var authManager: AuthManager
+    @Environment(\.scenePhase) private var scenePhase
     @Binding var pendingStoryId: String?
 
     @StateObject private var mapViewModel = MapViewModel()
     @StateObject private var tripsViewModel = TripsViewModel()
     @State private var router = AppRouter()
+    @ObservedObject private var catalogueStore = CatalogueStore.shared
 
     var body: some View {
         @Bindable var router = router
@@ -45,22 +47,29 @@ struct ContentView: View {
             // UGC adding is temporarily disabled — the "+" entry point is gone, so the
             // uploader stays off. Re-enable together with AddContentView.
             // PostUploader.shared.start()
+            await catalogueStore.refresh()
             await authManager.refreshMe()
-            if let pushPost = NotificationDelegate.consumePendingPushPost() {
-                await router.openPushPost(pushPost, map: mapViewModel)
-            } else if let storyId = pendingStoryId {
+            if let storyId = pendingStoryId {
                 pendingStoryId = nil
                 await router.openStory(id: storyId, map: mapViewModel)
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .openPushPost)) { note in
-            guard let payload = note.object as? PushPostPayload else { return }
-            Task { await router.openPushPost(payload, map: mapViewModel) }
         }
         .onChange(of: pendingStoryId) { _, newId in
             guard let newId else { return }
             pendingStoryId = nil
             Task { await router.openStory(id: newId, map: mapViewModel) }
+        }
+        .onChange(of: catalogueStore.catalogue.version) { _, _ in
+            mapViewModel.reloadCities()
+            tripsViewModel.reloadCatalogue()
+        }
+        .onChange(of: catalogueStore.updateSuggested) { _, suggested in
+            guard suggested else { return }
+            ToastManager.shared.show("Dostępna aktualizacja aplikacji", seconds: 3)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await catalogueStore.refresh() }
         }
     }
 }

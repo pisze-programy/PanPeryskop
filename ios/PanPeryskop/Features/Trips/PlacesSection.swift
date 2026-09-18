@@ -10,15 +10,24 @@ struct PlacesSection: View {
     @StateObject private var loader = PlacePreviewLoader()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            TripsSectionHeader(title: kind.label, info: info)
-                .padding(.horizontal, Theme.Spacing.l)
-            content
+        if isLoadingEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                TripsSectionHeader(title: kind.label, info: info)
+                    .padding(.horizontal, Theme.Spacing.l)
+                content
+            }
+            .padding(.top, Theme.Spacing.section)
+            .task {
+                await loader.load(kind: kind, lat: event.lat, lng: event.lng, day: event.isoDay)
+            }
         }
-        .padding(.top, Theme.Spacing.section)
-        .task {
-            await loader.load(kind: kind, lat: event.lat, lng: event.lng, day: event.isoDay)
-        }
+    }
+
+    private var isLoadingEmpty: Bool {
+        if case .empty = state { return true }
+        return false
     }
 
     @ViewBuilder
@@ -32,14 +41,14 @@ struct PlacesSection: View {
         case .loaded:
             PlaceSlider(
                 places: loader.places,
+                total: loader.total,
                 onOpen: { place in
                     if let url = place.url { onOpenURL(url) }
                 },
                 onSeeMore: { onExpand(kind) }
             )
         case .empty:
-            EmptyState(icon: "ticket", title: "Brak atrakcji w tym mieście")
-                .padding(.horizontal, Theme.Spacing.l)
+            EmptyView()
         case .loading:
             PlacesCardSkeleton()
         }

@@ -56,8 +56,9 @@ struct CarrierFlightCard: View {
         if let window {
             let hasAny = selectedOutbound != nil || selectedReturn != nil
             let total = Int((selectedOutbound?.price ?? 0) + (selectedReturn?.price ?? 0))
+            let hasBookable = window.outbound.contains { $0.price != nil } || window.returning.contains { $0.price != nil }
             CapsuleButton(
-                title: hasAny ? "Kup w \(carrier.displayName)" : "Wybierz lot aby kupić bilet",
+                title: hasAny ? "Kup w \(carrier.displayName)" : (hasBookable ? "Wybierz lot aby kupić bilet" : "Brak dostępnych biletów"),
                 trailingText: hasAny ? "\(total) zł" : nil,
                 tint: carrier.color,
                 fullWidth: true,
@@ -65,6 +66,15 @@ struct CarrierFlightCard: View {
             ) {
                 openBooking(window: window)
             }
+            .padding(.horizontal, Theme.Spacing.l)
+        } else if !isFailed {
+            CapsuleButton(
+                title: "Wybierz lot aby kupić bilet",
+                trailingText: nil,
+                tint: carrier.color,
+                fullWidth: true,
+                isEnabled: false
+            ) {}
             .padding(.horizontal, Theme.Spacing.l)
         }
     }

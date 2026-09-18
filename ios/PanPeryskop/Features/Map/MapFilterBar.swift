@@ -6,7 +6,6 @@ struct MapFilterBar: View {
     @ObservedObject var mapViewModel: MapViewModel
     @ObservedObject var tripsViewModel: TripsViewModel
     let onCityTap: () -> Void
-    let onAirportTap: () -> Void
     let onDayTap: () -> Void
     let onTripDayTap: () -> Void
 
@@ -25,10 +24,7 @@ struct MapFilterBar: View {
                     }
                 case .trips:
                     MapPickerPill(title: DayLabels.pill(offset: tripsViewModel.selectedDayOffset), action: onTripDayTap)
-                    MapPickerPill(
-                        title: "\(tripsViewModel.selectedAirport.iata) · \(tripsViewModel.selectedAirport.city)",
-                        action: onAirportTap
-                    )
+                    MapPickerPill(title: tripsViewModel.selectedCity.name, action: onCityTap)
                         .padding(.trailing, 12)
                     ForEach(TripsViewModel.TravelTag.allCases) { tag in
                         Chip(label: tag.label, isSelected: tripsViewModel.isTagSelected(tag.rawValue), badgeCount: tripsViewModel.tagCounts[tag.rawValue] ?? 0, showsBadgeWhenEmpty: true) {

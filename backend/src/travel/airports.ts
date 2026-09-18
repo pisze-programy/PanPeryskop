@@ -55,12 +55,6 @@ const ryanair = ryanairAirportsJson as RyanairAirportRow[];
 const ryanairConn = ryanairConnectionsJson as RyanairConnectionRow[];
 const wizzair = (wizzairMapJson as { cities: WizzairCityRow[] }).cities;
 
-// Wizzair multi-airport city aggregation ("London (All Airports)"); not real IATA.
-function aggregateName(a: WizzairCityRow): string | null {
-  const m = /^(.*) \(All Airports\)$/.exec(a.shortName);
-  return m ? m[1] : null;
-}
-
 const catalog = new Map<string, Airport>();
 for (const a of ryanair) {
   catalog.set(a.code, {
@@ -122,54 +116,45 @@ export function keepEuropeanCityEvent(country: string, city: string): boolean {
   return CONFIG.travel.europe.countryNames.has(country) && airportForCity(city) !== null;
 }
 
-// ---- Ryanair route normalization: "airport:STN"/"city:LONDON"/"country:es"/"region:ENGLAND" → IATA ----
-const byCityCode = new Map<string, string[]>();
-const byRegionCode = new Map<string, string[]>();
-const byCountryCode = new Map<string, string[]>();
-for (const a of ryanair) {
-  const push = (m: Map<string, string[]>, k: string) => m.set(k, [...(m.get(k) ?? []), a.code]);
-  push(byCityCode, diacriticFold(a.city.code));
-  push(byRegionCode, diacriticFold(a.region.code));
-  push(byCountryCode, diacriticFold(a.country.code));
+// ---- Routes ----
+// A route exists only when the carrier lists the exact airport. The aggregate
+// tokens (Ryanair city/region/country, Wizzair "(All Airports)") resolve to
+// thousands of airports the carrier does not serve from that origin, so they are
+// ignored. The explicit relation is symmetric in the data; we close it anyway.
+const ryanairExplicit = new Map<string, Set<string>>();
+for (const row of ryanairConn) {
+  const dests = new Set<string>();
+  for (const token of [...(row.routes ?? []), ...(row.seasonalRoutes ?? [])]) {
+    const [type, value] = token.split(':');
+    if (type === 'airport' && catalog.has(value)) dests.add(value);
+  }
+  ryanairExplicit.set(row.iataCode, dests);
 }
 
-function ryanairRouteToIatas(token: string): string[] {
-  const [type, value] = token.split(':');
-  const key = diacriticFold(value);
-  switch (type) {
-    case 'airport': return catalog.has(value) ? [value] : [];
-    case 'city': return byCityCode.get(key) ?? [];
-    case 'region': return byRegionCode.get(key) ?? [];
-    case 'country': return byCountryCode.get(key) ?? [];
-    default: return [];
+const wizzairRealStations = new Set(wizzair.filter((c) => !c.isFakeStation).map((c) => c.iata));
+const wizzairExplicit = new Map<string, Set<string>>();
+for (const city of wizzair) {
+  const dests = new Set<string>();
+  for (const c of city.connections ?? []) {
+    if (c.isDirectFlight && wizzairRealStations.has(c.iata)) dests.add(c.iata);
   }
+  wizzairExplicit.set(city.iata, dests);
+}
+
+function withReverse(explicit: Map<string, Set<string>>, origin: string): Set<string> {
+  const out = new Set(explicit.get(origin) ?? []);
+  for (const [from, dests] of explicit) {
+    if (from !== origin && dests.has(origin)) out.add(from);
+  }
+  return out;
 }
 
 function ryanairDestinations(iata: string): Set<string> {
-  const row = ryanairConn.find((r) => r.iataCode === iata);
-  const out = new Set<string>();
-  for (const token of [...(row?.routes ?? []), ...(row?.seasonalRoutes ?? [])]) {
-    for (const dest of ryanairRouteToIatas(token)) out.add(dest);
-  }
-  return out;
+  return withReverse(ryanairExplicit, iata);
 }
 
-// Aggregate pseudo-city (LON) expands to the real airports of that city,
-// derived from the catalog (self-healing, covers VEN/STO too).
 function wizzairDestinations(iata: string): Set<string> {
-  const city = wizzair.find((c) => c.iata === iata);
-  const out = new Set<string>();
-  for (const c of city?.connections ?? []) {
-    if (!c.isDirectFlight) continue;
-    const agg = wizzair.find((x) => x.iata === c.iata);
-    const aggCity = agg ? aggregateName(agg) : null;
-    if (aggCity) {
-      for (const a of catalog.values()) if (foldCity(a.city) === diacriticFold(aggCity)) out.add(a.iata);
-    } else {
-      out.add(c.iata);
-    }
-  }
-  return out;
+  return withReverse(wizzairExplicit, iata);
 }
 
 /** Union of reachable airports from `origin` across both providers, with geo. */

@@ -2,6 +2,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCatalogue, catalogueVersion } from '../src/travel/catalogue';
 import { travelRoutes } from '../src/api/travel';
+import { destinationsFrom } from '../src/travel/airports';
+
+test('routes: aggregate tokens are ignored (Wizzair serves LTN, not LGW/STN, from POZ)', () => {
+  const byIata = new Map(destinationsFrom('POZ').map((d) => [d.iata, d]));
+  assert.ok(byIata.get('LTN')?.providers.has('wizzair'), 'POZ->LTN wizzair must exist');
+  assert.ok(!byIata.get('LGW')?.providers.has('wizzair'), 'POZ->LGW wizzair must not exist');
+  assert.ok(!byIata.get('STN')?.providers.has('wizzair'), 'POZ->STN wizzair must not exist');
+});
+
+test('routes: no aggregate over-expansion per origin', () => {
+  for (const origin of ['POZ', 'WAW', 'KRK', 'WRO', 'GDN', 'WMI']) {
+    const count = destinationsFrom(origin).length;
+    assert.ok(count < 150, `${origin} has ${count} destinations`);
+  }
+});
 
 test('catalogue: 11 origin cities with the Warsaw pair and the Bialystok fallback', () => {
   const c = buildCatalogue('2026-01-01T00:00:00.000Z');

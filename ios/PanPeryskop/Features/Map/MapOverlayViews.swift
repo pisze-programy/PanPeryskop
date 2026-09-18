@@ -5,6 +5,9 @@ import SwiftUI
 struct AirportPinBadge: View {
     let iata: String
     var airlines: [Airline] = []
+    var shimmer: Bool = false
+
+    @State private var shimmerPhase: CGFloat = -1
 
     var body: some View {
         ZStack {
@@ -16,7 +19,27 @@ struct AirportPinBadge: View {
                 .font(.system(size: 13, weight: .bold))
                 .foregroundColor(.white)
         }
+        .overlay { if shimmer { sheen } }
         .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+    }
+
+    private var sheen: some View {
+        GeometryReader { geo in
+            LinearGradient(
+                colors: [.clear, .white.opacity(0.9), .clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: geo.size.width * 0.8)
+            .offset(x: shimmerPhase * geo.size.width)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .allowsHitTesting(false)
+        .onAppear {
+            withAnimation(.linear(duration: 1.1).repeatForever(autoreverses: false)) {
+                shimmerPhase = 1.6
+            }
+        }
     }
 
     private var fillStyle: AnyShapeStyle {

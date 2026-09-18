@@ -27,8 +27,14 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     private var loadTask: Task<Void, Never>?
     private var loadGeneration = 0
     private static let loadErrorMessage = "Coś poszło nie tak, spróbuj ponownie"
-    private static let refinementAttempts = 3
-    private static let refinementDelayMilliseconds = 1_500
+    private static let confirmErrorMessage = "Nie udało się potwierdzić lotów, spróbuj ponownie"
+    private static let searchToast = "Szukamy połączeń.."
+    private static let searchEventsToast = "Szukamy wydarzeń.."
+    private static let loadingToast = "Ładowanie..."
+    private static let emptyToast = "Brak wydarzeń dla tego dnia i lotu"
+    private static let loadToastKey = "trips-load"
+    private static let refinementAttempts = 12
+    private static let refinementDelayMilliseconds = 400
     private var cachedOriginAirlines: [Airline] = []
     private var cachedPosts: [Post] = []
     /// Loading scene: origin→airport connections drawn while the events load.
@@ -37,6 +43,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     /// `cachedPosts`, so a fast response can never leave the map empty.
     @Published private(set) var showPins = false
     private var loaderTask: Task<Void, Never>?
+    private var loadToastTask: Task<Void, Never>?
     private var loaderStartedAt: Date?
     /// The scene may only render while this is true. A stale scene can never leak
     /// into `overlays` just because `loadingArcs` still holds a frame.
@@ -107,7 +114,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     private static let legacyAirportPref = "trips.last_airport_iata"
 
     var overlays: [MapOverlay] {
-        var result: [MapOverlay] = isLoaderActive ? loadingArcs : []
+        var result: [MapOverlay] = isLoaderActive && !showFlightLayer ? loadingArcs : []
         if showFlightLayer, let selected = selectedTravelEvent {
             for dest in reachableDestinations(for: selected) {
                 result.append(contentsOf: arcs(for: dest, allowed: selected.reachableCarriers?[dest.iata]))
@@ -290,10 +297,12 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         recomputeDestinations()
     }
 
+    /// Visual centre of Europe, so the whole continent fits instead of the origin
+    /// city (which pushes the view east and cuts the west).
     var initialRegion: MKCoordinateRegion {
         MKCoordinateRegion(
-            center: selectedCity.center,
-            span: MKCoordinateSpan(latitudeDelta: 60, longitudeDelta: 60)
+            center: CLLocationCoordinate2D(latitude: 50, longitude: 10),
+            span: MKCoordinateSpan(latitudeDelta: 44, longitudeDelta: 68)
         )
     }
 
@@ -356,6 +365,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         let generation = loadGeneration
         let startedAt = Date()
         isLoading = true
+        startLoadToasts(showLoader: showLoader)
         if showLoader {
             cachedPosts = []
             showPins = false
@@ -367,24 +377,15 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     }
 
     private func runLoad(generation: Int, startedAt: Date) async {
-        let failed = await loadEvents(generation: generation)
-        guard loadGeneration == generation else { return }
+        defer { finishLoadToasts() }
+        // The scene is self-contained: it runs to the end, then clears. Data is
+        // resolved independently and pins appear only once it is confirmed.
         await holdLoader(since: startedAt)
         guard loadGeneration == generation else { return }
         await holdLoaderAnimation()
         guard loadGeneration == generation else { return }
         await waitForLoaderAnimation()
         guard loadGeneration == generation else { return }
-        isLoading = false
-        if failed {
-            withAnimation(.easeOut(duration: 0.2)) { clearLoadingScene() }
-            events = []
-            cachedPosts = []
-            showPins = false
-            tagCounts = [:]
-            ToastManager.shared.show(Self.loadErrorMessage, seconds: AppConstants.travelErrorToastSeconds)
-            return
-        }
         if isLoaderActive {
             withAnimation(.easeOut(duration: 0.3)) { clearLoadingScene() }
             try? await Task.sleep(nanoseconds: 300_000_000)
@@ -392,10 +393,40 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         } else {
             clearLoadingScene()
         }
+        let outcome = await resolveEvents(generation: generation)
+        guard loadGeneration == generation else { return }
+        isLoading = false
+        guard outcome == .confirmed else {
+            events = []
+            cachedPosts = []
+            showPins = false
+            tagCounts = [:]
+            ToastManager.shared.show(
+                outcome == .pending ? Self.confirmErrorMessage : Self.loadErrorMessage,
+                seconds: AppConstants.travelErrorToastSeconds
+            )
+            return
+        }
         if cachedPosts.isEmpty {
-            ToastManager.shared.show("Brak wydarzeń", seconds: 2)
+            ToastManager.shared.show(Self.emptyToast, seconds: 3)
         }
         showPins = true
+    }
+
+    private func startLoadToasts(showLoader: Bool) {
+        loadToastTask?.cancel()
+        ToastManager.shared.showSticky(showLoader ? Self.searchToast : Self.searchEventsToast, key: Self.loadToastKey)
+        loadToastTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled, self != nil else { return }
+            ToastManager.shared.showSticky(Self.loadingToast, key: Self.loadToastKey)
+        }
+    }
+
+    private func finishLoadToasts() {
+        loadToastTask?.cancel()
+        loadToastTask = nil
+        ToastManager.shared.dismiss(key: Self.loadToastKey)
     }
 
     // MARK: - Loading scene
@@ -414,7 +445,6 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
             clearLoadingScene()
             return
         }
-        ToastManager.shared.show("Trwa ładowanie…", seconds: 1.5)
         loaderStartedAt = Date()
         loadingArcs = loaderOverlays(picks: picks, progress: 0, scene: scene)
         let generation = loaderGeneration
@@ -452,7 +482,8 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
             let pin = MapOverlay.airport(AirportPin(
                 iata: dest.iata,
                 coord: CLLocationCoordinate2D(latitude: dest.lat, longitude: dest.lng),
-                airlines: dest.providers
+                airlines: dest.providers,
+                shimmer: true
             ))
             return arcs(for: dest, progress: progress, scene: scene) + [pin]
         }
@@ -495,37 +526,47 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         try? await Task.sleep(nanoseconds: UInt64((minS - elapsed) * 1_000_000_000))
     }
 
-    private func loadEvents(generation: Int) async -> Bool {
+    private enum LoadOutcome { case confirmed, pending, failed }
+
+    /// Only a confirmed (enriched) answer may be shown. An unenriched answer is
+    /// `pending`, so the loader stays up and we retry — no pin is ever retracted.
+    private func loadEvents(generation: Int) async -> LoadOutcome {
         let (from, to) = dayRange(offset: selectedDayOffset)
         let key = "\(originIatas.joined(separator: ","))|\(from)-\(to)"
         if let cached = eventsCache[key], !cached.isEmpty {
             apply(cached, generation: generation)
-            return false
+            return .confirmed
         }
         do {
             let resp = try await APIClient.getTravelEvents(
                 from: from, to: to,
                 origins: originIatas
             )
-            guard loadGeneration == generation else { return false }
+            guard loadGeneration == generation else { return .failed }
+            guard resp.enriched ?? true else { return .pending }
             let bucket = Dictionary(resp.events.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-            if resp.enriched ?? true { eventsCache[key] = bucket }
+            eventsCache[key] = bucket
             apply(bucket, generation: generation)
-            if resp.enriched == false { scheduleRefinement(generation: generation, attempt: 1) }
-            return false
+            return .confirmed
         } catch {
-            guard !(error is CancellationError) else { return false }
-            return true
+            guard !(error is CancellationError) else { return .failed }
+            return .failed
         }
     }
 
-    private func scheduleRefinement(generation: Int, attempt: Int) {
-        guard attempt <= Self.refinementAttempts else { return }
-        Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(Self.refinementDelayMilliseconds * attempt))
-            guard let self, self.loadGeneration == generation else { return }
-            _ = await self.loadEvents(generation: generation)
+    /// Retries an unenriched answer until it is confirmed or the attempts run out.
+    private func resolveEvents(generation: Int) async -> LoadOutcome {
+        var attempt = 0
+        while !Task.isCancelled {
+            let outcome = await loadEvents(generation: generation)
+            guard loadGeneration == generation else { return .failed }
+            if outcome != .pending { return outcome }
+            attempt += 1
+            guard attempt < Self.refinementAttempts else { return .pending }
+            try? await Task.sleep(for: .milliseconds(Self.refinementDelayMilliseconds))
+            guard loadGeneration == generation else { return .failed }
         }
+        return .failed
     }
 
     private func apply(_ bucket: [String: TravelEvent], generation: Int) {
@@ -566,9 +607,9 @@ extension TravelEvent {
 extension Post {
     /// Pin glyph for a travel event, derived from its tag (football vs running).
     var travelPinSymbol: String? {
-        guard let tags else { return nil }
+        guard user_id == "travel", let tags else { return nil }
         if tags.contains(TripsViewModel.TravelTag.runs.rawValue) { return "figure.run" }
         if tags.contains(TripsViewModel.TravelTag.football.rawValue) { return "soccerball" }
-        return "airplane"
+        return nil
     }
 }

@@ -2,7 +2,7 @@ name: PanPeryskop
 
 settings:
   MARKETING_VERSION: "1.3.0"
-  CURRENT_PROJECT_VERSION: 38
+  CURRENT_PROJECT_VERSION: 39
   DEVELOPMENT_TEAM: "3UKH2QRFKZ"
   SWIFT_VERSION: "6.0"
   INFOPLIST_KEY_CFBundleDisplayName: "Pan Peryskop"
@@ -51,6 +51,9 @@ targets:
             CFBundleURLSchemes:
               - panperyskop
         ITSAppUsesNonExemptEncryption: false
+        # Provider links often use cleartext http; the in-app browser must load them.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoadsInWebContent: true
     entitlements:
       path: PanPeryskop/SignInWithApple.entitlements
       properties:

@@ -44,9 +44,27 @@ struct InAppBrowserView: View {
         VStack(spacing: 0) {
             BrowserWebView(url: url, model: model, allowAnyHost: allowAnyHost)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay { if model.loadFailed { loadFailedView } }
             Divider()
             toolbar
         }
+        .background(Color(.systemBackground))
+    }
+
+    private var loadFailedView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 40))
+                .foregroundColor(.secondary)
+            Text("Nie można załadować strony")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Button("Otwórz w Safari") {
+                model.openInSystemBrowser(fallback: url)
+            }
+            .buttonStyle(.bordered)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
     }
 
@@ -255,6 +273,23 @@ private struct BrowserWebView: UIViewRepresentable {
         ) {
             decisionHandler(.deny)
         }
+
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            model.loadFailed = false
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            reportFailure(error)
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            reportFailure(error)
+        }
+
+        private func reportFailure(_ error: Error) {
+            guard (error as NSError).code != NSURLErrorCancelled else { return }
+            model.loadFailed = true
+        }
     }
 }
 
@@ -263,6 +298,9 @@ private struct BrowserWebView: UIViewRepresentable {
 final class BrowserModel: ObservableObject {
     @Published var canGoBack = false
     @Published var canGoForward = false
+    /// True when a page load fails (ATS, TLS, DNS, offline) — the body shows an
+    /// error instead of a silent blank web view.
+    @Published var loadFailed = false
     var currentURL: URL?
 
     weak var webView: WKWebView?

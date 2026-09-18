@@ -14,6 +14,9 @@ struct TripsEventDetail: View {
     private static let separator = ", "
     private static let distanceTitle = "Dystans:"
 
+    @State private var distancesWidth: CGFloat = 0
+    @State private var distancesContainer: CGFloat = 0
+
     private var meta: TravelEventMeta? { event.metaData }
 
     private var coordinate: CLLocationCoordinate2D {
@@ -60,7 +63,14 @@ struct TripsEventDetail: View {
                         chip(value)
                     }
                 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { _, width in
+                    distancesWidth = width
+                }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { _, width in
+                distancesContainer = width
+            }
+            .scrollDisabled(distancesWidth <= distancesContainer)
             .scrollBounceBehavior(.basedOnSize)
         }
     }

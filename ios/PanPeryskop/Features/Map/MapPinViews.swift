@@ -121,7 +121,8 @@ struct SinglePostPin: View {
 }
 
 private func iconForType(_ type: Post.MediaType) -> String {
-    type == .video ? "video.fill" : "photo.fill"
+    // Same glyph as the story preview placeholder for a missing image.
+    type == .video ? "video.slash" : "photo.badge.exclamationmark"
 }
 
 

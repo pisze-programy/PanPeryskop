@@ -44,7 +44,8 @@ struct AppTabBar: View {
                 } else {
                     Image(systemName: icon)
                         .font(.title3)
-                        .foregroundColor(category == cat ? .accentColor : .gray)
+                        // Lokalne and Europa are both the Home scope.
+                        .foregroundColor(.accentColor)
                 }
             }
             .frame(width: 28, height: 28)

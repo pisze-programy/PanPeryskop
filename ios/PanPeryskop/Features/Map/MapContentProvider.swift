@@ -30,6 +30,8 @@ struct AirportPin: Identifiable {
     var isOrigin: Bool = false
     /// Airlines serving the origin (border colors). Empty for destinations.
     var airlines: [Airline] = []
+    /// Animates a light sweep across the badge while the map is still loading.
+    var shimmer: Bool = false
     var id: String { iata }
 }
 

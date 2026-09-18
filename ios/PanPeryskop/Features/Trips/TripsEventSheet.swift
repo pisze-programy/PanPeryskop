@@ -111,6 +111,7 @@ struct TripsEventSheet: View {
         .scrollPosition(id: $activeIndex)
         .scrollDisabled(events.count <= 1)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { _, width in
+            guard width > 0 else { return }
             pageWidth = width
         }
     }

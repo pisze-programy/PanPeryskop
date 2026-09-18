@@ -153,7 +153,7 @@ struct MapKitMapView: View {
                         } label: { EmptyView() }
                     } else {
                         Annotation(coordinate: pin.coord, anchor: .center) {
-                            AirportPinBadge(iata: pin.iata, airlines: pin.airlines)
+                            AirportPinBadge(iata: pin.iata, airlines: pin.airlines, shimmer: pin.shimmer)
                                 .onTapGesture { onTap(.airport(pin)) }
                         } label: { EmptyView() }
                     }
@@ -173,6 +173,10 @@ struct MapKitMapView: View {
             }
             .onAppear {
                 cameraController.bind { region in
+                    // Match the target region now, so region-filtered airport pins
+                    // render during the flight, not only when the camera settles.
+                    visibleRegion = region
+                    currentCameraDistance = MapKitMapView.cameraDistance(for: region)
                     withAnimation(.easeInOut(duration: 1.2)) {
                         camera = .camera(MapKitMapView.tiltedCamera(center: region.center, region: region))
                     }
@@ -201,6 +205,9 @@ struct MapKitMapView: View {
                         latitude: center.latitude + coordinate.latitude - targetCoord.latitude,
                         longitude: center.longitude + coordinate.longitude - targetCoord.longitude
                     )
+                    // Match the target region now, so region-filtered airport pins
+                    // appear with the arc instead of popping in when the flight ends.
+                    visibleRegion = MKCoordinateRegion(center: newCenter, span: visibleRegion.span)
                     withAnimation(.easeInOut(duration: 0.6)) {
                         camera = .camera(MapCamera(
                             centerCoordinate: newCenter,

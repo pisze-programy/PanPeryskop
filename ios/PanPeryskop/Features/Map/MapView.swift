@@ -17,7 +17,6 @@ struct MapScreen: View {
     @State private var showCityList = false
     @State private var showDayList = false
     @State private var showTripsDayList = false
-    @State private var showTripsEventCard = false
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -99,6 +98,9 @@ struct MapScreen: View {
             mapViewModel.startPolling()
         }
         .onChange(of: category) { _, newCategory in
+            // A scope switch ends any Trips selection, so no stale arcs or sheet
+            // survive and the loading gate never suppresses a needed scene.
+            tripsViewModel.clearSelectionPublic()
             // Deterministic fly: events → the selected city (never a stale viewport),
             // trips → the Europe overview.
             switch newCategory {
@@ -134,10 +136,12 @@ struct MapScreen: View {
                 onSelect: { tripsViewModel.commitDay($0) }
             )
         }
-        .sheet(isPresented: $showTripsEventCard, onDismiss: {
-            tripsViewModel.clearSelectionPublic()
-        }) {
+        .sheet(item: $tripsViewModel.selectedEventGroup) { _ in
             TripsEventSheet(viewModel: tripsViewModel)
+        }
+        .onChange(of: tripsViewModel.selectedEventGroup?.id) { _, id in
+            guard id == nil else { return }
+            tripsViewModel.clearSelectionPublic()
         }
     }
 
@@ -191,7 +195,6 @@ struct MapScreen: View {
             Haptics.impact(.medium)
             guard tripsViewModel.selectTravelEvent(postId: post.id, group: pin.group) else { return }
             cameraController.flyToAboveSheet(post.coordinate)
-            showTripsEventCard = true
             return
         }
         Haptics.impact(.medium)

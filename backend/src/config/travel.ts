@@ -126,6 +126,7 @@ export const travel = {
     routeRetries: 2,
     enrichWaitMs: 2_000,
     enrichTtlMs: 12 * 3_600_000,
+    alertThrottleMs: 6 * 3_600_000,
     windows: {
       outbound: [-7, -1] as [number, number],
       return: [1, 7] as [number, number],

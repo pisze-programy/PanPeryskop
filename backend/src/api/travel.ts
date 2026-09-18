@@ -6,6 +6,7 @@ import { fetchRyanairWindow, fetchWizzairWindow, readFlightCache, writeFlightCac
 import { haversineKm, reachableEvents, type ReachableEvent, type TravelEventRow } from '../travel/reachability';
 import { viatorRandomCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
 import { staysWidgetUrl, type StayTheme, type StayView } from '../travel/stay22';
+import { alertFlightFailure } from '../travel/alerts';
 import { addDaysWarsaw } from '../seed/core/dates';
 
 export const travelRoutes = new Hono<{ Bindings: Env }>();
@@ -141,6 +142,7 @@ async function enrichedEvents(
     return c.json({ events, enriched: false });
   }
   if (settled.okRoutes === 0 && settled.failedRoutes > 0) {
+    await alertFlightFailure(c.env, 'all', `every route failed (${settled.failedRoutes})`);
     return c.json({ error: 'Flight reachability is unavailable' }, 502);
   }
   return c.json({ events: applyEnrichment(events, settled.airports), enriched: true });
@@ -239,7 +241,7 @@ function flightParams(q: Record<string, string | undefined>): { origin: string; 
   return { origin, destination, eventDay };
 }
 
-async function flightHandler(c: any, airline: 'ryanair' | 'wizzair'): Promise<Response> {
+async function flightHandler(c: Context<{ Bindings: Env }>, airline: 'ryanair' | 'wizzair'): Promise<Response> {
   const q = c.req.query();
   const params = flightParams(q);
   if (!params) return c.json({ error: 'origin, destination, eventDay required (IATA, YYYY-MM-DD)' }, 400);
@@ -249,6 +251,7 @@ async function flightHandler(c: any, airline: 'ryanair' | 'wizzair'): Promise<Re
       : await fetchWizzairWindow(params.origin, params.destination, params.eventDay, c.env.DB);
     return c.json(window);
   } catch (e) {
+    await alertFlightFailure(c.env, airline, (e as Error).message);
     return c.json({ error: (e as Error).message }, 502);
   }
 }

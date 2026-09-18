@@ -32,6 +32,12 @@ All notable changes to PanPeryskop. Format based on
   (`GET /travel/tag-counts`, Europe-wide for the selected day).
 
 ### Changed
+- Wycieczki events are fetched Europe-wide: the artificial airport-centred bbox
+  is gone, so reachable Portugal/Iceland/Ireland events are no longer clipped.
+  The per-tag badge is derived from the same response as the pins, so badge and
+  pins always agree, and toggling a tag makes no request. `GET /travel/tag-counts`
+  is removed.
+- Ryanair and Wizzair route snapshots re-pulled from the carriers.
 - Wycieczki events show up immediately and refine themselves: the map pins come
   from D1 at once, the flight-reachability filter lands a moment later (the
   response says `enriched: false` and the app asks again). Reachability now walks
@@ -78,6 +84,11 @@ All notable changes to PanPeryskop. Format based on
   section no longer jumps while prices load.
 
 ### Fixed
+- Wizzair flights self-heal when Wizzair retires an API version: the backend
+  now refreshes the cached version on HTTP 503 (was 404 only) and the fallback
+  is 29.17.0, so the 29.16.1 retirement no longer blanks the flight boards.
+- Wycieczki tag badges match the map pins: the count is the reachable events per
+  tag for the selected day, not the whole of Europe.
 - Wycieczki: changing the airport no longer wipes the map. The previous pins stay
   until the new ones arrive, a new choice always cancels the request in flight,
   and a failed or too-slow load (10 s) shows a short "Coś poszło nie tak, spróbuj

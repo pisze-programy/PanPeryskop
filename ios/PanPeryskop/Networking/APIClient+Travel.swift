@@ -3,14 +3,10 @@ import Foundation
 // MARK: - Travel (Wycieczki)
 
 extension APIClient {
-    /// Travel events within a bbox + day window, optionally reachable from an
-    /// origin airport. `from`/`to` are epoch ms.
-    static func getTravelEvents(swLat: Double, swLng: Double, neLat: Double, neLng: Double, from: Int64, to: Int64, tags: String?, origin: String? = nil) async throws -> TravelEventsResponse {
+    /// Travel events for a day window, optionally reachable from an origin
+    /// airport. `from`/`to` are epoch ms. No bbox: reachability scopes the set.
+    static func getTravelEvents(from: Int64, to: Int64, tags: String? = nil, origin: String? = nil) async throws -> TravelEventsResponse {
         var params = [
-            "sw_lat": String(swLat),
-            "sw_lng": String(swLng),
-            "ne_lat": String(neLat),
-            "ne_lng": String(neLng),
             "from": String(from),
             "to": String(to),
             "limit": "1000",

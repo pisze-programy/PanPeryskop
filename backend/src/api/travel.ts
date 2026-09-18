@@ -45,8 +45,9 @@ function parseBBox(q: Record<string, string | undefined>): BBox | null {
 
 travelRoutes.get('/events', async (c) => {
   const q = c.req.query();
-  const bbox = parseBBox(q);
-  if (!bbox) return c.json({ error: 'Invalid or missing bbox' }, 400);
+  const wantsBbox = ['sw_lat', 'sw_lng', 'ne_lat', 'ne_lng'].some((k) => q[k] !== undefined);
+  const bbox = wantsBbox ? parseBBox(q) : null;
+  if (wantsBbox && !bbox) return c.json({ error: 'Invalid bbox' }, 400);
   const from = Number(q.from);
   const to = Number(q.to);
   if (!isFinite(from) || !isFinite(to) || to <= from) return c.json({ error: 'Invalid or missing from/to (epoch ms)' }, 400);
@@ -67,17 +68,19 @@ travelRoutes.get('/events', async (c) => {
   const limit = parseLimit(q.limit);
   const origin = q.origin && CONFIG.travel.api.iataPattern.test(q.origin) ? q.origin.toUpperCase() : null;
 
+  const bboxCond = bbox ? 'AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?' : '';
+  const bboxBinds = bbox ? [bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng] : [];
   const { results } = await c.env.DB
     .prepare(
       `SELECT provider, external_id, title, lat, lng, city, country, start_ms, tag, link, meta
        FROM travel_events
-       WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?
+       WHERE 1=1 ${bboxCond}
        AND start_ms >= ? AND start_ms <= ?
        ${tagCond}
        ORDER BY start_ms
        LIMIT ${limit}`
     )
-    .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, from, to, ...tagBinds)
+    .bind(...bboxBinds, from, to, ...tagBinds)
     .all<{ city: string }>();
 
   const events = ((results ?? []) as TravelEventRow[]).map(withVenueFlag);
@@ -85,7 +88,7 @@ travelRoutes.get('/events', async (c) => {
   if (!origin) {
     return c.json({ events, enriched: true });
   }
-  return await enrichedEvents(c, events, origin, bbox, from, to);
+  return await enrichedEvents(c, events, origin, from, to);
 });
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -96,9 +99,8 @@ interface Enrichment {
   failedRoutes: number;
 }
 
-function reachCacheKey(origin: string, bbox: BBox, from: number, to: number): string {
-  const box = [bbox.swLat, bbox.swLng, bbox.neLat, bbox.neLng].map((v) => v.toFixed(1)).join(',');
-  return `reach:${origin}:${box}:${from}:${to}`;
+function reachCacheKey(origin: string, from: number, to: number): string {
+  return `reach:${origin}:${from}:${to}`;
 }
 
 async function enrich(origin: string, events: TravelEventRow[], db: D1Database): Promise<Enrichment> {
@@ -122,12 +124,11 @@ async function enrichedEvents(
   c: Context<{ Bindings: Env }>,
   events: TravelEventRow[],
   origin: string,
-  bbox: BBox,
   from: number,
   to: number,
 ): Promise<Response> {
   const db = c.env.DB;
-  const cacheKey = reachCacheKey(origin, bbox, from, to);
+  const cacheKey = reachCacheKey(origin, from, to);
   const cached = await readFlightCache(db, cacheKey);
   if (cached) return c.json({ events: applyEnrichment(events, cached as Record<string, string[]>), enriched: true });
 
@@ -147,24 +148,6 @@ async function enrichedEvents(
   }
   return c.json({ events: applyEnrichment(events, settled.airports), enriched: true });
 }
-
-// Europe-wide per-day tag counts for the Wycieczki filter chips. Scope is the
-// WHOLE of Europe (no bbox) for the requested day window, independent of the
-// currently selected tag — mirrors /stories/tag-counts for the Events chips.
-travelRoutes.get('/tag-counts', async (c) => {
-  const q = c.req.query();
-  const from = Number(q.from);
-  const to = Number(q.to);
-  if (!isFinite(from) || !isFinite(to) || to <= from) return c.json({ error: 'Invalid or missing from/to (epoch ms)' }, 400);
-  if (to - from > CONFIG.travel.api.maxWindowMs) return c.json({ error: 'Window too large' }, 400);
-  const { results } = await c.env.DB
-    .prepare(`SELECT tag, COUNT(*) AS count FROM travel_events WHERE start_ms >= ? AND start_ms <= ? GROUP BY tag`)
-    .bind(from, to)
-    .all<{ tag: string; count: number }>();
-  const counts = (results ?? []).filter((r) => CONFIG.travel.tags.set.has(r.tag as TravelTag));
-  const total = counts.reduce((a, r) => a + r.count, 0);
-  return c.json({ total, counts });
-});
 
 function parseLimit(raw: string | undefined): number {
   const n = Number(raw);

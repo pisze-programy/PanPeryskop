@@ -65,7 +65,6 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         selectedDayOffset = min(StoredDay.loadOffset(key: TripsPrefs.selectedDay) ?? 0, Self.maxDayOffset)
         tagSelection.sync(all: Set(TravelTag.allCases.map(\.rawValue)))
         cachedOriginAirlines = Self.airlines(for: destinations)
-        loadTagCounts()
     }
 
     var overlays: [MapOverlay] {
@@ -89,7 +88,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
             isOrigin: true,
             airlines: cachedOriginAirlines
         )))
-        for post in cachedPosts {
+        for post in cachedPosts where post.tags?.contains(where: isTagSelected) ?? false {
             result.append(.pin(MapPin(post: post)))
         }
         return result
@@ -177,14 +176,13 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         cachedOriginAirlines = Self.airlines(for: destinations)
         clearSelection()
         refresh()
-        loadTagCounts()
     }
 
-    /// Toggle one travel tag. The last selected tag cannot be turned off.
+    /// Toggle one travel tag. The last selected tag cannot be turned off. Filtering
+    /// is local: the day's events are fetched for every tag, so no network call.
     func toggleTag(_ id: String) {
         tagSelection.toggle(id)
         clearSelection()
-        refresh()
     }
 
     func isTagSelected(_ id: String) -> Bool { tagSelection.isSelected(id) }
@@ -195,23 +193,6 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         StoredDay.save(offset: offset, key: TripsPrefs.selectedDay)
         clearSelection()
         refresh()
-        loadTagCounts()
-    }
-
-    /// Fetch per-tag event counts for the selected day, Europe-wide (no bbox) —
-    /// independent of the active tag, mirroring the Events chips.
-    @MainActor
-    func loadTagCounts() {
-        Task {
-            struct TagCount: Decodable { let tag: String; let count: Int }
-            struct TagCountsResponse: Decodable { let total: Int; let counts: [TagCount] }
-            let (from, to) = dayRange(offset: selectedDayOffset)
-            guard let resp: TagCountsResponse = try? await APIClient.get(
-                "/travel/tag-counts",
-                params: ["from": String(from), "to": String(to)]
-            ) else { return }
-            tagCounts = Dictionary(uniqueKeysWithValues: resp.counts.map { ($0.tag, $0.count) })
-        }
     }
 
     func refresh() {
@@ -244,22 +225,14 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     private func loadEvents(generation: Int) async -> Bool {
         let (from, to) = dayRange(offset: selectedDayOffset)
-        let region = initialRegion
-        let swLat = region.center.latitude - region.span.latitudeDelta / 2
-        let swLng = region.center.longitude - region.span.longitudeDelta / 2
-        let neLat = region.center.latitude + region.span.latitudeDelta / 2
-        let neLng = region.center.longitude + region.span.longitudeDelta / 2
-        let tags = tagSelection.param(all: Set(TravelTag.allCases.map(\.rawValue)))
-        let key = "\(selectedAirport.iata)|\(from)-\(to)|\(tags ?? "")"
+        let key = "\(selectedAirport.iata)|\(from)-\(to)"
         if let cached = eventsCache[key], !cached.isEmpty {
             apply(cached, generation: generation)
             return false
         }
         do {
             let resp = try await APIClient.getTravelEvents(
-                swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng,
                 from: from, to: to,
-                tags: tags,
                 origin: selectedAirport.iata
             )
             guard loadGeneration == generation else { return false }
@@ -287,6 +260,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         guard loadGeneration == generation else { return }
         events = bucket.values.sorted { $0.start_ms < $1.start_ms }
         cachedPosts = events.compactMap(\.asPost)
+        tagCounts = Dictionary(grouping: events, by: \.tag).mapValues(\.count)
     }
 
     /// (from, to) epoch ms for a day offset (0..89), 0 = today. Per-day fetch —

@@ -125,7 +125,9 @@ export const travel = {
     routeConcurrency: 2,
     routeRetries: 2,
     enrichWaitMs: 2_000,
-    enrichTtlMs: 12 * 3_600_000,
+    // Matches the shortest provider cache it is derived from (Wizzair window and
+    // Ryanair prices 24 h; Ryanair availabilities 72 h).
+    enrichTtlMs: 24 * 3_600_000,
     alertThrottleMs: 6 * 3_600_000,
     windows: {
       outbound: [-7, -1] as [number, number],

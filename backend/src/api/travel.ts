@@ -140,8 +140,9 @@ async function enrich(origins: string[], events: TravelEventRow[], db: D1Databas
   }
   let okRoutes = 0;
   let failedRoutes = 0;
-  for (const origin of origins) {
-    const result = await reachableEvents(origin, events, db);
+  // A city has at most a few airports; enrich them together to halve cold latency.
+  const results = await Promise.all(origins.map((origin) => reachableEvents(origin, events, db)));
+  for (const result of results) {
     okRoutes += result.okRoutes;
     failedRoutes += result.failedRoutes;
     for (const event of result.events) {
@@ -182,8 +183,12 @@ async function enrichedEvents(
   if (cached) return c.json({ events: applyEnrichment(events, cached as ReachCache), enriched: true });
 
   const pending = enrich(origins, events, db).then(async (result) => {
-    const payload: ReachCache = { airports: result.airports, carriers: result.carriers };
-    await writeFlightCache(db, cacheKey, payload, CONFIG.travel.flights.enrichTtlMs);
+    // Cache only a fully confirmed sweep. A partial, failed or cut-off result must
+    // not be served as final for the next 24 h.
+    if (result.okRoutes > 0 && result.failedRoutes === 0) {
+      const payload: ReachCache = { airports: result.airports, carriers: result.carriers };
+      await writeFlightCache(db, cacheKey, payload, CONFIG.travel.flights.enrichTtlMs);
+    }
     return result;
   });
   const settled = await Promise.race([pending, sleep(CONFIG.travel.flights.enrichWaitMs).then(() => null)]);

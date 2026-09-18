@@ -44,6 +44,17 @@ struct HTTPClient {
         return try decoder.decode(T.self, from: data)
     }
 
+    /// GET with an `If-None-Match` validator. Returns `nil` on 304 (unchanged).
+    func getConditional(_ path: String, etag: String?, timeout: TimeInterval? = nil) async throws -> Data? {
+        var request = authorizedRequest(path)
+        if let etag { request.setValue(etag, forHTTPHeaderField: "If-None-Match") }
+        if let timeout { request.timeoutInterval = timeout }
+        let (data, response) = try await session.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 304 { return nil }
+        try validate(response: response, data: data)
+        return data
+    }
+
     func post<T: Decodable, B: Encodable>(_ path: String, body: B) async throws -> T {
         var request = authorizedRequest(path, method: "POST")
         request.httpBody = try encoder.encode(body)

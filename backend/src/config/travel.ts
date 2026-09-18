@@ -1,10 +1,10 @@
 import { queue } from './queue';
 
-export type TravelTag = 'citybreak' | 'pilka-nozna' | 'biegi';
+export type TravelTag = 'pilka-nozna' | 'biegi';
 export type TravelRunType = 'backfill' | 'replenish';
 export type PlaceKind = 'attraction';
 
-const travelTagValues: TravelTag[] = ['citybreak', 'pilka-nozna', 'biegi'];
+const travelTagValues: TravelTag[] = ['pilka-nozna', 'biegi'];
 
 export const travel = {
   provider: 'espn',
@@ -229,5 +229,11 @@ export const travel = {
     maxWindowMs: 370 * 24 * 3_600_000,
     maxLimit: 1000,
     iataPattern: /^[A-Z]{3}$/,
+  },
+  catalogue: {
+    // Bump on any breaking change to the catalogue JSON shape.
+    schemaVersion: 1,
+    // Oldest iOS build that can still read the current catalogue.
+    minAppBuild: 36,
   },
 } as const;

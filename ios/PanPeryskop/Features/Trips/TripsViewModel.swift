@@ -306,7 +306,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         )
     }
 
-    var defaultZoom: Double { 4 }
+    var initialDistance: CLLocationDistance? { maxZoomOutDistance }
 
     var maxZoomOutDistance: CLLocationDistance { AppConstants.tripsMaxZoomOutDistance }
 

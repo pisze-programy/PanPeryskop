@@ -26,7 +26,7 @@ struct MapScreen: View {
                 overlays: activeProvider.overlays,
                 currentUserId: authManager.userId,
                 initialRegion: activeProvider.initialRegion,
-                zoom: activeProvider.defaultZoom,
+                initialDistance: activeProvider.initialDistance,
                 maxZoomOutDistance: activeProvider.maxZoomOutDistance,
                 onRegionChange: { swLat, swLng, neLat, neLng in
                     activeProvider.onRegionChange(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
@@ -54,6 +54,7 @@ struct MapScreen: View {
             if !showStoryViewer {
                 VStack(spacing: 12) {
                     Spacer()
+                    ToastView()
                     CategoryPill(
                         selection: category,
                         eventsLoading: mapViewModel.isLoading,
@@ -61,9 +62,7 @@ struct MapScreen: View {
                         onSelect: onSelectCategory
                     )
                     AppTabBar(
-                        category: category,
-                        eventsLoading: mapViewModel.isLoading,
-                        onSelectCategory: onSelectCategory,
+                        onHome: { onSelectCategory(.events) },
                         onProfile: onProfile
                     )
                     .padding(.bottom, 32)
@@ -98,11 +97,7 @@ struct MapScreen: View {
             mapViewModel.startPolling()
         }
         .onChange(of: category) { _, newCategory in
-            // A scope switch ends any Trips selection, so no stale arcs or sheet
-            // survive and the loading gate never suppresses a needed scene.
             tripsViewModel.clearSelectionPublic()
-            // Deterministic fly: events → the selected city (never a stale viewport),
-            // trips → the Europe overview.
             switch newCategory {
             case .events:
                 mapViewModel.startPolling()
@@ -110,7 +105,7 @@ struct MapScreen: View {
             case .trips:
                 mapViewModel.stopPolling()
                 tripsViewModel.syncCity(mapViewModel.selectedCity)
-                cameraController.fly(to: tripsViewModel.initialRegion)
+                cameraController.fly(to: tripsViewModel.initialRegion, distance: tripsViewModel.initialDistance)
                 Task { await CatalogueStore.shared.refresh() }
                 tripsViewModel.refresh(showLoader: true)
             }
@@ -165,7 +160,7 @@ struct MapScreen: View {
             cameraController.fly(to: city.region)
         case .trips:
             tripsViewModel.selectCity(city)
-            cameraController.fly(to: tripsViewModel.initialRegion)
+            cameraController.fly(to: tripsViewModel.initialRegion, distance: tripsViewModel.initialDistance)
         }
     }
 

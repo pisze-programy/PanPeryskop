@@ -64,9 +64,14 @@ enum Airline: String, Codable {
 protocol MapContentProvider: ObservableObject {
     var overlays: [MapOverlay] { get }
     var initialRegion: MKCoordinateRegion { get }
-    var defaultZoom: Double { get }
+    /// Camera height for `initialRegion`. Nil derives it from the region span.
+    var initialDistance: CLLocationDistance? { get }
     /// Farthest the camera may zoom out (MapCameraBounds maximumDistance).
     var maxZoomOutDistance: CLLocationDistance { get }
     func onRegionChange(swLat: Double, swLng: Double, neLat: Double, neLng: Double)
     func onCameraSettled(_ region: MKCoordinateRegion)
+}
+
+extension MapContentProvider {
+    var initialDistance: CLLocationDistance? { nil }
 }

@@ -5,7 +5,7 @@ struct MapKitMapView: View {
     let overlays: [MapOverlay]
     let currentUserId: String?
     let initialRegion: MKCoordinateRegion
-    let zoom: Double
+    let initialDistance: CLLocationDistance?
     let maxZoomOutDistance: CLLocationDistance
     let onRegionChange: (Double, Double, Double, Double) -> Void
     let onCameraSettled: (MKCoordinateRegion) -> Void
@@ -20,7 +20,7 @@ struct MapKitMapView: View {
         overlays: [MapOverlay],
         currentUserId: String?,
         initialRegion: MKCoordinateRegion,
-        zoom: Double,
+        initialDistance: CLLocationDistance?,
         maxZoomOutDistance: CLLocationDistance,
         onRegionChange: @escaping (Double, Double, Double, Double) -> Void,
         onCameraSettled: @escaping (MKCoordinateRegion) -> Void,
@@ -30,22 +30,25 @@ struct MapKitMapView: View {
         self.overlays = overlays
         self.currentUserId = currentUserId
         self.initialRegion = initialRegion
-        self.zoom = zoom
+        self.initialDistance = initialDistance
         self.maxZoomOutDistance = maxZoomOutDistance
         self.onRegionChange = onRegionChange
         self.onCameraSettled = onCameraSettled
         self.onTap = onTap
         self.cameraController = cameraController
-        self._camera = State(initialValue: .camera(MapKitMapView.tiltedCamera(center: initialRegion.center, region: initialRegion)))
+        let distance = initialDistance ?? MapKitMapView.cameraDistance(for: initialRegion)
+        self._camera = State(initialValue: .camera(MapKitMapView.tiltedCamera(
+            center: initialRegion.center,
+            region: initialRegion,
+            distance: distance
+        )))
         self._visibleRegion = State(initialValue: initialRegion)
-        self._currentCameraDistance = State(initialValue: MapKitMapView.cameraDistance(for: initialRegion))
+        self._currentCameraDistance = State(initialValue: distance)
     }
 
     private static let pitchDegrees: Double = 60
     /// Screen fraction where a tapped pin is placed (see `MapCameraController.flyToAboveSheet`).
     private static let sheetAvoidFraction = CGPoint(x: 0.5, y: 0.40)
-    /// City fly framing distance — the city map's default camera height.
-    private static let cityFlyDistance: CLLocationDistance = 60_000
     private static let clusterPixels: Double = 48
 
     private var clusterRadiusDegrees: Double {
@@ -101,19 +104,14 @@ struct MapKitMapView: View {
         return meters / sin(pitchDegrees * .pi / 180)
     }
 
-    private static func tiltedCamera(center: CLLocationCoordinate2D, region: MKCoordinateRegion) -> MapCamera {
+    private static func tiltedCamera(
+        center: CLLocationCoordinate2D,
+        region: MKCoordinateRegion,
+        distance: CLLocationDistance? = nil
+    ) -> MapCamera {
         MapCamera(
             centerCoordinate: center,
-            distance: cameraDistance(for: region),
-            heading: 0,
-            pitch: pitchDegrees
-        )
-    }
-
-    private static func maxOutCamera(center: CLLocationCoordinate2D) -> MapCamera {
-        MapCamera(
-            centerCoordinate: center,
-            distance: cityFlyDistance,
+            distance: distance ?? cameraDistance(for: region),
             heading: 0,
             pitch: pitchDegrees
         )
@@ -172,13 +170,16 @@ struct MapKitMapView: View {
                 onCameraSettled(region)
             }
             .onAppear {
-                cameraController.bind { region in
-                    // Match the target region now, so region-filtered airport pins
-                    // render during the flight, not only when the camera settles.
+                cameraController.bind { region, distance in
                     visibleRegion = region
-                    currentCameraDistance = MapKitMapView.cameraDistance(for: region)
+                    let resolved = distance ?? MapKitMapView.cameraDistance(for: region)
+                    currentCameraDistance = resolved
                     withAnimation(.easeInOut(duration: 1.2)) {
-                        camera = .camera(MapKitMapView.tiltedCamera(center: region.center, region: region))
+                        camera = .camera(MapKitMapView.tiltedCamera(
+                            center: region.center,
+                            region: region,
+                            distance: resolved
+                        ))
                     }
                 }
                 cameraController.bindAvoidingSheet { coordinate in
@@ -205,8 +206,6 @@ struct MapKitMapView: View {
                         latitude: center.latitude + coordinate.latitude - targetCoord.latitude,
                         longitude: center.longitude + coordinate.longitude - targetCoord.longitude
                     )
-                    // Match the target region now, so region-filtered airport pins
-                    // appear with the arc instead of popping in when the flight ends.
                     visibleRegion = MKCoordinateRegion(center: newCenter, span: visibleRegion.span)
                     withAnimation(.easeInOut(duration: 0.6)) {
                         camera = .camera(MapCamera(

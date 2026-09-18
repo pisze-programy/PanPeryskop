@@ -5,10 +5,10 @@ import MapKit
 /// channel. The shell binds its flyTo handler here; MapScreen calls it on city/airport select.
 @MainActor
 final class MapCameraController: ObservableObject {
-    private var flyTo: ((MKCoordinateRegion) -> Void)?
+    private var flyTo: ((MKCoordinateRegion, CLLocationDistance?) -> Void)?
     private var flyToAvoidingSheet: ((CLLocationCoordinate2D) -> Void)?
 
-    func bind(_ handler: @escaping (MKCoordinateRegion) -> Void) {
+    func bind(_ handler: @escaping (MKCoordinateRegion, CLLocationDistance?) -> Void) {
         flyTo = handler
     }
 
@@ -19,8 +19,9 @@ final class MapCameraController: ObservableObject {
         flyToAvoidingSheet = handler
     }
 
-    func fly(to region: MKCoordinateRegion) {
-        flyTo?(region)
+    /// `distance` overrides the span-derived camera height.
+    func fly(to region: MKCoordinateRegion, distance: CLLocationDistance? = nil) {
+        flyTo?(region, distance)
     }
 
     /// Centers on a coordinate, shifted to stay visible above the medium sheet

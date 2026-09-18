@@ -173,8 +173,6 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         }
     }
 
-    var defaultZoom: Double { 12 }
-
     var maxZoomOutDistance: CLLocationDistance { 100_000 }
 
     var overlays: [MapOverlay] {

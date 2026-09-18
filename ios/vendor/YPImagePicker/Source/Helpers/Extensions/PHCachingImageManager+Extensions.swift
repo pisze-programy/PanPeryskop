@@ -27,7 +27,7 @@ extension PHCachingImageManager {
         let options = photoImageRequestOptions()
 
         // Fetch Highiest quality image possible.
-        requestImageData(for: asset, options: options) { data, _, _, _ in
+        requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
             guard let data = data, let image = UIImage(data: data)?.resetOrientation() else {
                 ypLog("fetchImage: could not decode image data (unsupported format?).")
                 callback(nil, [:])

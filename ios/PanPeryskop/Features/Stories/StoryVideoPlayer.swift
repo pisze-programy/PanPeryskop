@@ -54,7 +54,9 @@ struct StoryVideoPlayer: View {
                     forInterval: interval, queue: .main
                 ) { [weak p] time in
                     guard let p, let item = p.currentItem, item.duration.seconds > 0 else { return }
-                    onProgress(min(max(time.seconds / item.duration.seconds, 0), 1))
+                    MainActor.assumeIsolated {
+                        onProgress(min(max(time.seconds / item.duration.seconds, 0), 1))
+                    }
                 }
                 if isActive && !paused { p.play() }
             }

@@ -154,6 +154,7 @@ private struct BrowserWebView: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
+    @MainActor
     final class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate {
         let model: BrowserModel
         let allowAnyHost: Bool
@@ -170,7 +171,7 @@ private struct BrowserWebView: UIViewRepresentable {
         func webView(
             _ webView: WKWebView,
             decidePolicyFor navigationAction: WKNavigationAction,
-            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+            decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
         ) {
             guard let url = navigationAction.request.url else {
                 decisionHandler(.cancel)
@@ -193,22 +194,20 @@ private struct BrowserWebView: UIViewRepresentable {
         }
 
         private func openExternally(_ url: URL) {
-            DispatchQueue.main.async {
-                UIApplication.shared.open(url)
-            }
+            UIApplication.shared.open(url)
         }
 
         func attach(_ webView: WKWebView) {
             model.webView = webView
             observations = [
                 webView.observe(\.canGoBack, options: [.new]) { [weak self] webView, _ in
-                    self?.publishBack(from: webView)
+                    MainActor.assumeIsolated { self?.publishBack(from: webView) }
                 },
                 webView.observe(\.canGoForward, options: [.new]) { [weak self] webView, _ in
-                    self?.publishForward(from: webView)
+                    MainActor.assumeIsolated { self?.publishForward(from: webView) }
                 },
                 webView.observe(\.url, options: [.new]) { [weak self] webView, _ in
-                    self?.publishURL(from: webView)
+                    MainActor.assumeIsolated { self?.publishURL(from: webView) }
                 },
             ]
             publishBack(from: webView)
@@ -217,17 +216,13 @@ private struct BrowserWebView: UIViewRepresentable {
         }
 
         private func publishBack(from webView: WKWebView) {
-            DispatchQueue.main.async { [weak self] in
-                guard let self, self.model.canGoBack != webView.canGoBack else { return }
-                self.model.canGoBack = webView.canGoBack
-            }
+            guard model.canGoBack != webView.canGoBack else { return }
+            model.canGoBack = webView.canGoBack
         }
 
         private func publishForward(from webView: WKWebView) {
-            DispatchQueue.main.async { [weak self] in
-                guard let self, self.model.canGoForward != webView.canGoForward else { return }
-                self.model.canGoForward = webView.canGoForward
-            }
+            guard model.canGoForward != webView.canGoForward else { return }
+            model.canGoForward = webView.canGoForward
         }
 
         private func publishURL(from webView: WKWebView) {
@@ -256,7 +251,7 @@ private struct BrowserWebView: UIViewRepresentable {
             requestMediaCapturePermissionFor origin: WKSecurityOrigin,
             initiatedByFrame frame: WKFrameInfo,
             type: WKMediaCaptureType,
-            decisionHandler: @escaping (WKPermissionDecision) -> Void
+            decisionHandler: @escaping @MainActor (WKPermissionDecision) -> Void
         ) {
             decisionHandler(.deny)
         }
@@ -264,6 +259,7 @@ private struct BrowserWebView: UIViewRepresentable {
 }
 
 /// Navigation state + actions for the in-app browser toolbar.
+@MainActor
 final class BrowserModel: ObservableObject {
     @Published var canGoBack = false
     @Published var canGoForward = false

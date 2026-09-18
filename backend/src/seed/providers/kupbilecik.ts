@@ -109,7 +109,9 @@ export function parseKupEvent(e: KupEvent, day: string, dayStartMs: number): See
     address: (obj.Address || '').trim(),
     link: rowLink,
     mediaUrl: img,
-    thumbUrl: (e.Images?.Mini || '').trim() || img || null,
+    // The Mini variant is a 3:2 crop of a 1:1 image; using it as the preview makes
+    // the story jump when the full image loads. The full image is small enough.
+    thumbUrl: img || null,
     isSoldOut: false, // the API does not expose availability
     price,
     tags: tag ?? undefined,

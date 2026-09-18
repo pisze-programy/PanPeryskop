@@ -34,7 +34,8 @@ test('parseKupEvent: maps the direct-API row onto a candidate (price, coords, af
   assert.equal(c.venue, 'Bałtycki Teatr Dramatyczny');
   assert.equal(c.city, 'Koszalin');
   assert.equal(c.mediaUrl, 'https://www.kupbilecik.pl/img/gal_baza/x.webp?t=1');
-  assert.equal(c.thumbUrl, 'https://www.kupbilecik.pl/img/gal_baza/x_m.webp?t=1');
+  // The preview uses the full image so its aspect matches (no story jump).
+  assert.equal(c.thumbUrl, 'https://www.kupbilecik.pl/img/gal_baza/x.webp?t=1');
   assert.match(c.link, /^https:\/\/www\.kupbilecik\.pl\/imprezy\/185922\//);
   assert.match(c.link, /utm_source=pp&utm_medium=631/, 'affiliate params stamped into the link');
   assert.deepEqual(c.tags, ['teatr']);

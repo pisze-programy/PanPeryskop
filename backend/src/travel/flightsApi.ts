@@ -245,7 +245,7 @@ async function postWizzairTimetable(apiBase: string, origin: string, dest: strin
 async function fetchWizzairTimetable(db: D1Database, origin: string, dest: string, fromDay: string, toDay: string): Promise<WizzairTimetable> {
   const attempt = async (): Promise<Response> => await postWizzairTimetable(await wizzairApiBase(db), origin, dest, fromDay, toDay);
   let res = await attempt();
-  if (res.status === 404) {
+  if (res.status === 404 || res.status >= 500) {
     await dropCachedJson(db, WIZZAIR_VERSION_KEY);
     res = await attempt();
   }

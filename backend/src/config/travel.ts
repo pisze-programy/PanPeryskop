@@ -135,9 +135,9 @@ export const travel = {
       pageUrl: 'https://wizzair.com/en-gb',
       apiHost: 'https://be.wizzair.com',
       versionPattern: 'be\\.wizzair\\.com/(\\d+\\.\\d+\\.\\d+)/Api',
-      fallbackVersion: '29.16.1',
-      versionTtlMs: 24 * 3_600_000,
-      windowTtlMs: 12 * 3_600_000,
+      fallbackVersion: '29.17.0',
+      versionTtlMs: 7 * 24 * 3_600_000,
+      windowTtlMs: 24 * 3_600_000,
     },
   },
   viator: {

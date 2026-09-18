@@ -39,8 +39,6 @@ struct ContentView: View {
                 .zIndex(999)
                 .transition(.opacity)
             }
-
-            ToastView()
         }
         .ignoresSafeArea(.keyboard)
         .task {

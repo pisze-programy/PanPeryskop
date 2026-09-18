@@ -18,6 +18,10 @@ struct EventFlightSection: View {
     @State private var hidden: Set<String> = []
     @State private var selectedId: String?
 
+    /// UPDATE THIS TEXT when the mixed-airport rule changes. It claims the user
+    /// can fly out and return from different airports.
+    private static let mixedAirportsTip = "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska."
+
     private var allOptions: [FlightOption] {
         let options = reachableDestinations.flatMap { destination -> [FlightOption] in
             let allowed = reachableCarriers?[destination.iata]
@@ -42,7 +46,7 @@ struct EventFlightSection: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             TripsSectionHeader(
                 title: "Wybierz lot",
-                info: "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska."
+                info: reachableDestinations.count > 1 ? Self.mixedAirportsTip : nil
             )
             .padding(.horizontal, Theme.Spacing.l)
             mapRail

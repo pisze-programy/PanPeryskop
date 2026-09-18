@@ -3,14 +3,12 @@ import SwiftUI
 /// Bottom navigation: local scope + Profile. The Europe scope moves to the
 /// Lokalne | Europa segment above the bar.
 struct AppTabBar: View {
-    let category: MapCategory
-    var eventsLoading: Bool = false
-    let onSelectCategory: (MapCategory) -> Void
+    let onHome: () -> Void
     let onProfile: () -> Void
 
     var body: some View {
         HStack(spacing: 40) {
-            categoryButton(.events, icon: "house.fill", loading: eventsLoading)
+            tabButton(icon: "house.fill", color: .accentColor, action: onHome)
 
             Button {
                 Haptics.selection()
@@ -30,27 +28,16 @@ struct AppTabBar: View {
         .shadow(color: Theme.Palette.shadow, radius: 10, x: 0, y: 4)
     }
 
-    @ViewBuilder
-    private func categoryButton(_ cat: MapCategory, icon: String, loading: Bool) -> some View {
+    private func tabButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
         Button {
-            guard category != cat else { return }
             Haptics.selection()
-            onSelectCategory(cat)
+            action()
         } label: {
-            Group {
-                if loading {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: icon)
-                        .font(.title3)
-                        // Lokalne and Europa are both the Home scope.
-                        .foregroundColor(.accentColor)
-                }
-            }
-            .frame(width: 28, height: 28)
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(color)
+                .frame(width: 28, height: 28)
         }
         .buttonStyle(.plain)
-        .disabled(loading)
     }
 }

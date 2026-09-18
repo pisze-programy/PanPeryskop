@@ -59,22 +59,17 @@ struct ToastView: View {
     @ObservedObject private var manager = ToastManager.shared
 
     var body: some View {
-        VStack {
-            Spacer()
-            VStack(spacing: 8) {
-                ForEach(manager.items) { item in
-                    Text(item.message)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(Color.black.opacity(0.8))
-                        .clipShape(Capsule())
-                }
+        VStack(spacing: 8) {
+            ForEach(manager.items) { item in
+                Text(item.message)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.black.opacity(0.8))
+                    .clipShape(Capsule())
             }
-            // Above the Lokalne | Europa pill and the bottom bar.
-            .padding(.bottom, 190)
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }

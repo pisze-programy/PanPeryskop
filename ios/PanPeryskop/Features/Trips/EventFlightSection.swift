@@ -17,10 +17,10 @@ struct EventFlightSection: View {
     @State private var failed: Set<String> = []
     @State private var hidden: Set<String> = []
     @State private var selectedId: String?
-
-    /// UPDATE THIS TEXT when the mixed-airport rule changes. It claims the user
-    /// can fly out and return from different airports.
-    private static let mixedAirportsTip = "Tip: możesz kupić lot w jedną stronę i wrócić z innego lotniska."
+    @State private var mode: TransportMode = .flight
+    @State private var showsModeSheet = false
+    @State private var busWindow: BusWindowResponse?
+    @State private var busFailed = false
 
     private var allOptions: [FlightOption] {
         let options = reachableDestinations.flatMap { destination -> [FlightOption] in
@@ -45,21 +45,37 @@ struct EventFlightSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             TripsSectionHeader(
-                title: "Wybierz lot",
-                info: reachableDestinations.count > 1 ? Self.mixedAirportsTip : nil
+                title: mode == .flight ? "Wybierz lot" : "Transport publiczny",
+                filterLabel: mode.label,
+                onFilter: { showsModeSheet = true }
             )
             .padding(.horizontal, Theme.Spacing.l)
-            mapRail
-            board
+            switch mode {
+            case .flight:
+                mapRail
+                board
+            case .bus:
+                busContent
+            }
         }
         .padding(.top, Theme.Spacing.section)
+        .sheet(isPresented: $showsModeSheet) {
+            TransportModeSheet(mode: $mode)
+        }
         .task(id: loadTrigger) {
             guard isActive else { return }
+            guard mode == .flight else { return }
             await loadSelected()
+        }
+        .task(id: busTrigger) {
+            guard isActive else { return }
+            guard mode == .bus else { return }
+            await loadBus()
         }
     }
 
     private var loadTrigger: String { "\(event.id)|\(selectedOption?.id ?? "")|\(isActive)" }
+    private var busTrigger: String { "\(event.id)|\(isActive)|\(mode.rawValue)" }
 
     @ViewBuilder
     private var mapRail: some View {
@@ -92,6 +108,89 @@ struct EventFlightSection: View {
                 onRetry: { retry(option) }
             )
         }
+    }
+
+    @ViewBuilder
+    private var busContent: some View {
+        if busFailed {
+            ErrorState(message: "Nie udało się pobrać połączeń") {
+                Task { await loadBus(force: true) }
+            }
+            .padding(.horizontal, Theme.Spacing.l)
+        } else if let window = busWindow {
+            if let cheapest = window.offers.first {
+                busCard(cheapest, window: window)
+            } else {
+                busEmpty
+            }
+        } else {
+            BusSkeleton()
+                .padding(.horizontal, Theme.Spacing.l)
+        }
+    }
+
+    private func busCard(_ offer: BusOffer, window: BusWindowResponse) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            HStack(spacing: Theme.Spacing.s) {
+                Image(systemName: "bus.fill")
+                    .foregroundColor(Theme.Palette.partnerGreen)
+                Text(window.to?.name ?? event.city)
+                    .font(.headline)
+                Spacer(minLength: 0)
+            }
+            Text("Najtańszy: \(offer.hour), \(Self.durationLabel(offer.durationMinutes))\(offer.transfers == 0 ? ", bez przesiadek" : "")")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            CapsuleButton(
+                title: "Sprawdź na FlixBus",
+                trailingText: "od \(offer.price) zł",
+                tint: Theme.Palette.partnerGreen,
+                fullWidth: true
+            ) {
+                openBusBooking(window.bookUrl)
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.l)
+    }
+
+    private var busEmpty: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "bus")
+            Text("Brak połączeń busem do \(busWindow?.to?.name ?? event.city)")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, Theme.Spacing.xl)
+        .padding(.horizontal, Theme.Spacing.l)
+    }
+
+    private func openBusBooking(_ raw: String?) {
+        guard let raw, let url = URL(string: raw) else { return }
+        UIApplication.shared.open(url)
+    }
+
+    private func loadBus(force: Bool = false) async {
+        busFailed = false
+        if force { busWindow = nil }
+        let day = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
+        do {
+            let result = try await BusPricesService.shared.bus(
+                fromCity: viewModel.selectedCity.name,
+                toCity: event.city,
+                eventDay: day
+            )
+            guard !Task.isCancelled else { return }
+            busWindow = result
+        } catch {
+            guard !Task.isCancelled else { return }
+            busFailed = true
+        }
+    }
+
+    private static func durationLabel(_ minutes: Int) -> String {
+        let h = minutes / 60
+        let m = minutes % 60
+        return m == 0 ? "\(h) h" : "\(h) h \(m) min"
     }
 
     private var reachableDestinations: [Destination] {

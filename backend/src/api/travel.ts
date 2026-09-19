@@ -3,6 +3,7 @@ import { Hono, type Context } from 'hono';
 import { isPlaceKind, type TravelPlace } from '../travel/places';
 import { airportForCity } from '../travel/airports';
 import { fetchRyanairWindow, fetchWizzairWindow, readFlightCache, writeFlightCache } from '../travel/flightsApi';
+import { busBookingUrl, fetchBusDay, resolveBusCity } from '../travel/flixbus';
 import { haversineKm, reachableEvents, type ReachableEvent, type TravelEventRow } from '../travel/reachability';
 import { buildCatalogue } from '../travel/catalogue';
 import { viatorNearestCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
@@ -296,6 +297,37 @@ async function flightHandler(c: Context<{ Bindings: Env }>, airline: 'ryanair' |
 
 travelRoutes.get('/flights/ryanair', (c) => flightHandler(c, 'ryanair'));
 travelRoutes.get('/flights/wizzair', (c) => flightHandler(c, 'wizzair'));
+
+interface BusParams {
+  fromCity: string;
+  toCity: string;
+  eventDay: string;
+}
+
+function busParams(q: Record<string, string | undefined>): BusParams | null {
+  const fromCity = (q.fromCity ?? '').trim();
+  const toCity = (q.toCity ?? '').trim();
+  const eventDay = q.eventDay ?? '';
+  if (!fromCity || !toCity || !/^\d{4}-\d{2}-\d{2}$/.test(eventDay)) return null;
+  return { fromCity, toCity, eventDay };
+}
+
+// Bus offers for one city pair around the event day. Empty is a valid answer
+// (no route); a thrown failure is a 502 the app retries.
+travelRoutes.get('/bus/flixbus', async (c) => {
+  const params = busParams(c.req.query());
+  if (!params) return c.json({ error: 'fromCity, toCity and eventDay (YYYY-MM-DD) required' }, 400);
+  try {
+    const [from, to] = await Promise.all([resolveBusCity(c.env.DB, params.fromCity), resolveBusCity(c.env.DB, params.toCity)]);
+    if (!from || !to) return c.json({ offers: [], from, to, available: false });
+    const offers = await fetchBusDay(c.env.DB, from.id, to.id, params.eventDay);
+    const bookUrl = busBookingUrl(from.id, to.id, params.eventDay);
+    return c.json({ offers, from, to, bookUrl, available: offers.length > 0 });
+  } catch (e) {
+    await alertFlightFailure(c.env, 'flixbus', (e as Error).message);
+    return c.json({ error: (e as Error).message }, 502);
+  }
+});
 
 // Stay22 hotel map widget URL. The app opens the URL, the widget does the rest.
 travelRoutes.get('/stays-widget', async (c) => {

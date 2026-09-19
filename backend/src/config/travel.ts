@@ -142,6 +142,30 @@ export const travel = {
       windowTtlMs: 24 * 3_600_000,
     },
   },
+  flixbus: {
+    provider: 'flixbus',
+    apiHost: 'https://global.api.flixbus.com',
+    shopHost: 'https://shop.flixbus.pl',
+    currency: 'PLN',
+    locale: 'pl_PL',
+    lang: 'pl',
+    autocompleteTtlMs: 30 * 24 * 3_600_000,
+    priceTtlMs: 6 * 3_600_000,
+    failureTtlMs: 5 * 60_000,
+    timeoutMs: 6_000,
+    // The window the bus search covers, in days around the event.
+    windowBefore: 1,
+    windowAfter: 1,
+    // City names resolve at these distances from the event when the exact
+    // city is not a Flix node: the nearest served stop stands in.
+    nearbyKm: 60,
+    awin: {
+      // Fill in the Awin advertiser id once FlixBus approves the program.
+      advertiserId: '',
+      publisherId: '3071193',
+      base: 'https://www.awin1.com/cread.php',
+    },
+  },
   viator: {
     provider: 'viator',
     hosts: {

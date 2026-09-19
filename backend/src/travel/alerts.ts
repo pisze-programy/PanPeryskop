@@ -1,7 +1,7 @@
 import { CONFIG } from '../config/index';
 import { snitchReport, type SnitchEnv } from '../seed/alert';
 
-export type FlightCarrier = 'ryanair' | 'wizzair' | 'all';
+export type FlightCarrier = 'ryanair' | 'wizzair' | 'flixbus' | 'all';
 
 export interface AlertEnv extends SnitchEnv {
   DB: D1Database;

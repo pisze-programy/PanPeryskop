@@ -34,6 +34,11 @@ extension APIClient {
         return try await get(path, params: ["origin": origin, "destination": destination, "eventDay": eventDay])
     }
 
+    /// Bus offers for the origin city and the event city on the event day.
+    static func getBusWindow(fromCity: String, toCity: String, eventDay: String) async throws -> BusWindowResponse {
+        try await get("/travel/bus/flixbus", params: ["fromCity": fromCity, "toCity": toCity, "eventDay": eventDay])
+    }
+
     /// Places for one Wycieczki section around the event coordinates. `day` is the
     /// trip day (YYYY-MM-DD); the partner filters availability around it.
     static func getTravelPlaces(kind: PlaceKind, lat: Double, lng: Double, limit: Int = 15, offset: Int = 0, day: String? = nil) async throws -> TravelPlacesResponse {

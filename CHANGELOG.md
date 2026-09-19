@@ -4,9 +4,17 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
-## [1.3.0] — build 42, 2026-09-19
+## [1.3.0] — build 44, 2026-09-19
 
 ### Added
+- Bus option in Wycieczki next to the flights: a "Samolot | Transport publiczny"
+  dropdown (default Samolot) switches the section between the flight board and
+  live FlixBus offers from the origin city to the event city, showing the
+  cheapest ride ("od XX zł"), its hour and duration, and a "Sprawdź na FlixBus"
+  button that opens the prefilled booking page. No route shows an honest "Brak
+  połączeń busem", a failure shows retry — never a made-up fare.
+
+### Changed
 - Onboarding screen rebuilt around a looping background video: the full 15-second
   clip plays behind a bottom-anchored dark gradient, with a small logo and app name,
   the headline "Jedna mapa", a subheadline, and the white Sign in with Apple button.

@@ -7,7 +7,7 @@ struct PlacesListSheet: View {
     let eventDay: String
     let onClose: () -> Void
 
-    @State private var detent: PresentationDetent = .medium
+    @State private var detent: PresentationDetent = .large
     @State private var browserItem: BrowserItem?
 
     var body: some View {

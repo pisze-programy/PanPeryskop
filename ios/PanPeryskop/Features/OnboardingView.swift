@@ -57,7 +57,7 @@ struct OnboardingView: View {
     }
 
     private var headline: some View {
-        Text("Wydarzenia na jednej mapie")
+        Text("Jedna mapa")
             .font(.system(size: 34, weight: .bold))
             .foregroundColor(.white)
             .fixedSize(horizontal: false, vertical: true)
@@ -65,7 +65,7 @@ struct OnboardingView: View {
     }
 
     private var subheadline: some View {
-        Text("Wydarzenia na mapie, ceny lotów i noclegów — bez szukania.")
+        Text("Wydarzenia lokalne i w Europie — loty, noclegi w zasięgu wzroku, bez szukania.")
             .font(.system(size: 17))
             .foregroundColor(.white.opacity(0.8))
             .fixedSize(horizontal: false, vertical: true)

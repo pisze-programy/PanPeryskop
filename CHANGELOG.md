@@ -7,12 +7,11 @@ All notable changes to PanPeryskop. Format based on
 ## [1.3.0] — build 42, 2026-09-19
 
 ### Added
-- Onboarding screen rebuilt around a looping background video: a muted, muted-loop
-  clip of a night concert sits behind a bottom-anchored dark gradient, with a small
-  logo and app name, the headline "Wydarzenia na jednej mapie", a subheadline, and
-  the Sign in with Apple button. The clip loops seamlessly (forward + reverse
-  ping-pong), pauses in the background, and is replaced by a plain background when
-  Reduce Motion is on.
+- Onboarding screen rebuilt around a looping background video: the full 15-second
+  clip plays behind a bottom-anchored dark gradient, with a small logo and app name,
+  the headline "Jedna mapa", a subheadline, and the white Sign in with Apple button.
+  The clip is muted, paused in the background, and replaced by a plain background
+  when Reduce Motion is on.
 
 ### Changed
 - Wycieczki explorer: entering Europe or changing the city now frames the whole

@@ -107,6 +107,7 @@
 		8300E0BE741D17D30E6D869B /* DateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E2600CD901D47BDA2BB05D /* DateTests.swift */; };
 		84D197577717604F47047F82 /* RailSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD67997E1977E7A508573268 /* RailSliderView.swift */; };
 		855D4453DB1274F73B0CBCCB /* MapOverlayExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CBAFAB9586FD8D5B7797BA3 /* MapOverlayExtensions.swift */; };
+		865B30B4758B9A2B6B009B45 /* BusDirectionSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF8563CB5C3F29E88B69063 /* BusDirectionSection.swift */; };
 		86AFF281A5884F71C0D2E94E /* DescriptionStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC285092C6C1F446940D3AD0 /* DescriptionStepView.swift */; };
 		86BD8A6F871DB769FEFE8CF3 /* ArcBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE51F539CAB5E7E9E94B8224 /* ArcBuilderTests.swift */; };
 		8A120729ED883B863E2F6E0B /* AppDates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0305307ED2743DD230586C16 /* AppDates.swift */; };
@@ -147,6 +148,7 @@
 		CEE38FB27F83C3CEA8B3F5B6 /* AppTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 766F0918FE219B7F068729EF /* AppTabBar.swift */; };
 		D2B5737D3C5A7C2DC8555C2D /* OnboardingGradient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2576064A0730F213CBEAAB8 /* OnboardingGradient.swift */; };
 		D5333482B921092CA0D0ECDC /* ArcBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88D958DB4EABF432525E84D7 /* ArcBuilder.swift */; };
+		D5813308B30ACE5D6638F855 /* BusEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 518E83717DC1370322B69F65 /* BusEmptyState.swift */; };
 		D5E4150E6E1D474715CAFD73 /* PlacesCardSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BFDAAB336298B26AC233375 /* PlacesCardSkeleton.swift */; };
 		D6A799AF2C571B00063DD451 /* MapCameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F91D477AB9293FD289D6885B /* MapCameraController.swift */; };
 		D6FD31B42607CB3427509708 /* TeamCrest.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED579B795740245608314A73 /* TeamCrest.swift */; };
@@ -237,6 +239,7 @@
 		50862340B8C3F217D19CE888 /* PlaceSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceSlider.swift; sourceTree = "<group>"; };
 		51183ED5E5EF86B278EE0CEB /* PendingPost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPost.swift; sourceTree = "<group>"; };
 		5180F10F5EFC633481668D9A /* PartnerBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartnerBanner.swift; sourceTree = "<group>"; };
+		518E83717DC1370322B69F65 /* BusEmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusEmptyState.swift; sourceTree = "<group>"; };
 		52BE58C2791255B2A36A2828 /* MapOverlayViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapOverlayViews.swift; sourceTree = "<group>"; };
 		53DAB5BAC3A48A1258C4CB63 /* FlightTimelineSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightTimelineSkeleton.swift; sourceTree = "<group>"; };
 		55DBE95A96A407C58FB5BF55 /* DayListSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayListSheet.swift; sourceTree = "<group>"; };
@@ -355,6 +358,7 @@
 		FD3CE6D19B4678638F0B58D0 /* BusDayStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusDayStrip.swift; sourceTree = "<group>"; };
 		FD969EB8623A9F1CE3A1E7F7 /* StaysSort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaysSort.swift; sourceTree = "<group>"; };
 		FE51F539CAB5E7E9E94B8224 /* ArcBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcBuilderTests.swift; sourceTree = "<group>"; };
+		FEF8563CB5C3F29E88B69063 /* BusDirectionSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusDirectionSection.swift; sourceTree = "<group>"; };
 		FF34ABB25977082FFC794B87 /* TripsSectionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsSectionHeader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -461,6 +465,8 @@
 			children = (
 				796BB29CEB4FAE4F2BC4585D /* Airline+Booking.swift */,
 				FD3CE6D19B4678638F0B58D0 /* BusDayStrip.swift */,
+				FEF8563CB5C3F29E88B69063 /* BusDirectionSection.swift */,
+				518E83717DC1370322B69F65 /* BusEmptyState.swift */,
 				36ABC560FFD3EB5403C95231 /* BusSkeleton.swift */,
 				D7804B40F897EB064C34DF64 /* CarrierFlightCard.swift */,
 				37AB53DA95A6D6FBE3DDD950 /* DestinationMapPage.swift */,
@@ -817,6 +823,8 @@
 				D5333482B921092CA0D0ECDC /* ArcBuilder.swift in Sources */,
 				704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */,
 				B74D6FA1CD2E0F713682F96E /* BusDayStrip.swift in Sources */,
+				865B30B4758B9A2B6B009B45 /* BusDirectionSection.swift in Sources */,
+				D5813308B30ACE5D6638F855 /* BusEmptyState.swift in Sources */,
 				679260C347C32818463CB6CA /* BusOffer.swift in Sources */,
 				8C29DB265E8D9BA5D77235CE /* BusPricesService.swift in Sources */,
 				1D2F2834430E9724C2415AEB /* BusSkeleton.swift in Sources */,
@@ -1108,7 +1116,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 47;
+				CURRENT_PROJECT_VERSION = 48;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1168,7 +1176,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 47;
+				CURRENT_PROJECT_VERSION = 48;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

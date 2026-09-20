@@ -1,10 +1,13 @@
 import SwiftUI
 
-/// Horizontal day tabs for the bus search. The event day is the last entry
-/// (the latest you can leave and still arrive); the strip opens scrolled to it.
+/// Horizontal day tabs for the bus search. The event day carries a border and
+/// the event icon; the strip opens scrolled to it.
 struct BusDayStrip: View {
     let days: [Date]
     let selected: Date
+    let eventDay: Date
+    let eventIcon: String
+    let scrollAnchor: UnitPoint
     let onSelect: (Date) -> Void
 
     private static let calendar = AppConstants.warsawCalendar
@@ -12,27 +15,35 @@ struct BusDayStrip: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
+                HStack(spacing: Theme.Spacing.s) {
                     ForEach(days, id: \.self) { day in
-                        tab(day)
-                            .id(day)
+                        tab(day).id(day)
                     }
                 }
-                .padding(.horizontal, Theme.Spacing.s)
+                .padding(.horizontal, Theme.Spacing.l)
             }
-            .onAppear {
-                proxy.scrollTo(selected, anchor: .trailing)
+            .onAppear { proxy.scrollTo(selected, anchor: scrollAnchor) }
+            .onChange(of: selected) { _, day in
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                    proxy.scrollTo(day, anchor: scrollAnchor)
+                }
             }
         }
     }
 
     private func tab(_ day: Date) -> some View {
         let isSelected = Self.calendar.isDate(day, inSameDayAs: selected)
+        let isEventDay = Self.calendar.isDate(day, inSameDayAs: eventDay)
         return Button {
             Haptics.selection()
             onSelect(day)
         } label: {
             VStack(spacing: 2) {
+                if isEventDay {
+                    Image(systemName: eventIcon)
+                        .font(.caption2)
+                        .foregroundColor(Theme.Palette.partnerGreen)
+                }
                 Text(AppConstants.weekdayFormatter.string(from: day))
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(isSelected ? .primary : .secondary)
@@ -40,13 +51,17 @@ struct BusDayStrip: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(isSelected ? .primary : .secondary)
             }
-            .frame(minWidth: 64)
+            .frame(minWidth: 56)
             .padding(.vertical, Theme.Spacing.s)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(isSelected ? Theme.Palette.partnerGreen : Color.clear)
-                    .frame(height: 2)
-            }
+            .padding(.horizontal, Theme.Spacing.s)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
+                    .fill(isSelected ? Theme.Palette.surface : .clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
+                    .stroke(Theme.Palette.partnerGreen, lineWidth: isEventDay ? 1.5 : 0)
+            )
         }
         .buttonStyle(.plain)
     }

@@ -39,12 +39,12 @@ struct PartnerBannerSection: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: "chevron.right")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(banner.foreground.opacity(0.7))
+                    .foregroundColor(banner.gradient.last ?? banner.foreground)
             }
             .padding(.horizontal, Theme.Spacing.l)
             .padding(.vertical, Theme.Spacing.m)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(LinearGradient(colors: banner.gradient, startPoint: .topTrailing, endPoint: .bottomLeading))
+            .background(LinearGradient(colors: banner.gradient, startPoint: .leading, endPoint: .trailing))
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)

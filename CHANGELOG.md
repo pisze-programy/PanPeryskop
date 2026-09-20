@@ -4,6 +4,24 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 48, 2026-09-20
+
+### Added
+- Return bus section in Wycieczki: a second, independent direction (event city →
+  origin) with departures from the event day forward a week. Both directions
+  share one component.
+
+### Changed
+- Bus offers are listed by departure time; the fastest is badged "Najszybszy,
+  <czas>" in green and the cheapest price is green, with a "Najtańszy, <czas>"
+  note. The route header sits above the day tabs, and the event day is marked
+  with a border and the event icon.
+- Bus loading, empty and error states share the offers-card shape, so switching
+  days no longer makes the sheet jump.
+- Partner banners use a horizontal gradient (blue left, red right for Airhelp;
+  a warm cream-to-orange for the eSIM card), and the chevron carries the
+  gradient's end colour.
+
 ## [1.3.0] — build 47, 2026-09-20
 
 ### Added

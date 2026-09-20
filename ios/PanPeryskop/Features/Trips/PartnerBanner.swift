@@ -7,6 +7,7 @@ struct PartnerBanner: Identifiable {
     let title: String
     let subtitle: String
     let url: URL
+    /// Left-to-right gradient, so the chevron on the right shows its end colour.
     let gradient: [Color]
     let foreground: Color
 }
@@ -21,7 +22,7 @@ extension PartnerBanner {
             url: URL(string: "https://airhelp.tpo.mx/XAt50GXJ")!,
             gradient: [
                 Color(hex: 0x2d5fd6),
-                Color(hex: 0x3a53b8),
+                Color(hex: 0x5a4fb4),
                 Color(hex: 0xb3516e),
             ],
             foreground: .white
@@ -31,7 +32,11 @@ extension PartnerBanner {
             title: "Poczuj wolność dzięki nieograniczonej transmisji danych",
             subtitle: "Karta eSIM od 16 zł",
             url: URL(string: "https://airalo.tpo.mx/O378fS2W")!,
-            gradient: [Color(hex: 0xf2ebe3), Color(hex: 0xf0e8e0)],
+            gradient: [
+                Color(hex: 0xf2ebe3),
+                Color(hex: 0xf6c283),
+                Color(hex: 0xf08e48),
+            ],
             foreground: Color(hex: 0x101012)
         ),
     ]

@@ -12,6 +12,7 @@ test('restaurants: curated list shape', () => {
     assert.ok(r.lat > 49 && r.lat < 55, `${r.name}: lat in Poland`);
     assert.ok(r.lng > 14 && r.lng < 24.2, `${r.name}: lng in Poland`);
     assert.ok(r.name.trim().length > 0 && r.city.trim().length > 0, `${r.name}: name + city`);
+    assert.ok(r.address.endsWith(`, ${r.city}`), `${r.name}: address ends with city`);
   }
 });
 

@@ -6,6 +6,8 @@ struct StoryBrowserOverlay: View {
     /// Animated vertical offset while the panel slides in/out.
     let offset: CGFloat
     let bottomInset: CGFloat
+    /// Keep any http(s) host in-app (restaurant sites are outside the allow-list).
+    var allowAnyHost: Bool = false
     let onClose: () -> Void
 
     static var panelHeight: CGFloat { UIScreen.main.bounds.height * 0.7 }
@@ -29,7 +31,7 @@ struct StoryBrowserOverlay: View {
                     }
                     .gesture(dragToClose)
 
-                InAppBrowserView(url: url, bottomInset: bottomInset, onClose: onClose)
+                InAppBrowserView(url: url, bottomInset: bottomInset, allowAnyHost: allowAnyHost, onClose: onClose)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(height: Self.panelHeight)

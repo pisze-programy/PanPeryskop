@@ -8,7 +8,9 @@ struct StoryInfoCard: View {
     @Binding var selectedShowtime: String?
     /// The showtime pager is being used → hold/resume the story timer.
     let onPagerInteracting: (Bool) -> Void
-    let onOpenBrowser: (URL) -> Void
+    /// Opens the in-app browser. The flag keeps any host in-app (restaurant sites
+    /// are arbitrary domains, outside the fixed allow-list).
+    let onOpenBrowser: (URL, Bool) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
@@ -52,7 +54,7 @@ struct StoryInfoCard: View {
             }
             if let url = post.link_url.flatMap(URL.init) {
                 Button {
-                    onOpenBrowser(url)
+                    onOpenBrowser(url, true)
                 } label: {
                     Label("Strona restauracji", systemImage: "arrow.up.right")
                         .font(.subheadline)
@@ -136,7 +138,7 @@ struct StoryInfoCard: View {
             // event page link when the post has no booking.
             if let url = post.bookingURL(for: effectiveShowtime ?? clockTime) ?? post.link_url.flatMap(URL.init) {
                 Button {
-                    onOpenBrowser(url)
+                    onOpenBrowser(url, false)
                 } label: {
                     Label("Strona wydarzenia", systemImage: "arrow.up.right")
                         .font(.subheadline)

@@ -11,6 +11,7 @@ struct StoryFullScreenView: View {
     /// Random gradient generated once per preview open — stable while viewing.
     @State private var backgroundSeed = StoryGradientSeed.random()
     @State private var browserURL: URL?
+    @State private var browserAllowAnyHost = false
     @State private var showBrowser = false
     @State private var browserOffset: CGFloat = 0
 
@@ -89,7 +90,7 @@ struct StoryFullScreenView: View {
             }
 
             if showBrowser, let url = browserURL {
-                StoryBrowserOverlay(url: url, offset: browserOffset, bottomInset: bottomSafeAreaInset, onClose: closeBrowser)
+                StoryBrowserOverlay(url: url, offset: browserOffset, bottomInset: bottomSafeAreaInset, allowAnyHost: browserAllowAnyHost, onClose: closeBrowser)
             }
         }
         .ignoresSafeArea()
@@ -135,7 +136,8 @@ struct StoryFullScreenView: View {
 
     // MARK: - In-app browser (custom full-bleed bottom panel)
 
-    private func openBrowser(_ url: URL) {
+    private func openBrowser(_ url: URL, allowAnyHost: Bool) {
+        browserAllowAnyHost = allowAnyHost
         browserURL = url
         showBrowser = true
         browserOffset = StoryBrowserOverlay.panelHeight

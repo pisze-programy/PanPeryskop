@@ -4,6 +4,17 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 51, 2026-09-20
+
+### Fixed
+- Restaurant pins keep the red gradient with the fork and knife glyph and the
+  star badge — the shared photo is only the story background, never the pin.
+- Restaurant pages open in the in-app browser. Their domains are outside the
+  fixed allow-list, so the first navigation was handed to Safari.
+- Restaurant cards show the street address, not just the cuisine and city.
+- The story badge strip no longer shows a meaningless "RESTAURANT" source badge
+  next to the "Restauracje" tag.
+
 ## [1.3.0] — build 50, 2026-09-20
 
 ### Added

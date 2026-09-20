@@ -74,7 +74,7 @@ struct SinglePostPin: View {
                     startBounce()
                 }
 
-                if let url = post.resolvedThumbURL {
+                if let url = post.resolvedThumbURL, !post.isRestaurant {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):

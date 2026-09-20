@@ -39,7 +39,9 @@ struct StoryBadgesView: View {
                 items.append(EventBadge(id: "tag-\(tagId)", text: label.uppercased(), icon: "tag.fill", color: badgeGray))
             }
         }
-        if let source = post.source, !source.isEmpty {
+        // Restaurants carry the tag "Restauracje"; their external_id prefix is also
+        // "restaurant", which would show a second, meaningless badge.
+        if let source = post.source, !source.isEmpty, !post.isRestaurant {
             items.append(EventBadge(id: "source-\(source)", text: source.uppercased(), icon: "network", color: badgeGray))
         }
         return items

@@ -51,7 +51,7 @@ struct StoryFullScreenView: View {
                 posts: vm.posts,
                 currentIndex: vm.currentIndex,
                 progressFraction: vm.progressFraction,
-                showsMenu: !vm.currentPost.isEvent,
+                showsMenu: vm.currentPost.isLive,
                 topInset: topSafeAreaInset,
                 onClose: {
                     Haptics.selection()

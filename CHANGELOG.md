@@ -4,6 +4,24 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 52, 2026-09-20
+
+### Fixed
+- Restaurant story card: the name is centred like an event, the cuisine sits on
+  the distinction line, and the location line shows the street address.
+- Restaurants no longer offer "Zgłoś" — the report menu is for live user content
+  only, not for seeded events or curated restaurants.
+- Multikino Poznań Stary Browar stands at the right place again: 143 pins carried
+  pre-fix coordinates because the VPS runs a pre-built bundle that a source fix
+  never reached. The bundle is redeployed and the affected pins are corrected and
+  geo-locked.
+
+### Changed
+- Flight lookups survive a transient Wizzair/Ryanair failure: a cached failure
+  marker no longer returns 502 for its whole five-minute TTL, and one delayed
+  retry covers network errors, timeouts, 429 and 5xx. Live flight failures now
+  reach Sentry.
+
 ## [1.3.0] — build 51, 2026-09-20
 
 ### Fixed

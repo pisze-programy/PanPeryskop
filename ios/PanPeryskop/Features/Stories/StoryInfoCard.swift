@@ -32,25 +32,37 @@ struct StoryInfoCard: View {
         )
     }
 
-    /// Curated restaurant: name, distinction, cuisine/city, website. No date or
-    /// countdown — a restaurant is evergreen, not an event.
+    /// Curated restaurant: centred name (like events), the distinction and cuisine
+    /// on one line, then the street address and the website link.
     private var restaurantContent: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+        VStack(spacing: Theme.Spacing.s) {
             Text(post.restaurantInfo.name)
                 .font(.headline)
                 .foregroundColor(.primary)
                 .lineLimit(2)
-            if let award = post.restaurantAwardLabel {
-                Label(award, systemImage: post.restaurantStars > 0 ? "star.fill" : "fork.knife")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(post.restaurantStars > 0 ? .orange : .secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+            HStack(spacing: Theme.Spacing.s) {
+                if let award = post.restaurantAwardLabel {
+                    Label(award, systemImage: post.restaurantStars > 0 ? "star.fill" : "fork.knife")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(post.restaurantStars > 0 ? .orange : .secondary)
+                }
+                if !post.restaurantInfo.cuisine.isEmpty {
+                    Text(post.restaurantInfo.cuisine)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
             }
-            if !post.restaurantInfo.detail.isEmpty {
-                Text(post.restaurantInfo.detail)
+            .frame(maxWidth: .infinity)
+            if !post.restaurantInfo.address.isEmpty {
+                Text(post.restaurantInfo.address)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
                     .lineLimit(2)
+                    .frame(maxWidth: .infinity)
             }
             if let url = post.link_url.flatMap(URL.init) {
                 Button {

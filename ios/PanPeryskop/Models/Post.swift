@@ -47,6 +47,10 @@ struct Post: Codable, Identifiable, Equatable {
     /// or hides them. Live stays one-time.
     var isEvent: Bool { category == AppConstants.categoryEvents }
 
+    /// Live user content — the only kind that can be reported. Seeded events and
+    /// curated restaurants are editorial, so the report menu never applies.
+    var isLive: Bool { (category ?? AppConstants.categoryLive) == AppConstants.categoryLive }
+
     /// Seed events encode `Tytuł: HH:MM, Lokalizacja` in the description — parse it
     /// for the calendar/timer panel. `00:00` means the start time is unknown.
     var eventInfo: EventInfo {
@@ -205,12 +209,12 @@ struct Post: Codable, Identifiable, Equatable {
         }
     }
 
-    /// Restaurant name + "cuisine, city" detail, parsed from the description
-    /// ("Name — cuisine, city"). Falls back to the whole description.
-    var restaurantInfo: (name: String, detail: String) {
-        let parts = description.components(separatedBy: " — ")
-        guard parts.count == 2 else { return (description, "") }
-        return (parts[0], parts[1])
+    /// Restaurant fields parsed from the description ("Name — cuisine · address").
+    var restaurantInfo: (name: String, cuisine: String, address: String) {
+        let head = description.components(separatedBy: " — ")
+        guard head.count == 2 else { return (description, "", "") }
+        let tail = head[1].components(separatedBy: " · ")
+        return (head[0], tail.first ?? "", tail.count > 1 ? tail[1] : "")
     }
 
     enum MediaType: String, Codable {

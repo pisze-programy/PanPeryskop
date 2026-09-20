@@ -48,6 +48,7 @@
 		2CF78395B0580F1D6FB70BFB /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7468F0DDF6EC36FD82D6286A /* Color+Hex.swift */; };
 		2DD4F3AE0CE4DD5BB3D25EBF /* StoryContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45BBEA564F679F629608030C /* StoryContent.swift */; };
 		2DE925E15F94F605799E514F /* FaveLikeButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E29EEF879BABF9A2A1A46D /* FaveLikeButton.swift */; };
+		2E646ABA6EA8121D0FD7FD85 /* PriceInfoSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1360B7C265CAD15F9C8300A1 /* PriceInfoSheet.swift */; };
 		2FE912ACB25E13BCF8007270 /* StoryShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B3F0EC9D5925DDB27B7B9D /* StoryShareSheet.swift */; };
 		32051E175B81368F63A587F5 /* CapsuleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC68AE344E35212E88E2AC81 /* CapsuleButton.swift */; };
 		32C1EF2CEFB79B6B8DF06DEF /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4962ABEB84A69F22E8AB6ED3 /* NetworkMonitor.swift */; };
@@ -201,6 +202,7 @@
 		0AFF2D3AC0370D62EABBDC9C /* MyPost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPost.swift; sourceTree = "<group>"; };
 		0DC053E7CD5C92EC950CB5B2 /* StaysSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaysSection.swift; sourceTree = "<group>"; };
 		11E809F59619A854A20553D0 /* CityAirportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityAirportTests.swift; sourceTree = "<group>"; };
+		1360B7C265CAD15F9C8300A1 /* PriceInfoSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceInfoSheet.swift; sourceTree = "<group>"; };
 		140AFF403C2BBDE47B612F2B /* StaysAnchorPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaysAnchorPoint.swift; sourceTree = "<group>"; };
 		145C020736F425E69A661FE5 /* PanPeryskopTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PanPeryskopTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		18A29AFA7C9AA7901EC14037 /* FilterButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterButton.swift; sourceTree = "<group>"; };
@@ -494,6 +496,7 @@
 				CC0AF8D08D495D1D8A812E0B /* PlacesListSheet.swift */,
 				5CC3D5D50D1D5E23E9F0587F /* PlacesListView.swift */,
 				A5A18BF050D2634EC4EE2764 /* PlacesSection.swift */,
+				1360B7C265CAD15F9C8300A1 /* PriceInfoSheet.swift */,
 				A2E604C948E764A378B1CC45 /* RunDistances.swift */,
 				9E24106BABF1C88CC96C2B26 /* RunPalette.swift */,
 				C32C04F87C2920BF4421489D /* Stay22MapView.swift */,
@@ -908,6 +911,7 @@
 				5E6C9007B770CD6A531F6A77 /* PlacesSection.swift in Sources */,
 				C0E44758121DAEDF631C5FA1 /* Post.swift in Sources */,
 				6370F2E449A6B8876C90BFAD /* PostUploader.swift in Sources */,
+				2E646ABA6EA8121D0FD7FD85 /* PriceInfoSheet.swift in Sources */,
 				6E5B07BCA8BBA1704D750129 /* ProfileView.swift in Sources */,
 				84D197577717604F47047F82 /* RailSliderView.swift in Sources */,
 				25C1E006036F6170428ECAE1 /* RunDistances.swift in Sources */,

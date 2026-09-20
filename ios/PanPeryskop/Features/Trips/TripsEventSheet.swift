@@ -241,7 +241,7 @@ struct TripsEventPage: View {
     }
 
     private var priceFooter: some View {
-        TripsSectionFooter(text: "Ceny są orientacyjne i mogą się zmienić u dostawcy.")
+        TripsSectionFooter(text: "Ceny są orientacyjne i mogą się zmienić u dostawcy", showsPriceInfo: true)
             .padding(.horizontal, Theme.Spacing.l)
             .padding(.top, Theme.Spacing.section)
     }

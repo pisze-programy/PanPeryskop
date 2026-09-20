@@ -53,11 +53,18 @@ struct TipButton: View {
 
 struct TripsSectionFooter: View {
     let text: String
+    /// Shows the clickable "i" that opens the price + external-link disclaimer.
+    var showsPriceInfo = false
 
     var body: some View {
-        Text(text)
-            .font(.caption2)
-            .foregroundColor(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.xs) {
+            Text(text)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if showsPriceInfo {
+                PriceInfoButton()
+            }
+        }
     }
 }

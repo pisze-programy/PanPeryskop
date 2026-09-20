@@ -6,6 +6,11 @@ All notable changes to PanPeryskop. Format based on
 
 ## [1.3.0] — build 53, 2026-09-20
 
+### Added
+- An "i" next to the price note opens a modal with the price and external-link
+  disclaimer: prices are indicative, outbound links may be affiliate links, and
+  the buyer is never charged more.
+
 ### Fixed
 - Story card height is constant across events: the single-showtime column matched
   the showtime pager (60 pt) instead of being 7 pt taller, and the title always

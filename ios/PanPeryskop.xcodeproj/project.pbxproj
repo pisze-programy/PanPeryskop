@@ -130,6 +130,7 @@
 		B574DB1E765C352C09443DB9 /* FlightTimelineSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53DAB5BAC3A48A1258C4CB63 /* FlightTimelineSkeleton.swift */; };
 		B6B424C782D048693468C120 /* StorySlideModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7794F8A4ABE38ABFD63657A8 /* StorySlideModifier.swift */; };
 		B725B3D59CA1A854B8FD94BF /* StaysTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B171B30D45987AE19320EA7 /* StaysTests.swift */; };
+		B74D6FA1CD2E0F713682F96E /* BusDayStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD3CE6D19B4678638F0B58D0 /* BusDayStrip.swift */; };
 		B75E0DBA2194C2670F968BDD /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0C2297077E1CF861F55EF2 /* User.swift */; };
 		BB2ED3E2827B55E14509332D /* DayLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CAC8E5C2632EA80740D6BFD /* DayLabels.swift */; };
 		BBCD3606093C80EF805A22B6 /* TripsEventPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4272F73CBB4736D74B923499 /* TripsEventPlanner.swift */; };
@@ -351,6 +352,7 @@
 		F905CD59F62583D98BB8F1B3 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		F91D477AB9293FD289D6885B /* MapCameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapCameraController.swift; sourceTree = "<group>"; };
 		FBDD7756E22141DD95593257 /* City.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = City.swift; sourceTree = "<group>"; };
+		FD3CE6D19B4678638F0B58D0 /* BusDayStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusDayStrip.swift; sourceTree = "<group>"; };
 		FD969EB8623A9F1CE3A1E7F7 /* StaysSort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaysSort.swift; sourceTree = "<group>"; };
 		FE51F539CAB5E7E9E94B8224 /* ArcBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcBuilderTests.swift; sourceTree = "<group>"; };
 		FF34ABB25977082FFC794B87 /* TripsSectionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsSectionHeader.swift; sourceTree = "<group>"; };
@@ -458,6 +460,7 @@
 			isa = PBXGroup;
 			children = (
 				796BB29CEB4FAE4F2BC4585D /* Airline+Booking.swift */,
+				FD3CE6D19B4678638F0B58D0 /* BusDayStrip.swift */,
 				36ABC560FFD3EB5403C95231 /* BusSkeleton.swift */,
 				D7804B40F897EB064C34DF64 /* CarrierFlightCard.swift */,
 				37AB53DA95A6D6FBE3DDD950 /* DestinationMapPage.swift */,
@@ -813,6 +816,7 @@
 				F83DB2EE1C81C2E3A19B19B9 /* AppleSignIn.swift in Sources */,
 				D5333482B921092CA0D0ECDC /* ArcBuilder.swift in Sources */,
 				704C836CCC1B68D39D5F8B29 /* AuthManager.swift in Sources */,
+				B74D6FA1CD2E0F713682F96E /* BusDayStrip.swift in Sources */,
 				679260C347C32818463CB6CA /* BusOffer.swift in Sources */,
 				8C29DB265E8D9BA5D77235CE /* BusPricesService.swift in Sources */,
 				1D2F2834430E9724C2415AEB /* BusSkeleton.swift in Sources */,
@@ -1104,7 +1108,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 47;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1164,7 +1168,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 47;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

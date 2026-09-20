@@ -4,6 +4,22 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 47, 2026-09-20
+
+### Added
+- Bus day tabs in Wycieczki: a week of departures ending on the event day, opened
+  on the event day and scrollable back, so a morning departure can still make an
+  evening event. Picking a day reloads the offers.
+
+### Changed
+- Bus card now leads with the route ("Poznań → Berlin") and lists up to three
+  departures, the cheapest first and then the earliest. The whole card opens the
+  booking page; the chevron only marks it as tappable.
+- Flights with no fare left for the day now read "Bilety wyprzedane".
+- Partner banners are compact: the call-to-action pill is gone and the chevron
+  sits on the right, so the two banners take a fraction of their old height and
+  no longer outweigh the core sections.
+
 ## [1.3.0] — build 46, 2026-09-20
 
 ### Added

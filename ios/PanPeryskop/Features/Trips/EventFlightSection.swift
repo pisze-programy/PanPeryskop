@@ -21,6 +21,7 @@ struct EventFlightSection: View {
     @State private var showsModeSheet = false
     @State private var busWindow: BusWindowResponse?
     @State private var busFailed = false
+    @State private var busDay: Date?
 
     private var allOptions: [FlightOption] {
         let options = reachableDestinations.flatMap { destination -> [FlightOption] in
@@ -75,7 +76,21 @@ struct EventFlightSection: View {
     }
 
     private var loadTrigger: String { "\(event.id)|\(selectedOption?.id ?? "")|\(isActive)" }
-    private var busTrigger: String { "\(event.id)|\(isActive)|\(mode.rawValue)" }
+    private var busTrigger: String { "\(event.id)|\(isActive)|\(mode.rawValue)|\(AppConstants.isoDayFormatter.string(from: selectedBusDay))" }
+
+    /// The event day is the latest a bus can leave: you must arrive before it.
+    private var eventBusDay: Date {
+        let day = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
+        return AppConstants.warsawCalendar.startOfDay(for: day)
+    }
+
+    /// A week of departures ending on the event day, so the tab strip opens on it.
+    private var busDays: [Date] {
+        let calendar = AppConstants.warsawCalendar
+        return (0...7).reversed().map { calendar.date(byAdding: .day, value: -$0, to: eventBusDay) ?? eventBusDay }
+    }
+
+    private var selectedBusDay: Date { busDay ?? eventBusDay }
 
     @ViewBuilder
     private var mapRail: some View {
@@ -112,16 +127,19 @@ struct EventFlightSection: View {
 
     @ViewBuilder
     private var busContent: some View {
+        BusDayStrip(days: busDays, selected: selectedBusDay) { day in
+            busDay = day
+        }
         if busFailed {
             ErrorState(message: "Nie udało się pobrać połączeń") {
-                Task { await loadBus(force: true) }
+                Task { await loadBus() }
             }
             .padding(.horizontal, Theme.Spacing.l)
         } else if let window = busWindow {
-            if let cheapest = window.offers.first {
-                busCard(cheapest, window: window)
-            } else {
+            if window.offers.isEmpty {
                 busEmpty
+            } else {
+                busCard(window)
             }
         } else {
             BusSkeleton()
@@ -129,28 +147,71 @@ struct EventFlightSection: View {
         }
     }
 
-    private func busCard(_ offer: BusOffer, window: BusWindowResponse) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            HStack(spacing: Theme.Spacing.s) {
-                Image(systemName: "bus.fill")
-                    .foregroundColor(Theme.Palette.partnerGreen)
-                Text(window.to?.name ?? event.city)
-                    .font(.headline)
-                Spacer(minLength: 0)
-            }
-            Text("Najtańszy: \(offer.hour), \(Self.durationLabel(offer.durationMinutes))\(offer.transfers == 0 ? ", bez przesiadek" : "")")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            CapsuleButton(
-                title: "Sprawdź na FlixBus",
-                trailingText: "od \(offer.price) zł",
-                tint: Theme.Palette.partnerGreen,
-                fullWidth: true
-            ) {
-                openBusBooking(window.bookUrl)
-            }
+    /// Up to three departures: the cheapest first, then the earliest of the day.
+    private func busPreview(_ offers: [BusOffer]) -> [BusOffer] {
+        let byHour = offers.sorted { $0.hour < $1.hour }
+        let preview = Array(byHour.prefix(3))
+        guard let cheapest = offers.min(by: { $0.price < $1.price }) else { return preview }
+        if preview.contains(where: { $0.id == cheapest.id }) {
+            return [cheapest] + preview.filter { $0.id != cheapest.id }
         }
+        return [cheapest] + preview.prefix(2)
+    }
+
+    private func busCard(_ window: BusWindowResponse) -> some View {
+        let rows = busPreview(window.offers)
+        let from = window.from?.name ?? viewModel.selectedCity.name
+        let to = window.to?.name ?? event.city
+        return Button {
+            Haptics.selection()
+            openBusBooking(window.bookUrl)
+        } label: {
+            VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+                HStack(spacing: Theme.Spacing.s) {
+                    Image(systemName: "bus.fill")
+                        .foregroundColor(Theme.Palette.partnerGreen)
+                    Text("\(from) → \(to)")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.secondary)
+                }
+                VStack(spacing: Theme.Spacing.s) {
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, offer in
+                        busRow(offer, isCheapest: index == 0)
+                    }
+                }
+            }
+            .padding(Theme.Spacing.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        }
+        .buttonStyle(.plain)
         .padding(.horizontal, Theme.Spacing.l)
+    }
+
+    private func busRow(_ offer: BusOffer, isCheapest: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.m) {
+            Text(offer.hour)
+                .font(.subheadline.weight(.semibold))
+                .frame(width: 46, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(Self.durationLabel(offer.durationMinutes))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                if offer.transfers > 0 {
+                    Text("\(offer.transfers) przesiadka")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+            Text("\(offer.price) zł")
+                .font(.headline)
+                .foregroundColor(isCheapest ? Theme.Palette.partnerGreen : .primary)
+        }
     }
 
     private var busEmpty: some View {
@@ -169,15 +230,14 @@ struct EventFlightSection: View {
         UIApplication.shared.open(url)
     }
 
-    private func loadBus(force: Bool = false) async {
+    private func loadBus() async {
         busFailed = false
-        if force { busWindow = nil }
-        let day = Date(timeIntervalSince1970: TimeInterval(event.start_ms) / 1000)
+        busWindow = nil
         do {
             let result = try await BusPricesService.shared.bus(
                 fromCity: viewModel.selectedCity.name,
                 toCity: event.city,
-                eventDay: day
+                eventDay: selectedBusDay
             )
             guard !Task.isCancelled else { return }
             busWindow = result

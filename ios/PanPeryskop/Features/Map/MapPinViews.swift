@@ -104,10 +104,21 @@ struct SinglePostPin: View {
 
     private var fallbackIcon: some View {
         ZStack {
-            Circle().fill(Color.white.opacity(0.9))
-            Image(systemName: post.travelPinSymbol ?? iconForType(post.type))
-                .font(.body)
-                .foregroundColor(.black.opacity(0.7))
+            if let style = post.travelPin {
+                LinearGradient(
+                    colors: [Color(hex: style.startHex), Color(hex: style.endHex)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Image(systemName: style.icon)
+                    .font(.body)
+                    .foregroundColor(.white)
+            } else {
+                Circle().fill(Color.white.opacity(0.9))
+                Image(systemName: iconForType(post.type))
+                    .font(.body)
+                    .foregroundColor(.black.opacity(0.7))
+            }
         }
     }
 
@@ -129,7 +140,9 @@ private func iconForType(_ type: Post.MediaType) -> String {
 struct ClusterPin: View {
     let cluster: PostCluster
 
-    private static let ttlHours: TimeInterval = AppConstants.postTTLHours
+    private static let ttlHours: Double = AppConstants.postTTLHours
+
+    @State private var sheenPhase: CGFloat = -1.4
 
     private var oldest: Post {
         cluster.posts.min(by: { $0.created_at < $1.created_at }) ?? cluster.posts[0]
@@ -172,6 +185,27 @@ struct ClusterPin: View {
             Text("\(cluster.count)")
                 .font(.system(size: 17, weight: .bold))
                 .foregroundColor(.white)
+        }
+        .overlay { sheen }
+    }
+
+    /// A slow, faint blue sweep, so a group pin is not fully static.
+    private var sheen: some View {
+        GeometryReader { geo in
+            LinearGradient(
+                colors: [.clear, Color(hex: 0x9ecbff).opacity(0.45), .clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: geo.size.width * 0.7)
+            .offset(x: sheenPhase * geo.size.width)
+        }
+        .clipShape(Circle())
+        .allowsHitTesting(false)
+        .onAppear {
+            withAnimation(.linear(duration: 2.6).repeatForever(autoreverses: false)) {
+                sheenPhase = 1.4
+            }
         }
     }
 }

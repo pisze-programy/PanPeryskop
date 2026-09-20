@@ -29,8 +29,8 @@ extension PartnerBanner {
         ),
         PartnerBanner(
             id: "airalo",
-            title: "Poczuj wolność dzięki nieograniczonej transmisji danych",
-            subtitle: "Karta eSIM od 16 zł",
+            title: "Karta eSIM — bez limitu w Europie!",
+            subtitle: "Poczuj wolność na wyjeździe, od 16 zł",
             url: URL(string: "https://airalo.tpo.mx/O378fS2W")!,
             gradient: [
                 Color(hex: 0xf2ebe3),

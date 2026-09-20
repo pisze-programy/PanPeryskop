@@ -39,7 +39,7 @@ struct PartnerBannerSection: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: "chevron.right")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(banner.gradient.last ?? banner.foreground)
+                    .foregroundColor(banner.foreground.opacity(0.9))
             }
             .padding(.horizontal, Theme.Spacing.l)
             .padding(.vertical, Theme.Spacing.m)

@@ -4,6 +4,19 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 49, 2026-09-20
+
+### Changed
+- Wycieczki map pins carry identity: a match draws a gradient of the two team
+  colours with the stadium glyph, a run draws its distance-palette gradient with
+  the runner. Group pins stay the same but get a faint blue sheen so they are not
+  fully static.
+- Partner banner chevron was drawn in the gradient's own end colour and was
+  therefore invisible; it now uses the banner foreground. The eSIM banner reads
+  "Karta eSIM — bez limitu w Europie!" / "Poczuj wolność na wyjeździe, od 16 zł".
+- Choosing a bus day no longer pins that day to the screen edge; the strip keeps
+  its position, like the flight timeline.
+
 ## [1.3.0] — build 48, 2026-09-20
 
 ### Added

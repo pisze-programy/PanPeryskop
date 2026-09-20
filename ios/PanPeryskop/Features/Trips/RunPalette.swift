@@ -1,9 +1,22 @@
 import SwiftUI
+import UIKit
 
 /// Colour for a run, from light (short/easy, asphalt) to dark (long/hard, trail,
 /// ultra). All inputs come from the provider's real `distance`/`distances`,
 /// `surface` and `difficulty`.
 enum RunPalette {
+    /// Two-stop gradient for the map pin: the distance colour and a darker shade.
+    static func gradientHex(for event: TravelEvent) -> (UInt32, UInt32) {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(color(for: event)).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return (hex(r, g, b), hex(r * 0.72, g * 0.72, b * 0.72))
+    }
+
+    private static func hex(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat) -> UInt32 {
+        let channel: (CGFloat) -> UInt32 = { UInt32(max(0, min(1, $0)) * 255) }
+        return (channel(r) << 16) | (channel(g) << 8) | channel(b)
+    }
+
     static func color(for event: TravelEvent) -> Color {
         let t = intensity(for: event)
         let hue = 0.10 - 0.08 * t

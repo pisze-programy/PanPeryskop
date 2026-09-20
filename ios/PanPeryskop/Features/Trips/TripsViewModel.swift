@@ -599,17 +599,21 @@ extension TravelEvent {
             grid_cell_id: nil, liked: false, disliked: false, watched: false,
             author_name: provider, media_url: nil, thumb_url: nil, author_avatar_url: nil,
             is_sponsored: false, category: nil, link_url: link, is_sold_out: nil,
-            showtimes: nil, showtime_booking: nil, tags: [tag], source: provider
+            showtimes: nil, showtime_booking: nil, travelPin: pinStyle, tags: [tag], source: provider
         )
     }
-}
 
-extension Post {
-    /// Pin glyph for a travel event, derived from its tag (football vs running).
-    var travelPinSymbol: String? {
-        guard user_id == "travel", let tags else { return nil }
-        if tags.contains(TripsViewModel.TravelTag.runs.rawValue) { return "figure.run" }
-        if tags.contains(TripsViewModel.TravelTag.football.rawValue) { return "soccerball" }
-        return nil
+    /// Pin look: a match takes both team colours and the stadium glyph, a run
+    /// takes its distance palette and the runner glyph.
+    var pinStyle: TravelPinStyle? {
+        if isRun {
+            let (start, end) = RunPalette.gradientHex(for: self)
+            return TravelPinStyle(icon: "figure.run", startHex: start, endHex: end)
+        }
+        return TravelPinStyle(
+            icon: "sportscourt.fill",
+            startHex: PinHex.value(metaData?.homeColor) ?? 0x0d48bd,
+            endHex: PinHex.value(metaData?.awayColor) ?? 0xc6007e
+        )
     }
 }

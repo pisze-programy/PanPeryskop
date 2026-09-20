@@ -29,6 +29,8 @@ struct Post: Codable, Identifiable, Equatable {
     let is_sold_out: Bool?
     let showtimes: [String]?
     var showtime_booking: [ShowtimeBooking]? = nil
+    /// Pin look for a travel event (team-colour gradient or run distance colour).
+    var travelPin: TravelPinStyle? = nil
 
     /// Canonical event tags (ids from the /stories/tags catalog) — empty for untagged posts.
     let tags: [String]?
@@ -173,7 +175,7 @@ struct Post: Codable, Identifiable, Equatable {
             liked: liked ?? self.liked, disliked: disliked ?? self.disliked, watched: watched ?? self.watched,
             author_name: author_name, media_url: media_url, thumb_url: thumb_url,
             author_avatar_url: author_avatar_url,
-            is_sponsored: is_sponsored, category: category, link_url: link_url, is_sold_out: is_sold_out, showtimes: showtimes, showtime_booking: showtime_booking, tags: tags, source: source
+            is_sponsored: is_sponsored, category: category, link_url: link_url, is_sold_out: is_sold_out, showtimes: showtimes, showtime_booking: showtime_booking, travelPin: travelPin, tags: tags, source: source
         )
     }
 

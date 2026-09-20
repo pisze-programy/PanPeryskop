@@ -23,11 +23,6 @@ struct BusDayStrip: View {
                 .padding(.horizontal, Theme.Spacing.l)
             }
             .onAppear { proxy.scrollTo(selected, anchor: scrollAnchor) }
-            .onChange(of: selected) { _, day in
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                    proxy.scrollTo(day, anchor: scrollAnchor)
-                }
-            }
         }
     }
 

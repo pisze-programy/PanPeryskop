@@ -26,6 +26,7 @@
 		17F2F750BC0DBE923A98E8CB /* StaysWidgetLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73D24DD970FF4953EFA07601 /* StaysWidgetLoader.swift */; };
 		1824C10E93D5DE59C858A508 /* MapContentProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CC6FFCB08FB57A371173FF6 /* MapContentProvider.swift */; };
 		182C1A31786783D4FF5A12D6 /* NotificationNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = C26388CF369194FEBE99969F /* NotificationNames.swift */; };
+		1944A67C9E72462DE6905CAD /* PartnerBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5180F10F5EFC633481668D9A /* PartnerBanner.swift */; };
 		19D5F25597C51D3CB1DEBEB2 /* PlaceRowsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AA5BFFF9D2545CFAF2139E /* PlaceRowsList.swift */; };
 		1BE065A7EEF27FD5D834156F /* MapFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0313275F54CAE52C1764934 /* MapFilterBar.swift */; };
 		1D2F2834430E9724C2415AEB /* BusSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ABC560FFD3EB5403C95231 /* BusSkeleton.swift */; };
@@ -139,6 +140,7 @@
 		C6C5D49E6E17850BEC89CC9F /* StaysSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC053E7CD5C92EC950CB5B2 /* StaysSection.swift */; };
 		C7F65256927A31D898558C63 /* MapOverlayViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52BE58C2791255B2A36A2828 /* MapOverlayViews.swift */; };
 		C80A8E2C26F7DF70940D2A66 /* PanPeryskopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF363C9DF35DD8CFF0D626AB /* PanPeryskopApp.swift */; };
+		C972550CBD3E097FDA353B30 /* PartnerBannerSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EFCCEBF56025539D2E1E590 /* PartnerBannerSection.swift */; };
 		CBA26C98A2E111C597502213 /* StayRange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 966D1BFAA7477826BACF207A /* StayRange.swift */; };
 		CECE3357221FA0E0F7164F66 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15F3F36A0E617633DA2A779 /* SettingsView.swift */; };
 		CEE38FB27F83C3CEA8B3F5B6 /* AppTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 766F0918FE219B7F068729EF /* AppTabBar.swift */; };
@@ -229,9 +231,11 @@
 		4962ABEB84A69F22E8AB6ED3 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		4AA48B8F37907E9497C85C4E /* FlightOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightOption.swift; sourceTree = "<group>"; };
 		4CAC8E5C2632EA80740D6BFD /* DayLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayLabels.swift; sourceTree = "<group>"; };
+		4EFCCEBF56025539D2E1E590 /* PartnerBannerSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartnerBannerSection.swift; sourceTree = "<group>"; };
 		501091228071AF71FCC0106C /* LogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogicTests.swift; sourceTree = "<group>"; };
 		50862340B8C3F217D19CE888 /* PlaceSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceSlider.swift; sourceTree = "<group>"; };
 		51183ED5E5EF86B278EE0CEB /* PendingPost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPost.swift; sourceTree = "<group>"; };
+		5180F10F5EFC633481668D9A /* PartnerBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartnerBanner.swift; sourceTree = "<group>"; };
 		52BE58C2791255B2A36A2828 /* MapOverlayViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapOverlayViews.swift; sourceTree = "<group>"; };
 		53DAB5BAC3A48A1258C4CB63 /* FlightTimelineSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightTimelineSkeleton.swift; sourceTree = "<group>"; };
 		55DBE95A96A407C58FB5BF55 /* DayListSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayListSheet.swift; sourceTree = "<group>"; };
@@ -464,6 +468,8 @@
 				40772C13D951012865BD0096 /* FlightTimeline.swift */,
 				53DAB5BAC3A48A1258C4CB63 /* FlightTimelineSkeleton.swift */,
 				18B96DC041ACB25C8EF41626 /* MapAppPickerSheet.swift */,
+				5180F10F5EFC633481668D9A /* PartnerBanner.swift */,
+				4EFCCEBF56025539D2E1E590 /* PartnerBannerSection.swift */,
 				061D1BF76A85420B819565CC /* PlaceCard.swift */,
 				C8CD6BD0A4BED70D4ED47F42 /* PlacePreviewLoader.swift */,
 				E347A53F6B6F4E0A89EA4C6E /* PlaceRowSkeleton.swift */,
@@ -866,6 +872,8 @@
 				7776F8B9724CD7CA1CC87E3B /* OnboardingView.swift in Sources */,
 				5F3CBA0EA3AE88494F0CDA15 /* PageDots.swift in Sources */,
 				C80A8E2C26F7DF70940D2A66 /* PanPeryskopApp.swift in Sources */,
+				1944A67C9E72462DE6905CAD /* PartnerBanner.swift in Sources */,
+				C972550CBD3E097FDA353B30 /* PartnerBannerSection.swift in Sources */,
 				AAF4E6450DC795FBAC2D1028 /* PendingPost.swift in Sources */,
 				576B4EB45DFED915802A7168 /* PendingPostsStore.swift in Sources */,
 				2C2ACB375D317F5DD46C4415 /* PermissionCardsView.swift in Sources */,
@@ -1096,7 +1104,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 45;
+				CURRENT_PROJECT_VERSION = 46;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1156,7 +1164,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 45;
+				CURRENT_PROJECT_VERSION = 46;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

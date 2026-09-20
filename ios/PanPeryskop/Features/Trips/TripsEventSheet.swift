@@ -215,7 +215,6 @@ struct TripsEventPage: View {
                     event: event,
                     origins: origins,
                     destinations: destinations,
-                    destination: destination,
                     reachableAirports: reachableAirports,
                     reachableCarriers: event.reachableCarriers,
                     onSelectDestination: { planner.destination = $0 },

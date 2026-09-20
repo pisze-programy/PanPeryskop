@@ -9,6 +9,9 @@ struct DestinationMapRail: View {
     let onSelect: (FlightOption) -> Void
 
     @State private var activeId: String?
+    /// True while the rail sets its own position, so a programmatic move never
+    /// echoes back as a user selection and starts a select/sync loop.
+    @State private var isSyncing = false
 
     private static let mapHeight: CGFloat = 190
 
@@ -36,23 +39,29 @@ struct DestinationMapRail: View {
                     .stroke(Theme.Palette.hairline, lineWidth: 0.5)
             )
             .onChange(of: activeId) { _, newValue in
-                guard let newValue, let option = options.first(where: { $0.id == newValue }) else { return }
+                guard !isSyncing, let newValue, let option = options.first(where: { $0.id == newValue }) else { return }
                 onSelect(option)
             }
             .onChange(of: selected?.id) { _, newValue in
                 guard let newValue, newValue != activeId else { return }
-                activeId = newValue
+                setActive(newValue)
             }
             .onChange(of: options.map(\.id)) { _, _ in
                 guard activeId == nil || !options.contains(where: { $0.id == activeId }) else { return }
-                activeId = selected?.id ?? options.first?.id
+                setActive(selected?.id ?? options.first?.id)
             }
-            .onAppear { activeId = selected?.id ?? options.first?.id }
+            .onAppear { setActive(selected?.id ?? options.first?.id) }
 
             if options.count > 1 {
                 PageDots(count: options.count, index: currentIndex)
             }
         }
+    }
+
+    private func setActive(_ id: String?) {
+        isSyncing = true
+        activeId = id
+        DispatchQueue.main.async { isSyncing = false }
     }
 
     private var currentIndex: Int {

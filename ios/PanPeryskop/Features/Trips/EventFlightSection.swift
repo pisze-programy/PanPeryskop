@@ -4,7 +4,6 @@ struct EventFlightSection: View {
     let event: TravelEvent
     let origins: [Airport]
     let destinations: [Destination]
-    let destination: Destination?
     var reachableAirports: Set<String>? = nil
     /// Per destination IATA: carriers with flights around the event day. nil = show all.
     var reachableCarriers: [String: [String]]? = nil

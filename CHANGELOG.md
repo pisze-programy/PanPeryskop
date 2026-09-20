@@ -12,6 +12,8 @@ All notable changes to PanPeryskop. Format based on
   reserves two lines. Swiping between stories no longer makes the card jump.
 - Restaurant card keeps only the name centred; the distinction, cuisine, address
   and website link stay left-aligned.
+- The Michelin star is neutral grey, matching the Bib Gourmand label, instead of
+  yellow — on the card and on the map pin badge.
 
 ## [1.3.0] — build 52, 2026-09-20
 

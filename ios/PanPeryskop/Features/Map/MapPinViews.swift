@@ -110,7 +110,9 @@ struct SinglePostPin: View {
             ForEach(0..<post.restaurantStars, id: \.self) { _ in
                 Image(systemName: "star.fill")
                     .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(.yellow)
+                    // Same gray family as the card's distinction label. systemGray
+                    // (not .secondary) stays readable on the dark badge capsule.
+                    .foregroundColor(Color(.systemGray))
             }
         }
         .padding(.horizontal, 4)

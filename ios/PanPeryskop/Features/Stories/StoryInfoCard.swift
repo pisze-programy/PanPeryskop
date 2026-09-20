@@ -47,7 +47,7 @@ struct StoryInfoCard: View {
                     Label(award, systemImage: post.restaurantStars > 0 ? "star.fill" : "fork.knife")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(post.restaurantStars > 0 ? .orange : .secondary)
+                        .foregroundColor(.secondary)
                 }
                 if !post.restaurantInfo.cuisine.isEmpty {
                     Text(post.restaurantInfo.cuisine)

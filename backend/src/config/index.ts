@@ -11,6 +11,7 @@ import { helios } from './providers/helios';
 import { luma } from './providers/luma';
 import { meetup } from './providers/meetup';
 import { travel } from './travel';
+import { analytics } from './analytics';
 
 export const CONFIG = {
   time,
@@ -28,6 +29,7 @@ export const CONFIG = {
     meetup,
   },
   travel,
+  analytics,
 } as const;
 
 export type { TravelTag, TravelRunType, PlaceKind } from './travel';

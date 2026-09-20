@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev --config wrangler.toml",
-    "deploy": "wrangler deploy --config wrangler.toml",
+    "deploy": "bash scripts/deploy.sh",
     "test": "tsx --test test/seed*.test.ts",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "gen:templates": "tsx scripts/gen-templates.ts",
@@ -15,11 +15,13 @@
   },
   "dependencies": {
     "@cloudflare/puppeteer": "^1.3.0",
+    "@sentry/cloudflare": "^10.75.0",
     "hono": "^4.6.0",
     "nanoid": "^6.0.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5",
+    "@sentry/cli": "^3.8.0",
     "@types/node": "^26.2.0",
     "tsx": "^4",
     "typescript": "^5.7.0",

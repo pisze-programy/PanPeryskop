@@ -13,6 +13,10 @@ import {clientErrorRoutes} from './api/clientErrors';
 import {appleEventsRoutes} from './api/appleEvents';
 import {reportsRoutes} from './api/reports';
 import {travelRoutes} from './api/travel';
+import {usageObserver} from './analytics/observer';
+import {redirectRoutes} from './analytics/redirect';
+import {withSentry} from '@sentry/cloudflare';
+import {sentryOptions} from './analytics/sentry';
 import {tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
 import {produceSeedWindow, runQueue, SeedQueueMessage, watchdogUnits} from './seed/pipeline/queue';
 import {pruneSeedData, pruneSeedManifests} from './seed/pipeline/cleanup';
@@ -46,6 +50,10 @@ app.use(
     maxAge: 86_400,
   })
 );
+
+app.use('*', usageObserver());
+
+app.route('/', redirectRoutes);
 
 app.route('/auth', authRoutes);
 app.route('/users', usersRoutes);
@@ -121,7 +129,9 @@ app.post('/admin/seed', async (c) => {
   }
 });
 
-export default {
+export default withSentry<Env, SeedQueueMessage>(
+  (env) => sentryOptions(env),
+  {
   fetch: app.fetch.bind(app),
   async queue(batch: MessageBatch<SeedQueueMessage>, env: Env): Promise<void> {
     await runQueue(env, batch);
@@ -192,4 +202,5 @@ export default {
       })().catch((e) => console.error(`seed cron failed: ${(e as Error).message}`))
     );
   },
-};
+  }
+);

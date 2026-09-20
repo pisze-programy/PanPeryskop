@@ -11,6 +11,14 @@ compatibility_flags = ["nodejs_compat"]
 [limits]
 cpu_ms = 300_000
 
+# Emit source maps so Sentry stack traces are readable (not minified).
+upload_source_maps = true
+
+# Expose the deploy id to the Worker as CF_VERSION_METADATA, so Sentry tags each
+# event with its release and can match an uploaded source map to the deploy.
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
 
 [observability.logs]
 enabled = true

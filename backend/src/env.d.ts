@@ -45,4 +45,12 @@ interface Env {
   GOOGLE_CLIENT_ID?: string;
   // Cron schedule (mirrors wrangler.toml [triggers]) for the dashboard display.
   CRON_SCHEDULE?: string;
+  // Product analytics (server-side GA4 Measurement Protocol). The secret is a
+  // wrangler secret; the salt makes the anonymous client id non-reversible.
+  GA4_API_SECRET?: string;
+  ANALYTICS_SALT?: string;
+  // Base URL for minted shortlinks (defaults to the production API host).
+  REDIRECT_BASE?: string;
+  // Sentry DSN (EU region). Error monitoring only; no user data is sent.
+  SENTRY_DSN?: string;
 }

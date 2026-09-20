@@ -4,6 +4,7 @@ import { isPlaceKind, type TravelPlace } from '../travel/places';
 import { airportForCity } from '../travel/airports';
 import { fetchRyanairWindow, fetchWizzairWindow, readFlightCache, writeFlightCache } from '../travel/flightsApi';
 import { busBookingUrl, fetchBusDay, resolveBusCity } from '../travel/flixbus';
+import { mintRedirect } from '../analytics/redirect';
 import { haversineKm, reachableEvents, type ReachableEvent, type TravelEventRow } from '../travel/reachability';
 import { buildCatalogue } from '../travel/catalogue';
 import { viatorNearestCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
@@ -321,7 +322,7 @@ travelRoutes.get('/bus/flixbus', async (c) => {
     const [from, to] = await Promise.all([resolveBusCity(c.env.DB, params.fromCity), resolveBusCity(c.env.DB, params.toCity)]);
     if (!from || !to) return c.json({ offers: [], from, to, available: false });
     const offers = await fetchBusDay(c.env.DB, from.id, to.id, params.eventDay);
-    const bookUrl = busBookingUrl(from.id, to.id, params.eventDay);
+    const bookUrl = await mintRedirect(c.env, 'bus', busBookingUrl(from.id, to.id, params.eventDay));
     return c.json({ offers, from, to, bookUrl, available: offers.length > 0 });
   } catch (e) {
     await alertFlightFailure(c.env, 'flixbus', (e as Error).message);

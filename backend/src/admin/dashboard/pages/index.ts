@@ -11,6 +11,7 @@ import { registerStats } from './stats';
 import { registerErrors } from './errors';
 import { registerReports } from './reports';
 import { registerBlacklist } from './blacklist';
+import { registerUsage } from './usage';
 
 export const pageRoutes = new Hono<{ Bindings: Env }>();
 registerAuth(pageRoutes);
@@ -24,3 +25,4 @@ registerStats(pageRoutes);
 registerErrors(pageRoutes);
 registerReports(pageRoutes);
 registerBlacklist(pageRoutes);
+registerUsage(pageRoutes);

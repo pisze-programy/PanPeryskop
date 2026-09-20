@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildWindowFromCheapest, type CheapestDay } from '../src/travel/flightsApi';
+import { buildWindowFromCheapest, fetchWizzairWindow, type CheapestDay } from '../src/travel/flightsApi';
 import { haversineKm, nearbyCandidates, reachableCarriers, windowHasFlights, type TravelEventRow } from '../src/travel/reachability';
 import type { Destination } from '../src/travel/airports';
 
@@ -108,4 +108,49 @@ test('nearbyCandidates: two events sharing an airport keep it once', () => {
   const candidates = [dest('WMI', 52.4511, 20.6517)];
   const nearby = nearbyCandidates(candidates, [event(52.1657, 20.9671), event(52.4, 16.9)]);
   assert.equal(nearby.length, 1);
+});
+/** Minimal D1 stub: only the flight_cache read/write path `cachedJson` uses. */
+function flightCacheDb(rows: Record<string, string>): D1Database {
+  let key = '';
+  const statement = {
+    bind: (...args: unknown[]) => {
+      key = String(args[0] ?? '');
+      return {
+        first: async () => (rows[key] !== undefined ? { payload: rows[key] } : null),
+        run: async () => ({ meta: { changes: 1 } }),
+        all: async () => ({ results: [] }),
+      };
+    },
+    first: async () => null,
+    run: async () => ({ meta: { changes: 1 } }),
+    all: async () => ({ results: [] }),
+  };
+  return { prepare: () => statement } as unknown as D1Database;
+}
+
+test('wizzair: a cached failure marker never blocks a recovered upstream', async () => {
+  const originalFetch = globalThis.fetch;
+  let upstreamCalls = 0;
+  globalThis.fetch = (async () => {
+    upstreamCalls += 1;
+    return new Response(JSON.stringify({
+      outboundFlights: [
+        { departureDate: '2026-11-28T00:00:00', priceType: 'price', price: { amount: 199 }, departureDates: ['2026-11-28T10:00:00'] },
+      ],
+      returnFlights: [],
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch;
+  try {
+    // Both window months are marked as failed, but the upstream is healthy again.
+    const db = flightCacheDb({
+      'wizz:version': JSON.stringify('29.17.0'),
+      'wizz:POZ:LTN:2026-11-01': JSON.stringify({ __failed: true }),
+      'wizz:POZ:LTN:2026-12-01': JSON.stringify({ __failed: true }),
+    });
+    const window = await fetchWizzairWindow('POZ', 'LTN', '2026-12-01', db);
+    assert.ok(upstreamCalls > 0, 'the marker must not skip the upstream fetch');
+    assert.ok(window.outbound.some((cell) => cell.price === 199), 'recovered data reaches the window');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

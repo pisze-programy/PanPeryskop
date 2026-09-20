@@ -28,16 +28,32 @@ export interface FlightWindow {
 
 /** Raw farefinder GET. 404 → null (no such route); any other non-2xx throws. */
 async function fetchFareJson(url: string): Promise<any | null> {
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(() => fetch(url, {
     headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'application/json' },
     signal: AbortSignal.timeout(CONFIG.travel.flights.timeoutMs),
-  });
+  }));
   if (res.status === 404) return null;
   if (res.status === 429 || res.status >= 500) {
     throw new Error(`Ryanair farefinder ${res.status}`);
   }
   if (!res.ok) return null;
   return await res.json();
+}
+
+const TRANSIENT_RETRY_DELAY_MS = 400;
+
+/** One delayed retry for a network error, a timeout, 429 or 5xx. */
+async function fetchWithRetry(makeRequest: () => Promise<Response>): Promise<Response> {
+  const transient = (res: Response) => res.status === 429 || res.status >= 500;
+  try {
+    const res = await makeRequest();
+    if (!transient(res)) return res;
+    await new Promise((resolve) => setTimeout(resolve, TRANSIENT_RETRY_DELAY_MS));
+    return await makeRequest();
+  } catch (error) {
+    await new Promise((resolve) => setTimeout(resolve, TRANSIENT_RETRY_DELAY_MS));
+    return await makeRequest();
+  }
 }
 
 export async function readFlightCache(db: D1Database, key: string): Promise<any | null> {
@@ -61,8 +77,10 @@ async function cachedJson(db: D1Database, key: string, ttlMs: number, fetchFn: (
     .first<{ payload: string }>();
   if (row) {
     const parsed = safeParse(row.payload);
-    if (isFailedMarker(parsed)) throw new Error('cached upstream failure');
-    if (parsed !== undefined) return parsed;
+    // A failure marker only records that the last attempt failed. It must never
+    // short-circuit a later request: upstreams recover in seconds, and a cached
+    // marker would otherwise return 502 for its whole TTL.
+    if (parsed !== undefined && !isFailedMarker(parsed)) return parsed;
   }
   try {
     const value = await fetchFn();
@@ -228,7 +246,7 @@ async function postWizzairTimetable(apiBase: string, origin: string, dest: strin
     childCount: 0,
     infantCount: 0,
   };
-  return await fetch(`${apiBase}/search/timetable`, {
+  return await fetchWithRetry(() => fetch(`${apiBase}/search/timetable`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -239,7 +257,7 @@ async function postWizzairTimetable(apiBase: string, origin: string, dest: strin
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(CONFIG.travel.flights.timeoutMs),
-  });
+  }));
 }
 
 async function fetchWizzairTimetable(db: D1Database, origin: string, dest: string, fromDay: string, toDay: string): Promise<WizzairTimetable> {

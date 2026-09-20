@@ -11,6 +11,7 @@ import { viatorNearestCity, viatorProductsForCity, viatorConfigured, viatorWindo
 import { staysWidgetUrl, type StayTheme, type StayView } from '../travel/stay22';
 import { alertFlightFailure } from '../travel/alerts';
 import { addDaysWarsaw } from '../seed/core/dates';
+import { captureException, isInitialized } from '@sentry/cloudflare';
 
 export const travelRoutes = new Hono<{ Bindings: Env }>();
 
@@ -291,8 +292,12 @@ async function flightHandler(c: Context<{ Bindings: Env }>, airline: 'ryanair' |
       : await fetchWizzairWindow(params.origin, params.destination, params.eventDay, c.env.DB);
     return c.json(window);
   } catch (e) {
-    await alertFlightFailure(c.env, airline, (e as Error).message);
-    return c.json({ error: (e as Error).message }, 502);
+    const detail = (e as Error).message;
+    // Sentry sees every live flight failure: the handler swallows the throw, so
+    // without this the outage is invisible (only the Snitch alert records it).
+    if (isInitialized()) captureException(e, { tags: { area: 'travel/flights', carrier: airline } });
+    await alertFlightFailure(c.env, airline, detail);
+    return c.json({ error: detail }, 502);
   }
 }
 

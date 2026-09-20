@@ -4,6 +4,16 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 45, 2026-09-20
+
+### Added
+- Anonymous usage analytics on the backend: which features are used (events,
+  flights, buses, attractions, stays, outbound link clicks) as daily totals,
+  with no user, device or IP. A `/r/:token` shortlink counts booking clicks and
+  redirects. Error monitoring (Sentry, EU) reports failures without any
+  identifier. The privacy policy names the processors and the legitimate
+  interest.
+
 ## [1.3.0] — build 44, 2026-09-19
 
 ### Added

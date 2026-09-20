@@ -4,6 +4,15 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 46, 2026-09-20
+
+### Added
+- Partner banners under the attractions in a Wycieczki event sheet: an Airhelp
+  flight-compensation card and an Airalo eSIM card. Full-width cards with the
+  partners' own colours, rounded corners, a clear call to action and a chevron;
+  the whole card opens the partner page in the in-app browser. A revenue
+  add-on, kept separate from the core sections.
+
 ## [1.3.0] — build 45, 2026-09-20
 
 ### Added

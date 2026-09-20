@@ -167,6 +167,9 @@ struct TripsEventPage: View {
                     ForEach(TripsSheetSection.sections(for: event)) { section in
                         sectionView(section)
                     }
+                    PartnerBannerSection(banners: PartnerBanner.travel) { url in
+                        onOpenURL(url, .open)
+                    }
                     priceFooter
                 }
                 .padding(.bottom, Theme.Spacing.xl)

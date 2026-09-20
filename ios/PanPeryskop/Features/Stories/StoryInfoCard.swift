@@ -35,7 +35,7 @@ struct StoryInfoCard: View {
     /// Curated restaurant: centred name (like events), the distinction and cuisine
     /// on one line, then the street address and the website link.
     private var restaurantContent: some View {
-        VStack(spacing: Theme.Spacing.s) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             Text(post.restaurantInfo.name)
                 .font(.headline)
                 .foregroundColor(.primary)
@@ -55,14 +55,12 @@ struct StoryInfoCard: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .frame(maxWidth: .infinity)
             if !post.restaurantInfo.address.isEmpty {
                 Text(post.restaurantInfo.address)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
                     .lineLimit(2)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let url = post.link_url.flatMap(URL.init) {
                 Button {

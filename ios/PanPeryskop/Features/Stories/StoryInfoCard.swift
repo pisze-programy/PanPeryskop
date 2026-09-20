@@ -84,7 +84,9 @@ struct StoryInfoCard: View {
                 Text(post.eventInfo.title)
                     .font(.headline)
                     .foregroundColor(.primary)
-                    .lineLimit(2)
+                    // Always two lines: a one-line title would shorten the card and
+                    // make the whole layout jump when swiping between stories.
+                    .lineLimit(2, reservesSpace: true)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
             }
@@ -106,8 +108,10 @@ struct StoryInfoCard: View {
                     } else {
                         FlipClockTime(time: clockTime)
                             .frame(maxWidth: .infinity, alignment: .center)
-                        // Reserve the dots row height so single-time cards don't jump.
-                        Spacer().frame(height: 11)
+                        // Match ShowtimesPager exactly: clock 50 + stack spacing 6 +
+                        // indicator 4 = 60. A taller single-time column would push the
+                        // whole card up, so switching stories made the layout jump.
+                        Spacer().frame(height: 4)
                     }
                 }
                 .frame(width: 168)

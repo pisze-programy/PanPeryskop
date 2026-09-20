@@ -4,6 +4,13 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 53, 2026-09-20
+
+### Fixed
+- Story card height is constant across events: the single-showtime column matched
+  the showtime pager (60 pt) instead of being 7 pt taller, and the title always
+  reserves two lines. Swiping between stories no longer makes the card jump.
+
 ## [1.3.0] — build 52, 2026-09-20
 
 ### Fixed

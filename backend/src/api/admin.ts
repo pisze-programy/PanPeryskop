@@ -10,7 +10,7 @@ import { SeedCandidate } from '../seed/core/types';
 import { parseCandidate, isProviderId } from '../seed/core/candidate';
 import { ingestWinnersForDay } from '../seed/reconcile';
 import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
-import { getLastSeedDay, seedDue } from '../seed/cadence';
+import { ingestRestaurants } from '../seed/manual/restaurants';import { getLastSeedDay, seedDue } from '../seed/cadence';
 import { upsertTravelEvents, sanitizeManifest, TravelManifest, TravelEvent } from '../travel/store';
 import { refreshViatorDestinations } from '../travel/viator';
 
@@ -189,6 +189,15 @@ adminRoutes.post('/seed/mtp', async (c) => {
     results.push(await ingestMtpEvent(c.env, ev));
   }
   return c.json({ ok: true, results });
+});
+
+// Manual curated-restaurant import (map "Restauracje" tag). The list lives in
+// seed/manual/restaurants.ts — re-run after editing it. Idempotent by external_id.
+adminRoutes.post('/seed/restaurants', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const results = await ingestRestaurants(c.env);
+  const ok = results.filter((r) => r.status === 'ok').length;
+  return c.json({ ok: true, ingested: ok, failed: results.length - ok, results });
 });
 
 // Warm one day of kupbilecik events into R2. The official API returns the WHOLE

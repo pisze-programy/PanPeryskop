@@ -12,6 +12,60 @@ struct StoryInfoCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            if post.isRestaurant {
+                restaurantContent
+            } else {
+                eventOrLiveContent
+            }
+
+            StoryBadgesView(post: post, tags: tags)
+        }
+        .padding(Theme.Spacing.l)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sheet, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.sheet, style: .continuous)
+                .stroke(Color.white.opacity(0.25), lineWidth: 0.5)
+        )
+    }
+
+    /// Curated restaurant: name, distinction, cuisine/city, website. No date or
+    /// countdown — a restaurant is evergreen, not an event.
+    private var restaurantContent: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            Text(post.restaurantInfo.name)
+                .font(.headline)
+                .foregroundColor(.primary)
+                .lineLimit(2)
+            if let award = post.restaurantAwardLabel {
+                Label(award, systemImage: post.restaurantStars > 0 ? "star.fill" : "fork.knife")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(post.restaurantStars > 0 ? .orange : .secondary)
+            }
+            if !post.restaurantInfo.detail.isEmpty {
+                Text(post.restaurantInfo.detail)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+            if let url = post.link_url.flatMap(URL.init) {
+                Button {
+                    onOpenBrowser(url)
+                } label: {
+                    Label("Strona restauracji", systemImage: "arrow.up.right")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.blue)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var eventOrLiveContent: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             if post.isEvent {
                 Text(post.eventInfo.title)
                     .font(.headline)
@@ -52,17 +106,7 @@ struct StoryInfoCard: View {
 
                 Spacer(minLength: 0)
             }
-
-            StoryBadgesView(post: post, tags: tags)
         }
-        .padding(Theme.Spacing.l)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sheet, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.sheet, style: .continuous)
-                .stroke(Color.white.opacity(0.25), lineWidth: 0.5)
-        )
     }
 
     /// Flip-clock value: first structured showtime, else the event start time, else

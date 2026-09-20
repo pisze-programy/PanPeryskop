@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { nanoid } from 'nanoid';
-import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, MAX_EXTERNAL_ID_LEN, POST_TYPE_SET, POST_TYPE_PHOTO, POST_TYPE_VIDEO, STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED, CATEGORY_EVENTS, CATEGORY_LIVE, PostRow } from '../core/models';
+import { gridCellId, TTL_MS, MAX_LOOKAHEAD_MS, MAX_EXTERNAL_ID_LEN, POST_TYPE_SET, POST_TYPE_PHOTO, POST_TYPE_VIDEO, STATUS_APPROVED, STATUS_PENDING, STATUS_REJECTED, CATEGORY_EVENTS, CATEGORY_FOOD, CATEGORY_LIVE, PostRow } from '../core/models';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
 import { strField, fileField, ParsedForm } from '../core/form';
 import { mediaUrl, originFromRequest, resolvePostMedia } from '../core/media';
@@ -329,7 +329,7 @@ postsRoutes.get('/:id', async (c) => {
        FROM posts p
        JOIN users u ON p.user_id = u.id
        WHERE p.id = ? AND p.status = '${STATUS_APPROVED}'
-       AND p.created_at >= ?`
+       AND (p.created_at >= ? OR p.category = '${CATEGORY_FOOD}')`
     )
     .bind(c.req.param('id'), now - TTL_MS)
     .first<PostRow & { author_name: string; author_avatar_key: string | null }>();

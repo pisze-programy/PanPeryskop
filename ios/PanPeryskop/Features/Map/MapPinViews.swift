@@ -98,13 +98,39 @@ struct SinglePostPin: View {
                         .clipShape(Circle())
                 }
             }
+            .overlay(alignment: .bottomTrailing) {
+                if post.restaurantStars > 0 { starBadge }
+            }
             .offset(y: bounceOffset)
         }
     }
 
+    private var starBadge: some View {
+        HStack(spacing: 1) {
+            ForEach(0..<post.restaurantStars, id: \.self) { _ in
+                Image(systemName: "star.fill")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.yellow)
+            }
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
+        .background(Capsule().fill(Color.black.opacity(0.8)))
+        .overlay(Capsule().stroke(.white, lineWidth: 1))
+    }
+
     private var fallbackIcon: some View {
         ZStack {
-            if let style = post.travelPin {
+            if post.isRestaurant {
+                LinearGradient(
+                    colors: [Color(hex: 0xE4572E), Color(hex: 0x8C1D18)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Image(systemName: "fork.knife")
+                    .font(.body)
+                    .foregroundColor(.white)
+            } else if let style = post.travelPin {
                 LinearGradient(
                     colors: [Color(hex: style.startHex), Color(hex: style.endHex)],
                     startPoint: .topLeading,

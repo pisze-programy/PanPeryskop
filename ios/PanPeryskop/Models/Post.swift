@@ -34,6 +34,8 @@ struct Post: Codable, Identifiable, Equatable {
 
     /// Canonical event tags (ids from the /stories/tags catalog) — empty for untagged posts.
     let tags: [String]?
+    /// Curated restaurant distinction: "1*" | "2*" | "3*" | "bib". Nil otherwise.
+    let distinction: String?
     /// Seed source (external_id prefix: 'kupbilecik', 'going', …). Nil for user posts.
     let source: String?
 
@@ -175,8 +177,40 @@ struct Post: Codable, Identifiable, Equatable {
             liked: liked ?? self.liked, disliked: disliked ?? self.disliked, watched: watched ?? self.watched,
             author_name: author_name, media_url: media_url, thumb_url: thumb_url,
             author_avatar_url: author_avatar_url,
-            is_sponsored: is_sponsored, category: category, link_url: link_url, is_sold_out: is_sold_out, showtimes: showtimes, showtime_booking: showtime_booking, travelPin: travelPin, tags: tags, source: source
+            is_sponsored: is_sponsored, category: category, link_url: link_url, is_sold_out: is_sold_out, showtimes: showtimes, showtime_booking: showtime_booking, travelPin: travelPin, tags: tags, distinction: distinction, source: source
         )
+    }
+
+    /// True for a curated Michelin restaurant (map "restauracje" tag).
+    var isRestaurant: Bool { tags?.contains("restauracje") == true }
+
+    /// Michelin star count 1–3. 0 for Bib Gourmand or a non-restaurant post.
+    var restaurantStars: Int {
+        guard isRestaurant else { return 0 }
+        switch distinction {
+        case "1*": return 1
+        case "2*": return 2
+        case "3*": return 3
+        default: return 0
+        }
+    }
+
+    /// Short distinction label for the card. Nil outside restaurants.
+    var restaurantAwardLabel: String? {
+        switch restaurantStars {
+        case 1: return "1 gwiazdka"
+        case 2: return "2 gwiazdki"
+        case 3: return "3 gwiazdki"
+        default: return distinction == "bib" ? "Wyróżnienie" : nil
+        }
+    }
+
+    /// Restaurant name + "cuisine, city" detail, parsed from the description
+    /// ("Name — cuisine, city"). Falls back to the whole description.
+    var restaurantInfo: (name: String, detail: String) {
+        let parts = description.components(separatedBy: " — ")
+        guard parts.count == 2 else { return (description, "") }
+        return (parts[0], parts[1])
     }
 
     enum MediaType: String, Codable {

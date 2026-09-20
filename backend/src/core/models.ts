@@ -63,6 +63,8 @@ export interface PostRow {
   showtime_booking?: string | null;
   tags?: string | null;
   price_pln: number | null;
+  /** Curated restaurant distinction: '1*' | '2*' | '3*' | 'bib'. Null otherwise. */
+  distinction?: string | null;
 }
 
 // A post row joined with author info (and optional watched flag) for /stories.
@@ -77,7 +79,9 @@ export interface StoryRow extends PostRow {
 // Content category enum — NOT driven by is_sponsored (which is visual only).
 export const CATEGORY_LIVE = 'live';
 export const CATEGORY_EVENTS = 'events';
-export const POST_CATEGORIES = [CATEGORY_LIVE, CATEGORY_EVENTS] as const;
+/** Evergreen places (curated restaurants). No event_date — visible every day. */
+export const CATEGORY_FOOD = 'food';
+export const POST_CATEGORIES = [CATEGORY_LIVE, CATEGORY_EVENTS, CATEGORY_FOOD] as const;
 export type PostCategory = (typeof POST_CATEGORIES)[number];
 export const POST_CATEGORY_SET: ReadonlySet<string> = new Set<string>(POST_CATEGORIES);
 

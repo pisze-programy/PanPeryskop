@@ -168,9 +168,15 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         for dict in squares.values { for (id, post) in dict { byId[id] = post } }
         for (id, post) in extraPosts { byId[id] = post }
         return byId.values.filter {
-            (dayBrowse ? true : $0.isStillValid)
-                && ($0.category ?? AppConstants.categoryEvents) == AppConstants.categoryEvents
+            ($0.isRestaurant || (dayBrowse ? true : $0.isStillValid))
+                && Self.isMapCategory($0.category)
         }
+    }
+
+    /// Map shows seed events plus the evergreen curated restaurants.
+    private static func isMapCategory(_ category: String?) -> Bool {
+        let value = category ?? AppConstants.categoryEvents
+        return value == AppConstants.categoryEvents || value == AppConstants.categoryFood
     }
 
     var maxZoomOutDistance: CLLocationDistance { 100_000 }

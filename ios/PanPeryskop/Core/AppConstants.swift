@@ -23,6 +23,7 @@ enum AppConstants {
     /// Content categories — mirror backend `POST_CATEGORIES`.
     static let categoryLive = "live"
     static let categoryEvents = "events"
+    static let categoryFood = "food"
 
     /// Pending post staleness — uploads older than this are discarded.
     static let pendingStaleAfter: TimeInterval = 12 * 3600

@@ -1,7 +1,7 @@
 import { CONFIG } from '../config/index';
 import { Hono } from 'hono';
 import { authenticate } from './auth';
-import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED, CATEGORY_LIVE, CATEGORY_EVENTS } from '../core/models';
+import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED, CATEGORY_LIVE, CATEGORY_EVENTS, CATEGORY_FOOD } from '../core/models';
 import { mediaUrl, originFromRequest, resolvePostMedia } from '../core/media';
 import { tagCatalog, tagIdSet } from '../core/tagCatalog';
 import { cityBbox } from '../admin/cities';
@@ -82,7 +82,7 @@ storiesRoutes.get('/tag-counts', async (c) => {
        WHERE lat BETWEEN ? AND ?
        AND lng BETWEEN ? AND ?
        AND status = '${STATUS_APPROVED}'
-       AND event_date = ?`
+       AND (event_date = ? OR category = '${CATEGORY_FOOD}')`
     )
     .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, day)
     .all<{ category: string | null; event_date: string | null; showtimes: string | null; tags: string | null }>();
@@ -161,6 +161,8 @@ export interface StoryJson {
   showtimes: string[] | null;
   showtime_booking: { time: string; kind: string; params: Record<string, string> }[] | null;
   tags: string[] | null;
+  /** Restaurant distinction ('1*' | '2*' | '3*' | 'bib') — null for non-restaurants. */
+  distinction: string | null;
   /** Seed source — the external_id prefix (e.g. 'kupbilecik', 'going'). Null for user posts. */
   source: string | null;
   liked: boolean;
@@ -202,6 +204,7 @@ function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): StoryJso
     showtimes: r.showtimes ? (JSON.parse(r.showtimes) as string[]) : null,
     showtime_booking: r.showtime_booking ? JSON.parse(r.showtime_booking) : null,
     tags: r.tags ? JSON.parse(r.tags) : null,
+    distinction: r.distinction ?? null,
     source: r.external_id ? r.external_id.split('-')[0] || null : null,
     liked: false,
     disliked: (r.disliked ?? 0) === 1,
@@ -241,7 +244,13 @@ storiesRoutes.get('/', async (c) => {
   const now = Date.now();
   const windowStart = now - TTL_MS;
   const category = q.category && POST_CATEGORY_SET.has(q.category) ? q.category : null;
-  const catCond = category ? 'AND p.category = ?' : '';
+  // Events browsing also returns evergreen food places — the map shows both under
+  // the events category, and 'food' is never requested on its own.
+  const catCond = category
+    ? category === CATEGORY_EVENTS
+      ? `AND (p.category = ? OR p.category = '${CATEGORY_FOOD}')`
+      : 'AND p.category = ?'
+    : '';
   // Tag filter (map chips) — events only. The app sends a comma list of the
   // selected tags; a post matches if it carries ANY of them. Unknown tags are
   // dropped; if none is valid we return an empty list instead of 400 (the app can
@@ -265,11 +274,11 @@ storiesRoutes.get('/', async (c) => {
   // TTL window (future days are otherwise hidden by created_at <= now). Live posts
   // have event_date NULL so they never match a day query.
   const day = q.day ? String(q.day) : null;
-  let timeCond = 'p.created_at >= ? AND p.created_at <= ?';
+  let timeCond = `((p.created_at >= ? AND p.created_at <= ?) OR p.category = '${CATEGORY_FOOD}')`;
   let timeBinds: unknown[] = [windowStart, now];
   if (day) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: 'Invalid day' }, 400);
-    timeCond = 'p.event_date = ?';
+    timeCond = `(p.event_date = ? OR p.category = '${CATEGORY_FOOD}')`;
     timeBinds = [day];
   }
   const limit = parseStoriesLimit(q.limit);

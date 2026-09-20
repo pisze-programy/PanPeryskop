@@ -4,6 +4,21 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 50, 2026-09-20
+
+### Added
+- "Restauracje" tag: 49 curated Michelin Guide places (11 stars and 38 Bib
+  Gourmand) across Polish cities. Stars show a corner badge on the pin; the card
+  names the distinction and links to the restaurant's own website. Places are
+  evergreen — they appear on every day, not tied to an event date.
+- Every restaurant shares one placeholder photo, served from the backend like any
+  other event image.
+
+### Changed
+- Changing the airport on the trips minimap no longer makes the "Samolot" filter
+  jump: the minimap sync no longer echoes a programmatic position back as a user
+  selection.
+
 ## [1.3.0] — build 49, 2026-09-20
 
 ### Changed

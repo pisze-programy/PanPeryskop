@@ -16,14 +16,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const HERO_WIDTH = 640;
 const THUMB_WIDTH = 160;
-const MAX_PHOTOS = 5;
+const MAX_PHOTOS = 1;
 const MAX_BYTES = 400_000;
 const CONCURRENCY = 2;
 const ATTEMPTS = 3;
 const USER_AGENT = { 'User-Agent': 'PanPeryskop/1.0 (https://panperyskop.app)' };
 
-// Commons geosearch returns plenty of maps, coats of arms and logos.
-const SKIP_TITLE = /map|coat|flag|logo|seal|plan|diagram|chart|banner|icon|symbol|locator|panorama of/i;
 
 interface CityEntry {
   id: string;
@@ -108,38 +106,16 @@ function titleCandidates(city: CityEntry): string[] {
   return [...new Set(candidates.filter((c): c is string => Boolean(c)))];
 }
 
-/** The Wikipedia lead image first, then nearby landscape photos. */
+/** The Wikipedia lead image: the only source good enough to keep. */
 async function photoNames(city: CityEntry): Promise<string[]> {
-  const names: string[] = [];
   for (const title of titleCandidates(city)) {
     const summary = await fetchSummary(title);
     if (!summary) continue;
     const raw = summary.originalimage?.source ?? summary.thumbnail?.source;
     const name = raw ? fileName(raw) : null;
-    if (name) {
-      names.push(name);
-      break;
-    }
+    if (name) return [name];
   }
-
-  const geo = await getJson(
-    `https://commons.wikimedia.org/w/api.php?action=query&generator=geosearch` +
-      `&ggscoord=${city.lat}|${city.lng}&ggsradius=10000&ggslimit=40&ggsnamespace=6` +
-      `&prop=imageinfo&iiprop=url|mime|size&iiurlwidth=${HERO_WIDTH}&format=json`,
-  );
-  const pages: any[] = Object.values(geo?.query?.pages ?? {});
-  const nearby = pages
-    .map((page) => ({ title: String(page.title ?? ''), info: page.imageinfo?.[0] }))
-    .filter((p) => p.info?.mime === 'image/jpeg')
-    .filter((p) => Number(p.info?.width) >= 800 && Number(p.info?.width) > Number(p.info?.height))
-    .filter((p) => !SKIP_TITLE.test(p.title))
-    .map((p) => p.title.replace(/^File:/, ''));
-
-  for (const name of nearby) {
-    if (names.length >= MAX_PHOTOS) break;
-    if (!names.includes(name)) names.push(name);
-  }
-  return names.slice(0, MAX_PHOTOS);
+  return [];
 }
 
 async function download(name: string, width: number): Promise<Uint8Array | null> {

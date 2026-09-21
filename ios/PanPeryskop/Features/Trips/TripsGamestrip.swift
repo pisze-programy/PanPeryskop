@@ -33,7 +33,7 @@ struct TripsGamestrip: View {
     }
 
     private var bar: some View {
-        StickyBar(leadingColor: leadingGlow, trailingColor: trailingGlow) {
+        StickyBar(leadingColor: leadingGlow, trailingColor: trailingGlow, leadingImage: city?.thumbURL) {
             VStack(spacing: 0) {
                 if let league {
                     Text(league)
@@ -73,22 +73,16 @@ struct TripsGamestrip: View {
     }
 
     private func cityRow(_ city: TravelCity) -> some View {
-        HStack(spacing: Theme.Spacing.s) {
-            Image(systemName: "building.2.fill")
-                .font(.system(size: Self.runIconSize, weight: .semibold))
-                .foregroundColor(CityPalette.base(countryCode: city.countryCode))
-            VStack(alignment: .leading, spacing: Self.centerSpacing) {
-                Text(city.name)
-                    .font(.subheadline.weight(.bold))
-                    .lineLimit(1)
-                Text(city.country)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: Theme.Spacing.s)
+        VStack(alignment: .leading, spacing: Self.centerSpacing) {
+            Text(city.name)
+                .font(.subheadline.weight(.bold))
+                .lineLimit(1)
+            Text(city.country)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var soccerRow: some View {

@@ -182,12 +182,15 @@ struct ClusterPin: View {
 
     @State private var sheenPhase: CGFloat = -1.4
 
-    private var oldest: Post {
-        cluster.posts.min(by: { $0.created_at < $1.created_at }) ?? cluster.posts[0]
-    }
+    /// Restaurants are evergreen, so they carry no TTL. Only the timed members
+    /// drive the ring; a cluster of restaurants alone has none.
+    private var timedPosts: [Post] { cluster.posts.filter { !$0.isRestaurant } }
+
+    private var oldest: Post? { timedPosts.min(by: { $0.created_at < $1.created_at }) }
 
     private var ageHours: Double {
-        Double(Date().timeIntervalSince1970 - TimeInterval(oldest.created_at) / 1000) / AppConstants.secondsPerHour
+        guard let oldest else { return 0 }
+        return Double(Date().timeIntervalSince1970 - TimeInterval(oldest.created_at) / 1000) / AppConstants.secondsPerHour
     }
 
     private var ringColor: Color {
@@ -197,12 +200,16 @@ struct ClusterPin: View {
     }
 
     private func progress(at date: Date) -> Double {
+        guard let oldest else { return 0 }
         let elapsed = date.timeIntervalSince1970 - TimeInterval(oldest.created_at) / 1000
         return min(max(elapsed / (Self.ttlHours * AppConstants.secondsPerHour), 0), 1)
     }
 
-    var body: some View {
-        ZStack {
+    @ViewBuilder
+    private var ring: some View {
+        if oldest == nil {
+            Circle().fill(Color.black.opacity(0.25))
+        } else {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 let progress = progress(at: context.date)
                 ZStack {
@@ -214,7 +221,13 @@ struct ClusterPin: View {
                         .rotationEffect(.degrees(-90))
                 }
             }
-            .frame(width: 52, height: 52)
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            ring
+                .frame(width: 52, height: 52)
 
             Circle()
                 .fill(Color.accentColor)

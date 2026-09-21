@@ -33,8 +33,6 @@ struct CityBreakSheet: View {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 0) {
                         Color.clear.frame(height: 0).id(Self.topId)
-                        CityHeroView(photos: city.imageURLs)
-                            .padding(.top, Theme.Spacing.l)
                         flightsSection
                         StaysSection(
                             event: event,
@@ -102,22 +100,14 @@ struct CityBreakSheet: View {
                 HStack(spacing: Theme.Spacing.s) {
                     Image(systemName: "calendar")
                         .font(.body)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Sprawdź dostępne terminy")
-                            .font(.subheadline.weight(.semibold))
-                        if let summary {
-                            Text(summary)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    Spacer(minLength: 0)
+                    Text("Sprawdź dostępne terminy")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.bold))
                         .foregroundColor(.secondary)
                 }
                 .padding(Theme.Spacing.m)
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
                 .contentShape(Rectangle())
             }
@@ -125,12 +115,6 @@ struct CityBreakSheet: View {
             .padding(.horizontal, Theme.Spacing.l)
         }
         .padding(.top, Theme.Spacing.section)
-    }
-
-    private var summary: String? {
-        guard let outbound, let returning else { return nil }
-        let total = Int((outbound.price ?? 0) + (returning.price ?? 0))
-        return "\(outbound.date) → \(returning.date) · \(total) zł"
     }
 
     private var priceFooter: some View {

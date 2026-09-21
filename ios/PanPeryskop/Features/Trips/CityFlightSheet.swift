@@ -13,14 +13,30 @@ struct CityFlightSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var detent: PresentationDetent = .large
     @State private var selectedOptionId: String?
-    @State private var outboundMonth: Date = Date()
-    @State private var returningMonth: Date = Date()
+    @State private var outboundMonth: Date
+    @State private var returningMonth: Date
     @State private var outboundWindow: FlightWindowResponse?
     @State private var returningWindow: FlightWindowResponse?
     @State private var outboundFailed = false
     @State private var returningFailed = false
 
     private static let windowMonths = 3
+
+    init(
+        viewModel: TripsViewModel,
+        city: TravelCity,
+        outbound: Binding<FlightWindowCell?>,
+        returning: Binding<FlightWindowCell?>
+    ) {
+        self.viewModel = viewModel
+        self.city = city
+        self._outbound = outbound
+        self._returning = returning
+        // The day picked on the map decides the month the calendar opens on.
+        let start = Self.startOfMonth(viewModel.anchorDate)
+        self._outboundMonth = State(initialValue: start)
+        self._returningMonth = State(initialValue: Self.returnMonth(after: start))
+    }
 
     var body: some View {
         SheetShell(detent: $detent) {
@@ -70,8 +86,24 @@ struct CityFlightSheet: View {
 
     private var anchorDate: Date { viewModel.anchorDate }
 
-    private var maxMonth: Date {
-        AppConstants.warsawCalendar.date(byAdding: .month, value: Self.windowMonths, to: Date()) ?? Date()
+    private var maxMonth: Date { Self.maxMonthDate }
+
+    /// The return opens on the month after the outbound, capped at the range end:
+    /// a December outbound keeps both calendars in December.
+    private static func returnMonth(after month: Date) -> Date {
+        let calendar = AppConstants.warsawCalendar
+        let next = calendar.date(byAdding: .month, value: 1, to: month) ?? month
+        return min(next, maxMonthDate)
+    }
+
+    private static var maxMonthDate: Date {
+        let calendar = AppConstants.warsawCalendar
+        return calendar.date(byAdding: .month, value: windowMonths, to: startOfMonth(Date())) ?? Date()
+    }
+
+    private static func startOfMonth(_ date: Date) -> Date {
+        let calendar = AppConstants.warsawCalendar
+        return calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
     }
 
     // MARK: - Loading
@@ -99,10 +131,11 @@ struct CityFlightSheet: View {
             return
         }
         outboundWindow = loaded
-        guard outbound == nil else { return }
-        outbound = defaultOutbound(loaded)
-        // An outbound near the end of the month puts the return in the next one.
-        let target = returnMonth(for: outbound)
+        if outbound == nil || !isInMonth(outbound?.date, month: outboundMonth) {
+            outbound = defaultOutbound(loaded)
+        }
+        // Keep the return one month ahead of the outbound it defaulted to.
+        let target = Self.returnMonth(after: Self.startOfMonth(outboundMonth))
         if target != returningMonth { returningMonth = target }
     }
 
@@ -121,24 +154,33 @@ struct CityFlightSheet: View {
             return
         }
         returningWindow = loaded
-        guard returning == nil else { return }
-        returning = defaultReturning(loaded)
+        if returning == nil || !isInMonth(returning?.date, month: returningMonth) {
+            returning = defaultReturning(loaded)
+        }
     }
 
-    /// The map day picker picks the anchor; the outbound defaults to it.
+    /// The month on screen decides the selection: a new month always marks its
+    /// best day, so the calendar never opens on an arbitrary first fare.
     private func defaultOutbound(_ window: FlightWindowResponse) -> FlightWindowCell? {
         let anchor = AppConstants.isoDayFormatter.string(from: anchorDate)
         if let exact = window.outbound.first(where: { $0.date == anchor && $0.price != nil }) { return exact }
-        if let best = bestPair { return window.outbound.first { $0.date == iso(best.outbound.date) } }
+        if let best = bestPair, isInMonth(iso(best.outbound.date), month: outboundMonth) {
+            return window.outbound.first { $0.date == iso(best.outbound.date) }
+        }
         return cheapest(window.outbound)
     }
 
     private func defaultReturning(_ window: FlightWindowResponse) -> FlightWindowCell? {
         let after = outbound?.date ?? ""
-        if let best = bestPair, iso(best.returning.date) > after {
+        if let best = bestPair, iso(best.returning.date) > after, isInMonth(iso(best.returning.date), month: returningMonth) {
             return window.returning.first { $0.date == iso(best.returning.date) }
         }
-        return window.returning.first { $0.date > after && $0.price != nil } ?? cheapest(window.returning)
+        return cheapest(window.returning.filter { $0.date > after }) ?? cheapest(window.returning)
+    }
+
+    private func isInMonth(_ isoDay: String?, month: Date) -> Bool {
+        guard let isoDay else { return false }
+        return isoDay.hasPrefix(String(FlightPricesService.monthKey(month).prefix(7)))
     }
 
     private func returnMonth(for cell: FlightWindowCell?) -> Date {
@@ -164,11 +206,17 @@ struct CityFlightSheet: View {
     }
 
     private var bestOutboundDate: String? {
-        bestPair.map { iso($0.outbound.date) } ?? cheapest(outboundWindow?.outbound)?.date
+        if let best = bestPair, isInMonth(iso(best.outbound.date), month: outboundMonth) {
+            return iso(best.outbound.date)
+        }
+        return cheapest(outboundWindow?.outbound)?.date
     }
 
     private var bestReturnDate: String? {
-        bestPair.map { iso($0.returning.date) } ?? cheapest(returningWindow?.returning)?.date
+        if let best = bestPair, isInMonth(iso(best.returning.date), month: returningMonth) {
+            return iso(best.returning.date)
+        }
+        return cheapest(returningWindow?.returning)?.date
     }
 
     private func cheapest(_ cells: [FlightWindowCell]?) -> FlightWindowCell? {

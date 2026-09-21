@@ -4,6 +4,46 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 56, 2026-09-21
+
+### Added
+- City-break sheet with a month flight calendar. "Sprawdź dostępne terminy" opens
+  a dedicated sheet: the airport minimap on top, then a month calendar for each
+  leg (origin → destination, destination → origin), and a sticky buy button that
+  opens the airline in the default browser. Fares are colour-coded against the
+  month (green cheapest, amber average, red dearest), days without a fare are
+  greyed out, and the best trip around the day picked on the map is marked.
+- City-break attractions as a two-column photo grid.
+- `GET /travel/flights/{carrier}?month=YYYY-MM-01` returns a whole month for the
+  calendar, reusing the per-month cache of the ±7 day event window.
+
+### Changed
+- The city sheet no longer shows the bus option. A bus calendar follows later.
+
+## [1.3.0] — build 55, 2026-09-21
+
+### Changed
+- Travel tag chips sort by count, like the Lokalne filter.
+- Map markers scale with the zoom and with the number of pins, so a continent
+  view stays readable. City pins use the same circular shape as the event pins.
+- Destination airports draw as carrier-coloured dots at low zoom (blue Ryanair,
+  purple Wizzair) and open into the IATA badge on zoom-in.
+
+### Fixed
+- Restaurant pins no longer draw the 24 h time ring and no longer pulse.
+  Restaurants are evergreen and have no expiry.
+
+## [1.3.0] — build 54, 2026-09-21
+
+### Added
+- A "City break" filter on the Europa map. City pins show the destinations that
+  are reachable from the selected departure city on the selected day, together
+  with their connections. Cities are their own map layer: they never group with
+  the event pins. The detail follows the zoom — large cities appear first, and
+  the next tier stays as a dot until the map zooms in.
+- `GET /travel/cities` — city-break destinations with the day's connections,
+  computed from the materialized flight schedule (no provider call).
+
 ## [1.3.0] — build 53, 2026-09-20
 
 ### Added

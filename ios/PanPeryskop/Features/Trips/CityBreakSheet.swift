@@ -49,6 +49,19 @@ struct CityBreakSheet: View {
                     .padding(.bottom, Theme.Spacing.xl)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                .onChange(of: current.id) { _, _ in
+                    // Picking a neighbour from the horizontal list moves the map
+                    // and returns the sheet to the top, so the new city reads
+                    // from its hero like a fresh open.
+                    detent = .medium
+                    NotificationCenter.default.post(
+                        name: .centerMapOnCoordinate,
+                        object: MapCenterPayload(lat: current.lat, lng: current.lng)
+                    )
+                    withAnimation(AppConstants.springStandard) {
+                        proxy.scrollTo(Self.topId, anchor: .top)
+                    }
+                }
                 .safeAreaInset(edge: .top, spacing: 0) {
                     TripsGamestrip(event: event, city: current, onTap: {
                         withAnimation(AppConstants.springStandard) {

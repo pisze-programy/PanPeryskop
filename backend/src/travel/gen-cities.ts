@@ -170,6 +170,32 @@ function carrierAirports(name: string): string[] {
   return CARRIER_AIRPORTS.get(fold(name)) ?? [];
 }
 
+const AIRPORT_RADIUS_KM = 150;
+
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad;
+  const dLng = (lng2 - lng1) * rad;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(a));
+}
+
+function airportsNear(lat: number, lng: number): string[] {
+  const codes = airportCatalog()
+    .filter((a) => distanceKm(lat, lng, a.lat, a.lng) <= AIRPORT_RADIUS_KM)
+    .sort((a, b) => distanceKm(lat, lng, a.lat, a.lng) - distanceKm(lat, lng, b.lat, b.lng))
+    .map((a) => canonicalIata(a.iata));
+  return [...new Set(codes)];
+}
+
+/** The carrier names its own city first. When it names none — Bergamo is not
+ *  Milan — the airports within 150 km of the city are the answer. */
+function cityAirports(name: string, lat: number, lng: number): string[] {
+  const carrier = carrierAirports(name);
+  return carrier.length > 0 ? carrier : airportsNear(lat, lng);
+}
+
 function tabs(html: string): { near: string[]; next: string[]; similar: string[] } {
   const read = (name: string): string[] => {
     const start = html.indexOf(`tab tab-${name}`);
@@ -323,7 +349,7 @@ async function main(): Promise<void> {
       bandRank: bandRank(cost, edges),
       costUsd: cost,
       population: city.population,
-      airports: carrierAirports(city.name),
+      airports: cityAirports(city.name, city.latitude, city.longitude),
       imageUrl: city.image,
       imageLargeUrl: city.image_large,
       videoUrl: null,

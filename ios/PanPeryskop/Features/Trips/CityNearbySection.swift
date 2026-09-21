@@ -10,7 +10,7 @@ struct CityNearbySection: View {
             TripsSectionHeader(title: "W okolicy")
                 .padding(.horizontal, Theme.Spacing.l)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Theme.Spacing.s) {
+                LazyHStack(spacing: Theme.Spacing.s) {
                     ForEach(cities) { city in
                         card(city)
                     }

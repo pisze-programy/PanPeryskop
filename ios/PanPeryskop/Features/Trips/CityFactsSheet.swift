@@ -5,6 +5,7 @@ struct CityFactsSheet: View {
     let city: TravelCity
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.region) private var region
     @State private var detent: PresentationDetent = .medium
 
     private var facts: CityFacts { city.facts }
@@ -27,8 +28,8 @@ struct CityFactsSheet: View {
 
     private var rows: [(label: String, value: String)] {
         [
-            ("Koszt życia", "$\(facts.costLocalUsd) / miesiąc"),
-            ("Na miejscu", "$\(max(1, facts.costLocalUsd / 30)) / dzień"),
+            ("Koszt życia", "\(region.price(Double(facts.costLocalUsd))) / miesiąc"),
+            ("Na miejscu", "\(region.price(Double(max(1, facts.costLocalUsd / 30)))) / dzień"),
             ("Internet", "\(facts.internetMbps) Mb/s"),
             ("Temperatura teraz", temp(facts.tempNowC)),
             ("Wilgotność", "\(facts.humidityNow)%"),
@@ -61,8 +62,8 @@ struct CityFactsSheet: View {
     }
 
     private func score(_ value: Double?) -> String {
-        guard let value else { return "brak danych" }
-        return String(format: "%.1f / 5", value)
+        guard let value else { return region.scoreLabel(nil) }
+        return "\(String(format: "%.1f", value)) · \(region.scoreLabel(value))"
     }
 
     private func temp(_ value: Double) -> String {

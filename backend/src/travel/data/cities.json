@@ -10,7 +10,11 @@
     "bandRank": 1,
     "costUsd": 8835,
     "population": 56987,
-    "airports": [],
+    "airports": [
+      "NCE",
+      "CUF",
+      "GOA"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/monaco-monaco.jpg?1705536543",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/monaco-monaco.jpg?1705536543",
     "videoUrl": null,
@@ -89,7 +93,11 @@
     "bandRank": 1,
     "costUsd": 3716,
     "population": 687196,
-    "airports": [],
+    "airports": [
+      "BSL",
+      "FDH",
+      "FMM"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/zurich-switzerland.jpg?1705709221",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/zurich-switzerland.jpg?1705709221",
     "videoUrl": null,
@@ -251,7 +259,11 @@
     "bandRank": 1,
     "costUsd": 3393,
     "population": 434104,
-    "airports": [],
+    "airports": [
+      "LYS",
+      "DLE",
+      "GNB"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/geneva-switzerland.jpg?1705709440",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/geneva-switzerland.jpg?1705709440",
     "videoUrl": null,
@@ -491,7 +503,11 @@
     "bandRank": 1,
     "costUsd": 2972,
     "population": 289436,
-    "airports": [],
+    "airports": [
+      "DLE",
+      "BSL",
+      "LYS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lausanne-switzerland.jpg?1744761756",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lausanne-switzerland.jpg?1744761756",
     "videoUrl": null,
@@ -732,7 +748,16 @@
     "bandRank": 1,
     "costUsd": 2814,
     "population": 171873,
-    "airports": [],
+    "airports": [
+      "LTN",
+      "BHX",
+      "LGW",
+      "STN",
+      "BRS",
+      "BOH",
+      "EMA",
+      "CWL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/oxford-united-kingdom.jpg?1705536388",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/oxford-united-kingdom.jpg?1705536388",
     "videoUrl": null,
@@ -892,7 +917,11 @@
     "bandRank": 1,
     "costUsd": 2770,
     "population": 75974,
-    "airports": [],
+    "airports": [
+      "SNN",
+      "NOC",
+      "KIR"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/galway-ireland.jpg?1705450242",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/galway-ireland.jpg?1705450242",
     "videoUrl": null,
@@ -971,7 +1000,9 @@
     "bandRank": 1,
     "costUsd": 2702,
     "population": 205698,
-    "airports": [],
+    "airports": [
+      "BSL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bern-switzerland.jpg?1778716960",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bern-switzerland.jpg?1778716960",
     "videoUrl": null,
@@ -1290,7 +1321,10 @@
     "bandRank": 1,
     "costUsd": 2600,
     "population": 5067,
-    "airports": [],
+    "airports": [
+      "BSL",
+      "MXP"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/interlaken-switzerland.jpg?1705450507",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/interlaken-switzerland.jpg?1705450507",
     "videoUrl": null,
@@ -1369,7 +1403,12 @@
     "bandRank": 1,
     "costUsd": 2523,
     "population": 70434,
-    "airports": [],
+    "airports": [
+      "FDH",
+      "FMM",
+      "BSL",
+      "STR"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/st-gallen-switzerland.jpg?1705450477",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/st-gallen-switzerland.jpg?1705450477",
     "videoUrl": null,
@@ -1523,7 +1562,14 @@
     "bandRank": 1,
     "costUsd": 2500,
     "population": 140245,
-    "airports": [],
+    "airports": [
+      "STN",
+      "LTN",
+      "NWI",
+      "LGW",
+      "EMA",
+      "BHX"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cambridge-united-kingdom.jpg?1705709369",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cambridge-united-kingdom.jpg?1705709369",
     "videoUrl": null,
@@ -1602,7 +1648,11 @@
     "bandRank": 1,
     "costUsd": 2489,
     "population": 214585,
-    "airports": [],
+    "airports": [
+      "AMS",
+      "EIN",
+      "NRN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/haarlem-netherlands.jpg?1705450329",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/haarlem-netherlands.jpg?1705450329",
     "videoUrl": null,
@@ -1681,7 +1731,11 @@
     "bandRank": 1,
     "costUsd": 2480,
     "population": 93154,
-    "airports": [],
+    "airports": [
+      "MXP",
+      "BGY",
+      "TRN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lugano-switzerland.jpg?1778630752",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lugano-switzerland.jpg?1778630752",
     "videoUrl": null,
@@ -1760,7 +1814,12 @@
     "bandRank": 1,
     "costUsd": 2467,
     "population": 88517,
-    "airports": [],
+    "airports": [
+      "TTU",
+      "TNG",
+      "AGP",
+      "SVQ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/gibraltar-gibraltar.jpg?1778717142",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/gibraltar-gibraltar.jpg?1778717142",
     "videoUrl": null,
@@ -1839,7 +1898,12 @@
     "bandRank": 1,
     "costUsd": 2463,
     "population": 465581,
-    "airports": [],
+    "airports": [
+      "LGW",
+      "LTN",
+      "BOH",
+      "STN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/brighton-united-kingdom.jpg?1723766722",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/brighton-united-kingdom.jpg?1723766722",
     "videoUrl": null,
@@ -1918,7 +1982,9 @@
     "bandRank": 1,
     "costUsd": 2462,
     "population": 54166,
-    "airports": [],
+    "airports": [
+      "TOS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/tromso-norway.jpg?1710115855",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/tromso-norway.jpg?1710115855",
     "videoUrl": null,
@@ -2159,7 +2225,13 @@
     "bandRank": 1,
     "costUsd": 2402,
     "population": 517146,
-    "airports": [],
+    "airports": [
+      "AMS",
+      "EIN",
+      "NRN",
+      "MST",
+      "BRU"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/utrecht-netherlands.jpg?1705449796",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/utrecht-netherlands.jpg?1705449796",
     "videoUrl": null,
@@ -2238,7 +2310,13 @@
     "bandRank": 1,
     "costUsd": 2370,
     "population": 1018838,
-    "airports": [],
+    "airports": [
+      "AMS",
+      "EIN",
+      "BRU",
+      "NRN",
+      "MST"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/rotterdam-netherlands.jpg?1744416132",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/rotterdam-netherlands.jpg?1744416132",
     "videoUrl": null,
@@ -2397,7 +2475,14 @@
     "bandRank": 1,
     "costUsd": 2306,
     "population": 85529,
-    "airports": [],
+    "airports": [
+      "BRS",
+      "CWL",
+      "BOH",
+      "EXT",
+      "BHX",
+      "LTN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bath-united-kingdom.jpg?1772236937",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bath-united-kingdom.jpg?1772236937",
     "videoUrl": null,
@@ -2556,7 +2641,14 @@
     "bandRank": 1,
     "costUsd": 2294,
     "population": 273829,
-    "airports": [],
+    "airports": [
+      "LTN",
+      "LGW",
+      "BOH",
+      "STN",
+      "BRS",
+      "BHX"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/reading-united-kingdom.jpg?1642465355",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/reading-united-kingdom.jpg?1642465355",
     "videoUrl": null,
@@ -2715,7 +2807,11 @@
     "bandRank": 1,
     "costUsd": 2252,
     "population": 10614,
-    "airports": [],
+    "airports": [
+      "TRN",
+      "GNB",
+      "LYS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/chamonix-france.jpg?1705536203",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/chamonix-france.jpg?1705536203",
     "videoUrl": null,
@@ -2876,7 +2972,12 @@
     "bandRank": 1,
     "costUsd": 2203,
     "population": 277710,
-    "airports": [],
+    "airports": [
+      "AMS",
+      "EIN",
+      "NRN",
+      "BRU"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/leiden-netherlands.jpg?1705449657",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/leiden-netherlands.jpg?1705449657",
     "videoUrl": null,
@@ -3035,7 +3136,10 @@
     "bandRank": 1,
     "costUsd": 2194,
     "population": 1810438,
-    "airports": [],
+    "airports": [
+      "FMM",
+      "SZG"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/munich-germany.jpg?1776902416",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/munich-germany.jpg?1776902416",
     "videoUrl": null,
@@ -3358,7 +3462,14 @@
     "bandRank": 1,
     "costUsd": 2123,
     "population": 345308,
-    "airports": [],
+    "airports": [
+      "BOH",
+      "LGW",
+      "BRS",
+      "LTN",
+      "EXT",
+      "CWL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/southampton-united-kingdom.jpg?1706054783",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/southampton-united-kingdom.jpg?1706054783",
     "videoUrl": null,
@@ -3516,7 +3627,10 @@
     "bandRank": 1,
     "costUsd": 2068,
     "population": 22591,
-    "airports": [],
+    "airports": [
+      "MLA",
+      "CIY"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/sliema-malta.jpg?1777853065",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/sliema-malta.jpg?1777853065",
     "videoUrl": null,
@@ -3594,7 +3708,13 @@
     "bandRank": 1,
     "costUsd": 2067,
     "population": 161105,
-    "airports": [],
+    "airports": [
+      "AGP",
+      "TTU",
+      "GRX",
+      "TNG",
+      "SVQ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/marbella-spain.jpg?1705623017",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/marbella-spain.jpg?1705623017",
     "videoUrl": null,
@@ -3670,7 +3790,10 @@
     "bandRank": 1,
     "costUsd": 2032,
     "population": 207105,
-    "airports": [],
+    "airports": [
+      "PFO",
+      "LCA"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/limassol-cyprus.jpg?1705449893",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/limassol-cyprus.jpg?1705449893",
     "videoUrl": null,
@@ -3749,7 +3872,16 @@
     "bandRank": 1,
     "costUsd": 2025,
     "population": 193142,
-    "airports": [],
+    "airports": [
+      "NRN",
+      "EIN",
+      "AMS",
+      "MST",
+      "DTM",
+      "FMO",
+      "CGN",
+      "BRU"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/nijmegen-netherlands.jpg?1777507388",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/nijmegen-netherlands.jpg?1777507388",
     "videoUrl": null,
@@ -3908,7 +4040,14 @@
     "bandRank": 1,
     "costUsd": 1991,
     "population": 179320,
-    "airports": [],
+    "airports": [
+      "EIN",
+      "BRU",
+      "AMS",
+      "NRN",
+      "MST",
+      "CRL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/breda-netherlands.jpg?1778457857",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/breda-netherlands.jpg?1778457857",
     "videoUrl": null,
@@ -4063,7 +4202,9 @@
     "bandRank": 1,
     "costUsd": 1968,
     "population": 36436,
-    "airports": [],
+    "airports": [
+      "LIS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cascais-portugal.jpg?1705449712",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cascais-portugal.jpg?1705449712",
     "videoUrl": null,
@@ -4141,7 +4282,12 @@
     "bandRank": 1,
     "costUsd": 1962,
     "population": 485919,
-    "airports": [],
+    "airports": [
+      "BOH",
+      "LGW",
+      "BRS",
+      "LTN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/portsmouth-united-kingdom.jpg?1705536490",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/portsmouth-united-kingdom.jpg?1705536490",
     "videoUrl": null,
@@ -4298,7 +4444,14 @@
     "bandRank": 1,
     "costUsd": 1935,
     "population": 192669,
-    "airports": [],
+    "airports": [
+      "NRN",
+      "EIN",
+      "AMS",
+      "MST",
+      "FMO",
+      "DTM"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/arnhem-netherlands.jpg?1705622897",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/arnhem-netherlands.jpg?1705622897",
     "videoUrl": null,
@@ -4537,7 +4690,14 @@
     "bandRank": 1,
     "costUsd": 1920,
     "population": 201893,
-    "airports": [],
+    "airports": [
+      "EIN",
+      "NRN",
+      "BRU",
+      "AMS",
+      "MST",
+      "CRL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/tilburg-netherlands.jpg?1709856249",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/tilburg-netherlands.jpg?1709856249",
     "videoUrl": null,
@@ -4613,7 +4773,11 @@
     "bandRank": 1,
     "costUsd": 1918,
     "population": 185964,
-    "airports": [],
+    "airports": [
+      "AMS",
+      "EIN",
+      "NRN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/almere-netherlands.jpg?1726185750",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/almere-netherlands.jpg?1726185750",
     "videoUrl": null,
@@ -4771,7 +4935,14 @@
     "bandRank": 1,
     "costUsd": 1902,
     "population": 272820,
-    "airports": [],
+    "airports": [
+      "LTN",
+      "STN",
+      "LGW",
+      "BHX",
+      "EMA",
+      "NWI"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/luton-united-kingdom.jpg?1711757251",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/luton-united-kingdom.jpg?1711757251",
     "videoUrl": null,
@@ -4850,7 +5021,9 @@
     "bandRank": 1,
     "costUsd": 1902,
     "population": 96235,
-    "airports": [],
+    "airports": [
+      "AMS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/leeuwarden-netherlands.jpg?1714090215",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/leeuwarden-netherlands.jpg?1714090215",
     "videoUrl": null,
@@ -4927,7 +5100,11 @@
     "bandRank": 1,
     "costUsd": 1901,
     "population": 221547,
-    "airports": [],
+    "airports": [
+      "NCE",
+      "CUF",
+      "MRS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cannes-france.jpg?1705968403",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cannes-france.jpg?1705968403",
     "videoUrl": null,
@@ -5166,7 +5343,10 @@
     "bandRank": 1,
     "costUsd": 1885,
     "population": 176296,
-    "airports": [],
+    "airports": [
+      "FMO",
+      "BRE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/groningen-netherlands.jpg?1705363241",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/groningen-netherlands.jpg?1705363241",
     "videoUrl": null,
@@ -5323,7 +5503,11 @@
     "bandRank": 2,
     "costUsd": 1878,
     "population": 140707,
-    "airports": [],
+    "airports": [
+      "FMM",
+      "SZG",
+      "FDH"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/innsbruck-austria.jpg?1730851299",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/innsbruck-austria.jpg?1730851299",
     "videoUrl": null,
@@ -5402,7 +5586,9 @@
     "bandRank": 2,
     "costUsd": 1873,
     "population": 30916,
-    "airports": [],
+    "airports": [
+      "TRF"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/arendal-norway.jpg?1705709568",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/arendal-norway.jpg?1705709568",
     "videoUrl": null,
@@ -5636,7 +5822,10 @@
     "bandRank": 2,
     "costUsd": 1867,
     "population": 4933,
-    "airports": [],
+    "airports": [
+      "QSR",
+      "NAP"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/amalfi-italy.jpg?1705709656",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/amalfi-italy.jpg?1705709656",
     "videoUrl": null,
@@ -5874,7 +6063,13 @@
     "bandRank": 2,
     "costUsd": 1846,
     "population": 85565,
-    "airports": [],
+    "airports": [
+      "NRN",
+      "AMS",
+      "EIN",
+      "FMO",
+      "DTM"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/deventer-netherlands.jpg?1717891742",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/deventer-netherlands.jpg?1717891742",
     "videoUrl": null,
@@ -6116,7 +6311,15 @@
     "bandRank": 2,
     "costUsd": 1818,
     "population": 426304,
-    "airports": [],
+    "airports": [
+      "BHX",
+      "EMA",
+      "LTN",
+      "MAN",
+      "STN",
+      "LPL",
+      "BRS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/coventry-united-kingdom.jpg?1741305943",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/coventry-united-kingdom.jpg?1741305943",
     "videoUrl": null,
@@ -6193,7 +6396,14 @@
     "bandRank": 2,
     "costUsd": 1815,
     "population": 149998,
-    "airports": [],
+    "airports": [
+      "LBA",
+      "MME",
+      "MAN",
+      "NCL",
+      "EMA",
+      "LPL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/york-united-kingdom.jpg?1705450179",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/york-united-kingdom.jpg?1705450179",
     "videoUrl": null,
@@ -6271,7 +6481,11 @@
     "bandRank": 2,
     "costUsd": 1810,
     "population": 759365,
-    "airports": [],
+    "airports": [
+      "NCL",
+      "MME",
+      "LBA"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/newcastle-upon-tyne-united-kingdom.jpg?1705708865",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/newcastle-upon-tyne-united-kingdom.jpg?1705708865",
     "videoUrl": null,
@@ -6428,7 +6642,14 @@
     "bandRank": 2,
     "costUsd": 1791,
     "population": 118963,
-    "airports": [],
+    "airports": [
+      "BHX",
+      "BRS",
+      "CWL",
+      "EMA",
+      "LTN",
+      "BOH"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cheltenham-united-kingdom.jpg?1741306006",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cheltenham-united-kingdom.jpg?1741306006",
     "videoUrl": null,
@@ -6668,7 +6889,12 @@
     "bandRank": 2,
     "costUsd": 1755,
     "population": 879994,
-    "airports": [],
+    "airports": [
+      "AMS",
+      "EIN",
+      "BRU",
+      "NRN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/the-hague-netherlands.jpg?1709683337",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/the-hague-netherlands.jpg?1709683337",
     "videoUrl": null,
@@ -6747,7 +6973,11 @@
     "bandRank": 2,
     "costUsd": 1747,
     "population": 323910,
-    "airports": [],
+    "airports": [
+      "HEL",
+      "TLL",
+      "TKU"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/espoo-finland.jpg?1705536426",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/espoo-finland.jpg?1705536426",
     "videoUrl": null,
@@ -6826,7 +7056,12 @@
     "bandRank": 2,
     "costUsd": 1744,
     "population": 182776,
-    "airports": [],
+    "airports": [
+      "FKB",
+      "STR",
+      "SCN",
+      "HHN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/heidelberg-germany.jpg?1711411581",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/heidelberg-germany.jpg?1711411581",
     "videoUrl": null,
@@ -6985,7 +7220,12 @@
     "bandRank": 2,
     "costUsd": 1737,
     "population": 90333,
-    "airports": [],
+    "airports": [
+      "VRN",
+      "TSF",
+      "VCE",
+      "BGY"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/trento-italy.jpg?1730679026",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/trento-italy.jpg?1730679026",
     "videoUrl": null,
@@ -7305,7 +7545,14 @@
     "bandRank": 2,
     "costUsd": 1718,
     "population": 648410,
-    "airports": [],
+    "airports": [
+      "EMA",
+      "BHX",
+      "MAN",
+      "LBA",
+      "LPL",
+      "LTN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/nottingham-united-kingdom.jpg?1778630461",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/nottingham-united-kingdom.jpg?1778630461",
     "videoUrl": null,
@@ -7463,7 +7710,12 @@
     "bandRank": 2,
     "costUsd": 1697,
     "population": 185357,
-    "airports": [],
+    "airports": [
+      "BIQ",
+      "BIO",
+      "VIT",
+      "SDR"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/san-sebastian-spain.jpg?1705881965",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/san-sebastian-spain.jpg?1705881965",
     "videoUrl": null,
@@ -7542,7 +7794,14 @@
     "bandRank": 2,
     "costUsd": 1686,
     "population": 548450,
-    "airports": [],
+    "airports": [
+      "MAN",
+      "LBA",
+      "EMA",
+      "LPL",
+      "BHX",
+      "MME"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/sheffield-united-kingdom.jpg?1705450023",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/sheffield-united-kingdom.jpg?1705450023",
     "videoUrl": null,
@@ -7700,7 +7959,14 @@
     "bandRank": 2,
     "costUsd": 1678,
     "population": 20430,
-    "airports": [],
+    "airports": [
+      "TLS",
+      "CCF",
+      "PGF",
+      "GRO",
+      "BCN",
+      "LDE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/andorra-la-vella-andorra.jpg?1722038420",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/andorra-la-vella-andorra.jpg?1722038420",
     "videoUrl": null,
@@ -7942,7 +8208,13 @@
     "bandRank": 2,
     "costUsd": 1662,
     "population": 222358,
-    "airports": [],
+    "airports": [
+      "LTN",
+      "BHX",
+      "EMA",
+      "STN",
+      "LGW"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/northampton-united-kingdom.jpg?1705450317",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/northampton-united-kingdom.jpg?1705450317",
     "videoUrl": null,
@@ -8099,7 +8371,11 @@
     "bandRank": 2,
     "costUsd": 1652,
     "population": 829,
-    "airports": [],
+    "airports": [
+      "CIA",
+      "FCO",
+      "PEG"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/vatican-city-vatican-city.jpg?1705450536",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/vatican-city-vatican-city.jpg?1705450536",
     "videoUrl": null,
@@ -8178,7 +8454,9 @@
     "bandRank": 2,
     "costUsd": 1648,
     "population": 100476,
-    "airports": [],
+    "airports": [
+      "AAR"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/aalborg-denmark.jpg?1705450393",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/aalborg-denmark.jpg?1705450393",
     "videoUrl": null,
@@ -8417,7 +8695,14 @@
     "bandRank": 2,
     "costUsd": 1615,
     "population": 76962,
-    "airports": [],
+    "airports": [
+      "BRU",
+      "CRL",
+      "MST",
+      "EIN",
+      "LIL",
+      "NRN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/leuven-belgium.jpg?1774224318",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/leuven-belgium.jpg?1774224318",
     "videoUrl": null,
@@ -8576,7 +8861,10 @@
     "bandRank": 2,
     "costUsd": 1592,
     "population": 152437,
-    "airports": [],
+    "airports": [
+      "TKU",
+      "HEL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/tampere-finland.jpg?1777939253",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/tampere-finland.jpg?1777939253",
     "videoUrl": null,
@@ -8733,7 +9021,9 @@
     "bandRank": 2,
     "costUsd": 1589,
     "population": 7538,
-    "airports": [],
+    "airports": [
+      "LIS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/ericeira-portugal.jpg?1733788822",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/ericeira-portugal.jpg?1733788822",
     "videoUrl": null,
@@ -8812,7 +9102,15 @@
     "bandRank": 2,
     "costUsd": 1588,
     "population": 651278,
-    "airports": [],
+    "airports": [
+      "BRU",
+      "EIN",
+      "CRL",
+      "MST",
+      "LIL",
+      "AMS",
+      "NRN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/antwerp-belgium.jpg?1761005000",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/antwerp-belgium.jpg?1761005000",
     "videoUrl": null,
@@ -8891,7 +9189,12 @@
     "bandRank": 2,
     "costUsd": 1586,
     "population": 398145,
-    "airports": [],
+    "airports": [
+      "FKB",
+      "SCN",
+      "BSL",
+      "STR"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/strasbourg-france.jpg?1705536599",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/strasbourg-france.jpg?1705536599",
     "videoUrl": null,
@@ -9130,7 +9433,12 @@
     "bandRank": 2,
     "costUsd": 1583,
     "population": 125387,
-    "airports": [],
+    "airports": [
+      "LYS",
+      "GNB",
+      "DLE",
+      "TRN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/annecy-france.jpg?1724457682",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/annecy-france.jpg?1724457682",
     "videoUrl": null,
@@ -9209,7 +9517,14 @@
     "bandRank": 2,
     "costUsd": 1571,
     "population": 159014,
-    "airports": [],
+    "airports": [
+      "LBA",
+      "MAN",
+      "LPL",
+      "EMA",
+      "MME",
+      "BHX"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/huddersfield-united-kingdom.jpg?1707350804",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/huddersfield-united-kingdom.jpg?1707350804",
     "videoUrl": null,
@@ -9364,7 +9679,9 @@
     "bandRank": 2,
     "costUsd": 1565,
     "population": 1268,
-    "airports": [],
+    "airports": [
+      "LIS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/comporta-portugal.jpg?1733961954",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/comporta-portugal.jpg?1733961954",
     "videoUrl": null,
@@ -9442,7 +9759,12 @@
     "bandRank": 2,
     "costUsd": 1565,
     "population": 3519,
-    "airports": [],
+    "airports": [
+      "SPU",
+      "SJJ",
+      "DBV",
+      "ZAD"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/hvar-croatia.jpg?1768521774",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/hvar-croatia.jpg?1768521774",
     "videoUrl": null,
@@ -9521,7 +9843,15 @@
     "bandRank": 2,
     "costUsd": 1557,
     "population": 528805,
-    "airports": [],
+    "airports": [
+      "EMA",
+      "BHX",
+      "LTN",
+      "MAN",
+      "STN",
+      "LPL",
+      "LBA"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/leicester-united-kingdom.jpg?1726790692",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/leicester-united-kingdom.jpg?1726790692",
     "videoUrl": null,
@@ -9598,7 +9928,14 @@
     "bandRank": 2,
     "costUsd": 1514,
     "population": 430814,
-    "airports": [],
+    "airports": [
+      "PSA",
+      "FRL",
+      "BLQ",
+      "RMI",
+      "PEG",
+      "PMF"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/florence-italy.jpg?1777680214",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/florence-italy.jpg?1777680214",
     "videoUrl": null,
@@ -9677,7 +10014,12 @@
     "bandRank": 2,
     "costUsd": 1514,
     "population": 121025,
-    "airports": [],
+    "airports": [
+      "AMS",
+      "NRN",
+      "FMO",
+      "EIN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/zwolle-netherlands.jpg?1705450161",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/zwolle-netherlands.jpg?1705450161",
     "videoUrl": null,
@@ -9913,7 +10255,13 @@
     "bandRank": 2,
     "costUsd": 1507,
     "population": 120288,
-    "airports": [],
+    "airports": [
+      "HHN",
+      "SCN",
+      "FKB",
+      "STR",
+      "CGN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/darmstadt-germany.jpg?1705450231",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/darmstadt-germany.jpg?1705450231",
     "videoUrl": null,
@@ -9991,7 +10339,9 @@
     "bandRank": 2,
     "costUsd": 1504,
     "population": 15662,
-    "airports": [],
+    "airports": [
+      "LIS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/peniche-portugal.jpg?1705622549",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/peniche-portugal.jpg?1705622549",
     "videoUrl": null,
@@ -10070,7 +10420,12 @@
     "bandRank": 2,
     "costUsd": 1504,
     "population": 23000,
-    "airports": [],
+    "airports": [
+      "AMS",
+      "EIN",
+      "BRU",
+      "NRN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/scheveningen-netherlands.jpg?1705536570",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/scheveningen-netherlands.jpg?1705536570",
     "videoUrl": null,
@@ -10227,7 +10582,9 @@
     "bandRank": 2,
     "costUsd": 1492,
     "population": 15851,
-    "airports": [],
+    "airports": [
+      "FAO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/albufeira-portugal.jpg?1705449806",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/albufeira-portugal.jpg?1705449806",
     "videoUrl": null,
@@ -10546,7 +10903,13 @@
     "bandRank": 3,
     "costUsd": 1485,
     "population": 53901,
-    "airports": [],
+    "airports": [
+      "PSA",
+      "PEG",
+      "FRL",
+      "RMI",
+      "BLQ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/siena-italy.jpg?1778198804",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/siena-italy.jpg?1778198804",
     "videoUrl": null,
@@ -10625,7 +10988,11 @@
     "bandRank": 3,
     "costUsd": 1478,
     "population": 59998,
-    "airports": [],
+    "airports": [
+      "FSC",
+      "OLB",
+      "AHO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/ajaccio-corsica-france.jpg?1706573651",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/ajaccio-corsica-france.jpg?1706573651",
     "videoUrl": null,
@@ -10945,7 +11312,15 @@
     "bandRank": 3,
     "costUsd": 1468,
     "population": 203725,
-    "airports": [],
+    "airports": [
+      "TSF",
+      "VCE",
+      "VRN",
+      "BLQ",
+      "TRS",
+      "FRL",
+      "PMF"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/padova-italy.jpg?1705449868",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/padova-italy.jpg?1705449868",
     "videoUrl": null,
@@ -11183,7 +11558,11 @@
     "bandRank": 3,
     "costUsd": 1454,
     "population": 1199498,
-    "airports": [],
+    "airports": [
+      "LYS",
+      "GNB",
+      "DLE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lyon-france.jpg?1705536454",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lyon-france.jpg?1705536454",
     "videoUrl": null,
@@ -11341,7 +11720,9 @@
     "bandRank": 3,
     "costUsd": 1448,
     "population": 13968,
-    "airports": [],
+    "airports": [
+      "LIS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/costa-da-caparica-portugal.jpg?1778630441",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/costa-da-caparica-portugal.jpg?1778630441",
     "videoUrl": null,
@@ -11420,7 +11801,11 @@
     "bandRank": 3,
     "costUsd": 1436,
     "population": 2189,
-    "airports": [],
+    "airports": [
+      "DBV",
+      "TGD",
+      "SJJ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cavtat-croatia.jpg?1705536259",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cavtat-croatia.jpg?1705536259",
     "videoUrl": null,
@@ -11978,7 +12363,13 @@
     "bandRank": 3,
     "costUsd": 1417,
     "population": 81645,
-    "airports": [],
+    "airports": [
+      "TSF",
+      "VCE",
+      "TRS",
+      "VRN",
+      "BLQ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/treviso-italy.jpg?1705364227",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/treviso-italy.jpg?1705364227",
     "videoUrl": null,
@@ -12299,7 +12690,14 @@
     "bandRank": 3,
     "costUsd": 1403,
     "population": 323575,
-    "airports": [],
+    "airports": [
+      "BZR",
+      "FNI",
+      "MRS",
+      "PGF",
+      "CCF",
+      "RDZ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/montpellier-france.jpg?1705795257",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/montpellier-france.jpg?1705795257",
     "videoUrl": null,
@@ -12699,7 +13097,9 @@
     "bandRank": 3,
     "costUsd": 1360,
     "population": 49239,
-    "airports": [],
+    "airports": [
+      "NUE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/hof-germany.jpg?1775174558",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/hof-germany.jpg?1775174558",
     "videoUrl": null,
@@ -12936,7 +13336,11 @@
     "bandRank": 3,
     "costUsd": 1353,
     "population": 297321,
-    "airports": [],
+    "airports": [
+      "KLU",
+      "LJU",
+      "VIE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/graz-austria.jpg?1712016240",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/graz-austria.jpg?1712016240",
     "videoUrl": null,
@@ -13013,7 +13417,10 @@
     "bandRank": 3,
     "costUsd": 1350,
     "population": 554276,
-    "airports": [],
+    "airports": [
+      "PRG",
+      "BER"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/dresden-germany.jpg?1705449717",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/dresden-germany.jpg?1705449717",
     "videoUrl": null,
@@ -13171,7 +13578,9 @@
     "bandRank": 3,
     "costUsd": 1323,
     "population": 109751,
-    "airports": [],
+    "airports": [
+      "NUE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/erlangen-germany.jpg?1709770187",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/erlangen-germany.jpg?1709770187",
     "videoUrl": null,
@@ -13331,7 +13740,13 @@
     "bandRank": 3,
     "costUsd": 1315,
     "population": 94916,
-    "airports": [],
+    "airports": [
+      "LUX",
+      "HHN",
+      "SCN",
+      "CGN",
+      "MST"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/trier-germany.jpg?1717978049",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/trier-germany.jpg?1717978049",
     "videoUrl": null,
@@ -13410,7 +13825,9 @@
     "bandRank": 3,
     "costUsd": 1313,
     "population": 247655,
-    "airports": [],
+    "airports": [
+      "NTE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/rennes-france.jpg?1737676910",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/rennes-france.jpg?1737676910",
     "videoUrl": null,
@@ -13488,7 +13905,13 @@
     "bandRank": 3,
     "costUsd": 1312,
     "population": 288592,
-    "airports": [],
+    "airports": [
+      "BIQ",
+      "VIT",
+      "BIO",
+      "ZAZ",
+      "LDE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/pamplona-spain.jpg?1778630586",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/pamplona-spain.jpg?1778630586",
     "videoUrl": null,
@@ -13642,7 +14065,9 @@
     "bandRank": 3,
     "costUsd": 1311,
     "population": 273244,
-    "airports": [],
+    "airports": [
+      "SCQ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/a-coruna-spain.jpg?1698798128",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/a-coruna-spain.jpg?1698798128",
     "videoUrl": null,
@@ -13802,7 +14227,17 @@
     "bandRank": 3,
     "costUsd": 1299,
     "population": 240719,
-    "airports": [],
+    "airports": [
+      "MST",
+      "CGN",
+      "EIN",
+      "NRN",
+      "BRU",
+      "CRL",
+      "HHN",
+      "LUX",
+      "DTM"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/aachen-germany.jpg?1733356819",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/aachen-germany.jpg?1733356819",
     "videoUrl": null,
@@ -13879,7 +14314,9 @@
     "bandRank": 3,
     "costUsd": 1289,
     "population": 14974268,
-    "airports": [],
+    "airports": [
+      "IST"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/istanbul-turkey.jpg?1705622450",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/istanbul-turkey.jpg?1705622450",
     "videoUrl": null,
@@ -13958,7 +14395,9 @@
     "bandRank": 3,
     "costUsd": 1288,
     "population": 542679,
-    "airports": [],
+    "airports": [
+      "BER"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/leipzig-germany.jpg?1705449809",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/leipzig-germany.jpg?1705449809",
     "videoUrl": null,
@@ -14037,7 +14476,14 @@
     "bandRank": 3,
     "costUsd": 1287,
     "population": 124398,
-    "airports": [],
+    "airports": [
+      "MXP",
+      "BGY",
+      "PMF",
+      "TRN",
+      "VRN",
+      "GOA"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/monza-italy.jpg?1750205216",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/monza-italy.jpg?1750205216",
     "videoUrl": null,
@@ -14194,7 +14640,11 @@
     "bandRank": 3,
     "costUsd": 1283,
     "population": 64938,
-    "airports": [],
+    "airports": [
+      "LIL",
+      "BRU",
+      "CRL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bruges-belgium.jpg?1705709505",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bruges-belgium.jpg?1705709505",
     "videoUrl": null,
@@ -14354,7 +14804,11 @@
     "bandRank": 3,
     "costUsd": 1279,
     "population": 16868,
-    "airports": [],
+    "airports": [
+      "AMS",
+      "EIN",
+      "NRN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/zandvoort-netherlands.jpg?1776470691",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/zandvoort-netherlands.jpg?1776470691",
     "videoUrl": null,
@@ -14594,7 +15048,9 @@
     "bandRank": 3,
     "costUsd": 1262,
     "population": 80880,
-    "airports": [],
+    "airports": [
+      "OPO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/aveiro-portugal.jpg?1705449697",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/aveiro-portugal.jpg?1705449697",
     "videoUrl": null,
@@ -14672,7 +15128,11 @@
     "bandRank": 3,
     "costUsd": 1261,
     "population": 76819,
-    "airports": [],
+    "airports": [
+      "FNI",
+      "MRS",
+      "BZR"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/avignon-france.jpg?1705450527",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/avignon-france.jpg?1705450527",
     "videoUrl": null,
@@ -14913,7 +15373,11 @@
     "bandRank": 3,
     "costUsd": 1248,
     "population": 70058,
-    "airports": [],
+    "airports": [
+      "AMS",
+      "NRN",
+      "EIN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lelystad-netherlands.jpg?1778717136",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lelystad-netherlands.jpg?1778717136",
     "videoUrl": null,
@@ -15149,7 +15613,10 @@
     "bandRank": 3,
     "costUsd": 1241,
     "population": 331479,
-    "airports": [],
+    "airports": [
+      "LCA",
+      "PFO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/nicosia-cyprus.jpg?1705449805",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/nicosia-cyprus.jpg?1705449805",
     "videoUrl": null,
@@ -15386,7 +15853,10 @@
     "bandRank": 3,
     "costUsd": 1231,
     "population": 310917,
-    "airports": [],
+    "airports": [
+      "BVA",
+      "ORY"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/rouen-france.jpg?1705536737",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/rouen-france.jpg?1705536737",
     "videoUrl": null,
@@ -15464,7 +15934,11 @@
     "bandRank": 3,
     "costUsd": 1230,
     "population": 405000,
-    "airports": [],
+    "airports": [
+      "PMI",
+      "IBZ",
+      "MAH"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/mallorca-spain.jpg?1705622547",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/mallorca-spain.jpg?1705622547",
     "videoUrl": null,
@@ -15703,7 +16177,13 @@
     "bandRank": 4,
     "costUsd": 1228,
     "population": 52027,
-    "airports": [],
+    "airports": [
+      "PSA",
+      "BLQ",
+      "PMF",
+      "GOA",
+      "FRL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lucca-italy.jpg?1716336629",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lucca-italy.jpg?1716336629",
     "videoUrl": null,
@@ -15780,7 +16260,9 @@
     "bandRank": 4,
     "costUsd": 1227,
     "population": 13600,
-    "airports": [],
+    "airports": [
+      "AMS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/texel-netherlands.jpg?1705450433",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/texel-netherlands.jpg?1705450433",
     "videoUrl": null,
@@ -16093,7 +16575,12 @@
     "bandRank": 4,
     "costUsd": 1211,
     "population": 18000,
-    "airports": [],
+    "airports": [
+      "TGD",
+      "DBV",
+      "TIA",
+      "SJJ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/budva-montenegro.jpg?1721952610",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/budva-montenegro.jpg?1721952610",
     "videoUrl": null,
@@ -16332,7 +16819,15 @@
     "bandRank": 4,
     "costUsd": 1200,
     "population": 156542,
-    "airports": [],
+    "airports": [
+      "DTM",
+      "CGN",
+      "PAD",
+      "FMO",
+      "NRN",
+      "MST",
+      "EIN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/hagen-germany.jpg?1705449934",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/hagen-germany.jpg?1705449934",
     "videoUrl": null,
@@ -16408,7 +16903,16 @@
     "bandRank": 4,
     "costUsd": 1199,
     "population": 151926,
-    "airports": [],
+    "airports": [
+      "BLQ",
+      "PMF",
+      "VRN",
+      "FRL",
+      "PSA",
+      "VCE",
+      "BGY",
+      "TSF"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/modena-italy.jpg?1704845537",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/modena-italy.jpg?1704845537",
     "videoUrl": null,
@@ -16565,7 +17069,9 @@
     "bandRank": 4,
     "costUsd": 1195,
     "population": 198688,
-    "airports": [],
+    "airports": [
+      "DLE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/dijon-france.jpg?1712189435",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/dijon-france.jpg?1712189435",
     "videoUrl": null,
@@ -16796,7 +17302,7 @@
   {
     "id": "cadiz-spain",
     "name": "Cadiz",
-    "namePl": "Kadyks",
+    "namePl": "Cadiz (Filipiny)",
     "country": "Spain",
     "countryCode": "ES",
     "lat": 36.532572,
@@ -16804,7 +17310,11 @@
     "bandRank": 4,
     "costUsd": 1192,
     "population": 117917,
-    "airports": [],
+    "airports": [
+      "TNG",
+      "SVQ",
+      "TTU"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cadiz-spain.jpg?1764460909",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cadiz-spain.jpg?1764460909",
     "videoUrl": null,
@@ -16882,7 +17392,10 @@
     "bandRank": 4,
     "costUsd": 1191,
     "population": 236998,
-    "airports": [],
+    "airports": [
+      "PAD",
+      "DTM"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/kassel-germany.jpg?1708042270",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/kassel-germany.jpg?1708042270",
     "videoUrl": null,
@@ -17442,7 +17955,11 @@
     "bandRank": 4,
     "costUsd": 1164,
     "population": 367234,
-    "airports": [],
+    "airports": [
+      "GRX",
+      "AGP",
+      "LEI"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/granada-spain.jpg?1705536114",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/granada-spain.jpg?1705536114",
     "videoUrl": null,
@@ -17521,7 +18038,9 @@
     "bandRank": 4,
     "costUsd": 1161,
     "population": 105093,
-    "airports": [],
+    "airports": [
+      "OPO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/braga-portugal.jpg?1777334463",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/braga-portugal.jpg?1777334463",
     "videoUrl": null,
@@ -17599,7 +18118,13 @@
     "bandRank": 4,
     "costUsd": 1155,
     "population": 229885,
-    "airports": [],
+    "airports": [
+      "BRU",
+      "LIL",
+      "CRL",
+      "EIN",
+      "MST"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/ghent-belgium.jpg?1743465752",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/ghent-belgium.jpg?1743465752",
     "videoUrl": null,
@@ -17678,7 +18203,12 @@
     "bandRank": 4,
     "costUsd": 1153,
     "population": 18169,
-    "airports": [],
+    "airports": [
+      "TNG",
+      "TTU",
+      "AGP",
+      "SVQ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/tarifa-spain.jpg?1705709658",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/tarifa-spain.jpg?1705709658",
     "videoUrl": null,
@@ -17838,7 +18368,12 @@
     "bandRank": 4,
     "costUsd": 1134,
     "population": 241331,
-    "airports": [],
+    "airports": [
+      "FMO",
+      "PAD",
+      "DTM",
+      "BRE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bielefeld-germany.jpg?1705622846",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bielefeld-germany.jpg?1705622846",
     "videoUrl": null,
@@ -17916,7 +18451,10 @@
     "bandRank": 4,
     "costUsd": 1130,
     "population": 22613,
-    "airports": [],
+    "airports": [
+      "CFU",
+      "PVK"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/sarande-albania.jpg?1741046607",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/sarande-albania.jpg?1741046607",
     "videoUrl": null,
@@ -18233,7 +18771,9 @@
     "bandRank": 4,
     "costUsd": 1119,
     "population": 140796,
-    "airports": [],
+    "airports": [
+      "OPO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/coimbra-portugal.jpg?1719964876",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/coimbra-portugal.jpg?1719964876",
     "videoUrl": null,
@@ -18393,7 +18933,14 @@
     "bandRank": 4,
     "costUsd": 1110,
     "population": 74244,
-    "airports": [],
+    "airports": [
+      "LPL",
+      "BHX",
+      "MAN",
+      "EMA",
+      "BRS",
+      "LBA"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/shrewsbury-united-kingdom.jpg?1748736234",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/shrewsbury-united-kingdom.jpg?1748736234",
     "videoUrl": null,
@@ -19426,7 +19973,15 @@
     "bandRank": 4,
     "costUsd": 1049,
     "population": 91783,
-    "airports": [],
+    "airports": [
+      "BLQ",
+      "VRN",
+      "FRL",
+      "PMF",
+      "VCE",
+      "TSF",
+      "RMI"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/ferrara-italy.jpg?1705882321",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/ferrara-italy.jpg?1705882321",
     "videoUrl": null,
@@ -19504,7 +20059,10 @@
     "bandRank": 4,
     "costUsd": 1048,
     "population": 70778,
-    "airports": [],
+    "airports": [
+      "NAP",
+      "QSR"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/avellino-italy.jpg?1706832589",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/avellino-italy.jpg?1706832589",
     "videoUrl": null,
@@ -19634,7 +20192,9 @@
     "bandRank": 4,
     "costUsd": 1034,
     "population": 114815,
-    "airports": [],
+    "airports": [
+      "PLQ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/klaipeda-lithuania.jpg?1758585873",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/klaipeda-lithuania.jpg?1758585873",
     "videoUrl": null,
@@ -19711,7 +20271,12 @@
     "bandRank": 4,
     "costUsd": 1031,
     "population": 5345,
-    "airports": [],
+    "airports": [
+      "DBV",
+      "TGD",
+      "SJJ",
+      "TIA"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/kotor-montenegro.jpg?1708042566",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/kotor-montenegro.jpg?1708042566",
     "videoUrl": null,
@@ -19790,7 +20355,11 @@
     "bandRank": 4,
     "costUsd": 1024,
     "population": 241782,
-    "airports": [],
+    "airports": [
+      "SVQ",
+      "GRX",
+      "AGP"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cordoba-spain.jpg?1712102669",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cordoba-spain.jpg?1712102669",
     "videoUrl": null,
@@ -19827,7 +20396,12 @@
     "bandRank": 4,
     "costUsd": 1021,
     "population": 321555,
-    "airports": [],
+    "airports": [
+      "LBA",
+      "MME",
+      "EMA",
+      "MAN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/hull-united-kingdom.jpg?1705449854",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/hull-united-kingdom.jpg?1705449854",
     "videoUrl": null,
@@ -19903,7 +20477,11 @@
     "bandRank": 4,
     "costUsd": 1014,
     "population": 32468,
-    "airports": [],
+    "airports": [
+      "CHQ",
+      "HER",
+      "JTR"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/rethymno-greece.jpg?1705450344",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/rethymno-greece.jpg?1705450344",
     "videoUrl": null,
@@ -20060,7 +20638,9 @@
     "bandRank": 4,
     "costUsd": 1005,
     "population": 905745,
-    "airports": [],
+    "airports": [
+      "LWN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/tbilisi-georgia.jpg?1710115260",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/tbilisi-georgia.jpg?1710115260",
     "videoUrl": null,
@@ -20219,7 +20799,12 @@
     "bandRank": 4,
     "costUsd": 1002,
     "population": 515140,
-    "airports": [],
+    "airports": [
+      "BRE",
+      "PAD",
+      "HAM",
+      "FMO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/hannover-germany.jpg?1705536541",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/hannover-germany.jpg?1705536541",
     "videoUrl": null,
@@ -20375,7 +20960,13 @@
     "bandRank": 4,
     "costUsd": 951,
     "population": 150826,
-    "airports": [],
+    "airports": [
+      "ZTH",
+      "EFL",
+      "PVK",
+      "KLX",
+      "VOL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/patras-greece.jpg?1774137632",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/patras-greece.jpg?1774137632",
     "videoUrl": null,
@@ -20612,7 +21203,9 @@
     "bandRank": 4,
     "costUsd": 945,
     "population": 2647686,
-    "airports": [],
+    "airports": [
+      "BJV"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/izmir-turkey.jpg?1705449672",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/izmir-turkey.jpg?1705449672",
     "videoUrl": null,
@@ -20850,7 +21443,11 @@
     "bandRank": 5,
     "costUsd": 942,
     "population": 17727,
-    "airports": [],
+    "airports": [
+      "TGD",
+      "DBV",
+      "TIA"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bar-montenegro.jpg?1705277183",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bar-montenegro.jpg?1705277183",
     "videoUrl": null,
@@ -21246,7 +21843,9 @@
     "bandRank": 5,
     "costUsd": 862,
     "population": 33494,
-    "airports": [],
+    "airports": [
+      "FAO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lagos-portugal.jpg?1705449638",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lagos-portugal.jpg?1705449638",
     "videoUrl": null,
@@ -21565,7 +22164,9 @@
     "bandRank": 5,
     "costUsd": 850,
     "population": 38487,
-    "airports": [],
+    "airports": [
+      "FAO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/portimao-portugal.jpg?1705536070",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/portimao-portugal.jpg?1705536070",
     "videoUrl": null,
@@ -21642,7 +22243,13 @@
     "bandRank": 5,
     "costUsd": 850,
     "population": 84700,
-    "airports": [],
+    "airports": [
+      "MXP",
+      "BGY",
+      "TRN",
+      "PMF",
+      "VRN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lake-como-italy.jpg?1777248106",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lake-como-italy.jpg?1777248106",
     "videoUrl": null,
@@ -21720,7 +22327,12 @@
     "bandRank": 5,
     "costUsd": 843,
     "population": 262654,
-    "airports": [],
+    "airports": [
+      "BEG",
+      "OSI",
+      "TZL",
+      "TSR"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/novi-sad-serbia.jpg?1778284824",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/novi-sad-serbia.jpg?1778284824",
     "videoUrl": null,
@@ -21879,7 +22491,9 @@
     "bandRank": 5,
     "costUsd": 834,
     "population": 111541,
-    "airports": [],
+    "airports": [
+      "FNC"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/madeira-portugal.jpg?1706227278",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/madeira-portugal.jpg?1706227278",
     "videoUrl": null,
@@ -21958,7 +22572,9 @@
     "bandRank": 5,
     "costUsd": 829,
     "population": 128081,
-    "airports": [],
+    "airports": [
+      "AYT"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/alanya-turkey.jpg?1729728050",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/alanya-turkey.jpg?1729728050",
     "videoUrl": null,
@@ -22279,7 +22895,11 @@
     "bandRank": 5,
     "costUsd": 774,
     "population": 188441,
-    "airports": [],
+    "airports": [
+      "OTP",
+      "BBU",
+      "GHV"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/ploiesti-romania.jpg?1778630417",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/ploiesti-romania.jpg?1778630417",
     "videoUrl": null,
@@ -22436,7 +23056,10 @@
     "bandRank": 5,
     "costUsd": 764,
     "population": 9232,
-    "airports": [],
+    "airports": [
+      "SOF",
+      "PDV"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bansko-bulgaria.jpg?1705795452",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bansko-bulgaria.jpg?1705795452",
     "videoUrl": null,
@@ -22673,7 +23296,11 @@
     "bandRank": 5,
     "costUsd": 752,
     "population": 436714,
-    "airports": [],
+    "airports": [
+      "GDN",
+      "SZY",
+      "PLQ"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/kaliningrad-russia.jpg?1755994140",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/kaliningrad-russia.jpg?1755994140",
     "videoUrl": null,
@@ -22986,7 +23613,9 @@
     "bandRank": 5,
     "costUsd": 720,
     "population": 633827,
-    "airports": [],
+    "airports": [
+      "RZE"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lviv-ukraine.jpg?1705623274",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lviv-ukraine.jpg?1705623274",
     "videoUrl": null,
@@ -23062,7 +23691,12 @@
     "bandRank": 5,
     "costUsd": 703,
     "population": 28768,
-    "airports": [],
+    "airports": [
+      "OSR",
+      "BRQ",
+      "PED",
+      "WRO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/sumperk-czechia.jpg?1725926587",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/sumperk-czechia.jpg?1725926587",
     "videoUrl": null,
@@ -23218,7 +23852,12 @@
     "bandRank": 5,
     "costUsd": 698,
     "population": 28016,
-    "airports": [],
+    "airports": [
+      "ALC",
+      "VLC",
+      "IBZ",
+      "CDT"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/javea-spain.jpg?1705536684",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/javea-spain.jpg?1705536684",
     "videoUrl": null,
@@ -23534,7 +24173,9 @@
     "bandRank": 5,
     "costUsd": 670,
     "population": 2274556,
-    "airports": [],
+    "airports": [
+      "IST"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bursa-turkey.jpg?1778544078",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bursa-turkey.jpg?1778544078",
     "videoUrl": null,
@@ -23766,7 +24407,13 @@
     "bandRank": 5,
     "costUsd": 635,
     "population": 104518,
-    "airports": [],
+    "airports": [
+      "SJJ",
+      "DBV",
+      "SPU",
+      "BNX",
+      "TZL"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/mostar-bosnia.jpg?1705536366",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/mostar-bosnia.jpg?1705536366",
     "videoUrl": null,
@@ -23845,7 +24492,10 @@
     "bandRank": 5,
     "costUsd": 635,
     "population": 41933,
-    "airports": [],
+    "airports": [
+      "KUT",
+      "LWN"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/gori-georgia.jpg?1705622715",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/gori-georgia.jpg?1705622715",
     "videoUrl": null,
@@ -24625,7 +25275,9 @@
     "bandRank": 5,
     "costUsd": 538,
     "population": 25468,
-    "airports": [],
+    "airports": [
+      "BTS"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lake-balaton-hungary.jpg?1705276992",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lake-balaton-hungary.jpg?1705276992",
     "videoUrl": null,
@@ -24834,7 +25486,11 @@
     "bandRank": 5,
     "costUsd": 482,
     "population": 216197,
-    "airports": [],
+    "airports": [
+      "PRN",
+      "SKP",
+      "INI"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/pristina-kosovo.jpg?1763510495",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/pristina-kosovo.jpg?1763510495",
     "videoUrl": null,
@@ -25467,7 +26123,9 @@
     "bandRank": 5,
     "costUsd": 329,
     "population": 162393,
-    "airports": [],
+    "airports": [
+      "KUT"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/batumi-georgia.jpg?1705449676",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/batumi-georgia.jpg?1705449676",
     "videoUrl": null,
@@ -25546,7 +26204,9 @@
     "bandRank": 5,
     "costUsd": 235,
     "population": 387593,
-    "airports": [],
+    "airports": [
+      "CND"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/mamaia-romania.jpg?1705536390",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/mamaia-romania.jpg?1705536390",
     "videoUrl": null,
@@ -25624,7 +26284,9 @@
     "bandRank": 5,
     "costUsd": 222,
     "population": 1010537,
-    "airports": [],
+    "airports": [
+      "RMO"
+    ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/odessa-ukraine.jpg?1653007358",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/odessa-ukraine.jpg?1653007358",
     "videoUrl": null,

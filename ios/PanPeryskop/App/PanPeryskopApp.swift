@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct PanPeryskopApp: App {
     @StateObject private var authManager = AuthManager()
+    @StateObject private var regionStore = RegionStore.shared
     @State private var pendingStoryId: String?
 
     var body: some Scene {
@@ -16,6 +17,8 @@ struct PanPeryskopApp: App {
                         .environmentObject(authManager)
                 }
             }
+            .environment(\.region, regionStore.current)
+            .environmentObject(regionStore)
             .background(MeshGradientWarmup())
             .overlay(alignment: .bottom) {
                 #if DEBUG

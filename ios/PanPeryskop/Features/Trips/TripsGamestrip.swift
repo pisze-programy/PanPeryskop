@@ -72,17 +72,33 @@ struct TripsGamestrip: View {
         }
     }
 
+    /// The name is already on the hero, so the second line carries the fact the
+    /// hero does not: how many people live there. The rank sits on the right.
     private func cityRow(_ city: TravelCity) -> some View {
-        VStack(alignment: .leading, spacing: Self.centerSpacing) {
-            Text(city.displayName)
-                .font(.subheadline.weight(.bold))
-                .lineLimit(1)
-            Text(city.country)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
+        HStack(spacing: Theme.Spacing.m) {
+            VStack(alignment: .leading, spacing: Self.centerSpacing) {
+                Text(city.displayName)
+                    .font(.subheadline.weight(.bold))
+                    .lineLimit(1)
+                Text("Populacja: \(city.population.formatted(.number.notation(.compactName)))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            bandBadge(city)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The cost band as a rank: 1 is the dearest of five.
+    private func bandBadge(_ city: TravelCity) -> some View {
+        Text("\(city.bandRank)/5")
+            .font(.caption.weight(.bold))
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Theme.Palette.surface, in: Capsule())
     }
 
     private var soccerRow: some View {

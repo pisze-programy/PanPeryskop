@@ -4,28 +4,51 @@ import SwiftUI
 struct CityHeroSection: View {
     let city: TravelCity
 
+    @State private var loaded = false
+
     private static let height: CGFloat = 220
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            photo
+            placeholder
+            hero
             scrim
             labels
         }
+        .frame(maxWidth: .infinity)
         .frame(height: Self.height)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
         .padding(.horizontal, Theme.Spacing.l)
         .padding(.top, Theme.Spacing.s)
     }
 
-    private var photo: some View {
-        AsyncImage(url: city.heroURL) { image in
-            image.resizable().aspectRatio(contentMode: .fill)
-        } placeholder: {
-            CityPalette.gradient(countryCode: city.countryCode, bandRank: city.bandRank).first
+    /// The bundled thumbnail fills the frame from the first moment, so the sheet
+    /// never jumps when the large photo arrives. It is the same picture, only
+    /// soft, and it is free.
+    private var placeholder: some View {
+        Group {
+            if let image = CityThumbStore.image(for: city.id) {
+                Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
+            } else {
+                CityPalette.gradient(countryCode: city.countryCode, bandRank: city.bandRank).first
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
+    }
+
+    private var hero: some View {
+        AsyncImage(url: city.heroURL) { phase in
+            if case .success(let image) = phase {
+                image.resizable().aspectRatio(contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                    .opacity(loaded ? 1 : 0)
+                    .onAppear { withAnimation(.easeInOut(duration: 0.3)) { loaded = true } }
+            } else {
+                Color.clear
+            }
+        }
     }
 
     private var scrim: some View {
@@ -51,7 +74,6 @@ struct CityHeroSection: View {
     }
 
     private var subtitle: String {
-        let people = city.population.formatted(.number.notation(.compactName))
-        return "\(city.country) · \(people)"
+        "\(city.country) · \(city.population.formatted(.number.notation(.compactName)))"
     }
 }

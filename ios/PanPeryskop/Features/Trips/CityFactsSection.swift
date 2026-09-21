@@ -4,6 +4,7 @@ import SwiftUI
 struct CityFactsSection: View {
     let city: TravelCity
     @State private var showsAll = false
+    @Environment(\.region) private var region
 
     private var facts: CityFacts { city.facts }
 
@@ -56,11 +57,10 @@ struct CityFactsSection: View {
     }
 
     private var dailyCost: String {
-        "$\(max(1, facts.costLocalUsd / 30))"
+        region.price(Double(max(1, facts.costLocalUsd / 30)))
     }
 
     private func score(_ value: Double?) -> String {
-        guard let value else { return "—" }
-        return String(format: "%.1f", value)
+        region.scoreLabel(value)
     }
 }

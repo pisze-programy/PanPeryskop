@@ -4,6 +4,21 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 61, 2026-09-21
+
+### Added
+- The city list is rebuilt: 327 European cities with Polish names, a photo, the
+  cost, the scores, the weather and the neighbours. The city sheet shows a hero
+  photo, six facts with a "Wszystkie dane" sheet, the weather now, the cities
+  near it, and the licence text.
+- A city without a direct flight says so and offers another date, instead of
+  disappearing from the map.
+- The city map layer has five cost bands: the dearest cities show at continent
+  zoom, the cheapest when you zoom in.
+
+### Changed
+- The city pin carries the city photo, and a city without a flight is faded.
+
 ## [1.3.0] — build 60, 2026-09-21
 
 ### Fixed

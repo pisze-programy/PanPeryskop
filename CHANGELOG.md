@@ -4,14 +4,19 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.3.0] — build 57, 2026-09-21
+
+### Added
+- Every city-break destination has a lead photo: a compressed Wikimedia
+  thumbnail in R2, shown as the sheet hero. The source file page is stored per
+  city, and the app policy screen carries the Wikimedia Commons CC attribution.
+- City-break attractions use the same section as the event sheet, with the full
+  list one tap away.
 
 ### Changed
 - The city-break sheet opens at the medium detent, like the event sheet.
 - The city header runs a gradient from the country colour into its lighter tier
   shade, so a city reads as "country → city (tier)".
-- The city hero is a photo area, not text: one to three photos lay out as a
-  bento block, more than three scroll horizontally at 70 % of the width.
 - The two flight calendars keep independent months, so an October outbound with
   a November return is possible.
 - The buy action uses the native bottom-bar shape (rounded rectangle) instead of

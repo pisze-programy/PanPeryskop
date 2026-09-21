@@ -108,7 +108,6 @@
 		7776F8B9724CD7CA1CC87E3B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D9E114A2FF13FB58E4EDFA5 /* OnboardingView.swift */; };
 		781F8403B00309F4C3ED314A /* NicknameEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91F6A15970C0E3AC3AD767AE /* NicknameEditView.swift */; };
 		7A32C8AA192F3F1D43D9EA1A /* catalogue.json in Resources */ = {isa = PBXBuildFile; fileRef = 85E51A1AB50974D20AE4A11C /* catalogue.json */; };
-		7EC79BFAEBD27973AF6B0CA0 /* PlaceGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E19D19C1F46781C55BA08FD /* PlaceGrid.swift */; };
 		7F032AA75243C9DC471A771D /* PlaceSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50862340B8C3F217D19CE888 /* PlaceSlider.swift */; };
 		7F057E350C86565718BC4D8F /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AEC0301C06FDC8E6D0BD73E /* MapView.swift */; };
 		8300E0BE741D17D30E6D869B /* DateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E2600CD901D47BDA2BB05D /* DateTests.swift */; };
@@ -283,7 +282,6 @@
 		6ACC720AF26AB168403D40E7 /* Chip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chip.swift; sourceTree = "<group>"; };
 		6CA2AF9B54DF0D4E30580F2D /* PendingPostsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingPostsStore.swift; sourceTree = "<group>"; };
 		6D0328366619E568BB043CF9 /* SignInWithApple.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SignInWithApple.entitlements; sourceTree = "<group>"; };
-		6E19D19C1F46781C55BA08FD /* PlaceGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceGrid.swift; sourceTree = "<group>"; };
 		702099485B19214D722CB2AB /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		72AA5BFFF9D2545CFAF2139E /* PlaceRowsList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceRowsList.swift; sourceTree = "<group>"; };
 		73D24DD970FF4953EFA07601 /* StaysWidgetLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaysWidgetLoader.swift; sourceTree = "<group>"; };
@@ -516,7 +514,6 @@
 				5180F10F5EFC633481668D9A /* PartnerBanner.swift */,
 				4EFCCEBF56025539D2E1E590 /* PartnerBannerSection.swift */,
 				061D1BF76A85420B819565CC /* PlaceCard.swift */,
-				6E19D19C1F46781C55BA08FD /* PlaceGrid.swift */,
 				C8CD6BD0A4BED70D4ED47F42 /* PlacePreviewLoader.swift */,
 				E347A53F6B6F4E0A89EA4C6E /* PlaceRowSkeleton.swift */,
 				72AA5BFFF9D2545CFAF2139E /* PlaceRowsList.swift */,
@@ -941,7 +938,6 @@
 				2C2ACB375D317F5DD46C4415 /* PermissionCardsView.swift in Sources */,
 				F362DED9FE7F41389E90B0E4 /* PermissionGateView.swift in Sources */,
 				E99DAB83962E29BDB27FDE6F /* PlaceCard.swift in Sources */,
-				7EC79BFAEBD27973AF6B0CA0 /* PlaceGrid.swift in Sources */,
 				1ECB2877A783FE6052F708F2 /* PlacePreviewLoader.swift in Sources */,
 				EEBA4E491E59F918C7CD8A33 /* PlaceRowSkeleton.swift in Sources */,
 				4A6E4B698DEC1FF55B22C531 /* PlaceRowView.swift in Sources */,
@@ -1172,7 +1168,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 56;
+				CURRENT_PROJECT_VERSION = 57;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1232,7 +1228,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 56;
+				CURRENT_PROJECT_VERSION = 57;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CITY_ENTRIES, cityBreakForDay } from '../src/travel/cities';
 import { epochDay, packMask } from '../src/travel/routeDays';
+import { destinationsFrom } from '../src/travel/airports';
 
 test('cities: the generated list is clean', () => {
   assert.ok(CITY_ENTRIES.length > 300, `expected the full European list, got ${CITY_ENTRIES.length}`);
@@ -21,6 +22,24 @@ test('cities: the generated list is clean', () => {
   assert.ok(withAirport.length > CITY_ENTRIES.length * 0.4, 'the main cities need their airport');
   assert.ok(CITY_ENTRIES.some((c) => c.airports.includes('KRK')), 'Krakow maps to its own airport');
   assert.ok(CITY_ENTRIES.some((c) => c.airports.includes('LGW')), 'London maps to its airports');
+});
+
+test('cities: a city reaches through the airports around it', () => {
+  const milan = CITY_ENTRIES.find((c) => c.name === 'Milan');
+  assert.ok(milan, 'Milan must be in the list');
+  assert.ok(milan.airports.includes('BGY'), 'Milan reaches through Bergamo');
+  const paris = CITY_ENTRIES.find((c) => c.name === 'Paris');
+  assert.ok(paris?.airports.includes('ORY'), 'Paris reaches through Orly');
+  const rome = CITY_ENTRIES.find((c) => c.name === 'Rome');
+  assert.ok(rome?.airports.includes('CIA') && rome?.airports.includes('FCO'), 'Rome has both airports');
+
+  // The regression: Poznan flies to Bergamo, so Milan must be reachable from it.
+  const poz = new Set(destinationsFrom('POZ').map((d) => d.iata));
+  assert.ok(milan.airports.some((a) => poz.has(a)), 'POZ has a flight to Milan');
+
+  const withoutAirport = CITY_ENTRIES.filter((c) => c.airports.length === 0);
+  assert.ok(withoutAirport.length > 0, 'a few small cities have no airport');
+  assert.ok(withoutAirport.length < CITY_ENTRIES.length * 0.2, 'but not many');
 });
 
 test('cities: the cost bands cover every rank and the dearest leads', () => {

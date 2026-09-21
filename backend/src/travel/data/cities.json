@@ -179,7 +179,8 @@
     "airports": [
       "LGW",
       "LTN",
-      "STN"
+      "STN",
+      "BOH"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/london-united-kingdom.jpg?1705795285",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/london-united-kingdom.jpg?1705795285",
@@ -423,7 +424,9 @@
     "costUsd": 2997,
     "population": 1226866,
     "airports": [
-      "AMS"
+      "AMS",
+      "EIN",
+      "NRN"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/amsterdam-netherlands.jpg?1765497717",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/amsterdam-netherlands.jpg?1765497717",
@@ -587,7 +590,8 @@
     "costUsd": 2877,
     "population": 1136833,
     "airports": [
-      "DUB"
+      "DUB",
+      "BFS"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/dublin-ireland.jpg?1747440187",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/dublin-ireland.jpg?1747440187",
@@ -668,7 +672,9 @@
     "costUsd": 2864,
     "population": 329504,
     "airports": [
-      "BSL"
+      "BSL",
+      "FKB",
+      "FDH"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/basel-switzerland.jpg?1751760113",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/basel-switzerland.jpg?1751760113",
@@ -837,7 +843,10 @@
     "costUsd": 2794,
     "population": 76684,
     "airports": [
-      "LUX"
+      "LUX",
+      "SCN",
+      "HHN",
+      "MST"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/luxembourg-luxembourg.jpg?1741305947",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/luxembourg-luxembourg.jpg?1741305947",
@@ -1081,7 +1090,9 @@
     "costUsd": 2671,
     "population": 1226049,
     "airports": [
-      "CPH"
+      "CPH",
+      "MMX",
+      "AAR"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/copenhagen-denmark.jpg?1705622563",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/copenhagen-denmark.jpg?1705622563",
@@ -1162,7 +1173,8 @@
     "costUsd": 2670,
     "population": 871464,
     "airports": [
-      "OSL"
+      "OSL",
+      "TRF"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/oslo-norway.jpg?1705450226",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/oslo-norway.jpg?1705450226",
@@ -1242,7 +1254,9 @@
     "costUsd": 2633,
     "population": 152885,
     "airports": [
-      "ORK"
+      "ORK",
+      "KIR",
+      "SNN"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cork-ireland.jpg?1705536362",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cork-ireland.jpg?1705536362",
@@ -2064,7 +2078,11 @@
     "costUsd": 2439,
     "population": 614619,
     "airports": [
-      "BRS"
+      "BRS",
+      "CWL",
+      "BOH",
+      "EXT",
+      "BHX"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bristol-united-kingdom.jpg?1724457640",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bristol-united-kingdom.jpg?1724457640",
@@ -2145,7 +2163,8 @@
     "costUsd": 2411,
     "population": 53704,
     "airports": [
-      "IBZ"
+      "IBZ",
+      "PMI"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/ibiza-spain.jpg?1778457713",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/ibiza-spain.jpg?1778457713",
@@ -2395,7 +2414,8 @@
     "costUsd": 2317,
     "population": 132123,
     "airports": [
-      "BGO"
+      "BGO",
+      "HAU"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bergen-norway.jpg?1710115827",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bergen-norway.jpg?1710115827",
@@ -2562,7 +2582,12 @@
     "costUsd": 2300,
     "population": 2530580,
     "airports": [
-      "MAN"
+      "MAN",
+      "LPL",
+      "LBA",
+      "EMA",
+      "BHX",
+      "MME"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/manchester-united-kingdom.jpg?1705536087",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/manchester-united-kingdom.jpg?1705536087",
@@ -2892,7 +2917,8 @@
     "population": 1494058,
     "airports": [
       "ARN",
-      "VST"
+      "VST",
+      "NYO"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/stockholm-sweden.jpg?1778630436",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/stockholm-sweden.jpg?1778630436",
@@ -3056,7 +3082,14 @@
     "costUsd": 2198,
     "population": 287945,
     "airports": [
-      "EIN"
+      "EIN",
+      "NRN",
+      "MST",
+      "BRU",
+      "AMS",
+      "CRL",
+      "CGN",
+      "DTM"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/eindhoven-netherlands.jpg?1775952258",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/eindhoven-netherlands.jpg?1775952258",
@@ -3220,7 +3253,8 @@
     "population": 9378375,
     "airports": [
       "BVA",
-      "XCR"
+      "XCR",
+      "ORY"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/paris-france.jpg?1705622481",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/paris-france.jpg?1705622481",
@@ -3301,7 +3335,10 @@
     "costUsd": 2165,
     "population": 521039,
     "airports": [
-      "EDI"
+      "EDI",
+      "GLA",
+      "PIK",
+      "NCL"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/edinburgh-united-kingdom.jpg?1705622722",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/edinburgh-united-kingdom.jpg?1705622722",
@@ -3382,7 +3419,9 @@
     "costUsd": 2161,
     "population": 15550,
     "airports": [
-      "JTR"
+      "JTR",
+      "JMK",
+      "HER"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/santorini-greece.jpg?1705536611",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/santorini-greece.jpg?1705536611",
@@ -3547,7 +3586,8 @@
     "costUsd": 2092,
     "population": 233049,
     "airports": [
-      "AAR"
+      "AAR",
+      "BLL"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/aarhus-denmark.jpg?1705536678",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/aarhus-denmark.jpg?1705536678",
@@ -3960,7 +4000,8 @@
     "costUsd": 2018,
     "population": 144223,
     "airports": [
-      "SZG"
+      "SZG",
+      "LNZ"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/salzburg-austria.jpg?1705795849",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/salzburg-austria.jpg?1705795849",
@@ -4122,7 +4163,9 @@
     "costUsd": 1975,
     "population": 3972159,
     "airports": [
-      "BCN"
+      "BCN",
+      "GRO",
+      "REU"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/barcelona-spain.jpg?1705795235",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/barcelona-spain.jpg?1705795235",
@@ -4364,7 +4407,12 @@
     "costUsd": 1945,
     "population": 2624672,
     "airports": [
-      "BHX"
+      "BHX",
+      "EMA",
+      "MAN",
+      "LPL",
+      "LTN",
+      "BRS"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/birmingham-united-kingdom.jpg?1705449812",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/birmingham-united-kingdom.jpg?1705449812",
@@ -4529,7 +4577,11 @@
     "costUsd": 1934,
     "population": 1404036,
     "airports": [
-      "BRU"
+      "BRU",
+      "CRL",
+      "LIL",
+      "EIN",
+      "MST"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/brussels-belgium.jpg?1705536139",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/brussels-belgium.jpg?1705536139",
@@ -4610,7 +4662,9 @@
     "costUsd": 1927,
     "population": 26922,
     "airports": [
-      "DBV"
+      "DBV",
+      "SJJ",
+      "TGD"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/dubrovnik-croatia.jpg?1705622579",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/dubrovnik-croatia.jpg?1705622579",
@@ -5263,7 +5317,9 @@
     "costUsd": 1894,
     "population": 2025850,
     "airports": [
-      "VIE"
+      "VIE",
+      "BTS",
+      "BRQ"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/vienna-austria.jpg?1705622480",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/vienna-austria.jpg?1705622480",
@@ -5661,7 +5717,8 @@
     "costUsd": 1870,
     "population": 1012043,
     "airports": [
-      "HEL"
+      "HEL",
+      "TLL"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/helsinki-finland.jpg?1706140831",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/helsinki-finland.jpg?1706140831",
@@ -5742,7 +5799,9 @@
     "costUsd": 1870,
     "population": 899190,
     "airports": [
-      "HHN"
+      "HHN",
+      "CGN",
+      "PAD"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/frankfurt-germany.jpg?1715472068",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/frankfurt-germany.jpg?1715472068",
@@ -5904,7 +5963,9 @@
     "costUsd": 1860,
     "population": 195116,
     "airports": [
-      "NWI"
+      "NWI",
+      "STN",
+      "LTN"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/norwich-united-kingdom.jpg?1705536393",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/norwich-united-kingdom.jpg?1705536393",
@@ -5985,7 +6046,12 @@
     "costUsd": 1859,
     "population": 1063246,
     "airports": [
-      "LBA"
+      "LBA",
+      "MAN",
+      "MME",
+      "LPL",
+      "EMA",
+      "NCL"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/leeds-united-kingdom.jpg?1773446473",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/leeds-united-kingdom.jpg?1773446473",
@@ -6150,7 +6216,8 @@
     "population": 1757998,
     "airports": [
       "HAM",
-      "LBC"
+      "LBC",
+      "BRE"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/hamburg-germany.jpg?1705536083",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/hamburg-germany.jpg?1705536083",
@@ -6231,7 +6298,8 @@
     "population": 968812,
     "airports": [
       "GLA",
-      "PIK"
+      "PIK",
+      "EDI"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/glasgow-united-kingdom.jpg?1732493017",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/glasgow-united-kingdom.jpg?1732493017",
@@ -6564,7 +6632,11 @@
     "costUsd": 1807,
     "population": 385409,
     "airports": [
-      "BOH"
+      "BOH",
+      "BRS",
+      "EXT",
+      "CWL",
+      "LGW"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bournemouth-united-kingdom.jpg?1705709297",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bournemouth-united-kingdom.jpg?1705709297",
@@ -6728,7 +6800,9 @@
     "costUsd": 1760,
     "population": 1387654,
     "airports": [
-      "VLC"
+      "VLC",
+      "CDT",
+      "ALC"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/valencia-spain.jpg?1705795228",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/valencia-spain.jpg?1705795228",
@@ -6809,7 +6883,11 @@
     "costUsd": 1760,
     "population": 1224259,
     "airports": [
-      "LPL"
+      "LPL",
+      "MAN",
+      "LBA",
+      "EMA",
+      "BHX"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/liverpool-united-kingdom.jpg?1706227310",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/liverpool-united-kingdom.jpg?1706227310",
@@ -7141,7 +7219,10 @@
     "costUsd": 1741,
     "population": 440687,
     "airports": [
-      "BFS"
+      "BFS",
+      "LDY",
+      "DUB",
+      "PIK"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/belfast-united-kingdom.jpg?1705450501",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/belfast-united-kingdom.jpg?1705450501",
@@ -7304,7 +7385,10 @@
     "costUsd": 1736,
     "population": 898012,
     "airports": [
-      "STR"
+      "STR",
+      "FKB",
+      "FMM",
+      "FDH"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/stuttgart-germany.jpg?1705449674",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/stuttgart-germany.jpg?1705449674",
@@ -7384,7 +7468,11 @@
     "costUsd": 1735,
     "population": 389789,
     "airports": [
-      "CWL"
+      "CWL",
+      "BRS",
+      "EXT",
+      "BOH",
+      "BHX"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cardiff-united-kingdom.jpg?1705795758",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cardiff-united-kingdom.jpg?1705795758",
@@ -7631,7 +7719,11 @@
     "costUsd": 1708,
     "population": 109009,
     "airports": [
-      "EXT"
+      "EXT",
+      "CWL",
+      "BRS",
+      "NQY",
+      "BOH"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/exeter-united-kingdom.jpg?1721952613",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/exeter-united-kingdom.jpg?1721952613",
@@ -7880,7 +7972,9 @@
     "costUsd": 1685,
     "population": 417466,
     "airports": [
-      "NCE"
+      "NCE",
+      "CUF",
+      "GOA"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/nice-france.jpg?1711584468",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/nice-france.jpg?1711584468",
@@ -8047,7 +8141,8 @@
     "population": 2376184,
     "airports": [
       "CIA",
-      "FCO"
+      "FCO",
+      "PEG"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/rome-italy.jpg?1705449666",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/rome-italy.jpg?1705449666",
@@ -8128,7 +8223,14 @@
     "costUsd": 1666,
     "population": 1124448,
     "airports": [
-      "CGN"
+      "CGN",
+      "DTM",
+      "MST",
+      "NRN",
+      "HHN",
+      "PAD",
+      "EIN",
+      "FMO"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cologne-germany.jpg?1733788954",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cologne-germany.jpg?1733788954",
@@ -8535,7 +8637,10 @@
     "population": 1880605,
     "airports": [
       "WAW",
-      "WMI"
+      "WMI",
+      "RDO",
+      "LCJ",
+      "SZY"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/warsaw-poland.jpg?1705708829",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/warsaw-poland.jpg?1705708829",
@@ -8616,7 +8721,10 @@
     "costUsd": 1618,
     "population": 129012,
     "airports": [
-      "GRO"
+      "GRO",
+      "PGF",
+      "BCN",
+      "CCF"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/girona-spain.jpg?1787077740",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/girona-spain.jpg?1787077740",
@@ -8781,7 +8889,8 @@
     "costUsd": 1606,
     "population": 317213,
     "airports": [
-      "MMX"
+      "MMX",
+      "CPH"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/malmo-sweden.jpg?1778371382",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/malmo-sweden.jpg?1778371382",
@@ -8942,7 +9051,10 @@
     "costUsd": 1590,
     "population": 743044,
     "airports": [
-      "BIO"
+      "BIO",
+      "VIT",
+      "SDR",
+      "BIQ"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bilbao-spain.jpg?1711757334",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bilbao-spain.jpg?1711757334",
@@ -9273,7 +9385,14 @@
     "costUsd": 1584,
     "population": 906826,
     "airports": [
-      "NRN"
+      "NRN",
+      "CGN",
+      "DTM",
+      "MST",
+      "EIN",
+      "PAD",
+      "FMO",
+      "HHN"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/dusseldorf-germany.jpg?1787667499",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/dusseldorf-germany.jpg?1787667499",
@@ -9354,7 +9473,12 @@
     "costUsd": 1583,
     "population": 2598977,
     "airports": [
-      "MXP"
+      "MXP",
+      "BGY",
+      "PMF",
+      "GOA",
+      "TRN",
+      "VRN"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/milan-italy.jpg?1705450496",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/milan-italy.jpg?1705450496",
@@ -10099,7 +10223,8 @@
     "costUsd": 1508,
     "population": 107124,
     "airports": [
-      "TKU"
+      "TKU",
+      "HEL"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/turku-finland.jpg?1730937773",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/turku-finland.jpg?1730937773",
@@ -10502,7 +10627,10 @@
     "costUsd": 1498,
     "population": 639521,
     "airports": [
-      "TLS"
+      "TLS",
+      "CCF",
+      "RDZ",
+      "LDE"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/toulouse-france.jpg?1730592280",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/toulouse-france.jpg?1730592280",
@@ -10664,7 +10792,10 @@
     "costUsd": 1490,
     "population": 298182,
     "airports": [
-      "FKB"
+      "FKB",
+      "STR",
+      "SCN",
+      "HHN"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/karlsruhe-germany.jpg?1726531256",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/karlsruhe-germany.jpg?1726531256",
@@ -10745,7 +10876,10 @@
     "costUsd": 1488,
     "population": 33188,
     "airports": [
-      "BIQ"
+      "BIQ",
+      "BIO",
+      "VIT",
+      "LDE"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/biarritz-france.jpg?1709770298",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/biarritz-france.jpg?1709770298",
@@ -10823,7 +10957,10 @@
     "costUsd": 1487,
     "population": 894144,
     "airports": [
-      "LIL"
+      "LIL",
+      "CRL",
+      "BRU",
+      "BVA"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lille-france.jpg?1748995294",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lille-france.jpg?1748995294",
@@ -11072,7 +11209,9 @@
     "costUsd": 1471,
     "population": 630337,
     "airports": [
-      "BOD"
+      "BOD",
+      "EGC",
+      "BVE"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bordeaux-france.jpg?1705104678",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bordeaux-france.jpg?1705104678",
@@ -11151,7 +11290,8 @@
     "costUsd": 1471,
     "population": 35961,
     "airports": [
-      "PFO"
+      "PFO",
+      "LCA"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/paphos-cyprus.jpg?1730505788",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/paphos-cyprus.jpg?1730505788",
@@ -11479,7 +11619,13 @@
     "costUsd": 1463,
     "population": 178106,
     "airports": [
-      "TRS"
+      "TRS",
+      "RJK",
+      "LJU",
+      "PUY",
+      "VCE",
+      "KLU",
+      "TSF"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/trieste-italy.jpg?1750204932",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/trieste-italy.jpg?1750204932",
@@ -11641,7 +11787,8 @@
     "costUsd": 1450,
     "population": 890270,
     "airports": [
-      "MRS"
+      "MRS",
+      "FNI"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/marseille-france.jpg?1705882203",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/marseille-france.jpg?1705882203",
@@ -11884,7 +12031,8 @@
     "costUsd": 1434,
     "population": 1195820,
     "airports": [
-      "PRG"
+      "PRG",
+      "PED"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/prague-czechia.jpg?1705622429",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/prague-czechia.jpg?1705622429",
@@ -11965,7 +12113,12 @@
     "costUsd": 1425,
     "population": 246448,
     "airports": [
-      "LJU"
+      "LJU",
+      "KLU",
+      "TRS",
+      "RJK",
+      "ZAG",
+      "PUY"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/ljubljana-slovenia.jpg?1758585614",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/ljubljana-slovenia.jpg?1758585614",
@@ -12127,7 +12280,10 @@
     "costUsd": 1423,
     "population": 190374,
     "airports": [
-      "SPU"
+      "SPU",
+      "ZAD",
+      "BNX",
+      "SJJ"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/split-croatia.jpg?1738022424",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/split-croatia.jpg?1738022424",
@@ -12286,7 +12442,9 @@
     "costUsd": 1419,
     "population": 421978,
     "airports": [
-      "BRE"
+      "BRE",
+      "HAM",
+      "FMO"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bremen-germany.jpg?1778284864",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bremen-germany.jpg?1778284864",
@@ -12448,7 +12606,9 @@
     "costUsd": 1416,
     "population": 521811,
     "airports": [
-      "AGP"
+      "AGP",
+      "GRX",
+      "TTU"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/malaga-spain.jpg?1728086532",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/malaga-spain.jpg?1728086532",
@@ -12529,7 +12689,12 @@
     "population": 57151,
     "airports": [
       "TSF",
-      "VCE"
+      "VCE",
+      "TRS",
+      "VRN",
+      "BLQ",
+      "PUY",
+      "FRL"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/venice-italy.jpg?1736553671",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/venice-italy.jpg?1736553671",
@@ -12775,7 +12940,9 @@
     "costUsd": 1401,
     "population": 288262,
     "airports": [
-      "BTS"
+      "BTS",
+      "VIE",
+      "BRQ"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bratislava-slovakia.jpg?1705536140",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bratislava-slovakia.jpg?1705536140",
@@ -12856,7 +13023,8 @@
     "costUsd": 1385,
     "population": 384543,
     "airports": [
-      "GDN"
+      "GDN",
+      "BZG"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/gdansk-poland.jpg?1733788936",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/gdansk-poland.jpg?1733788936",
@@ -12937,7 +13105,9 @@
     "costUsd": 1370,
     "population": 211359,
     "airports": [
-      "TFS"
+      "TFS",
+      "TFN",
+      "LPA"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/tenerife-canary-islands-spain.jpg?1675438206",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/tenerife-canary-islands-spain.jpg?1675438206",
@@ -13018,7 +13188,8 @@
     "costUsd": 1369,
     "population": 452422,
     "airports": [
-      "NTE"
+      "NTE",
+      "LRH"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/nantes-france.jpg?1705450031",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/nantes-france.jpg?1705450031",
@@ -13175,7 +13346,11 @@
     "costUsd": 1360,
     "population": 66655,
     "airports": [
-      "PSA"
+      "PSA",
+      "BLQ",
+      "PMF",
+      "FRL",
+      "GOA"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/pisa-italy.jpg?1705449810",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/pisa-italy.jpg?1705449810",
@@ -13256,7 +13431,8 @@
     "costUsd": 1354,
     "population": 438696,
     "airports": [
-      "TLL"
+      "TLL",
+      "HEL"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/tallinn-estonia.jpg?1722038420",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/tallinn-estonia.jpg?1722038420",
@@ -13660,7 +13836,9 @@
     "costUsd": 1320,
     "population": 397479,
     "airports": [
-      "ALC"
+      "ALC",
+      "RMU",
+      "VLC"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/alicante-spain.jpg?1713657627",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/alicante-spain.jpg?1713657627",
@@ -13987,7 +14165,8 @@
     "costUsd": 1311,
     "population": 358404,
     "airports": [
-      "GNB"
+      "GNB",
+      "LYS"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/grenoble-france.jpg?1752105667",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/grenoble-france.jpg?1752105667",
@@ -14147,7 +14326,8 @@
     "costUsd": 1300,
     "population": 337045,
     "airports": [
-      "VNO"
+      "VNO",
+      "KUN"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/vilnius-lithuania.jpg?1705709013",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/vilnius-lithuania.jpg?1705709013",
@@ -14561,7 +14741,12 @@
     "costUsd": 1284,
     "population": 533035,
     "airports": [
-      "GOA"
+      "GOA",
+      "CUF",
+      "PMF",
+      "TRN",
+      "MXP",
+      "PSA"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/genoa-italy.jpg?1705450042",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/genoa-italy.jpg?1705450042",
@@ -14724,7 +14909,8 @@
     "costUsd": 1281,
     "population": 2772903,
     "airports": [
-      "NAP"
+      "NAP",
+      "QSR"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/naples-italy.jpg?1705450345",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/naples-italy.jpg?1705450345",
@@ -14887,7 +15073,11 @@
     "costUsd": 1267,
     "population": 310756,
     "airports": [
-      "BRQ"
+      "BRQ",
+      "OSR",
+      "BTS",
+      "VIE",
+      "PED"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/brno-czechia.jpg?1712361658",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/brno-czechia.jpg?1712361658",
@@ -14968,7 +15158,12 @@
     "costUsd": 1265,
     "population": 105877,
     "airports": [
-      "RMI"
+      "RMI",
+      "FRL",
+      "AOI",
+      "PEG",
+      "BLQ",
+      "PUY"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/rimini-italy.jpg?1705450321",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/rimini-italy.jpg?1705450321",
@@ -15212,7 +15407,8 @@
     "costUsd": 1260,
     "population": 78033,
     "airports": [
-      "LCA"
+      "LCA",
+      "PFO"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/larnaca-cyprus.jpg?1704758717",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/larnaca-cyprus.jpg?1704758717",
@@ -15293,7 +15489,13 @@
     "costUsd": 1249,
     "population": 747625,
     "airports": [
-      "DTM"
+      "DTM",
+      "CGN",
+      "FMO",
+      "PAD",
+      "NRN",
+      "MST",
+      "EIN"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/dortmund-germany.jpg?1705449923",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/dortmund-germany.jpg?1705449923",
@@ -15452,7 +15654,13 @@
     "population": 443837,
     "airports": [
       "BLQ",
-      "FRL"
+      "FRL",
+      "PMF",
+      "VRN",
+      "RMI",
+      "PSA",
+      "VCE",
+      "TSF"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bologna-italy.jpg?1705795288",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bologna-italy.jpg?1705795288",
@@ -15533,7 +15741,8 @@
     "costUsd": 1242,
     "population": 3118703,
     "airports": [
-      "ATH"
+      "ATH",
+      "JSI"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/athens-greece.jpg?1720483220",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/athens-greece.jpg?1720483220",
@@ -15693,7 +15902,8 @@
     "costUsd": 1236,
     "population": 507929,
     "airports": [
-      "WRO"
+      "WRO",
+      "POZ"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/wroclaw-poland.jpg?1705795326",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/wroclaw-poland.jpg?1705795326",
@@ -15773,7 +15983,9 @@
     "costUsd": 1235,
     "population": 213124,
     "airports": [
-      "KSC"
+      "KSC",
+      "TAT",
+      "DEB"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/kosice-slovakia.jpg?1705449891",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/kosice-slovakia.jpg?1705449891",
@@ -16097,7 +16309,10 @@
     "costUsd": 1228,
     "population": 65549,
     "airports": [
-      "ZAD"
+      "ZAD",
+      "SPU",
+      "RJK",
+      "PUY"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/zadar-croatia.jpg?1776902449",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/zadar-croatia.jpg?1776902449",
@@ -16341,7 +16556,10 @@
     "costUsd": 1224,
     "population": 1152239,
     "airports": [
-      "TRN"
+      "TRN",
+      "CUF",
+      "MXP",
+      "GOA"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/turin-italy.jpg?1705536683",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/turin-italy.jpg?1705536683",
@@ -16660,7 +16878,8 @@
     "costUsd": 1207,
     "population": 222180,
     "airports": [
-      "BRI"
+      "BRI",
+      "BDS"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bari-italy.jpg?1709770262",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bari-italy.jpg?1709770262",
@@ -16739,7 +16958,10 @@
     "costUsd": 1205,
     "population": 1122806,
     "airports": [
-      "BEG"
+      "BEG",
+      "TSR",
+      "TZL",
+      "OSI"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/belgrade-serbia.jpg?1733875424",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/belgrade-serbia.jpg?1733875424",
@@ -17151,7 +17373,8 @@
     "costUsd": 1194,
     "population": 56900,
     "airports": [
-      "ACE"
+      "ACE",
+      "FUE"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lanzarote-canary-islands-spain.jpg?1705450440",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lanzarote-canary-islands-spain.jpg?1705450440",
@@ -17473,7 +17696,12 @@
     "costUsd": 1190,
     "population": 214392,
     "airports": [
-      "VRN"
+      "VRN",
+      "PMF",
+      "TSF",
+      "BLQ",
+      "BGY",
+      "VCE"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/verona-italy.jpg?1705795902",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/verona-italy.jpg?1705795902",
@@ -17553,7 +17781,9 @@
     "costUsd": 1184,
     "population": 623545,
     "airports": [
-      "ZAG"
+      "ZAG",
+      "LJU",
+      "RJK"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/zagreb-croatia.jpg?1705449629",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/zagreb-croatia.jpg?1705449629",
@@ -17634,7 +17864,9 @@
     "costUsd": 1184,
     "population": 10704,
     "airports": [
-      "JMK"
+      "JMK",
+      "JTR",
+      "ATH"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/mykonos-greece.jpg?1715731828",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/mykonos-greece.jpg?1715731828",
@@ -17715,7 +17947,9 @@
     "costUsd": 1174,
     "population": 1068352,
     "airports": [
-      "SOF"
+      "SOF",
+      "INI",
+      "PDV"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/sofia-bulgaria.jpg?1705536104",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/sofia-bulgaria.jpg?1705536104",
@@ -17875,7 +18109,8 @@
     "costUsd": 1164,
     "population": 1086455,
     "airports": [
-      "EVN"
+      "EVN",
+      "LWN"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/yerevan-armenia.jpg?1720224028",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/yerevan-armenia.jpg?1720224028",
@@ -18288,7 +18523,10 @@
     "costUsd": 1143,
     "population": 90000,
     "airports": [
-      "RHO"
+      "RHO",
+      "DLM",
+      "KGS",
+      "BJV"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/rhodes-greece.jpg?1730764872",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/rhodes-greece.jpg?1730764872",
@@ -18534,7 +18772,9 @@
     "costUsd": 1126,
     "population": 494422,
     "airports": [
-      "POZ"
+      "POZ",
+      "BZG",
+      "WRO"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/poznan-poland.jpg?1711843308",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/poznan-poland.jpg?1711843308",
@@ -18612,7 +18852,8 @@
     "costUsd": 1125,
     "population": 65924,
     "airports": [
-      "CHQ"
+      "CHQ",
+      "HER"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/chania-crete-greece.jpg?1705881827",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/chania-crete-greece.jpg?1705881827",
@@ -18692,7 +18933,8 @@
     "costUsd": 1124,
     "population": 263323,
     "airports": [
-      "KUN"
+      "KUN",
+      "VNO"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/kaunas-lithuania.jpg?1706659329",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/kaunas-lithuania.jpg?1706659329",
@@ -18853,7 +19095,8 @@
     "costUsd": 1112,
     "population": 668781,
     "airports": [
-      "PMO"
+      "PMO",
+      "TPS"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/palermo-italy.jpg?1731456147",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/palermo-italy.jpg?1731456147",
@@ -19018,7 +19261,9 @@
     "costUsd": 1104,
     "population": 834386,
     "airports": [
-      "TIA"
+      "TIA",
+      "OHD",
+      "TGD"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/tirana-albania.jpg?1705622579",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/tirana-albania.jpg?1705622579",
@@ -19100,7 +19345,8 @@
     "population": 1911711,
     "airports": [
       "BBU",
-      "OTP"
+      "OTP",
+      "GHV"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bucharest-romania.jpg?1732752129",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bucharest-romania.jpg?1732752129",
@@ -19254,7 +19500,9 @@
     "costUsd": 1088,
     "population": 866326,
     "airports": [
-      "KTW"
+      "KTW",
+      "KRK",
+      "OSR"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/katowice-poland.jpg?1710115377",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/katowice-poland.jpg?1710115377",
@@ -19335,7 +19583,10 @@
     "costUsd": 1088,
     "population": 65743,
     "airports": [
-      "BJV"
+      "BJV",
+      "KGS",
+      "RHO",
+      "DLM"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/bodrum-turkey.jpg?1705450206",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/bodrum-turkey.jpg?1705450206",
@@ -19412,7 +19663,12 @@
     "costUsd": 1078,
     "population": 227002,
     "airports": [
-      "GHV"
+      "GHV",
+      "SBZ",
+      "OTP",
+      "TGM",
+      "BBU",
+      "BCM"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/brasov-romania.jpg?1778544048",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/brasov-romania.jpg?1778544048",
@@ -19574,7 +19830,9 @@
     "costUsd": 1070,
     "population": 187397,
     "airports": [
-      "RZE"
+      "RZE",
+      "KRK",
+      "LUZ"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/rzeszow-poland.jpg?1705709158",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/rzeszow-poland.jpg?1705709158",
@@ -19655,7 +19913,8 @@
     "costUsd": 1067,
     "population": 69934,
     "airports": [
-      "OSI"
+      "OSI",
+      "TZL"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/osijek-croatia.jpg?1727222638",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/osijek-croatia.jpg?1727222638",
@@ -19735,7 +19994,12 @@
     "costUsd": 1055,
     "population": 117743,
     "airports": [
-      "RJK"
+      "RJK",
+      "PUY",
+      "TRS",
+      "LJU",
+      "ZAG",
+      "KLU"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/rijeka-croatia.jpg?1705622435",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/rijeka-croatia.jpg?1705622435",
@@ -19894,7 +20158,9 @@
     "costUsd": 1052,
     "population": 454960,
     "airports": [
-      "CTA"
+      "CTA",
+      "REG",
+      "CIY"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/catania-italy.jpg?1717373105",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/catania-italy.jpg?1717373105",
@@ -20113,7 +20379,11 @@
     "costUsd": 1037,
     "population": 582486,
     "airports": [
-      "LCJ"
+      "LCJ",
+      "WMI",
+      "WAW",
+      "RDO",
+      "KTW"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lodz-poland.jpg?1735948824",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lodz-poland.jpg?1735948824",
@@ -20720,7 +20990,9 @@
     "costUsd": 1005,
     "population": 299715,
     "airports": [
-      "LUZ"
+      "LUZ",
+      "RDO",
+      "RZE"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/lublin-poland.jpg?1750550420",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/lublin-poland.jpg?1750550420",
@@ -21045,7 +21317,9 @@
     "costUsd": 948,
     "population": 290944,
     "airports": [
-      "VAR"
+      "VAR",
+      "BOJ",
+      "CND"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/varna-bulgaria.jpg?1705449751",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/varna-bulgaria.jpg?1705449751",
@@ -21123,7 +21397,11 @@
     "costUsd": 946,
     "population": 149981,
     "airports": [
-      "TGD"
+      "TGD",
+      "DBV",
+      "TIA",
+      "SJJ",
+      "PRN"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/podgorica-montenegro.jpg?1778457716",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/podgorica-montenegro.jpg?1778457716",
@@ -21284,7 +21562,8 @@
     "costUsd": 944,
     "population": 269077,
     "airports": [
-      "CND"
+      "CND",
+      "VAR"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/constanta-romania.jpg?1705536172",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/constanta-romania.jpg?1705536172",
@@ -21527,7 +21806,8 @@
     "costUsd": 935,
     "population": 300046,
     "airports": [
-      "SZZ"
+      "SZZ",
+      "BER"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/szczecin-poland.jpg?1723507418",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/szczecin-poland.jpg?1723507418",
@@ -21606,7 +21886,8 @@
     "costUsd": 917,
     "population": 422257,
     "airports": [
-      "RMO"
+      "RMO",
+      "IAS"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/chisinau-moldova.jpg?1705795815",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/chisinau-moldova.jpg?1705795815",
@@ -21684,7 +21965,10 @@
     "costUsd": 881,
     "population": 276210,
     "airports": [
-      "IAS"
+      "IAS",
+      "BCM",
+      "RMO",
+      "SCV"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/iasi-romania.jpg?1705449737",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/iasi-romania.jpg?1705449737",
@@ -21763,7 +22047,9 @@
     "costUsd": 879,
     "population": 319430,
     "airports": [
-      "TSR"
+      "TSR",
+      "BEG",
+      "OMR"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/timisoara-romania.jpg?1705881688",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/timisoara-romania.jpg?1705881688",
@@ -22006,7 +22292,8 @@
     "costUsd": 856,
     "population": 104073,
     "airports": [
-      "BOJ"
+      "BOJ",
+      "VAR"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/burgas-bulgaria.jpg?1705536223",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/burgas-bulgaria.jpg?1705536223",
@@ -22411,7 +22698,9 @@
     "costUsd": 836,
     "population": 382283,
     "airports": [
-      "LPA"
+      "LPA",
+      "TFN",
+      "TFS"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/gran-canaria-canary-islands-spain.jpg?1706486424",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/gran-canaria-canary-islands-spain.jpg?1706486424",
@@ -22654,7 +22943,8 @@
     "costUsd": 825,
     "population": 330225,
     "airports": [
-      "PDV"
+      "PDV",
+      "SOF"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/plovdiv-bulgaria.jpg?1705708925",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/plovdiv-bulgaria.jpg?1705708925",
@@ -23139,7 +23429,8 @@
     "costUsd": 761,
     "population": 29282,
     "airports": [
-      "MAH"
+      "MAH",
+      "PMI"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/menorca-spain.jpg?1721433802",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/menorca-spain.jpg?1721433802",
@@ -24014,7 +24305,9 @@
     "costUsd": 687,
     "population": 200184,
     "airports": [
-      "INI"
+      "INI",
+      "PRN",
+      "SOF"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/nis-serbia.jpg?1777680016",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/nis-serbia.jpg?1777680016",
@@ -24094,7 +24387,8 @@
     "costUsd": 677,
     "population": 20000,
     "airports": [
-      "FUE"
+      "FUE",
+      "ACE"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/fuerteventura-canary-islands-spain.jpg?1705708842",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/fuerteventura-canary-islands-spain.jpg?1705708842",
@@ -25037,7 +25331,11 @@
     "costUsd": 578,
     "population": 698022,
     "airports": [
-      "KRK"
+      "KRK",
+      "KTW",
+      "TAT",
+      "OSR",
+      "RZE"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/krakow-poland.jpg?1767312011",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/krakow-poland.jpg?1767312011",
@@ -25356,7 +25654,10 @@
     "costUsd": 508,
     "population": 254384,
     "airports": [
-      "SJJ"
+      "SJJ",
+      "TZL",
+      "BNX",
+      "DBV"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/sarajevo-bosnia.jpg?1724112033",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/sarajevo-bosnia.jpg?1724112033",
@@ -25648,7 +25949,11 @@
     "costUsd": 429,
     "population": 286598,
     "airports": [
-      "CLJ"
+      "CLJ",
+      "TGM",
+      "SBZ",
+      "SUJ",
+      "OMR"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/cluj-romania.jpg?1705449679",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/cluj-romania.jpg?1705449679",
@@ -25806,7 +26111,10 @@
     "costUsd": 389,
     "population": 99309,
     "airports": [
-      "BNX"
+      "BNX",
+      "TZL",
+      "ZAG",
+      "OSI"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/banja-luka-bosnia.jpg?1705709244",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/banja-luka-bosnia.jpg?1705709244",
@@ -25964,7 +26272,9 @@
     "costUsd": 363,
     "population": 353174,
     "airports": [
-      "SKP"
+      "SKP",
+      "PRN",
+      "OHD"
     ],
     "imageUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=600,height=600,quality=25/https://nomads.com/assets/img/places/skopje-north-macedonia.jpg?1707696052",
     "imageLargeUrl": "https://resizeapi.com/resize-cgi/image/format=auto,fit=cover,width=1000,height=500,quality=25/https://nomads.com/assets/img/places/skopje-north-macedonia.jpg?1707696052",

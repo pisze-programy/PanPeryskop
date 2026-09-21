@@ -66,17 +66,19 @@ struct CityFlightSheet: View {
 
     // MARK: - Options
 
-    /// Built from the city's airports, not from the day's connections: a city
-    /// with no flight today still opens its calendar. The carriers come from the
-    /// day when known, otherwise both are asked.
+    /// Every airport of the city the origin flies to, times the carriers that
+    /// really serve it. The carriers come from the catalogue, not from the
+    /// selected day, so no option is ever empty and both carriers of one airport
+    /// stay comparable by price.
     private var options: [FlightOption] {
-        city.airports.flatMap { iata -> [FlightOption] in
-            guard let destination = viewModel.destinations.first(where: { $0.iata == iata }) else { return [] }
-            let known = city.connections.first(where: { $0.iata == iata })?.carriers ?? []
-            let carriers = known.compactMap(Airline.init(rawValue:)).sorted { $0.rawValue < $1.rawValue }
-            let airlines = carriers.isEmpty ? [Airline.ryanair, Airline.wizzair] : carriers
-            return airlines.map { FlightOption(destination: destination, carrier: $0) }
-        }
+        let wanted = Set(city.airports)
+        return viewModel.destinations
+            .filter { wanted.contains($0.iata) }
+            .flatMap { destination in
+                destination.providers
+                    .sorted { $0.rawValue < $1.rawValue }
+                    .map { FlightOption(destination: destination, carrier: $0) }
+            }
     }
 
     private var selectedOption: FlightOption? {

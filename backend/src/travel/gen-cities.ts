@@ -189,11 +189,12 @@ function airportsNear(lat: number, lng: number): string[] {
   return [...new Set(codes)];
 }
 
-/** The carrier names its own city first. When it names none — Bergamo is not
- *  Milan — the airports within 150 km of the city are the answer. */
+/** Every airport that can serve the city: the carriers' own city name plus the
+ *  airports within 150 km. The radius is what makes Milan reachable through
+ *  Bergamo, which is the airport the carriers actually sell. Its known cost is a
+ *  pair like Aachen → Charleroi; the plan accepts that trade. */
 function cityAirports(name: string, lat: number, lng: number): string[] {
-  const carrier = carrierAirports(name);
-  return carrier.length > 0 ? carrier : airportsNear(lat, lng);
+  return [...new Set([...carrierAirports(name), ...airportsNear(lat, lng)])];
 }
 
 function tabs(html: string): { near: string[]; next: string[]; similar: string[] } {

@@ -142,11 +142,19 @@ struct CityBreakSheet: View {
         }
     }
 
+    /// The airports of this city that the origin actually flies to. Independent
+    /// of the selected day: the calendar answers the day question. Milan counts
+    /// through Bergamo, which is what the carriers sell.
+    private var reachableAirports: [Destination] {
+        let wanted = Set(current.airports)
+        return viewModel.destinations.filter { wanted.contains($0.iata) }
+    }
+
     private var flightsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            TripsSectionHeader(title: current.connections.isEmpty ? "Autobus" : "Loty")
+            TripsSectionHeader(title: reachableAirports.isEmpty ? "Autobus" : "Loty")
                 .padding(.horizontal, Theme.Spacing.l)
-            if current.connections.isEmpty {
+            if reachableAirports.isEmpty {
                 busSection
             } else {
                 flightsButton

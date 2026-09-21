@@ -23,7 +23,6 @@ struct CityPinView: View {
                 .scaleEffect((isExpanded ? 1 : 0.35) * scale)
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.78), value: isExpanded)
-        .opacity(city.reachable ? 1 : 0.4)
         .contentShape(Rectangle())
     }
 
@@ -47,12 +46,10 @@ struct CityPinView: View {
     private var photo: some View {
         ZStack {
             Circle().fill(accent)
-            if let url = city.pinURL {
-                AsyncImage(url: url) { image in
-                    image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    glyph
-                }
+            if let image = CityThumbStore.image(for: city.id) {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
             } else {
                 glyph
             }

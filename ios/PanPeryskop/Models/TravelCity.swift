@@ -19,6 +19,8 @@ struct TravelCity: Codable, Identifiable, Equatable {
     let next: [String]
     let similar: [String]
     let facts: CityFacts
+    /// The airports that serve the city, independent of the selected day.
+    let airports: [String]
     let reachable: Bool
     let connections: [CityConnection]
 }

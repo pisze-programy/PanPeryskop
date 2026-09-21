@@ -66,10 +66,10 @@ struct MapKitMapView: View {
 
     /// A dense screen shrinks markers further, so the map stays readable. Count
     /// what is drawn: the arcs and the cities below the ladder are not.
-    private var densityScale: CGFloat {
+    private func densityScale(_ visible: [MapOverlay]) -> CGFloat {
         let rank = cityMaxTierRank
         var count = 0
-        for overlay in visibleOverlays {
+        for overlay in visible {
             switch overlay {
             case .pin:
                 count += 1
@@ -85,8 +85,6 @@ struct MapKitMapView: View {
         default: return 1
         }
     }
-
-    private var markerScale: CGFloat { zoomScale * densityScale }
 
     private var clusterRadiusDegrees: Double {
         let screenHeight = UIScreen.main.bounds.height
@@ -127,33 +125,33 @@ struct MapKitMapView: View {
         return 5
     }
 
-    /// Cities one tier below the ladder stay as a dot, so a zoom step shows what
+    /// Cities one band below the ladder stay as a dot, so a zoom step shows what
     /// is about to appear instead of a hard cut.
-    private var cityPins: [CityPin] {
+    private func cityPins(_ visible: [MapOverlay]) -> [CityPin] {
         let visibleRank = cityMaxTierRank
-        return visibleOverlays.compactMap { overlay in
+        return visible.compactMap { overlay in
             guard case .city(let pin) = overlay else { return nil }
             return pin.city.bandRank <= visibleRank + 1 ? pin : nil
         }
     }
 
-    private var pinClusters: [PostCluster] {
-        let pins = visibleOverlays.compactMap { overlay -> Post? in
+    private func pinClusters(_ visible: [MapOverlay]) -> [PostCluster] {
+        let pins = visible.compactMap { overlay -> Post? in
             if case .pin(let p) = overlay { return p.post }
             return nil
         }
         return makeClusters(pins, radiusDegrees: clusterRadiusDegrees)
     }
 
-    private var airportPins: [AirportPin] {
-        visibleOverlays.compactMap { overlay in
+    private func airportPins(_ visible: [MapOverlay]) -> [AirportPin] {
+        visible.compactMap { overlay in
             if case .airport(let a) = overlay { return a }
             return nil
         }
     }
 
-    private var flightArcs: [FlightArc] {
-        visibleOverlays.compactMap { overlay in
+    private func flightArcs(_ visible: [MapOverlay]) -> [FlightArc] {
+        visible.compactMap { overlay in
             if case .arc(let a) = overlay { return a }
             return nil
         }
@@ -178,7 +176,15 @@ struct MapKitMapView: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
+        // One filter pass per render, shared by every layer. Recomputing it per
+        // layer made the frame five times the work.
+        let visible = visibleOverlays
+        let scale = zoomScale * densityScale(visible)
+        let arcs = flightArcs(visible)
+        let clusters = pinClusters(visible)
+        let cities = cityPins(visible)
+        let airports = airportPins(visible)
+        return GeometryReader { geo in
             MapReader { proxy in
                 Map(
                 position: $camera,
@@ -187,12 +193,12 @@ struct MapKitMapView: View {
             ) {
                 UserAnnotation()
 
-                ForEach(flightArcs) { arc in
+                ForEach(arcs) { arc in
                     MapPolyline(arc.polyline)
                         .stroke(arc.color, lineWidth: 2.5)
                 }
 
-                ForEach(pinClusters) { cluster in
+                ForEach(clusters) { cluster in
                     Annotation(coordinate: cluster.coord, anchor: .center) {
                         ClusterBadge(
                             cluster: cluster,
@@ -201,22 +207,22 @@ struct MapKitMapView: View {
                                 onTap(.pin(MapPin(post: cluster.singlePost ?? cluster.posts[0], group: cluster.posts)))
                             }
                         )
-                        .scaleEffect(markerScale)
+                        .scaleEffect(scale)
                     } label: { EmptyView() }
                 }
 
-                ForEach(cityPins) { pin in
+                ForEach(cities) { pin in
                     Annotation(coordinate: pin.coordinate, anchor: .center) {
                         CityPinView(
                             city: pin.city,
                             isExpanded: pin.city.bandRank <= cityMaxTierRank,
-                            scale: markerScale
+                            scale: scale
                         )
                         .onTapGesture { onTap(.city(pin)) }
                     } label: { EmptyView() }
                 }
 
-                ForEach(airportPins) { pin in
+                ForEach(airports) { pin in
                     if pin.isOrigin {
                         Annotation(coordinate: pin.coord, anchor: .center) {
                             OriginAirportPin(iata: pin.iata, airlines: pin.airlines)
@@ -224,7 +230,7 @@ struct MapKitMapView: View {
                     } else {
                         Annotation(coordinate: pin.coord, anchor: .center) {
                             AirportPinBadge(iata: pin.iata, airlines: pin.airlines, shimmer: pin.shimmer)
-                                .scaleEffect(markerScale)
+                                .scaleEffect(scale)
                                 .onTapGesture { onTap(.airport(pin)) }
                         } label: { EmptyView() }
                     }
@@ -334,36 +340,26 @@ struct PostCluster: Identifiable {
     let posts: [Post]
 }
 
+/// One pass over the posts into grid cells of the cluster radius. The old
+/// pairwise scan was O(n²) and ran on every camera change.
 private func makeClusters(_ posts: [Post], radiusDegrees: Double) -> [PostCluster] {
-    let radius = radiusDegrees
-    var used = Set<String>()
-    var clusters: [PostCluster] = []
-
+    guard !posts.isEmpty, radiusDegrees > 0 else { return [] }
+    var buckets: [String: [Post]] = [:]
+    buckets.reserveCapacity(posts.count)
     for post in posts {
-        guard !used.contains(post.id) else { continue }
-        var nearby = [post]
-        for other in posts {
-            guard !used.contains(other.id), other.id != post.id else { continue }
-            if dist(post.lat, post.lng, other.lat, other.lng) < radius {
-                nearby.append(other)
-            }
-        }
-        nearby.forEach { used.insert($0.id) }
-        let avgLat = nearby.map(\.lat).reduce(0, +) / Double(nearby.count)
-        let avgLng = nearby.map(\.lng).reduce(0, +) / Double(nearby.count)
-        clusters.append(PostCluster(
-            id: nearby.map(\.id).min() ?? post.id,
-            coord: CLLocationCoordinate2D(latitude: avgLat, longitude: avgLng),
-            count: nearby.count,
-            singlePost: nearby.count == 1 ? nearby.first : nil,
-            posts: nearby
-        ))
+        let lat = Int((post.lat / radiusDegrees).rounded(.down))
+        let lng = Int((post.lng / radiusDegrees).rounded(.down))
+        buckets["\(lat):\(lng)", default: []].append(post)
     }
-    return clusters
-}
-
-private func dist(_ lat1: Double, _ lng1: Double, _ lat2: Double, _ lng2: Double) -> Double {
-    let dlat = lat1 - lat2
-    let dlng = lng1 - lng2
-    return sqrt(dlat * dlat + dlng * dlng)
+    return buckets.values.map { group in
+        let lat = group.map(\.lat).reduce(0, +) / Double(group.count)
+        let lng = group.map(\.lng).reduce(0, +) / Double(group.count)
+        return PostCluster(
+            id: group.map(\.id).min() ?? "",
+            coord: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+            count: group.count,
+            singlePost: group.count == 1 ? group.first : nil,
+            posts: group
+        )
+    }
 }

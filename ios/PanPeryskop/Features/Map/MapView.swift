@@ -39,6 +39,19 @@ struct MapScreen: View {
             )
             .ignoresSafeArea()
 
+            if AppConstants.showsFPS {
+                VStack {
+                    Spacer()
+                    HStack {
+                        FPSOverlay()
+                        Spacer()
+                    }
+                    .padding(.leading, Theme.Spacing.l)
+                    .padding(.bottom, 4)
+                }
+                .allowsHitTesting(false)
+            }
+
             VStack(spacing: 0) {
                 MapFilterBar(
                     category: category,

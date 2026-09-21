@@ -68,6 +68,9 @@ export interface CityView {
   next: string[];
   similar: string[];
   facts: CityFacts;
+  /** The airports that serve the city. Independent of the day, so the flight
+   *  calendar opens for every city. */
+  airports: string[];
   reachable: boolean;
   connections: CityConnection[];
 }
@@ -209,6 +212,7 @@ export async function cityBreakForDay(db: DbReader, origins: string[], day: stri
       next: parseList(row.next),
       similar: parseList(row.similar),
       facts: parseFacts(row.facts),
+      airports: parseList(row.airports),
       reachable: connections.length > 0,
       connections,
     };

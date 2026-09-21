@@ -131,10 +131,10 @@ struct CityBreakSheet: View {
 
     private var flightsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            TripsSectionHeader(title: "Loty")
+            TripsSectionHeader(title: current.connections.isEmpty ? "Autobus" : "Loty")
                 .padding(.horizontal, Theme.Spacing.l)
             if current.connections.isEmpty {
-                noFlightNote
+                busSection
             } else {
                 flightsButton
             }
@@ -142,20 +142,25 @@ struct CityBreakSheet: View {
         .padding(.top, Theme.Spacing.section)
     }
 
-    /// A city with no flight on the selected day must say so. A silent drop or a
-    /// sold-out bar reads as a missing city or a sold-out flight.
-    private var noFlightNote: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text("Brak bezpośredniego lotu z \(viewModel.selectedCity.name) w tym terminie")
-                .font(.subheadline.weight(.semibold))
-            Text("Wybierz inny dzień w pasku dat albo inne miasto.")
-                .font(.footnote)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Theme.Spacing.m)
-        .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
+    /// No flight reaches this city from the origin, so the bus is the way in. A
+    /// placeholder until the bus calendar lands.
+    private var busSection: some View {
+        BusDirectionSection(
+            fromCity: viewModel.selectedCity.name,
+            toCity: current.displayName,
+            days: busDays,
+            eventDay: viewModel.anchorDate,
+            eventIcon: "bus",
+            scrollAnchor: .leading,
+            isActive: true
+        )
         .padding(.horizontal, Theme.Spacing.l)
+    }
+
+    private var busDays: [Date] {
+        let calendar = AppConstants.warsawCalendar
+        let start = calendar.startOfDay(for: viewModel.anchorDate)
+        return (0..<3).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
     }
 
     private var flightsButton: some View {

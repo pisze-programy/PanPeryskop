@@ -2,9 +2,10 @@
 #
 # Release the iOS app to TestFlight.
 #
-#   scripts/release-ios.sh [--version X.Y.Z] [--build N] [--no-upload]
+#   scripts/release-ios.sh [--version X.Y.Z] [--build N] [--fps] [--no-upload]
 #
 # Bumps the version, regenerates the Xcode project, then archives and uploads.
+# The map FPS readout is off unless --fps is given.
 # It does NOT touch git — commit the version bump yourself.
 # Builds with `-jobs 2` — the compiler otherwise drives macOS into ~10 GB of swap
 # on a 16 GB machine and gets OOM-killed.
@@ -14,11 +15,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS="$ROOT/ios"
 YML="$IOS/project.yml"
 
-VERSION=""; BUILD=""; DO_UPLOAD=1
+VERSION=""; BUILD=""; DO_UPLOAD=1; FPS=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --version) VERSION="$2"; shift 2 ;;
     --build) BUILD="$2"; shift 2 ;;
+    --fps) FPS=1; shift ;;
     --no-upload) DO_UPLOAD=0; shift ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -30,6 +32,18 @@ VERSION="${VERSION:-$CUR_VERSION}"
 BUILD="${BUILD:-$((CUR_BUILD + 1))}"
 
 echo "▸ Releasing iOS $VERSION (build $BUILD)"
+
+# 0) The map FPS readout: off unless --fps, so a production build never ships it.
+CONSTANTS="$IOS/PanPeryskop/Core/AppConstants.swift"
+python3 - "$CONSTANTS" "$FPS" <<'PY'
+import sys, re
+path, fps = sys.argv[1], sys.argv[2]
+value = "true" if fps == "1" else "false"
+s = open(path).read()
+s = re.sub(r'static let showsFPS = (true|false)', f'static let showsFPS = {value}', s, count=1)
+open(path, 'w').write(s)
+PY
+echo "▸ FPS readout: $([[ "$FPS" == "1" ]] && echo on || echo off)"
 
 # 1) Bump version in project.yml (xcodegen regenerates the pbxproj from this).
 python3 - "$YML" "$VERSION" "$BUILD" <<'PY'

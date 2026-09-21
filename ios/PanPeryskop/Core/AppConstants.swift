@@ -16,6 +16,9 @@ enum AppConstants {
     static let postTTLHours: TimeInterval = 24
     static let postTTLMs: Int64 = 24 * hourMs
 
+    /// The small frames-per-second readout on the map. Off for production.
+    static let showsFPS = true
+
     /// Showtime marker for an UNKNOWN start time — mirrors backend `UNKNOWN_TIME`
     /// ("00:00" = all-day events, never time-filtered).
     static let unknownTime = "00:00"

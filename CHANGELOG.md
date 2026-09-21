@@ -4,6 +4,14 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 64, 2026-09-21
+
+### Changed
+- City pins are chosen by the screen, not by a cost band. One pin per screen
+  cell, the most important city in it. A country with three cities shows three
+  pins at once; a continent shows about a hundred. The band ladder used to hide
+  a whole country until the map was zoomed in.
+
 ## [1.3.0] — build 63, 2026-09-21
 
 ### Changed

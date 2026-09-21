@@ -1,6 +1,61 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildWizzairWindow, mergeWizzairMonths, monthsInWindow, parseWizzairVersion } from '../src/travel/flightsApi';
+import { buildWizzairWindow, mergeWizzairMonths, monthsInWindow, parseWizzairVersion, resolveStation, wizzairFlyingDays } from '../src/travel/flightsApi';
+
+test('resolveStation: the pair that matches the request wins', () => {
+  const flights = [
+    { departureStation: 'WAW', arrivalStation: 'BGY', departureDate: '2026-10-11T00:00:00' },
+    { departureStation: 'WAW', arrivalStation: 'MXP', departureDate: '2026-10-11T00:00:00' },
+    { departureStation: 'WAW', arrivalStation: 'MXP', departureDate: '2026-10-12T00:00:00' },
+  ];
+  const resolved = resolveStation(flights, 'WAW', 'BGY');
+  assert.deepEqual(resolved.station, { from: 'WAW', to: 'BGY' });
+  assert.equal(resolved.flights.length, 1);
+});
+
+test('resolveStation: a metro-area substitution reports the real airport', () => {
+  // Wizzair sells Warsaw as one area: asking for WAW answers with a WMI flight.
+  const flights = [
+    { departureStation: 'WMI', arrivalStation: 'BSL', departureDate: '2026-12-03T00:00:00', priceType: 'price', price: { amount: 101.6 } },
+    { departureStation: 'WMI', arrivalStation: 'BSL', departureDate: '2026-12-04T00:00:00', priceType: 'price', price: { amount: 101.6 } },
+  ];
+  const resolved = resolveStation(flights, 'WAW', 'BSL');
+  assert.deepEqual(resolved.station, { from: 'WMI', to: 'BSL' });
+  assert.equal(resolved.flights.length, 2);
+
+  const window = buildWizzairWindow({ outboundFlights: flights }, '2026-12-11', 'WAW', 'BSL');
+  assert.deepEqual(window.outboundStation, { from: 'WMI', to: 'BSL' });
+  assert.equal(window.outbound.find((c) => c.date === '2026-12-04')?.price, 101.6);
+});
+
+test('resolveStation: no exact pair falls back to the busiest one', () => {
+  const flights = [
+    { departureStation: 'KRK', arrivalStation: 'MXP', departureDate: '2026-10-11T00:00:00' },
+    { departureStation: 'KTW', arrivalStation: 'MXP', departureDate: '2026-10-12T00:00:00' },
+    { departureStation: 'KRK', arrivalStation: 'MXP', departureDate: '2026-10-13T00:00:00' },
+  ];
+  assert.deepEqual(resolveStation(flights, 'KTW', 'BGY').station, { from: 'KRK', to: 'MXP' });
+});
+
+test('resolveStation: flights without stations keep every flight', () => {
+  const flights = [{ departureDate: '2026-10-11T00:00:00', priceType: 'price', price: { amount: 139 } }];
+  const resolved = resolveStation(flights, 'WAW', 'BSL');
+  assert.deepEqual(resolved.station, { from: 'WAW', to: 'BSL' });
+  assert.equal(resolved.flights.length, 1);
+});
+
+test('wizzairFlyingDays: only the operating route counts, both directions', () => {
+  const data = {
+    outboundFlights: [
+      { departureStation: 'WMI', arrivalStation: 'BSL', departureDate: '2026-12-03T00:00:00' },
+      { departureStation: 'WAW', arrivalStation: 'MLA', departureDate: '2026-12-09T00:00:00' },
+    ],
+    returnFlights: [
+      { departureStation: 'BSL', arrivalStation: 'WMI', departureDate: '2026-12-07T00:00:00' },
+    ],
+  };
+  assert.deepEqual(wizzairFlyingDays(data, 'WAW', 'BSL').sort(), ['2026-12-03', '2026-12-07']);
+});
 
 test('parseWizzairVersion: reads the versioned API path out of the site HTML', () => {
   const html = '<script>window.__CONFIG={"apiUrl":"https://be.wizzair.com/29.16.1/Api","x":1}</script>';

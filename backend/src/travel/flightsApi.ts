@@ -20,6 +20,16 @@ export interface FlightCell {
 export interface FlightWindow {
   outbound: FlightCell[];
   returning: FlightCell[];
+  /** The airports the carrier actually flies, when it reports them (Wizzair). */
+  outboundStation?: FlightStation;
+  returningStation?: FlightStation;
+}
+
+/** An operating airport pair. A carrier may serve a metro area from a different
+ *  airport than the one asked for, and reports which one it used. */
+export interface FlightStation {
+  from: string;
+  to: string;
 }
 
 // ---- Live Ryanair (farefinder) ----
@@ -223,6 +233,8 @@ export async function fetchRyanairMonth(origin: string, dest: string, month: str
 const WIZZAIR_VERSION_KEY = 'wizz:version';
 
 interface WizzairFlight {
+  departureStation?: string;
+  arrivalStation?: string;
   price?: { amount?: number } | null;
   priceType?: string;
   departureDate?: string;
@@ -303,14 +315,60 @@ function wizzairCell(flight: WizzairFlight | undefined, day: string): FlightCell
   return { date: day, hour, price: amount };
 }
 
-function wizzairDays(flights: WizzairFlight[], range: [number, number], eventDay: string): FlightCell[] {
-  const byDay = new Map<string, WizzairFlight>();
-  for (const f of flights) {
-    if (typeof f.departureDate === 'string') byDay.set(f.departureDate.slice(0, 10), f);
+/** The station pair a carrier really operates for one direction.
+ *
+ *  Wizzair sells by metro area (`mac`): ask for Warsaw Chopin and it may answer
+ *  with a Modlin flight, reporting the real airport in `departureStation`. The
+ *  pair that matches the request wins; otherwise the busiest pair is the route.
+ *  A response with no station fields keeps every flight, as before. */
+export function resolveStation(
+  flights: WizzairFlight[],
+  from: string,
+  to: string,
+): { station: FlightStation; flights: WizzairFlight[] } {
+  const groups = new Map<string, WizzairFlight[]>();
+  for (const flight of flights) {
+    const departure = flight.departureStation ?? '';
+    const arrival = flight.arrivalStation ?? '';
+    if (!departure || !arrival) continue;
+    const key = `${departure}|${arrival}`;
+    groups.set(key, [...(groups.get(key) ?? []), flight]);
   }
-  const days: string[] = [];
-  for (let o = range[0]; o <= range[1]; o++) days.push(addDaysWarsaw(eventDay, o));
+  const exact = groups.get(`${from}|${to}`);
+  if (exact) return { station: { from, to }, flights: exact };
+  let busiest: { station: FlightStation; flights: WizzairFlight[] } | null = null;
+  for (const [key, group] of groups) {
+    if (busiest && group.length <= busiest.flights.length) continue;
+    const [departure, arrival] = key.split('|');
+    busiest = { station: { from: departure, to: arrival }, flights: group };
+  }
+  return busiest ?? { station: { from, to }, flights };
+}
+
+function wizzairCells(flights: WizzairFlight[], days: string[]): FlightCell[] {
+  const byDay = new Map<string, WizzairFlight>();
+  for (const flight of flights) {
+    if (typeof flight.departureDate === 'string') byDay.set(flight.departureDate.slice(0, 10), flight);
+  }
   return days.map((day) => wizzairCell(byDay.get(day), day));
+}
+
+function daysInWindow(range: [number, number], eventDay: string): string[] {
+  const days: string[] = [];
+  for (let offset = range[0]; offset <= range[1]; offset++) days.push(addDaysWarsaw(eventDay, offset));
+  return days;
+}
+
+/** The flying days of the route the carrier really operates, both directions. */
+export function wizzairFlyingDays(data: WizzairTimetable, origin: string, dest: string): string[] {
+  if (data.noMarket) return [];
+  const out = resolveStation(data.outboundFlights ?? [], origin, dest);
+  const ret = resolveStation(data.returnFlights ?? [], dest, origin);
+  const days = new Set<string>();
+  for (const flight of [...out.flights, ...ret.flights]) {
+    if (typeof flight.departureDate === 'string') days.add(flight.departureDate.slice(0, 10));
+  }
+  return [...days];
 }
 
 /** `YYYY-MM-DD` for every day of the month `YYYY-MM-01`. */
@@ -330,11 +388,16 @@ export function buildMonthWindow(
   return { outbound: days.map(outboundCell), returning: days.map(returningCell) };
 }
 
-export function buildWizzairWindow(data: WizzairTimetable, eventDay: string): FlightWindow {
+export function buildWizzairWindow(data: WizzairTimetable, eventDay: string, origin = '', dest = ''): FlightWindow {
   if (data.noMarket) return { outbound: [], returning: [] };
+  const windows = CONFIG.travel.flights.windows;
+  const out = resolveStation(data.outboundFlights ?? [], origin, dest);
+  const ret = resolveStation(data.returnFlights ?? [], dest, origin);
   return {
-    outbound: wizzairDays(data.outboundFlights ?? [], CONFIG.travel.flights.windows.outbound, eventDay),
-    returning: wizzairDays(data.returnFlights ?? [], CONFIG.travel.flights.windows.return, eventDay),
+    outbound: wizzairCells(out.flights, daysInWindow(windows.outbound, eventDay)),
+    returning: wizzairCells(ret.flights, daysInWindow(windows.return, eventDay)),
+    outboundStation: out.station,
+    returningStation: ret.station,
   };
 }
 
@@ -379,33 +442,26 @@ async function cachedWizzairTimetable(db: D1Database, origin: string, dest: stri
 }
 
 export async function fetchWizzairWindow(origin: string, dest: string, eventDay: string, db: D1Database): Promise<FlightWindow> {
-  return buildWizzairWindow(await cachedWizzairTimetable(db, origin, dest, eventDay), eventDay);
+  return buildWizzairWindow(await cachedWizzairTimetable(db, origin, dest, eventDay), eventDay, origin, dest);
 }
 
 /** Every day of `month` (YYYY-MM-01), both directions. One provider call. */
 export async function fetchWizzairMonth(origin: string, dest: string, month: string, db: D1Database): Promise<FlightWindow> {
   const data = await wizzairMonth(db, origin, dest, month);
   if (data.noMarket) return { outbound: [], returning: [] };
-  const byDay = (flights: WizzairFlight[]) => {
-    const map = new Map<string, WizzairFlight>();
-    for (const f of flights) {
-      if (typeof f.departureDate === 'string') map.set(f.departureDate.slice(0, 10), f);
-    }
-    return map;
+  const days = monthDays(month);
+  const out = resolveStation(data.outboundFlights ?? [], origin, dest);
+  const ret = resolveStation(data.returnFlights ?? [], dest, origin);
+  return {
+    outbound: wizzairCells(out.flights, days),
+    returning: wizzairCells(ret.flights, days),
+    outboundStation: out.station,
+    returningStation: ret.station,
   };
-  const out = byDay(data.outboundFlights ?? []);
-  const ret = byDay(data.returnFlights ?? []);
-  return buildMonthWindow(month, (day) => wizzairCell(out.get(day), day), (day) => wizzairCell(ret.get(day), day));
 }
 
 export async function fetchWizzairFlyingDays(origin: string, dest: string, eventDay: string, db: D1Database): Promise<string[]> {
-  const data = await cachedWizzairTimetable(db, origin, dest, eventDay);
-  if (data.noMarket) return [];
-  const days = new Set<string>();
-  for (const flight of [...(data.outboundFlights ?? []), ...(data.returnFlights ?? [])]) {
-    if (typeof flight.departureDate === 'string') days.add(flight.departureDate.slice(0, 10));
-  }
-  return [...days];
+  return wizzairFlyingDays(await cachedWizzairTimetable(db, origin, dest, eventDay), origin, dest);
 }
 
 /** Flying days for a route in [fromDay, toDay], both directions pooled. Uses the
@@ -413,14 +469,11 @@ export async function fetchWizzairFlyingDays(origin: string, dest: string, event
 export async function fetchWizzairFlyingDaysInRange(
   db: D1Database, origin: string, dest: string, fromDay: string, toDay: string,
 ): Promise<string[]> {
-  const days = new Set<string>();
+  const loaded: WizzairTimetable[] = [];
   for (const month of monthsBetween(fromDay, toDay)) {
-    const data = await wizzairMonth(db, origin, dest, month);
-    for (const flight of [...(data.outboundFlights ?? []), ...(data.returnFlights ?? [])]) {
-      if (typeof flight.departureDate === 'string') days.add(flight.departureDate.slice(0, 10));
-    }
+    loaded.push(await wizzairMonth(db, origin, dest, month));
   }
-  return [...days].filter((day) => day >= fromDay && day <= toDay);
+  return wizzairFlyingDays(mergeWizzairMonths(loaded), origin, dest).filter((day) => day >= fromDay && day <= toDay);
 }
 
 // ---- VPS drain: provider-only fetch, no D1 and no cache ----
@@ -449,12 +502,9 @@ async function fetchWizzairTimetableDirect(origin: string, dest: string, fromDay
 }
 
 export async function fetchWizzairFlyingDaysInRangeDirect(origin: string, dest: string, fromDay: string, toDay: string): Promise<string[]> {
-  const days = new Set<string>();
+  const loaded: WizzairTimetable[] = [];
   for (const month of monthsBetween(fromDay, toDay)) {
-    const data = await fetchWizzairTimetableDirect(origin, dest, month, addDaysWarsaw(month, 30));
-    for (const flight of [...(data.outboundFlights ?? []), ...(data.returnFlights ?? [])]) {
-      if (typeof flight.departureDate === 'string') days.add(flight.departureDate.slice(0, 10));
-    }
+    loaded.push(await fetchWizzairTimetableDirect(origin, dest, month, addDaysWarsaw(month, 30)));
   }
-  return [...days].filter((day) => day >= fromDay && day <= toDay);
+  return wizzairFlyingDays(mergeWizzairMonths(loaded), origin, dest).filter((day) => day >= fromDay && day <= toDay);
 }

@@ -4,6 +4,30 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 63, 2026-09-21
+
+### Changed
+- A city with no flight from the origin no longer shows a "no flights" message.
+  The bus search takes its place, as a placeholder until the bus calendar lands.
+
+## [1.3.0] — build 62, 2026-09-21
+
+### Changed
+- The city map no longer drops frames. The overlay list is filtered once per
+  frame instead of five times, clustering is a single pass instead of a
+  pairwise scan, and the city pin reads its photo from the app bundle instead
+  of downloading it 327 times.
+- The flight calendar opens for every city. It is built from the city's
+  airports, not from the flights of the selected day, so another date or
+  another airport is always one tap away.
+- A city without a flight on the selected day says so and keeps the calendar
+  open, instead of hiding it.
+
+### Added
+- 327 city pin photos in the app bundle (2.5 MB).
+- A small frames-per-second readout in the bottom-left corner, on for the
+  test builds only.
+
 ## [1.3.0] — build 61, 2026-09-21
 
 ### Added

@@ -4,6 +4,13 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 66, 2026-09-21
+
+### Changed
+- The map layers are rebuilt only when the camera settles or the data changes,
+  never once per animation frame. A camera move used to filter and bucket every
+  overlay on every frame of the animation.
+
 ## [1.3.0] — build 65, 2026-09-21
 
 ### Added

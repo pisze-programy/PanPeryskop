@@ -116,6 +116,15 @@ struct EventGroup: Identifiable {
 struct FlightWindowResponse: Codable {
     let outbound: [FlightWindowCell]
     let returning: [FlightWindowCell]
+    /// The airports the carrier really flies. Wizzair sells by metro area, so it
+    /// may answer a Warsaw request with a Modlin flight and report WMI here.
+    let outboundStation: FlightStation?
+    let returningStation: FlightStation?
+}
+
+struct FlightStation: Codable, Equatable {
+    let from: String
+    let to: String
 }
 
 struct FlightWindowCell: Codable {

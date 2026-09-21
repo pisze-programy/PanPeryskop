@@ -84,6 +84,26 @@ struct CityFlightSheet: View {
         TripsViewModel.origin(for: destination, among: viewModel.originAirports)
     }
 
+    /// The carrier may fly from a sibling airport of the origin city: Wizzair
+    /// answers a Warsaw Chopin request from Modlin. The response says which.
+    private var outboundStation: FlightStation? {
+        outboundWindow?.outboundStation ?? returningWindow?.outboundStation
+    }
+
+    private var returningStation: FlightStation? {
+        returningWindow?.returningStation ?? outboundWindow?.returningStation
+    }
+
+    private var realOrigin: Airport? {
+        guard let option = selectedOption else { return nil }
+        guard let iata = outboundStation?.from else { return origin(for: option.destination) }
+        return viewModel.originAirports.first { $0.iata == iata } ?? origin(for: option.destination)
+    }
+
+    private func legTitle(_ from: String, _ to: String) -> String {
+        "Loty \(from) → \(to)"
+    }
+
     private var anchorDate: Date { viewModel.anchorDate }
 
     private var maxMonth: Date { Self.maxMonthDate }
@@ -233,9 +253,9 @@ struct CityFlightSheet: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             TripsSectionHeader(title: "Lotnisko")
                 .padding(.horizontal, Theme.Spacing.l)
-            if let selected = selectedOption {
+            if let selected = selectedOption, let origin = realOrigin {
                 DestinationMapRail(
-                    origin: origin(for: selected.destination),
+                    origin: origin,
                     options: options,
                     selected: selected,
                     onSelect: { option in
@@ -255,7 +275,7 @@ struct CityFlightSheet: View {
     private var outboundCalendar: some View {
         if let option = selectedOption {
             calendar(
-                title: "Loty \(origin(for: option.destination).iata) → \(option.destination.iata)",
+                title: legTitle(outboundStation?.from ?? origin(for: option.destination).iata, outboundStation?.to ?? option.destination.iata),
                 cells: outboundWindow?.outbound ?? [],
                 month: $outboundMonth,
                 selected: $outbound,
@@ -270,7 +290,7 @@ struct CityFlightSheet: View {
     private var returningCalendar: some View {
         if let option = selectedOption {
             calendar(
-                title: "Loty \(option.destination.iata) → \(origin(for: option.destination).iata)",
+                title: legTitle(returningStation?.from ?? option.destination.iata, returningStation?.to ?? origin(for: option.destination).iata),
                 cells: returningWindow?.returning ?? [],
                 month: $returningMonth,
                 selected: $returning,
@@ -348,13 +368,15 @@ struct CityFlightSheet: View {
     }
 
     private func openBooking() {
-        guard let option = selectedOption,
-              let url = option.carrier.bookingURL(
-                origin: origin(for: option.destination).iata,
-                destination: option.destination.iata,
-                outbound: outbound?.date,
-                returning: returning?.date
-              ) else { return }
+        guard let option = selectedOption else { return }
+        let from = outboundStation?.from ?? origin(for: option.destination).iata
+        let to = outboundStation?.to ?? option.destination.iata
+        guard let url = option.carrier.bookingURL(
+            origin: from,
+            destination: to,
+            outbound: outbound?.date,
+            returning: returning?.date
+        ) else { return }
         UIApplication.shared.open(url)
     }
 }

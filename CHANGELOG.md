@@ -4,6 +4,17 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 60, 2026-09-21
+
+### Fixed
+- Wizzair sells by metro area, so it answers a Warsaw Chopin request with a
+  Modlin flight and reports the real airport in the response. The app now reads
+  that airport: the calendar header, the booking link and the airport map use the
+  airport that really flies. Warsaw → Basel opens WMI → BSL, Kraków → Bergamo
+  opens KRK → Malpensa, Warsaw → Ciampino opens FCO.
+- Fares no longer mix airports of one metro area. Milan Bergamo and Malpensa are
+  priced separately instead of taking one arbitrary flight of the two.
+
 ## [1.3.0] — build 59, 2026-09-21
 
 ### Changed

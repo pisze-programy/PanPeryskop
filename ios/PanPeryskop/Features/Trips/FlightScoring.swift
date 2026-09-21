@@ -59,6 +59,33 @@ enum FlightScoring {
             return total + (isSaturday ? AppConstants.hotelSaturdayNightlyEstimate : AppConstants.hotelNightlyEstimate)
         }
     }
+
+    /// City break: there is no event day. The anchor is the day picked on the map,
+    /// so the trip may start a few days around it and last 1–7 nights.
+    static func findBestCityTrip(outbound: [FlightCell], returning: [FlightCell], anchor: Date) -> FlightPair? {
+        let calendar = AppConstants.warsawCalendar
+        let from = calendar.date(byAdding: .day, value: -3, to: anchor) ?? anchor
+        let to = calendar.date(byAdding: .day, value: 3, to: anchor) ?? anchor
+        return outbound
+            .filter { $0.price != nil && $0.date >= from && $0.date <= to }
+            .flatMap { start in returning.compactMap { cityPair(start, $0) } }
+            .min(by: isBetter)
+    }
+
+    private static func cityPair(_ start: FlightCell, _ end: FlightCell) -> FlightPair? {
+        guard let startPrice = start.price, let endPrice = end.price else { return nil }
+        let nights = AppConstants.warsawCalendar.daysBetween(start.date, end.date)
+        guard nights >= 1, nights <= AppConstants.cityBreakMaxNights else { return nil }
+        let hotel = hotelCost(from: start.date, nights: nights)
+        return FlightPair(
+            outbound: start,
+            returning: end,
+            total: startPrice + endPrice,
+            nights: nights,
+            hotelCost: hotel,
+            generalizedCost: startPrice + endPrice + hotel
+        )
+    }
 }
 
 extension Calendar {

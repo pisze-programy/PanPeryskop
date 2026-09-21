@@ -12,7 +12,7 @@ struct AirportPinBadge: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
-                .fill(fillStyle)
+                .fill(Airline.fill(airlines))
                 .frame(width: 44, height: 30)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.35), lineWidth: 1))
             Text(iata)
@@ -40,20 +40,6 @@ struct AirportPinBadge: View {
                 shimmerPhase = 1.6
             }
         }
-    }
-
-    private var fillStyle: AnyShapeStyle {
-        let hasWizz = airlines.contains(.wizzair)
-        let hasRyan = airlines.contains(.ryanair)
-        if hasWizz && hasRyan {
-            return AnyShapeStyle(LinearGradient(
-                colors: [Airline.ryanair.color, Airline.wizzair.color],
-                startPoint: .leading, endPoint: .trailing
-            ))
-        }
-        if hasWizz { return AnyShapeStyle(Airline.wizzair.color) }
-        if hasRyan { return AnyShapeStyle(Airline.ryanair.color) }
-        return AnyShapeStyle(Color.black.opacity(0.75))
     }
 }
 

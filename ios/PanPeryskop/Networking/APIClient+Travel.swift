@@ -16,6 +16,14 @@ extension APIClient {
         return try await get("/travel/events", params: params, timeout: AppConstants.travelRequestTimeout)
     }
 
+    /// City-break destinations for one day, with the connections that serve them
+    /// from the origin airports. `reachable` is false when no route flies that day.
+    static func getCities(origins: [String], day: String) async throws -> TravelCitiesResponse {
+        var params = ["day": day]
+        if !origins.isEmpty { params["origins"] = origins.joined(separator: ",") }
+        return try await get("/travel/cities", params: params, timeout: AppConstants.travelRequestTimeout)
+    }
+
     /// Travel catalogue for the current content version. Returns `nil` on 304
     /// (the caller's copy is still current).
     static func getCatalogue(etag: String?) async throws -> TravelCatalogue? {
@@ -32,6 +40,12 @@ extension APIClient {
     static func getFlights(airline: Airline, origin: String, destination: String, eventDay: String) async throws -> FlightWindowResponse {
         let path = airline == .ryanair ? "/travel/flights/ryanair" : "/travel/flights/wizzair"
         return try await get(path, params: ["origin": origin, "destination": destination, "eventDay": eventDay])
+    }
+
+    /// A whole month of prices for the city-break calendar. `month` is YYYY-MM-01.
+    static func getFlightMonth(airline: Airline, origin: String, destination: String, month: String) async throws -> FlightWindowResponse {
+        let path = airline == .ryanair ? "/travel/flights/ryanair" : "/travel/flights/wizzair"
+        return try await get(path, params: ["origin": origin, "destination": destination, "month": month])
     }
 
     /// Bus offers for the origin city and the event city on the event day.

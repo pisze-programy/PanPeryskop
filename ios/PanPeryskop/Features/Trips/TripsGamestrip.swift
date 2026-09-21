@@ -11,23 +11,10 @@ struct TripsGamestrip: View {
     private static let crestSize: CGFloat = 44
     private static let runIconSize: CGFloat = 22
     private static let rowHeight: CGFloat = 58
-    private static let rowTopPadding: CGFloat = 18
-    private static let rowBottomPadding: CGFloat = 10
     private static let badgeSpacing: CGFloat = 8
     private static let centerSpacing: CGFloat = 1
     private static let detailSpacing: CGFloat = 4
     private static let separator = " · "
-
-    private static let glowOpacity: Double = 0.5
-    private static let glowFadeLocation: Double = 0.65
-    private static let glowRadiusScale: CGFloat = 1.1
-    private static let glowOffsetFraction: CGFloat = 0.0325
-    private static let glowCenterY: CGFloat = -0.25
-    private static let glowLeadingCenter = UnitPoint(x: -glowOffsetFraction, y: glowCenterY)
-    private static let glowTrailingCenter = UnitPoint(x: 1 + glowOffsetFraction, y: glowCenterY)
-
-    private static let edgeShadowHeight: CGFloat = 5
-    private static let edgeShadowOpacity: Double = 0.1
 
     private var meta: TravelEventMeta? { event.metaData }
 
@@ -44,27 +31,25 @@ struct TripsGamestrip: View {
     }
 
     private var bar: some View {
-        VStack(spacing: 0) {
-            if let league {
-                Text(league)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .frame(maxWidth: .infinity)
+        StickyBar(leadingColor: leadingGlow, trailingColor: trailingGlow) {
+            VStack(spacing: 0) {
+                if let league {
+                    Text(league)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, Theme.Spacing.l)
+                }
+                row
+                    .frame(height: Self.rowHeight)
                     .padding(.horizontal, Theme.Spacing.l)
-                    .padding(.top, Self.rowTopPadding)
+                    .padding(.top, league == nil ? 0 : Self.badgeSpacing)
+                    .frame(maxWidth: .infinity)
+                dots
             }
-            row
-                .frame(height: Self.rowHeight)
-                .padding(.horizontal, Theme.Spacing.l)
-                .padding(.top, league == nil ? Self.rowTopPadding : Self.badgeSpacing)
-                .padding(.bottom, Self.rowBottomPadding)
-                .frame(maxWidth: .infinity)
-            dots
+            .contentShape(Rectangle())
         }
-        .frame(maxWidth: .infinity)
-        .background(background)
-        .contentShape(Rectangle())
     }
 
     @ViewBuilder
@@ -158,32 +143,6 @@ struct TripsGamestrip: View {
         [shortDate, event.displayTime].compactMap { $0 }.joined(separator: Self.separator)
     }
 
-    private var background: some View {
-        GeometryReader { geometry in
-            glows(in: geometry.size)
-        }
-        .overlay(alignment: .bottom) { edgeShadow }
-    }
-
-    private func glows(in size: CGSize) -> some View {
-        let radius = max(size.width, size.height) * Self.glowRadiusScale
-        return ZStack {
-            Rectangle().fill(Color(.systemBackground))
-            CornerGlow(color: leadingGlow, center: Self.glowLeadingCenter, radius: radius)
-            CornerGlow(color: trailingGlow, center: Self.glowTrailingCenter, radius: radius)
-        }
-    }
-
-    private var edgeShadow: some View {
-        LinearGradient(
-            colors: [Color.black.opacity(Self.edgeShadowOpacity), .clear],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .frame(height: Self.edgeShadowHeight)
-        .offset(y: Self.edgeShadowHeight)
-    }
-
     private var leadingGlow: Color {
         event.isRun ? runColor : tint(meta?.homeColor, name: event.home)
     }
@@ -237,21 +196,4 @@ struct TripsGamestrip: View {
         }
     }
 
-    private struct CornerGlow: View {
-        let color: Color
-        let center: UnitPoint
-        let radius: CGFloat
-
-        var body: some View {
-            RadialGradient(
-                stops: [
-                    .init(color: color.opacity(TripsGamestrip.glowOpacity), location: 0),
-                    .init(color: .clear, location: TripsGamestrip.glowFadeLocation),
-                ],
-                center: center,
-                startRadius: 0,
-                endRadius: radius
-            )
-        }
-    }
 }

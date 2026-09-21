@@ -26,7 +26,7 @@ struct MapFilterBar: View {
                     MapPickerPill(title: DayLabels.pill(offset: tripsViewModel.selectedDayOffset), action: onTripDayTap)
                     MapPickerPill(title: tripsViewModel.selectedCity.name, action: onCityTap)
                         .padding(.trailing, 12)
-                    ForEach(TripsViewModel.TravelTag.allCases) { tag in
+                    ForEach(tripsViewModel.sortedTags) { tag in
                         Chip(label: tag.label, isSelected: tripsViewModel.isTagSelected(tag.rawValue), badgeCount: tripsViewModel.tagCounts[tag.rawValue] ?? 0, showsBadgeWhenEmpty: true) {
                             tripsViewModel.toggleTag(tag.rawValue)
                         }

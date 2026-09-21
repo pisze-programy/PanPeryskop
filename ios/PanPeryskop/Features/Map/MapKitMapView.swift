@@ -50,6 +50,30 @@ struct MapKitMapView: View {
     /// Screen fraction where a tapped pin is placed (see `MapCameraController.flyToAboveSheet`).
     private static let sheetAvoidFraction = CGPoint(x: 0.5, y: 0.40)
     private static let clusterPixels: Double = 48
+    /// Marker scale at continent zoom and at city zoom. Between the two spans the
+    /// scale is interpolated, so pins do not cover a whole country when zoomed out.
+    private static let markerMinScale: CGFloat = 0.45
+    private static let markerFullScaleSpan: Double = 2
+    private static let markerMinScaleSpan: Double = 22
+
+    private var zoomScale: CGFloat {
+        let span = visibleRegion.span.latitudeDelta
+        guard span > Self.markerFullScaleSpan else { return 1 }
+        guard span < Self.markerMinScaleSpan else { return Self.markerMinScale }
+        let t = (span - Self.markerFullScaleSpan) / (Self.markerMinScaleSpan - Self.markerFullScaleSpan)
+        return 1 - CGFloat(t) * (1 - Self.markerMinScale)
+    }
+
+    /// A dense screen shrinks markers further, so the map stays readable.
+    private var densityScale: CGFloat {
+        switch visibleOverlays.count {
+        case 240...: return 0.72
+        case 140...: return 0.85
+        default: return 1
+        }
+    }
+
+    private var markerScale: CGFloat { zoomScale * densityScale }
 
     private var clusterRadiusDegrees: Double {
         let screenHeight = UIScreen.main.bounds.height
@@ -69,11 +93,32 @@ struct MapKitMapView: View {
             switch $0 {
             case .pin(let p):
                 return p.post.lat >= lat0 && p.post.lat <= lat1 && p.post.lng >= lng0 && p.post.lng <= lng1
+            case .city(let c):
+                return c.city.lat >= lat0 && c.city.lat <= lat1 && c.city.lng >= lng0 && c.city.lng <= lng1
             case .airport(let a):
                 return a.coord.latitude >= lat0 && a.coord.latitude <= lat1 && a.coord.longitude >= lng0 && a.coord.longitude <= lng1
             case .arc:
                 return true
             }
+        }
+    }
+
+    /// Zoom ladder for city pins: the farther out, the fewer tiers show. 600
+    /// cities plus the event pins would flood the map at continent zoom.
+    private var cityMaxTierRank: Int {
+        let span = visibleRegion.span.latitudeDelta
+        if span >= 25 { return 1 }
+        if span >= 10 { return 2 }
+        return 3
+    }
+
+    /// Cities one tier below the ladder stay as a dot, so a zoom step shows what
+    /// is about to appear instead of a hard cut.
+    private var cityPins: [CityPin] {
+        let visibleRank = cityMaxTierRank
+        return visibleOverlays.compactMap { overlay in
+            guard case .city(let pin) = overlay else { return nil }
+            return pin.city.tierRank <= visibleRank + 1 ? pin : nil
         }
     }
 
@@ -141,6 +186,18 @@ struct MapKitMapView: View {
                                 onTap(.pin(MapPin(post: cluster.singlePost ?? cluster.posts[0], group: cluster.posts)))
                             }
                         )
+                        .scaleEffect(markerScale)
+                    } label: { EmptyView() }
+                }
+
+                ForEach(cityPins) { pin in
+                    Annotation(coordinate: pin.coordinate, anchor: .center) {
+                        CityPinView(
+                            city: pin.city,
+                            isExpanded: pin.city.tierRank <= cityMaxTierRank,
+                            scale: markerScale
+                        )
+                        .onTapGesture { onTap(.city(pin)) }
                     } label: { EmptyView() }
                 }
 
@@ -152,6 +209,7 @@ struct MapKitMapView: View {
                     } else {
                         Annotation(coordinate: pin.coord, anchor: .center) {
                             AirportPinBadge(iata: pin.iata, airlines: pin.airlines, shimmer: pin.shimmer)
+                                .scaleEffect(markerScale)
                                 .onTapGesture { onTap(.airport(pin)) }
                         } label: { EmptyView() }
                     }

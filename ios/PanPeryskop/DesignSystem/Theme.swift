@@ -47,5 +47,24 @@ enum Theme {
                 ? Color(red: 0.09, green: 0.18, blue: 0.14)
                 : Color(red: 0.85, green: 0.94, blue: 0.88)
         }
+
+        /// Flight price bands in the month calendar: cheap, average, dear.
+        static func priceLow(_ scheme: ColorScheme) -> Color {
+            scheme == .dark
+                ? Color(red: 0.29, green: 0.87, blue: 0.50)
+                : Color(red: 0.08, green: 0.50, blue: 0.24)
+        }
+
+        static func priceMid(_ scheme: ColorScheme) -> Color {
+            scheme == .dark
+                ? Color(red: 0.98, green: 0.75, blue: 0.14)
+                : Color(red: 0.71, green: 0.33, blue: 0.04)
+        }
+
+        static func priceHigh(_ scheme: ColorScheme) -> Color {
+            scheme == .dark
+                ? Color(red: 0.97, green: 0.44, blue: 0.44)
+                : Color(red: 0.73, green: 0.11, blue: 0.11)
+        }
     }
 }

@@ -6,6 +6,8 @@ struct CapsuleButton: View {
     var tint: Color = .accentColor
     var fullWidth: Bool = false
     var isEnabled: Bool = true
+    /// Nil keeps the capsule. Set a radius for a native bottom-bar action.
+    var cornerRadius: CGFloat? = nil
     let action: () -> Void
 
     static let height: CGFloat = 44
@@ -33,7 +35,12 @@ struct CapsuleButton: View {
         .padding(.horizontal, Self.horizontalPadding)
         .frame(height: Self.height)
         .frame(maxWidth: fullWidth ? .infinity : nil)
-        .background(Capsule().fill(tint))
+        .background(shape.fill(tint))
         .opacity(isEnabled ? 1 : Self.disabledOpacity)
+    }
+
+    private var shape: AnyShape {
+        guard let cornerRadius else { return AnyShape(Capsule()) }
+        return AnyShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }

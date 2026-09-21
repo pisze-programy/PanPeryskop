@@ -14,6 +14,9 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     /// Event-count badge per travel tag (Europe-wide, selected day).
     @Published var tagCounts: [String: Int] = [:]
     @Published var events: [TravelEvent] = []
+    /// City-break destinations for the selected origin + day.
+    @Published var cities: [TravelCity] = []
+    @Published var selectedCityBreak: TravelCity?
     /// Flight layer (airport pins + arcs) is hidden until an event is selected.
     @Published var showFlightLayer: Bool = false
     @Published var selectedTravelEvent: TravelEvent?
@@ -26,6 +29,8 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     @Published private(set) var isLoading = false
     private var loadTask: Task<Void, Never>?
     private var loadGeneration = 0
+    private var citiesTask: Task<Void, Never>?
+    private var cityBreakCount = 0
     private static let loadErrorMessage = "Coś poszło nie tak, spróbuj ponownie"
     private static let confirmErrorMessage = "Nie udało się potwierdzić lotów, spróbuj ponownie"
     private static let searchToast = "Szukamy połączeń.."
@@ -62,12 +67,14 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     enum TravelTag: String, CaseIterable, Identifiable {
         case runs = "biegi"
         case football = "pilka-nozna"
+        case citybreak = "citybreak"
 
         var id: String { rawValue }
         var label: String {
             switch self {
             case .runs: return "Biegi"
             case .football: return "Piłka nożna"
+            case .citybreak: return "City break"
             }
         }
     }
@@ -88,6 +95,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         selectedDayOffset = min(StoredDay.loadOffset(key: TripsPrefs.selectedDay) ?? 0, Self.maxDayOffset)
         tagSelection.sync(all: Set(TravelTag.allCases.map(\.rawValue)))
         recomputeDestinations()
+        loadCities()
     }
 
     private func recomputeDestinations() {
@@ -135,7 +143,25 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
                 result.append(.pin(MapPin(post: post)))
             }
         }
+        if isTagSelected(TravelTag.citybreak.rawValue) {
+            for city in visibleCities {
+                result.append(.city(CityPin(city: city)))
+            }
+        }
         return result
+    }
+
+    var sortedTags: [TravelTag] {
+        let pills = TravelTag.allCases.map { TagPill(id: $0.rawValue, label: $0.label) }
+        return TagSorting.sorted(pills, counts: tagCounts).compactMap { TravelTag(rawValue: $0.id) }
+    }
+
+    /// The pilot respects the selected day. Flip to `false` to test the variant
+    /// that shows every city and only marks the reachable ones.
+    private static let citiesRespectDay = true
+
+    private var visibleCities: [TravelCity] {
+        Self.citiesRespectDay ? cities.filter(\.reachable) : cities
     }
 
     /// The airports of the selected city. Warszawa has two; the rest have one.
@@ -235,6 +261,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         selectedTravelEvent = nil
         showFlightLayer = false
         selectedEventGroup = nil
+        selectedCityBreak = nil
     }
 
     /// Card dismiss (drag/X) — clears selection so arcs + airports hide.
@@ -329,6 +356,8 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         clearLoadingScene()
         events = []
         cachedPosts = []
+        cities = []
+        cityBreakCount = 0
         showPins = false
         tagCounts = [:]
     }
@@ -359,6 +388,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     /// Day changes refresh silently.
     func refresh(showLoader: Bool = false) {
         loadTask?.cancel()
+        loadCities()
         // Every refresh drops any previous scene first, so no stale frame survives.
         clearLoadingScene()
         loadGeneration += 1
@@ -407,10 +437,15 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
             )
             return
         }
-        if cachedPosts.isEmpty {
+        if cachedPosts.isEmpty && !hasCityPins {
             ToastManager.shared.show(Self.emptyToast, seconds: 3)
         }
         showPins = true
+    }
+
+    /// The city-break layer can still fill the map when there are no events.
+    private var hasCityPins: Bool {
+        isTagSelected(TravelTag.citybreak.rawValue) && !visibleCities.isEmpty
     }
 
     private func startLoadToasts(showLoader: Bool) {
@@ -572,8 +607,46 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     private func apply(_ bucket: [String: TravelEvent], generation: Int) {
         guard loadGeneration == generation else { return }
         events = bucket.values.sorted { $0.start_ms < $1.start_ms }
-        tagCounts = Dictionary(grouping: events, by: \.tag).mapValues(\.count)
+        refreshTagCounts()
         cachedPosts = events.compactMap(\.asPost)
+    }
+
+    /// Event tags count the day's events. `citybreak` counts the reachable
+    /// cities, which is a different source — so it is merged in, not grouped.
+    private func refreshTagCounts() {
+        var counts = Dictionary(grouping: events, by: \.tag).mapValues(\.count)
+        counts[TravelTag.citybreak.rawValue] = cityBreakCount
+        tagCounts = counts
+    }
+
+    /// The backend reads route_days, so this never calls a provider.
+    func loadCities() {
+        citiesTask?.cancel()
+        let origins = originIatas
+        let day = dayIso(offset: selectedDayOffset)
+        citiesTask = Task { [weak self] in
+            do {
+                let resp = try await APIClient.getCities(origins: origins, day: day)
+                guard !Task.isCancelled, let self else { return }
+                self.cities = resp.cities
+                self.cityBreakCount = resp.cities.filter(\.reachable).count
+                self.refreshTagCounts()
+            } catch {
+                guard !(error is CancellationError) else { return }
+                print("Failed to load cities:", error)
+            }
+        }
+    }
+
+    /// `YYYY-MM-DD` (Europe/Warsaw) for a day offset, matching `dayRange`.
+    func dayIso(offset: Int) -> String {
+        let (from, _) = dayRange(offset: offset)
+        return AppConstants.isoDayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(from) / 1000))
+    }
+
+    var anchorDate: Date {
+        let (from, _) = dayRange(offset: selectedDayOffset)
+        return Date(timeIntervalSince1970: TimeInterval(from) / 1000)
     }
 
     /// (from, to) epoch ms for a day offset (0..89), 0 = today. Per-day fetch —

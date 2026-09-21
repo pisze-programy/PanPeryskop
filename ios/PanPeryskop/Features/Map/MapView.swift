@@ -134,6 +134,9 @@ struct MapScreen: View {
         .sheet(item: $tripsViewModel.selectedEventGroup) { _ in
             TripsEventSheet(viewModel: tripsViewModel)
         }
+        .sheet(item: $tripsViewModel.selectedCityBreak) { city in
+            CityBreakSheet(viewModel: tripsViewModel, city: city)
+        }
         .onChange(of: tripsViewModel.selectedEventGroup?.id) { _, id in
             guard id == nil else { return }
             tripsViewModel.clearSelectionPublic()
@@ -184,7 +187,19 @@ struct MapScreen: View {
 
 
     private func handleTap(_ overlay: MapOverlay) {
-        guard case .pin(let pin) = overlay else { return }
+        switch overlay {
+        case .pin(let pin): handlePinTap(pin)
+        case .city(let city): handleCityTap(city)
+        default: return
+        }
+    }
+
+    private func handleCityTap(_ city: CityPin) {
+        Haptics.impact(.medium)
+        tripsViewModel.selectedCityBreak = city.city
+    }
+
+    private func handlePinTap(_ pin: MapPin) {
         let post = pin.post
         if category == .trips {
             Haptics.impact(.medium)

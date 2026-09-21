@@ -47,7 +47,7 @@ struct SinglePostPin: View {
     }
 
     private var bounceAmount: CGFloat {
-        guard isHighlighted else { return 0 }
+        guard !post.isRestaurant, isHighlighted else { return 0 }
         if ageHours > 20 { return 4 }
         if ageHours > 12 { return 2 }
         return 0
@@ -56,23 +56,13 @@ struct SinglePostPin: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             ZStack {
-                TimelineView(.periodic(from: .now, by: 30)) { context in
-                    let progress = progress(at: context.date)
-                    ZStack {
-                        Circle().fill(Color.black.opacity(0.25))
-                        Circle().stroke(ringColor.opacity(0.25), lineWidth: 3)
-                        Circle()
-                            .trim(from: progress, to: 1)
-                            .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                            .rotationEffect(.degrees(-90))
+                ring
+                    .frame(width: 52, height: 52)
+                    .onAppear { startBounce() }
+                    .onChange(of: post.id) { _, _ in
+                        bounceOffset = 0
+                        startBounce()
                     }
-                }
-                .frame(width: 52, height: 52)
-                .onAppear { startBounce() }
-                .onChange(of: post.id) { _, _ in
-                    bounceOffset = 0
-                    startBounce()
-                }
 
                 if let url = post.resolvedThumbURL, !post.isRestaurant {
                     AsyncImage(url: url) { phase in
@@ -102,6 +92,26 @@ struct SinglePostPin: View {
                 if post.restaurantStars > 0 { starBadge }
             }
             .offset(y: bounceOffset)
+        }
+    }
+
+    /// Restaurants are evergreen: no TTL ring, only the plain backing.
+    @ViewBuilder
+    private var ring: some View {
+        if post.isRestaurant {
+            Circle().fill(Color.black.opacity(0.25))
+        } else {
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                let progress = progress(at: context.date)
+                ZStack {
+                    Circle().fill(Color.black.opacity(0.25))
+                    Circle().stroke(ringColor.opacity(0.25), lineWidth: 3)
+                    Circle()
+                        .trim(from: progress, to: 1)
+                        .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                }
+            }
         }
     }
 

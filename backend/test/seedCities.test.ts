@@ -3,23 +3,43 @@ import assert from 'node:assert/strict';
 import { CITY_ENTRIES, cityBreakForDay } from '../src/travel/cities';
 import { epochDay, packMask } from '../src/travel/routeDays';
 
-const TIERS = new Set(['metropolis', 'large', 'medium']);
-
 test('cities: the generated list is clean', () => {
-  assert.ok(CITY_ENTRIES.length > 100, `expected the top-tier extract, got ${CITY_ENTRIES.length}`);
+  assert.ok(CITY_ENTRIES.length > 300, `expected the full European list, got ${CITY_ENTRIES.length}`);
   const ids = new Set(CITY_ENTRIES.map((c) => c.id));
-  assert.equal(ids.size, CITY_ENTRIES.length, 'one row per Urban Audit code');
+  assert.equal(ids.size, CITY_ENTRIES.length, 'one row per city slug');
   for (const city of CITY_ENTRIES) {
-    assert.ok(TIERS.has(city.tier), `${city.name}: unexpected tier ${city.tier}`);
-    assert.ok(city.tierRank >= 1 && city.tierRank <= 3, `${city.name}: tier rank out of range`);
+    assert.ok(city.namePl.length > 1, `${city.name}: no Polish name`);
+    assert.ok(city.countryCode.length === 2, `${city.name}: bad country code`);
+    assert.ok(city.bandRank >= 1 && city.bandRank <= 5, `${city.name}: band rank out of range`);
+    assert.ok(city.costUsd > 0, `${city.name}: no cost`);
     assert.ok(city.lat > -90 && city.lat < 90, `${city.name}: bad latitude`);
     assert.ok(city.lng > -180 && city.lng < 180, `${city.name}: bad longitude`);
-    // A missing GISCO point must be dropped, not stored as 0,0.
-    assert.ok(city.lat !== 0 || city.lng !== 0, `${city.name}: null island`);
+    assert.ok(city.imageUrl.startsWith('https://'), `${city.name}: no image`);
   }
+  // The carriers name their own cities, so a small resort has no airport here.
   const withAirport = CITY_ENTRIES.filter((c) => c.airports.length > 0);
-  assert.ok(withAirport.length > CITY_ENTRIES.length * 0.9, 'almost every city needs a nearby airport');
+  assert.ok(withAirport.length > CITY_ENTRIES.length * 0.4, 'the main cities need their airport');
   assert.ok(CITY_ENTRIES.some((c) => c.airports.includes('KRK')), 'Krakow maps to its own airport');
+  assert.ok(CITY_ENTRIES.some((c) => c.airports.includes('LGW')), 'London maps to its airports');
+});
+
+test('cities: the cost bands cover every rank and the dearest leads', () => {
+  const bands = new Set(CITY_ENTRIES.map((c) => c.bandRank));
+  assert.deepEqual([...bands].sort(), [1, 2, 3, 4, 5], 'all five bands are used');
+  const dearest = CITY_ENTRIES.reduce((a, b) => (a.costUsd >= b.costUsd ? a : b));
+  assert.equal(dearest.bandRank, 1, 'the dearest city is in band 1');
+  const cheapest = CITY_ENTRIES.reduce((a, b) => (a.costUsd <= b.costUsd ? a : b));
+  assert.equal(cheapest.bandRank, 5, 'the cheapest city is in band 5');
+});
+
+test('cities: the neighbour lists hold city ids', () => {
+  const ids = new Set(CITY_ENTRIES.map((c) => c.id));
+  const withNear = CITY_ENTRIES.filter((c) => c.nearby.length > 0);
+  assert.ok(withNear.length > CITY_ENTRIES.length * 0.9, 'almost every city has neighbours');
+  for (const city of withNear) {
+    assert.ok(!city.nearby.includes(city.id), `${city.name}: lists itself`);
+    assert.ok(city.nearby.some((id) => ids.has(id)), `${city.name}: no known neighbour`);
+  }
 });
 
 interface RouteRow {
@@ -30,6 +50,18 @@ interface RouteRow {
   mask: string;
 }
 
+function cityRow(overrides: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: 'x', name: 'X', name_pl: 'X', country: 'France', country_code: 'FR',
+    lat: 45, lng: 2, band_rank: 3, cost_usd: 1200, population: 100000,
+    airports: '[]',
+    image_url: 'https://example.test/x.jpg', image_large_url: 'https://example.test/xl.jpg',
+    video_url: null, nearby: '[]', next: '[]', similar: '[]',
+    facts: JSON.stringify(CITY_ENTRIES[0].facts),
+    ...overrides,
+  };
+}
+
 function citiesDb(routes: RouteRow[]): D1Database {
   return {
     prepare: (sql: string) => {
@@ -37,16 +69,8 @@ function citiesDb(routes: RouteRow[]): D1Database {
         if (sql.includes('FROM route_days')) return { results: routes };
         return {
           results: [
-            {
-              id: 'FR001C', name: 'Paris', country: 'France', country_code: 'FR',
-              lat: 48.84, lng: 2.31, tier: 'metropolis', tier_rank: 1,
-              airports: JSON.stringify(['ORY', 'BVA', 'XCR']),
-            },
-            {
-              id: 'XX001C', name: 'Nowhere', country: 'France', country_code: 'FR',
-              lat: 45, lng: 2, tier: 'medium', tier_rank: 3,
-              airports: JSON.stringify(['ZZZ']),
-            },
+            cityRow({ id: 'paris-france', name: 'Paris', name_pl: 'Paryż', airports: JSON.stringify(['ORY', 'BVA', 'XCR']) }),
+            cityRow({ id: 'nowhere-france', name: 'Nowhere', name_pl: 'Nigdzie', airports: JSON.stringify(['ZZZ']) }),
           ],
         };
       };
@@ -69,13 +93,14 @@ test('cities: reachability comes from route_days, not a provider', async () => {
   }) as typeof fetch;
   try {
     const { cities, airports } = await cityBreakForDay(db, ['POZ'], day);
-    const paris = cities.find((c) => c.id === 'FR001C');
+    const paris = cities.find((c) => c.id === 'paris-france');
     assert.ok(paris, 'Paris must be in the answer');
+    assert.equal(paris.namePl, 'Paryż');
     assert.equal(paris.reachable, true);
     assert.deepEqual(paris.connections.map((c) => c.iata).sort(), ['BVA', 'ORY']);
     assert.deepEqual(paris.connections.find((c) => c.iata === 'BVA')?.carriers, ['ryanair']);
 
-    const nowhere = cities.find((c) => c.id === 'XX001C');
+    const nowhere = cities.find((c) => c.id === 'nowhere-france');
     assert.equal(nowhere?.reachable, false);
     assert.deepEqual(nowhere?.connections, []);
 
@@ -94,7 +119,7 @@ test('cities: a route outside the horizon day is not reachable', async () => {
     { dest: 'ORY', carrier: 'wizzair', horizon_start: start, horizon_days: 90, mask: packMask(['2026-10-15'], start, 90) },
   ]);
   const { cities, airports } = await cityBreakForDay(db, ['POZ'], '2026-10-16');
-  assert.equal(cities.find((c) => c.id === 'FR001C')?.reachable, false);
+  assert.equal(cities.find((c) => c.id === 'paris-france')?.reachable, false);
   assert.deepEqual(airports, []);
 });
 

@@ -156,13 +156,9 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         return TagSorting.sorted(pills, counts: tagCounts).compactMap { TravelTag(rawValue: $0.id) }
     }
 
-    /// The pilot respects the selected day. Flip to `false` to test the variant
-    /// that shows every city and only marks the reachable ones.
-    private static let citiesRespectDay = true
-
-    private var visibleCities: [TravelCity] {
-        Self.citiesRespectDay ? cities.filter(\.reachable) : cities
-    }
+    /// Every city stays on the map. A city with no flight on the selected day is
+    /// muted, not dropped: a silent drop looks like a missing city.
+    private var visibleCities: [TravelCity] { cities }
 
     /// The airports of the selected city. Warszawa has two; the rest have one.
     /// Cached per city — read on every map render.

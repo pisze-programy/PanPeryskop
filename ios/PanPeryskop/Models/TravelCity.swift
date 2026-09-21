@@ -3,27 +3,49 @@ import Foundation
 struct TravelCity: Codable, Identifiable, Equatable {
     let id: String
     let name: String
+    let namePl: String
     let country: String
     let countryCode: String
     let lat: Double
     let lng: Double
-    let tier: String
-    let tierRank: Int
+    /// 1 = the most expensive band. Drives the zoom ladder and the pin ring.
+    let bandRank: Int
+    let costUsd: Int
+    let population: Int
+    let imageUrl: String
+    let imageLargeUrl: String
+    let videoUrl: String?
+    let nearby: [String]
+    let next: [String]
+    let similar: [String]
+    let facts: CityFacts
     let reachable: Bool
     let connections: [CityConnection]
-    /// R2 keys of the hero gallery, in order.
-    let imageKeys: [String]
-    /// R2 key of the map-pin image, or nil.
-    let thumbKey: String?
+}
+
+struct CityFacts: Codable, Equatable {
+    let costLocalUsd: Int
+    let internetMbps: Int
+    let tempNowC: Double
+    let humidityNow: Int
+    let airQualityNow: Int
+    let airQualityYear: Int
+    let safety: Double?
+    let cleanliness: Double?
+    let fun: Double?
+    let nightlife: Double?
+    let walkability: Double?
+    let healthcare: Double?
+    let english: Double?
+    let lgbtFriendly: Double?
+    let femaleFriendly: Double?
+    let overall: Double?
 }
 
 extension TravelCity {
-    var imageURLs: [URL] { imageKeys.compactMap { Self.mediaURL($0) } }
-    var thumbURL: URL? { thumbKey.flatMap { Self.mediaURL($0) } }
-
-    private static func mediaURL(_ key: String) -> URL? {
-        URL(string: "\(APIClient.baseURL)/media/\(key)")
-    }
+    var displayName: String { namePl.isEmpty ? name : namePl }
+    var heroURL: URL? { URL(string: imageLargeUrl) }
+    var pinURL: URL? { URL(string: imageUrl) }
 }
 
 struct CityConnection: Codable, Equatable {

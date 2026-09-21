@@ -33,7 +33,7 @@ struct TripsGamestrip: View {
     }
 
     private var bar: some View {
-        StickyBar(leadingColor: leadingGlow, trailingColor: trailingGlow, leadingImage: city?.thumbURL) {
+        StickyBar(leadingColor: leadingGlow, trailingColor: trailingGlow, leadingImage: city?.pinURL) {
             VStack(spacing: 0) {
                 if let league {
                     Text(league)
@@ -74,7 +74,7 @@ struct TripsGamestrip: View {
 
     private func cityRow(_ city: TravelCity) -> some View {
         VStack(alignment: .leading, spacing: Self.centerSpacing) {
-            Text(city.name)
+            Text(city.displayName)
                 .font(.subheadline.weight(.bold))
                 .lineLimit(1)
             Text(city.country)
@@ -161,12 +161,12 @@ struct TripsGamestrip: View {
     }
 
     private var leadingGlow: Color {
-        if let city { return CityPalette.gradient(countryCode: city.countryCode, tier: city.tier).first ?? .accentColor }
+        if let city { return CityPalette.gradient(countryCode: city.countryCode, bandRank: city.bandRank).first ?? .accentColor }
         return event.isRun ? runColor : tint(meta?.homeColor, name: event.home)
     }
 
     private var trailingGlow: Color {
-        if let city { return CityPalette.gradient(countryCode: city.countryCode, tier: city.tier).last ?? .accentColor }
+        if let city { return CityPalette.gradient(countryCode: city.countryCode, bandRank: city.bandRank).last ?? .accentColor }
         return event.isRun ? runColor : tint(meta?.awayColor, name: event.away)
     }
 

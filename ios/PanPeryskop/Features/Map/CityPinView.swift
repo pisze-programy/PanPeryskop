@@ -17,12 +17,13 @@ struct CityPinView: View {
         ZStack {
             dot
                 .opacity(isExpanded ? 0 : 1)
-                .scaleEffect(isExpanded ? 2.2 : 1)
+                .scaleEffect((isExpanded ? 2.2 : 1) * scale)
             pin
                 .opacity(isExpanded ? 1 : 0)
                 .scaleEffect((isExpanded ? 1 : 0.35) * scale)
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.78), value: isExpanded)
+        .opacity(city.reachable ? 1 : 0.4)
         .contentShape(Rectangle())
     }
 
@@ -46,7 +47,7 @@ struct CityPinView: View {
     private var photo: some View {
         ZStack {
             Circle().fill(accent)
-            if let url = city.thumbURL {
+            if let url = city.pinURL {
                 AsyncImage(url: url) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {

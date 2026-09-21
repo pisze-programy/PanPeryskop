@@ -64,9 +64,22 @@ struct MapKitMapView: View {
         return 1 - CGFloat(t) * (1 - Self.markerMinScale)
     }
 
-    /// A dense screen shrinks markers further, so the map stays readable.
+    /// A dense screen shrinks markers further, so the map stays readable. Count
+    /// what is drawn: the arcs and the cities below the ladder are not.
     private var densityScale: CGFloat {
-        switch visibleOverlays.count {
+        let rank = cityMaxTierRank
+        var count = 0
+        for overlay in visibleOverlays {
+            switch overlay {
+            case .pin:
+                count += 1
+            case .city(let pin):
+                if pin.city.bandRank <= rank + 1 { count += 1 }
+            case .airport, .arc:
+                break
+            }
+        }
+        switch count {
         case 240...: return 0.72
         case 140...: return 0.85
         default: return 1
@@ -103,13 +116,15 @@ struct MapKitMapView: View {
         }
     }
 
-    /// Zoom ladder for city pins: the farther out, the fewer tiers show. 600
+    /// Zoom ladder for city pins: the farther out, the fewer bands show. 327
     /// cities plus the event pins would flood the map at continent zoom.
     private var cityMaxTierRank: Int {
         let span = visibleRegion.span.latitudeDelta
         if span >= 25 { return 1 }
         if span >= 10 { return 2 }
-        return 3
+        if span >= 5 { return 3 }
+        if span >= 2.5 { return 4 }
+        return 5
     }
 
     /// Cities one tier below the ladder stay as a dot, so a zoom step shows what
@@ -118,7 +133,7 @@ struct MapKitMapView: View {
         let visibleRank = cityMaxTierRank
         return visibleOverlays.compactMap { overlay in
             guard case .city(let pin) = overlay else { return nil }
-            return pin.city.tierRank <= visibleRank + 1 ? pin : nil
+            return pin.city.bandRank <= visibleRank + 1 ? pin : nil
         }
     }
 
@@ -194,7 +209,7 @@ struct MapKitMapView: View {
                     Annotation(coordinate: pin.coordinate, anchor: .center) {
                         CityPinView(
                             city: pin.city,
-                            isExpanded: pin.city.tierRank <= cityMaxTierRank,
+                            isExpanded: pin.city.bandRank <= cityMaxTierRank,
                             scale: markerScale
                         )
                         .onTapGesture { onTap(.city(pin)) }

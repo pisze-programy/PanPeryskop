@@ -1,10 +1,11 @@
-// One lead photo per city-break destination. Fetches the Wikipedia article image,
-// scales it to a compressed thumbnail, and posts it to the backend, which stores
-// it in R2 and records the key. Run once, or again after the city list changes:
+// City-break photo gallery. Fetches the Wikipedia article image plus nearby
+// Commons photos, scales them to compressed thumbnails, and posts them to the
+// backend, which stores them in R2 and records the keys. Run once, or again
+// after the city list changes:
 //
 //   npx tsx backend/src/travel/fetch-city-photos.ts [--limit=N] [--all]
 //
-// Cities that already have a photo are skipped unless --all is passed. Needs
+// Cities that already have a gallery are skipped unless --all is passed. Needs
 // BASE_URL and ADMIN_SECRET (read from backend/.dev.vars by default).
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -13,15 +14,22 @@ import citiesJson from './data/cities.json';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const THUMB_WIDTH = 640;
-const MAX_BYTES = 700_000;
+const HERO_WIDTH = 640;
+const THUMB_WIDTH = 160;
+const MAX_PHOTOS = 5;
+const MAX_BYTES = 400_000;
 const CONCURRENCY = 2;
 const ATTEMPTS = 3;
 const USER_AGENT = { 'User-Agent': 'PanPeryskop/1.0 (https://panperyskop.app)' };
 
+// Commons geosearch returns plenty of maps, coats of arms and logos.
+const SKIP_TITLE = /map|coat|flag|logo|seal|plan|diagram|chart|banner|icon|symbol|locator|panorama of/i;
+
 interface CityEntry {
   id: string;
   name: string;
+  lat: number;
+  lng: number;
 }
 
 interface WikipediaSummary {
@@ -61,28 +69,27 @@ function sleep(ms: number): Promise<void> {
 }
 
 /** GET with a backoff: Wikimedia answers 429 when hit too fast. */
-async function getWithRetry(url: string, timeoutMs: number): Promise<Response | null> {
+async function getJson(url: string): Promise<any | null> {
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
-    const res = await fetch(url, { headers: USER_AGENT, signal: AbortSignal.timeout(timeoutMs) });
-    if (res.status !== 429) return res;
-    await sleep(2_000 * (attempt + 1));
+    const res = await fetch(url, { headers: USER_AGENT, signal: AbortSignal.timeout(20_000) });
+    if (res.status === 429) {
+      await sleep(2_000 * (attempt + 1));
+      continue;
+    }
+    if (!res.ok) return null;
+    return await res.json();
   }
   return null;
 }
 
 async function fetchSummary(title: string): Promise<WikipediaSummary | null> {
-  const res = await getWithRetry(
+  return await getJson(
     `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`,
-    15_000,
   );
-  if (!res || !res.ok) return null;
-  return (await res.json()) as WikipediaSummary;
 }
 
-/** The Commons file name behind a Wikipedia article image. */
-function fileName(summary: WikipediaSummary): string | null {
-  const raw = summary.originalimage?.source ?? summary.thumbnail?.source;
-  if (!raw) return null;
+/** The Commons file name behind an upload URL. */
+function fileName(raw: string): string | null {
   const clean = raw.split('?')[0];
   const parts = clean.split('/');
   const name = clean.includes('/thumb/') ? parts[parts.length - 2] : parts[parts.length - 1];
@@ -90,69 +97,98 @@ function fileName(summary: WikipediaSummary): string | null {
 }
 
 /** Wikimedia renders the requested width on demand; a hand-built thumb URL 400s. */
-function photoUrl(name: string): string {
-  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(name)}?width=${THUMB_WIDTH}`;
+function filePathUrl(name: string, width: number): string {
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(name)}?width=${width}`;
 }
 
 /** "San Sebastián/Donostia" is one article, not a slash path. */
 function titleCandidates(city: CityEntry): string[] {
-  const override = TITLE_OVERRIDES[city.id];
   const first = city.name.split('/')[0].trim();
-  const candidates = [override, city.name, first];
+  const candidates = [TITLE_OVERRIDES[city.id], city.name, first];
   return [...new Set(candidates.filter((c): c is string => Boolean(c)))];
 }
 
-async function findPhoto(city: CityEntry): Promise<{ url: string; credit: string } | null> {
+/** The Wikipedia lead image first, then nearby landscape photos. */
+async function photoNames(city: CityEntry): Promise<string[]> {
+  const names: string[] = [];
   for (const title of titleCandidates(city)) {
     const summary = await fetchSummary(title);
     if (!summary) continue;
-    const name = fileName(summary);
-    if (!name) continue;
-    return {
-      url: photoUrl(name),
-      credit: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(name)}`,
-    };
+    const raw = summary.originalimage?.source ?? summary.thumbnail?.source;
+    const name = raw ? fileName(raw) : null;
+    if (name) {
+      names.push(name);
+      break;
+    }
+  }
+
+  const geo = await getJson(
+    `https://commons.wikimedia.org/w/api.php?action=query&generator=geosearch` +
+      `&ggscoord=${city.lat}|${city.lng}&ggsradius=10000&ggslimit=40&ggsnamespace=6` +
+      `&prop=imageinfo&iiprop=url|mime|size&iiurlwidth=${HERO_WIDTH}&format=json`,
+  );
+  const pages: any[] = Object.values(geo?.query?.pages ?? {});
+  const nearby = pages
+    .map((page) => ({ title: String(page.title ?? ''), info: page.imageinfo?.[0] }))
+    .filter((p) => p.info?.mime === 'image/jpeg')
+    .filter((p) => Number(p.info?.width) >= 800 && Number(p.info?.width) > Number(p.info?.height))
+    .filter((p) => !SKIP_TITLE.test(p.title))
+    .map((p) => p.title.replace(/^File:/, ''));
+
+  for (const name of nearby) {
+    if (names.length >= MAX_PHOTOS) break;
+    if (!names.includes(name)) names.push(name);
+  }
+  return names.slice(0, MAX_PHOTOS);
+}
+
+async function download(name: string, width: number): Promise<Uint8Array | null> {
+  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+    const res = await fetch(filePathUrl(name, width), {
+      headers: USER_AGENT,
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (res.status === 429) {
+      await sleep(2_000 * (attempt + 1));
+      continue;
+    }
+    if (!res.ok) return null;
+    return new Uint8Array(await res.arrayBuffer());
   }
   return null;
 }
 
 async function processCity(city: CityEntry): Promise<string> {
-  const photo = await findPhoto(city);
-  if (!photo) return `${city.id} ${city.name}: no photo`;
-  const bytes = await download(photo.url);
-  if (!bytes) return `${city.id} ${city.name}: image unavailable`;
-  if (bytes.length > MAX_BYTES) return `${city.id} ${city.name}: too large (${bytes.length})`;
+  const names = await photoNames(city);
+  if (names.length === 0) return `${city.id} ${city.name}: no photo`;
+
+  const images: string[] = [];
+  for (const name of names) {
+    const bytes = await download(name, HERO_WIDTH);
+    if (!bytes || bytes.length > MAX_BYTES) continue;
+    images.push(Buffer.from(bytes).toString('base64'));
+  }
+  if (images.length === 0) return `${city.id} ${city.name}: nothing under the size cap`;
+
+  const thumb = await download(names[0], THUMB_WIDTH);
+  if (!thumb) return `${city.id} ${city.name}: no thumb`;
+
   const response = await fetch(`${BASE_URL}/admin/seed/cities/photo`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${ADMIN_SECRET}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id: city.id,
-      image: Buffer.from(bytes).toString('base64'),
-      credit: photo.credit,
-    }),
-    signal: AbortSignal.timeout(30_000),
+    body: JSON.stringify({ id: city.id, images, thumb: Buffer.from(thumb).toString('base64') }),
+    signal: AbortSignal.timeout(60_000),
   });
   if (!response.ok) return `${city.id} ${city.name}: upload ${response.status}`;
-  return `ok ${city.id} ${city.name} (${Math.round(bytes.length / 1024)} KB)`;
-}
-
-/** Smallest first: a wide PNG can stay heavy even at 640 px. */
-async function download(url: string): Promise<Uint8Array | null> {
-  for (const width of [THUMB_WIDTH, 400, 240]) {
-    const res = await getWithRetry(url.replace(/width=\d+/, `width=${width}`), 30_000);
-    if (!res || !res.ok) continue;
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.length <= MAX_BYTES) return bytes;
-  }
-  return null;
+  return `ok ${city.id} ${city.name} (${images.length} photos)`;
 }
 
 async function storedIds(): Promise<Set<string>> {
   const day = new Date().toISOString().slice(0, 10);
   const res = await fetch(`${BASE_URL}/travel/cities?day=${day}`);
   if (!res.ok) return new Set();
-  const body = (await res.json()) as { cities: { id: string; imageKey: string | null }[] };
-  return new Set(body.cities.filter((c) => c.imageKey).map((c) => c.id));
+  const body = (await res.json()) as { cities: { id: string; imageKeys: string[] }[] };
+  return new Set(body.cities.filter((c) => (c.imageKeys ?? []).length > 0).map((c) => c.id));
 }
 
 async function main(): Promise<void> {
@@ -161,9 +197,7 @@ async function main(): Promise<void> {
   const skipStored = !process.argv.includes('--all');
   const stored = skipStored ? await storedIds() : new Set<string>();
 
-  const queue = (citiesJson as CityEntry[])
-    .filter((c) => !stored.has(c.id))
-    .slice(0, limit);
+  const queue = (citiesJson as CityEntry[]).filter((c) => !stored.has(c.id)).slice(0, limit);
   const total = queue.length;
   console.log(`${total} cities to fetch (${stored.size} already stored)`);
   let ok = 0;
@@ -179,7 +213,7 @@ async function main(): Promise<void> {
   };
 
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
-  console.log(`done: ${ok}/${total} photos stored`);
+  console.log(`done: ${ok}/${total} cities stored`);
 }
 
 main();

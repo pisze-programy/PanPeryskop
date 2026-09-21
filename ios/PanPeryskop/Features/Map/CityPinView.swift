@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// City-break destination pin, in the same circular shape as an event pin. A
-/// thumb image replaces the icon later.
+/// City-break destination pin, in the same circular shape as an event pin. The
+/// circle shows the city photo; the dot below the zoom ladder stays plain.
 struct CityPinView: View {
     let city: TravelCity
     let isExpanded: Bool
@@ -11,7 +11,7 @@ struct CityPinView: View {
     private static let ringDiameter: CGFloat = 52
     private static let iconDiameter: CGFloat = 44
 
-    private var accent: Color { Color(hex: 0x4F46E5) }
+    private var accent: Color { CityPalette.base(countryCode: city.countryCode) }
 
     var body: some View {
         ZStack {
@@ -38,19 +38,31 @@ struct CityPinView: View {
         ZStack {
             Circle().fill(Color.black.opacity(0.25))
             Circle().stroke(accent, lineWidth: 3)
-            icon
+            photo
         }
         .frame(width: Self.ringDiameter, height: Self.ringDiameter)
     }
 
-    private var icon: some View {
+    private var photo: some View {
         ZStack {
             Circle().fill(accent)
-            Image(systemName: "building.2.fill")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.white)
+            if let url = city.thumbURL {
+                AsyncImage(url: url) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    glyph
+                }
+            } else {
+                glyph
+            }
         }
         .frame(width: Self.iconDiameter, height: Self.iconDiameter)
         .clipShape(Circle())
+    }
+
+    private var glyph: some View {
+        Image(systemName: "building.2.fill")
+            .font(.system(size: 18, weight: .bold))
+            .foregroundColor(.white)
     }
 }

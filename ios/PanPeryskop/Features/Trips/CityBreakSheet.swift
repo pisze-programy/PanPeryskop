@@ -15,10 +15,11 @@ struct CityBreakSheet: View {
     @State private var browserItem: BrowserItem?
     @State private var outbound: FlightWindowCell?
     @State private var returning: FlightWindowCell?
+    @State private var scrollTopToken = 0
+
+    private static let topId = "city-break-top"
 
     private var event: TravelEvent { city.asTravelEvent(day: viewModel.anchorDate) }
-
-    private var heroPhotos: [URL?] { [city.imageURL] }
 
     private var airportCoordinate: CLLocationCoordinate2D? {
         guard let connection = city.connections.first,
@@ -28,34 +29,40 @@ struct CityBreakSheet: View {
 
     var body: some View {
         SheetShell(detent: $detent) {
-            ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 0) {
-                    CityHeroView(photos: heroPhotos)
-                        .padding(.top, Theme.Spacing.l)
-                    connectionsSection
-                    flightsSection
-                    StaysSection(
-                        event: event,
-                        airportCoordinate: airportCoordinate,
-                        checkin: outbound?.date,
-                        checkout: returning?.date
-                    )
-                    PlacesSection(
-                        kind: .attraction,
-                        event: event,
-                        onOpenURL: { url in browserItem = BrowserItem(url: url, access: .restricted) },
-                        onExpand: { expanded = $0 }
-                    )
-                    PartnerBannerSection(banners: PartnerBanner.travel) { url in
-                        browserItem = BrowserItem(url: url, access: .open)
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        Color.clear.frame(height: 0).id(Self.topId)
+                        CityHeroView(photos: city.imageURLs)
+                            .padding(.top, Theme.Spacing.l)
+                        flightsSection
+                        StaysSection(
+                            event: event,
+                            airportCoordinate: airportCoordinate,
+                            checkin: outbound?.date,
+                            checkout: returning?.date
+                        )
+                        PlacesSection(
+                            kind: .attraction,
+                            event: event,
+                            onOpenURL: { url in browserItem = BrowserItem(url: url, access: .restricted) },
+                            onExpand: { expanded = $0 }
+                        )
+                        PartnerBannerSection(banners: PartnerBanner.travel) { url in
+                            browserItem = BrowserItem(url: url, access: .open)
+                        }
+                        priceFooter
                     }
-                    priceFooter
+                    .padding(.bottom, Theme.Spacing.xl)
                 }
-                .padding(.bottom, Theme.Spacing.xl)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                CityBreakStickyHeader(city: city) { dismiss() }
+                .scrollBounceBehavior(.basedOnSize)
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    TripsGamestrip(event: event, city: city, onTap: {
+                        withAnimation(AppConstants.springStandard) {
+                            proxy.scrollTo(Self.topId, anchor: .top)
+                        }
+                    })
+                }
             }
         }
         .sheet(isPresented: $showsFlights) {
@@ -84,50 +91,6 @@ struct CityBreakSheet: View {
         }
     }
 
-    private var connectionsSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            TripsSectionHeader(title: "Połączenia")
-                .padding(.horizontal, Theme.Spacing.l)
-            if city.connections.isEmpty {
-                Text("Brak bezpośredniego lotu tego dnia")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, Theme.Spacing.l)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(city.connections.enumerated()), id: \.element.iata) { index, connection in
-                        if index > 0 { Divider().padding(.leading, Theme.Spacing.m) }
-                        connectionRow(connection)
-                    }
-                }
-                .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
-                .padding(.horizontal, Theme.Spacing.l)
-            }
-        }
-        .padding(.top, Theme.Spacing.section)
-    }
-
-    private func connectionRow(_ connection: CityConnection) -> some View {
-        HStack(spacing: Theme.Spacing.s) {
-            Text(connection.iata)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .frame(minWidth: 40, alignment: .leading)
-            Text(connection.carriers.map(Self.carrierLabel).joined(separator: ", "))
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            Spacer(minLength: 0)
-        }
-        .padding(Theme.Spacing.m)
-    }
-
-    private static func carrierLabel(_ raw: String) -> String {
-        switch raw {
-        case "ryanair": return "Ryanair"
-        case "wizzair": return "Wizz Air"
-        default: return raw
-        }
-    }
-
     private var flightsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             TripsSectionHeader(title: "Loty")
@@ -142,9 +105,11 @@ struct CityBreakSheet: View {
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Sprawdź dostępne terminy")
                             .font(.subheadline.weight(.semibold))
-                        Text(summary ?? "Kalendarz cen na cały miesiąc")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        if let summary {
+                            Text(summary)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.right")

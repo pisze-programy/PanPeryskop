@@ -34,8 +34,10 @@ export interface CityView {
   tierRank: number;
   reachable: boolean;
   connections: CityConnection[];
-  /** R2 key of the lead photo, or null. */
-  imageKey: string | null;
+  /** R2 keys of the hero gallery, in order. */
+  imageKeys: string[];
+  /** R2 key of the map-pin image, or null. */
+  thumbKey: string | null;
 }
 
 export const CITY_ENTRIES = citiesJson as CityEntry[];
@@ -50,10 +52,15 @@ interface CityRow {
   tier: string;
   tier_rank: number;
   airports: string;
-  image_key: string | null;
+  image_keys: string;
+  thumb_key: string | null;
 }
 
 function parseAirports(raw: string): string[] {
+  return parseKeys(raw);
+}
+
+function parseKeys(raw: string): string[] {
   try {
     const value = JSON.parse(raw);
     return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
@@ -122,7 +129,7 @@ export async function cityBreakForDay(db: DbReader, origins: string[], day: stri
     .sort((a, b) => a.iata.localeCompare(b.iata));
   const { results } = await db
     .prepare(
-      `SELECT id, name, country, country_code, lat, lng, tier, tier_rank, airports, image_key
+      `SELECT id, name, country, country_code, lat, lng, tier, tier_rank, airports, image_keys, thumb_key
        FROM travel_cities ORDER BY tier_rank, rank`,
     )
     .all<CityRow>();
@@ -141,7 +148,8 @@ export async function cityBreakForDay(db: DbReader, origins: string[], day: stri
       tierRank: row.tier_rank,
       reachable: connections.length > 0,
       connections,
-      imageKey: row.image_key,
+      imageKeys: parseKeys(row.image_keys),
+      thumbKey: row.thumb_key,
     };
   });
   return { cities, airports };

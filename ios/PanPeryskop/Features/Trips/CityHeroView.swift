@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// City photos at the top of the city-break sheet. One to three photos lay out as
-/// a bento block; more than three scroll horizontally at 70 % of the width. Photos
-/// are placeholders until the city images land — they are not zoomable.
+/// a bento block; more than three scroll horizontally at 70 % of the width. They
+/// are not zoomable.
 struct CityHeroView: View {
-    let photos: [URL?]
+    let photos: [URL]
 
     private static let tileHeight: CGFloat = 200
     private static let stripWidthFraction: CGFloat = 0.7
@@ -12,7 +12,8 @@ struct CityHeroView: View {
 
     var body: some View {
         if photos.isEmpty {
-            EmptyView()
+            tile(height: Self.tileHeight)
+                .padding(.horizontal, Theme.Spacing.l)
         } else if photos.count <= 3 {
             bento
         } else {
@@ -51,17 +52,12 @@ struct CityHeroView: View {
         .frame(height: Self.tileHeight)
     }
 
-    private func tile(_ photo: URL?, height: CGFloat) -> some View {
-        Group {
-            if let photo {
-                AsyncImage(url: photo) { image in
-                    image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    placeholder
-                }
-            } else {
-                placeholder
-            }
+    @ViewBuilder
+    private func tile(_ photo: URL, height: CGFloat) -> some View {
+        AsyncImage(url: photo) { image in
+            image.resizable().aspectRatio(contentMode: .fill)
+        } placeholder: {
+            placeholder
         }
         .frame(maxWidth: .infinity)
         .frame(height: height)
@@ -70,6 +66,17 @@ struct CityHeroView: View {
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .stroke(Theme.Palette.hairline, lineWidth: 0.5)
         )
+    }
+
+    private func tile(height: CGFloat) -> some View {
+        placeholder
+            .frame(maxWidth: .infinity)
+            .frame(height: height)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                    .stroke(Theme.Palette.hairline, lineWidth: 0.5)
+            )
     }
 
     private var placeholder: some View {

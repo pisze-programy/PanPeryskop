@@ -197,6 +197,7 @@ struct MapScreen: View {
     private func handleCityTap(_ city: CityPin) {
         Haptics.impact(.medium)
         tripsViewModel.selectedCityBreak = city.city
+        cameraController.flyToAboveSheet(city.coordinate)
     }
 
     private func handlePinTap(_ pin: MapPin) {

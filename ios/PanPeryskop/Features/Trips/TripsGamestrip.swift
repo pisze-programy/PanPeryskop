@@ -4,6 +4,8 @@ import SwiftUI
 /// glued to the top while the page scrolls under it.
 struct TripsGamestrip: View {
     let event: TravelEvent
+    /// Set for a city break: the row and the glows come from the city.
+    var city: TravelCity? = nil
     var dotsCount = 1
     var dotsIndex = 0
     let onTap: () -> Void
@@ -61,11 +63,32 @@ struct TripsGamestrip: View {
 
     @ViewBuilder
     private var row: some View {
-        if event.isRun {
+        if let city {
+            cityRow(city)
+        } else if event.isRun {
             runRow
         } else {
             soccerRow
         }
+    }
+
+    private func cityRow(_ city: TravelCity) -> some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Image(systemName: "building.2.fill")
+                .font(.system(size: Self.runIconSize, weight: .semibold))
+                .foregroundColor(CityPalette.base(countryCode: city.countryCode))
+            VStack(alignment: .leading, spacing: Self.centerSpacing) {
+                Text(city.name)
+                    .font(.subheadline.weight(.bold))
+                    .lineLimit(1)
+                Text(city.country)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: Theme.Spacing.s)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var soccerRow: some View {
@@ -144,11 +167,13 @@ struct TripsGamestrip: View {
     }
 
     private var leadingGlow: Color {
-        event.isRun ? runColor : tint(meta?.homeColor, name: event.home)
+        if let city { return CityPalette.gradient(countryCode: city.countryCode, tier: city.tier).first ?? .accentColor }
+        return event.isRun ? runColor : tint(meta?.homeColor, name: event.home)
     }
 
     private var trailingGlow: Color {
-        event.isRun ? runColor : tint(meta?.awayColor, name: event.away)
+        if let city { return CityPalette.gradient(countryCode: city.countryCode, tier: city.tier).last ?? .accentColor }
+        return event.isRun ? runColor : tint(meta?.awayColor, name: event.away)
     }
 
     private var runColor: Color { RunPalette.color(for: event) }

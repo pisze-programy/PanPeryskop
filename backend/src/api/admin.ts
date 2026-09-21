@@ -210,25 +210,38 @@ adminRoutes.post('/seed/cities', async (c) => {
   return c.json({ ok: true, saved });
 });
 
-// One compressed city photo. The local job fetches a Wikimedia thumbnail and
-// posts it here, so R2 and D1 are written from one place.
+// The city photo gallery: a few compressed Wikimedia thumbnails plus the small
+// pin image. The local job fetches them and posts here, so R2 and D1 are written
+// from one place.
 adminRoutes.post('/seed/cities/photo', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const body = await c.req
-    .json<{ id?: unknown; image?: unknown; credit?: unknown }>()
-    .catch(() => ({} as { id?: unknown; image?: unknown; credit?: unknown }));
+    .json<{ id?: unknown; images?: unknown; thumb?: unknown }>()
+    .catch(() => ({} as { id?: unknown; images?: unknown; thumb?: unknown }));
   const id = typeof body.id === 'string' ? body.id : '';
-  const image = typeof body.image === 'string' ? body.image : '';
-  if (!id || !image) return c.json({ error: 'id + image (base64) required' }, 400);
-  const bytes = Uint8Array.from(atob(image), (ch) => ch.charCodeAt(0));
-  if (bytes.length > 800_000) return c.json({ error: 'image too large' }, 400);
-  const key = `seed/city/${id}.jpg`;
-  await c.env.MEDIA.put(key, bytes, { httpMetadata: { contentType: 'image/jpeg' } });
-  await c.env.DB.prepare('UPDATE travel_cities SET image_key=?, image_credit=? WHERE id=?')
-    .bind(key, typeof body.credit === 'string' ? body.credit : null, id)
+  const images = Array.isArray(body.images) ? body.images.filter((v): v is string => typeof v === 'string') : [];
+  const thumb = typeof body.thumb === 'string' ? body.thumb : '';
+  if (!id || images.length === 0 || !thumb) return c.json({ error: 'id + images[] + thumb required' }, 400);
+  if (images.length > 6) return c.json({ error: 'too many images' }, 400);
+  const keys: string[] = [];
+  for (let i = 0; i < images.length; i++) {
+    const bytes = decodeBase64(images[i]);
+    if (bytes.length > 400_000) return c.json({ error: `image ${i} too large` }, 400);
+    const key = `seed/city/${id}/${i + 1}.jpg`;
+    await c.env.MEDIA.put(key, bytes, { httpMetadata: { contentType: 'image/jpeg' } });
+    keys.push(key);
+  }
+  const thumbKey = `seed/city/${id}/thumb.jpg`;
+  await c.env.MEDIA.put(thumbKey, decodeBase64(thumb), { httpMetadata: { contentType: 'image/jpeg' } });
+  await c.env.DB.prepare('UPDATE travel_cities SET image_keys=?, thumb_key=?, image_key=? WHERE id=?')
+    .bind(JSON.stringify(keys), thumbKey, keys[0], id)
     .run();
-  return c.json({ ok: true, key, bytes: bytes.length });
+  return c.json({ ok: true, keys, thumbKey });
 });
+
+function decodeBase64(value: string): Uint8Array {
+  return Uint8Array.from(atob(value), (ch) => ch.charCodeAt(0));
+}
 
 // Warm one day of kupbilecik events into R2. The official API returns the WHOLE
 // future catalog (~60 MB JSON) — too big to parse per-day on the Worker. An external

@@ -24,49 +24,28 @@ struct CityFlightSheet: View {
 
     var body: some View {
         SheetShell(detent: $detent) {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                    railSection
-                    outboundCalendar
-                    returningCalendar
+            NavigationStack {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                        railSection
+                        outboundCalendar
+                        returningCalendar
+                    }
+                    .padding(.top, Theme.Spacing.m)
+                    .padding(.bottom, Theme.Spacing.xl)
                 }
-                .padding(.top, Theme.Spacing.s)
-                .padding(.bottom, Theme.Spacing.xl)
+                .safeAreaInset(edge: .bottom, spacing: 0) { buyBar }
+                .navigationTitle("Wybierz terminy")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Anuluj") { dismiss() }
+                    }
+                }
             }
-            .safeAreaInset(edge: .top, spacing: 0) { topBar }
-            .safeAreaInset(edge: .bottom, spacing: 0) { buyBar }
         }
         .task(id: outboundLoadKey) { await loadOutbound() }
         .task(id: returningLoadKey) { await loadReturning() }
-    }
-
-    private var topBar: some View {
-        let tint = selectedOption?.carrier.color ?? .accentColor
-        return StickyBar(leadingColor: tint, trailingColor: tint, bottomPadding: Theme.Spacing.s) {
-            HStack(spacing: Theme.Spacing.s) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("Wybierz terminy")
-                        .font(.headline)
-                    Text(city.name)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer(minLength: Theme.Spacing.s)
-                Button {
-                    Haptics.selection()
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.footnote.weight(.bold))
-                        .foregroundColor(.secondary)
-                        .frame(width: 30, height: 30)
-                        .background(Theme.Palette.surface, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Zamknij")
-            }
-            .padding(.horizontal, Theme.Spacing.l)
-        }
     }
 
     // MARK: - Options
@@ -120,7 +99,11 @@ struct CityFlightSheet: View {
             return
         }
         outboundWindow = loaded
+        guard outbound == nil else { return }
         outbound = defaultOutbound(loaded)
+        // An outbound near the end of the month puts the return in the next one.
+        let target = returnMonth(for: outbound)
+        if target != returningMonth { returningMonth = target }
     }
 
     private func loadReturning() async {
@@ -138,6 +121,7 @@ struct CityFlightSheet: View {
             return
         }
         returningWindow = loaded
+        guard returning == nil else { return }
         returning = defaultReturning(loaded)
     }
 
@@ -155,6 +139,22 @@ struct CityFlightSheet: View {
             return window.returning.first { $0.date == iso(best.returning.date) }
         }
         return window.returning.first { $0.date > after && $0.price != nil } ?? cheapest(window.returning)
+    }
+
+    private func returnMonth(for cell: FlightWindowCell?) -> Date {
+        let calendar = AppConstants.warsawCalendar
+        guard let cell, let date = AppConstants.isoDayFormatter.date(from: cell.date) else {
+            return startOfMonth(anchorDate)
+        }
+        let daysInMonth = calendar.range(of: .day, in: .month, for: date)?.count ?? 30
+        let day = calendar.component(.day, from: date)
+        let crosses = day > daysInMonth - AppConstants.cityBreakMaxNights
+        return calendar.date(byAdding: .month, value: crosses ? 1 : 0, to: startOfMonth(date)) ?? date
+    }
+
+    private func startOfMonth(_ date: Date) -> Date {
+        let calendar = AppConstants.warsawCalendar
+        return calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
     }
 
     private var bestPair: FlightPair? {
@@ -183,7 +183,7 @@ struct CityFlightSheet: View {
 
     private var railSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            TripsSectionHeader(title: "Lotnisko", info: "Przesuń, aby zmienić lotnisko")
+            TripsSectionHeader(title: "Lotnisko")
                 .padding(.horizontal, Theme.Spacing.l)
             if let selected = selectedOption {
                 DestinationMapRail(

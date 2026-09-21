@@ -11,14 +11,18 @@ struct TravelCity: Codable, Identifiable, Equatable {
     let tierRank: Int
     let reachable: Bool
     let connections: [CityConnection]
-    /// R2 key of the lead photo, or nil.
-    let imageKey: String?
+    /// R2 keys of the hero gallery, in order.
+    let imageKeys: [String]
+    /// R2 key of the map-pin image, or nil.
+    let thumbKey: String?
 }
 
 extension TravelCity {
-    var imageURL: URL? {
-        guard let imageKey else { return nil }
-        return URL(string: "\(APIClient.baseURL)/media/\(imageKey)")
+    var imageURLs: [URL] { imageKeys.compactMap { Self.mediaURL($0) } }
+    var thumbURL: URL? { thumbKey.flatMap { Self.mediaURL($0) } }
+
+    private static func mediaURL(_ key: String) -> URL? {
+        URL(string: "\(APIClient.baseURL)/media/\(key)")
     }
 }
 

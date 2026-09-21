@@ -4,6 +4,25 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- The city-break sheet opens at the medium detent, like the event sheet.
+- The city header runs a gradient from the country colour into its lighter tier
+  shade, so a city reads as "country → city (tier)".
+- The city hero is a photo area, not text: one to three photos lay out as a
+  bento block, more than three scroll horizontally at 70 % of the width.
+- The two flight calendars keep independent months, so an October outbound with
+  a November return is possible.
+- The buy action uses the native bottom-bar shape (rounded rectangle) instead of
+  a capsule.
+- The event gamestrip and both city headers share one sticky bar component
+  (glows, material, divider, drag-indicator padding).
+
+### Fixed
+- "Ceny i linki zewnętrzne" uses the shared sheet shell and a full-width close
+  button, like the rest of the app.
+
 ## [1.3.0] — build 56, 2026-09-21
 
 ### Added
@@ -19,6 +38,13 @@ All notable changes to PanPeryskop. Format based on
 
 ### Changed
 - The city sheet no longer shows the bus option. A bus calendar follows later.
+- Destination airports show only after an event is tapped, as before. The
+  carrier-coloured dots from build 55 are gone.
+
+### Fixed
+- EuroAirport Basel Mulhouse Freiburg is one airport with three IATA codes, but
+  Ryanair lists BSL and Wizzair lists BSL and MLH. The destination list showed
+  the same airport twice, at the same price. The two codes are merged into BSL.
 
 ## [1.3.0] — build 55, 2026-09-21
 

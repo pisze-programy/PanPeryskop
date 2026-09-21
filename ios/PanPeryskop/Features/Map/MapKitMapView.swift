@@ -15,6 +15,40 @@ struct MapKitMapView: View {
     @State private var camera: MapCameraPosition
     @State private var visibleRegion: MKCoordinateRegion
     @State private var currentCameraDistance: CLLocationDistance
+    @State private var derived = Derived()
+
+    /// The layers a render draws. Rebuilt only when the region settles or the
+    /// data changes, never per animation frame: a camera move used to filter and
+    /// bucket every overlay on every frame.
+    private struct Derived {
+        var visible: [MapOverlay] = []
+        var arcs: [FlightArc] = []
+        var clusters: [PostCluster] = []
+        var cities: [CityPin] = []
+        var airports: [AirportPin] = []
+    }
+
+    /// Cheap identity for the overlay list: a count plus the two ends.
+    private var overlaysFingerprint: String {
+        "\(overlays.count)|\(overlays.first?.id ?? "")|\(overlays.last?.id ?? "")"
+    }
+
+    /// `MKCoordinateRegion` is not Equatable, so the region needs a key.
+    private struct RegionKey: Equatable {
+        let lat: Double
+        let lng: Double
+        let dLat: Double
+        let dLng: Double
+    }
+
+    private var regionKey: RegionKey {
+        RegionKey(
+            lat: visibleRegion.center.latitude,
+            lng: visibleRegion.center.longitude,
+            dLat: visibleRegion.span.latitudeDelta,
+            dLng: visibleRegion.span.longitudeDelta
+        )
+    }
 
     init(
         overlays: [MapOverlay],
@@ -153,6 +187,17 @@ struct MapKitMapView: View {
         }
     }
 
+    private func rebuild() {
+        let visible = visibleOverlays
+        derived = Derived(
+            visible: visible,
+            arcs: flightArcs(visible),
+            clusters: pinClusters(visible),
+            cities: cityPins(visible),
+            airports: airportPins(visible)
+        )
+    }
+
     private static func cameraDistance(for region: MKCoordinateRegion) -> CLLocationDistance {
         let meters = region.span.latitudeDelta * 111_320
         return meters / sin(pitchDegrees * .pi / 180)
@@ -172,13 +217,10 @@ struct MapKitMapView: View {
     }
 
     var body: some View {
-        // One filter pass per render, shared by every layer. Recomputing it per
-        // layer made the frame five times the work.
-        let visible = visibleOverlays
-        let arcs = flightArcs(visible)
-        let clusters = pinClusters(visible)
-        let cities = cityPins(visible)
-        let airports = airportPins(visible)
+        let arcs = derived.arcs
+        let clusters = derived.clusters
+        let cities = derived.cities
+        let airports = derived.airports
         let scale = zoomScale * densityScale(clusters.count + cities.count + airports.count)
         return GeometryReader { geo in
             MapReader { proxy in
@@ -244,7 +286,10 @@ struct MapKitMapView: View {
                 onRegionChange(swLat, swLng, neLat, neLng)
                 onCameraSettled(region)
             }
+            .onChange(of: regionKey) { _, _ in rebuild() }
+            .onChange(of: overlaysFingerprint) { _, _ in rebuild() }
             .onAppear {
+                rebuild()
                 cameraController.bind { region, distance in
                     visibleRegion = region
                     let resolved = distance ?? MapKitMapView.cameraDistance(for: region)

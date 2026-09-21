@@ -4,6 +4,24 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 65, 2026-09-21
+
+### Added
+- A global region: region, country, language and currency in one place, read
+  from the environment and changeable in onboarding and the profile. Prices are
+  shown in the local currency, and every 0–5 score is shown in words.
+- The hero opens on the bundled thumbnail, so the photo never jumps when the
+  large one arrives.
+- The city header shows the population and the cost rank instead of repeating
+  the country.
+
+### Changed
+- A city pin falls back to the airports within 150 km when the carriers name no
+  city of their own: 33 cities have none left, down from 181.
+- Picking a neighbour from the horizontal list moves the map to it and returns
+  the sheet to the top.
+- The weather row fills the full width.
+
 ## [1.3.0] — build 64, 2026-09-21
 
 ### Changed

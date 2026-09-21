@@ -11,6 +11,15 @@ struct TravelCity: Codable, Identifiable, Equatable {
     let tierRank: Int
     let reachable: Bool
     let connections: [CityConnection]
+    /// R2 key of the lead photo, or nil.
+    let imageKey: String?
+}
+
+extension TravelCity {
+    var imageURL: URL? {
+        guard let imageKey else { return nil }
+        return URL(string: "\(APIClient.baseURL)/media/\(imageKey)")
+    }
 }
 
 struct CityConnection: Codable, Equatable {

@@ -40,6 +40,13 @@ struct AppPolicyView: View {
                     .foregroundColor(.secondary)
             }
 
+            Section("Zdjęcia miast") {
+                Label("© Wikimedia Commons contributors", systemImage: "photo")
+                Text("Zdjęcia miast pochodzą z Wikimedia Commons i są udostępniane na licencjach Creative Commons (CC BY / CC BY-SA). Źródło każdego zdjęcia jest zapisane przy mieście.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
             Section("Źródła wydarzeń") {
                 if isLoading {
                     HStack {

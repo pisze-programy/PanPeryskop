@@ -11,17 +11,14 @@ struct CityBreakSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var detent: PresentationDetent = .medium
     @State private var showsFlights = false
+    @State private var expanded: PlaceKind?
     @State private var browserItem: BrowserItem?
     @State private var outbound: FlightWindowCell?
     @State private var returning: FlightWindowCell?
 
-    /// Placeholder count until the city images land. More than three photos make
-    /// the hero scroll horizontally.
-    private static let heroPlaceholders = 4
-
     private var event: TravelEvent { city.asTravelEvent(day: viewModel.anchorDate) }
 
-    private var heroPhotos: [URL?] { Array(repeating: nil, count: Self.heroPlaceholders) }
+    private var heroPhotos: [URL?] { [city.imageURL] }
 
     private var airportCoordinate: CLLocationCoordinate2D? {
         guard let connection = city.connections.first,
@@ -43,9 +40,12 @@ struct CityBreakSheet: View {
                         checkin: outbound?.date,
                         checkout: returning?.date
                     )
-                    PlaceGrid(kind: .attraction, event: event) { url in
-                        browserItem = BrowserItem(url: url, access: .restricted)
-                    }
+                    PlacesSection(
+                        kind: .attraction,
+                        event: event,
+                        onOpenURL: { url in browserItem = BrowserItem(url: url, access: .restricted) },
+                        onExpand: { expanded = $0 }
+                    )
                     PartnerBannerSection(banners: PartnerBanner.travel) { url in
                         browserItem = BrowserItem(url: url, access: .open)
                     }
@@ -73,6 +73,14 @@ struct CityBreakSheet: View {
                 onClose: { browserItem = nil }
             )
             .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $expanded) { kind in
+            PlacesListSheet(
+                kind: kind,
+                eventCoordinate: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng),
+                eventDay: event.isoDay,
+                onClose: { expanded = nil }
+            )
         }
     }
 

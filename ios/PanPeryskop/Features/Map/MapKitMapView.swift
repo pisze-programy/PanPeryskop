@@ -64,22 +64,9 @@ struct MapKitMapView: View {
         return 1 - CGFloat(t) * (1 - Self.markerMinScale)
     }
 
-    /// A dense screen shrinks markers further, so the map stays readable. Count
-    /// what is drawn: the arcs and the cities below the ladder are not.
-    private func densityScale(_ visible: [MapOverlay]) -> CGFloat {
-        let rank = cityMaxTierRank
-        var count = 0
-        for overlay in visible {
-            switch overlay {
-            case .pin:
-                count += 1
-            case .city(let pin):
-                if pin.city.bandRank <= rank + 1 { count += 1 }
-            case .airport, .arc:
-                break
-            }
-        }
-        switch count {
+    /// A dense screen shrinks markers further, so the map stays readable.
+    private func densityScale(_ rendered: Int) -> CGFloat {
+        switch rendered {
         case 240...: return 0.72
         case 140...: return 0.85
         default: return 1
@@ -114,25 +101,34 @@ struct MapKitMapView: View {
         }
     }
 
-    /// Zoom ladder for city pins: the farther out, the fewer bands show. 327
-    /// cities plus the event pins would flood the map at continent zoom.
-    private var cityMaxTierRank: Int {
-        let span = visibleRegion.span.latitudeDelta
-        if span >= 25 { return 1 }
-        if span >= 10 { return 2 }
-        if span >= 5 { return 3 }
-        if span >= 2.5 { return 4 }
-        return 5
+    /// One city pin per screen cell, the most important city in it. The cap
+    /// follows the screen, not the data: a country with three cities shows three
+    /// pins, and a continent shows about a hundred. A band threshold hid a whole
+    /// country until the user zoomed in.
+    private func cityPins(_ visible: [MapOverlay]) -> [CityPin] {
+        let cell = cityCellDegrees
+        var best: [String: CityPin] = [:]
+        for overlay in visible {
+            guard case .city(let pin) = overlay else { continue }
+            let lat = Int((pin.city.lat / cell).rounded(.down))
+            let lng = Int((pin.city.lng / cell).rounded(.down))
+            let key = "\(lat):\(lng)"
+            if let current = best[key], !isMoreImportant(pin.city, than: current.city) { continue }
+            best[key] = pin
+        }
+        return Array(best.values)
     }
 
-    /// Cities one band below the ladder stay as a dot, so a zoom step shows what
-    /// is about to appear instead of a hard cut.
-    private func cityPins(_ visible: [MapOverlay]) -> [CityPin] {
-        let visibleRank = cityMaxTierRank
-        return visible.compactMap { overlay in
-            guard case .city(let pin) = overlay else { return nil }
-            return pin.city.bandRank <= visibleRank + 1 ? pin : nil
-        }
+    /// About 64 pt on screen, so a cell holds one pin.
+    private var cityCellDegrees: Double {
+        let screenHeight = UIScreen.main.bounds.height
+        let degreesPerPixel = visibleRegion.span.latitudeDelta / Double(screenHeight)
+        return max(degreesPerPixel * 64, 0.00005)
+    }
+
+    private func isMoreImportant(_ city: TravelCity, than other: TravelCity) -> Bool {
+        if city.bandRank != other.bandRank { return city.bandRank < other.bandRank }
+        return city.population > other.population
     }
 
     private func pinClusters(_ visible: [MapOverlay]) -> [PostCluster] {
@@ -179,11 +175,11 @@ struct MapKitMapView: View {
         // One filter pass per render, shared by every layer. Recomputing it per
         // layer made the frame five times the work.
         let visible = visibleOverlays
-        let scale = zoomScale * densityScale(visible)
         let arcs = flightArcs(visible)
         let clusters = pinClusters(visible)
         let cities = cityPins(visible)
         let airports = airportPins(visible)
+        let scale = zoomScale * densityScale(clusters.count + cities.count + airports.count)
         return GeometryReader { geo in
             MapReader { proxy in
                 Map(
@@ -215,7 +211,7 @@ struct MapKitMapView: View {
                     Annotation(coordinate: pin.coordinate, anchor: .center) {
                         CityPinView(
                             city: pin.city,
-                            isExpanded: pin.city.bandRank <= cityMaxTierRank,
+                            isExpanded: true,
                             scale: scale
                         )
                         .onTapGesture { onTap(.city(pin)) }

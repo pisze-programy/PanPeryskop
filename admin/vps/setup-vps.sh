@@ -58,6 +58,7 @@ install -m 0644 "$SRC_TMP/awin-warm.mjs"   "$REPO_DIR/backend/dist/awin-warm.mjs
 install -m 0644 "$SRC_TMP/travel.mjs"       "$REPO_DIR/backend/dist/travel.mjs"
 install -m 0755 "$SRC_TMP/consumer.sh"        "$REPO_DIR/admin/vps/consumer.sh"
 install -m 0755 "$SRC_TMP/consumer-ensure.sh" "$REPO_DIR/admin/vps/consumer-ensure.sh"
+install -m 0755 "$SRC_TMP/route-days.sh"     "$REPO_DIR/admin/vps/route-days.sh"
 install -m 0755 "$SRC_TMP/setup-vps.sh"    "$REPO_DIR/admin/vps/setup-vps.sh"
 install -m 0644 "$SRC_TMP/ipv4-proxy.mjs"  "$REPO_DIR/admin/vps/ipv4-proxy.mjs"
 say "bundle + scripts installed into $REPO_DIR"
@@ -72,7 +73,7 @@ say "legacy files cleaned"
 
 # ---------- 5. crontab (preserve system + user entries; swap our seed lines) ----------
 TMP_CRON=$(mktemp)
-crontab -l 2>/dev/null | grep -vE 'panperyskop.*(watchdog|orchestrator)\.sh|vps-seed\.mjs|(kup-warm|awin-warm|travel|consumer-ensure)\.(mjs|sh)' > "$TMP_CRON"
+crontab -l 2>/dev/null | grep -vE 'panperyskop.*(watchdog|orchestrator)\.sh|vps-seed\.mjs|(kup-warm|awin-warm|travel|consumer-ensure|route-days)\.(mjs|sh)' > "$TMP_CRON"
 # Seed consumer supervisor — restart the long-lived drain within 5 min if it dies.
 printf '%s\n' '*/5 * * * * /opt/panperyskop/admin/vps/consumer-ensure.sh' >> "$TMP_CRON"
 # Nightly kupbilecik manifest warm — 00:01 Warsaw, CLEAN env (no proxy: the origin
@@ -84,9 +85,11 @@ printf '%s\n' '3 0 * * * cd /opt/panperyskop && /usr/bin/node --max-old-space-si
 printf '%s\n' '10 0 * * 1 cd /opt/panperyskop && /usr/bin/node --max-old-space-size=192 backend/dist/travel.mjs --provider=espn >> admin/vps/logs/travel-espn.log 2>&1' >> "$TMP_CRON"
 # worldsmarathons runs replenish — Monday 00:25 Warsaw (after ESPN).
 printf '%s\n' '25 0 * * 1 cd /opt/panperyskop && /usr/bin/node --max-old-space-size=192 backend/dist/travel.mjs --provider=worldsmarathons >> admin/vps/logs/travel-wm.log 2>&1' >> "$TMP_CRON"
+# Flight schedule drain — daily 11:00 Warsaw. Exits fast when nothing is due.
+printf '%s\n' '0 11 * * * /opt/panperyskop/admin/vps/route-days.sh >> /opt/panperyskop/admin/vps/logs/travel-route-days.log 2>&1' >> "$TMP_CRON"
 crontab "$TMP_CRON"
 rm -f "$TMP_CRON"
-say "crontab ok: */5 consumer-ensure + 00:01 kup-warm + 00:03 awin-warm + 00:10 mon espn + 00:25 mon worldsmarathons"
+say "crontab ok: */5 consumer-ensure + 00:01 kup-warm + 00:03 awin-warm + 00:10 mon espn + 00:25 mon worldsmarathons + 11:00 daily route-days"
 
 # ---------- env ----------
 if [ -f "$ENV_FILE" ]; then

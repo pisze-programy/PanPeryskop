@@ -16,6 +16,7 @@ import { runTravelProvider, TravelSource } from '../../../../src/travel/run';
 import { ESPN_SOURCE } from '../../../../src/travel/espn';
 import { WORLDSMARATHONS_SOURCE } from '../../../../src/travel/worldsmarathons';
 import { checkpointGeoStore, loadCp, saveCp } from './runtime';
+import { runRouteDaysJob } from './routeDaysJob';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -65,12 +66,22 @@ async function main(): Promise<void> {
   const provider = argValue('provider') || 'espn';
   const source = SOURCES[provider];
   const backfill = process.argv.includes('--backfill');
-  if (!source) {
-    console.error(`[travel] unknown provider '${provider}' (expected ${Object.keys(SOURCES).join('|')})`);
-    process.exit(1);
-  }
   if (!secret) {
     log(provider, 'ADMIN_SECRET missing — abort');
+    process.exit(1);
+  }
+  if (provider === 'route-days') {
+    const limit = Number(argValue('limit'));
+    const batches = Number(argValue('batches'));
+    const saved = await runRouteDaysJob(base, secret, env, {
+      batchLimit: Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : undefined,
+      maxBatches: Number.isFinite(batches) && batches > 0 ? Math.floor(batches) : undefined,
+    });
+    log(provider, `done (${saved} routes saved)`);
+    return;
+  }
+  if (!source) {
+    console.error(`[travel] unknown provider '${provider}' (expected ${Object.keys(SOURCES).join('|')}|route-days)`);
     process.exit(1);
   }
 

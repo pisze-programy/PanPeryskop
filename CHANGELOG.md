@@ -4,6 +4,24 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 58, 2026-09-21
+
+### Added
+- A city pin shows the city photo, and tapping it zooms the map, like an event pin.
+
+### Changed
+- A city hero is a gallery: up to five Wikimedia photos per city, laid out as a
+  bento block for one to three and as a horizontal strip at 70 % of the width
+  for more.
+- The city header is the same gamestrip as an event header — one component, one
+  height. The separate city header and its close button are gone.
+- The flight sheet uses the standard sheet header ("Anuluj"), not a gradient bar.
+- The return calendar opens the next month when the outbound is near the end of
+  its month, so a 30.11 outbound offers December returns.
+
+### Removed
+- The "Połączenia" block on the city sheet.
+
 ## [1.3.0] — build 57, 2026-09-21
 
 ### Added

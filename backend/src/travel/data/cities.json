@@ -1,0 +1,2635 @@
+[
+  {
+    "id": "FR001C",
+    "name": "Paris",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 48.8406,
+    "lng": 2.31488,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 1,
+    "nightsTotal": 71423725,
+    "airports": [
+      "ORY",
+      "BVA",
+      "XCR"
+    ]
+  },
+  {
+    "id": "IT001C",
+    "name": "Roma",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 41.86314,
+    "lng": 12.38737,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 2,
+    "nightsTotal": 42705319,
+    "airports": [
+      "FCO",
+      "CIA",
+      "PEG"
+    ]
+  },
+  {
+    "id": "DE001C",
+    "name": "Berlin",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 52.50153,
+    "lng": 13.40185,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 3,
+    "nightsTotal": 34124364,
+    "airports": [
+      "BER"
+    ]
+  },
+  {
+    "id": "ES001C",
+    "name": "Madrid",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 40.44348,
+    "lng": -3.70782,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 4,
+    "nightsTotal": 22751955,
+    "airports": [
+      "MAD"
+    ]
+  },
+  {
+    "id": "DE003C",
+    "name": "München",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 48.15321,
+    "lng": 11.54726,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 5,
+    "nightsTotal": 18291939,
+    "airports": [
+      "FMM",
+      "SZG"
+    ]
+  },
+  {
+    "id": "NL017C",
+    "name": "'s-Gravenhage",
+    "country": "Netherlands",
+    "countryCode": "NL",
+    "lat": 52.03727,
+    "lng": 4.3319,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 6,
+    "nightsTotal": 17754788,
+    "airports": [
+      "AMS",
+      "EIN",
+      "BRU",
+      "NRN"
+    ]
+  },
+  {
+    "id": "IT002C",
+    "name": "Milano",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 45.54929,
+    "lng": 9.11739,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 7,
+    "nightsTotal": 17667773,
+    "airports": [
+      "MXP",
+      "BGY",
+      "TRN",
+      "PMF",
+      "GOA",
+      "VRN"
+    ]
+  },
+  {
+    "id": "PT001C",
+    "name": "Lisboa",
+    "country": "Portugal",
+    "countryCode": "PT",
+    "lat": 38.80749,
+    "lng": -9.17446,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 8,
+    "nightsTotal": 16780035,
+    "airports": [
+      "LIS"
+    ]
+  },
+  {
+    "id": "ES044C",
+    "name": "Benidorm",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 38.55144,
+    "lng": -0.12748,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 9,
+    "nightsTotal": 16139363,
+    "airports": [
+      "ALC",
+      "VLC",
+      "RMU",
+      "IBZ"
+    ]
+  },
+  {
+    "id": "DE002C",
+    "name": "Hamburg",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 53.54464,
+    "lng": 10.027,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 10,
+    "nightsTotal": 15267308,
+    "airports": [
+      "HAM",
+      "LBC",
+      "BRE"
+    ]
+  },
+  {
+    "id": "AT001C",
+    "name": "Wien",
+    "country": "Austria",
+    "countryCode": "AT",
+    "lat": 48.19872,
+    "lng": 16.36914,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 11,
+    "nightsTotal": 13440328,
+    "airports": [
+      "VIE",
+      "BTS",
+      "BRQ"
+    ]
+  },
+  {
+    "id": "IT011C",
+    "name": "Venezia",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 45.48326,
+    "lng": 12.22626,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 12,
+    "nightsTotal": 13290973,
+    "airports": [
+      "VCE",
+      "TSF",
+      "TRS",
+      "VRN",
+      "BLQ",
+      "FRL",
+      "PUY"
+    ]
+  },
+  {
+    "id": "CZ001C",
+    "name": "Praha",
+    "country": "Czechia",
+    "countryCode": "CZ",
+    "lat": 50.06675,
+    "lng": 14.46605,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 14,
+    "nightsTotal": 12948091,
+    "airports": [
+      "PRG",
+      "PED"
+    ]
+  },
+  {
+    "id": "NL001C",
+    "name": "Amsterdam",
+    "country": "Netherlands",
+    "countryCode": "NL",
+    "lat": 52.36595,
+    "lng": 4.91221,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 15,
+    "nightsTotal": 12538000,
+    "airports": [
+      "AMS",
+      "EIN",
+      "NRN"
+    ]
+  },
+  {
+    "id": "SE001C",
+    "name": "Stockholm",
+    "country": "Sweden",
+    "countryCode": "SE",
+    "lat": 59.32988,
+    "lng": 18.01775,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 16,
+    "nightsTotal": 11442249,
+    "airports": [
+      "ARN",
+      "VST",
+      "NYO"
+    ]
+  },
+  {
+    "id": "DE005C",
+    "name": "Frankfurt am Main",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 50.11796,
+    "lng": 8.64416,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 17,
+    "nightsTotal": 10786473,
+    "airports": [
+      "HHN",
+      "CGN",
+      "PAD",
+      "SCN"
+    ]
+  },
+  {
+    "id": "HU001C",
+    "name": "Budapest",
+    "country": "Hungary",
+    "countryCode": "HU",
+    "lat": 47.47501,
+    "lng": 19.09335,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 18,
+    "nightsTotal": 10703950,
+    "airports": [
+      "BUD"
+    ]
+  },
+  {
+    "id": "ES010C",
+    "name": "Palma de Mallorca",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 39.5584,
+    "lng": 2.77624,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 19,
+    "nightsTotal": 9296691,
+    "airports": [
+      "PMI",
+      "MAH",
+      "IBZ"
+    ]
+  },
+  {
+    "id": "IT007C",
+    "name": "Firenze",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 43.77996,
+    "lng": 11.24497,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 20,
+    "nightsTotal": 9192960,
+    "airports": [
+      "PSA",
+      "FRL",
+      "BLQ",
+      "RMI",
+      "PEG",
+      "PMF"
+    ]
+  },
+  {
+    "id": "BE001C",
+    "name": "Bruxelles/Brussel",
+    "country": "Belgium",
+    "countryCode": "BE",
+    "lat": 50.84327,
+    "lng": 4.34472,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 21,
+    "nightsTotal": 6993061,
+    "airports": [
+      "BRU",
+      "CRL",
+      "LIL",
+      "EIN",
+      "MST"
+    ]
+  },
+  {
+    "id": "IT071C",
+    "name": "Rimini",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 44.03883,
+    "lng": 12.53045,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 22,
+    "nightsTotal": 6938992,
+    "airports": [
+      "RMI",
+      "FRL",
+      "AOI",
+      "PEG",
+      "BLQ",
+      "PUY"
+    ]
+  },
+  {
+    "id": "DE004C",
+    "name": "Köln",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 50.94562,
+    "lng": 6.97332,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 23,
+    "nightsTotal": 6579119,
+    "airports": [
+      "CGN",
+      "DTM",
+      "MST",
+      "NRN",
+      "HHN",
+      "PAD",
+      "EIN",
+      "FMO"
+    ]
+  },
+  {
+    "id": "PL001C",
+    "name": "Warszawa",
+    "country": "Poland",
+    "countryCode": "PL",
+    "lat": 52.22933,
+    "lng": 21.04774,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 24,
+    "nightsTotal": 6548363,
+    "airports": [
+      "WAW",
+      "WMI",
+      "RDO",
+      "LCJ",
+      "SZY"
+    ]
+  },
+  {
+    "id": "PL003C",
+    "name": "Kraków",
+    "country": "Poland",
+    "countryCode": "PL",
+    "lat": 50.05316,
+    "lng": 19.98507,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 25,
+    "nightsTotal": 6082877,
+    "airports": [
+      "KRK",
+      "KTW",
+      "TAT",
+      "OSR",
+      "RZE"
+    ]
+  },
+  {
+    "id": "FR002C",
+    "name": "Lyon",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 45.74072,
+    "lng": 4.87418,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 26,
+    "nightsTotal": 5963727,
+    "airports": [
+      "LYS",
+      "GNB"
+    ]
+  },
+  {
+    "id": "PT002C",
+    "name": "Porto",
+    "country": "Portugal",
+    "countryCode": "PT",
+    "lat": 41.13047,
+    "lng": -8.55551,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 27,
+    "nightsTotal": 5938869,
+    "airports": [
+      "OPO"
+    ]
+  },
+  {
+    "id": "IT003C",
+    "name": "Napoli",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 40.91852,
+    "lng": 14.19291,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 28,
+    "nightsTotal": 5760243,
+    "airports": [
+      "NAP",
+      "QSR"
+    ]
+  },
+  {
+    "id": "CH002C",
+    "name": "Zurich",
+    "country": "Switzerland",
+    "countryCode": "CH",
+    "lat": 47.35079,
+    "lng": 8.51668,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 29,
+    "nightsTotal": 5739471,
+    "airports": [
+      "BSL",
+      "FDH",
+      "FMM"
+    ]
+  },
+  {
+    "id": "EL001C",
+    "name": "Athina",
+    "country": "Greece",
+    "countryCode": "EL",
+    "lat": 38.02287,
+    "lng": 23.75589,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 30,
+    "nightsTotal": 5632003,
+    "airports": [
+      "ATH",
+      "JSI"
+    ]
+  },
+  {
+    "id": "ES052C",
+    "name": "Torremolinos",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 36.60954,
+    "lng": -4.54211,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 31,
+    "nightsTotal": 5555841,
+    "airports": [
+      "AGP",
+      "GRX",
+      "TTU",
+      "SVQ"
+    ]
+  },
+  {
+    "id": "IE002C",
+    "name": "Cork",
+    "country": "Ireland",
+    "countryCode": "IE",
+    "lat": 51.89979,
+    "lng": -8.49138,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 32,
+    "nightsTotal": 5532448,
+    "airports": [
+      "ORK",
+      "KIR",
+      "SNN"
+    ]
+  },
+  {
+    "id": "FR008C",
+    "name": "Nice",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 43.70073,
+    "lng": 7.21954,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 33,
+    "nightsTotal": 5348363,
+    "airports": [
+      "NCE",
+      "CUF"
+    ]
+  },
+  {
+    "id": "IE004C",
+    "name": "Galway",
+    "country": "Ireland",
+    "countryCode": "IE",
+    "lat": 53.28836,
+    "lng": -9.04876,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 35,
+    "nightsTotal": 5110080,
+    "airports": [
+      "SNN",
+      "NOC",
+      "KIR"
+    ]
+  },
+  {
+    "id": "PT004C",
+    "name": "Funchal",
+    "country": "Portugal",
+    "countryCode": "PT",
+    "lat": 32.67885,
+    "lng": -16.91958,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 36,
+    "nightsTotal": 5022176,
+    "airports": [
+      "FNC"
+    ]
+  },
+  {
+    "id": "DE011C",
+    "name": "Düsseldorf",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 51.23546,
+    "lng": 6.81005,
+    "tier": "metropolis",
+    "tierRank": 1,
+    "rank": 37,
+    "nightsTotal": 5001354,
+    "airports": [
+      "CGN",
+      "NRN",
+      "DTM",
+      "MST",
+      "EIN",
+      "PAD",
+      "FMO",
+      "HHN"
+    ]
+  },
+  {
+    "id": "BG003C",
+    "name": "Varna",
+    "country": "Bulgaria",
+    "countryCode": "BG",
+    "lat": 43.19943,
+    "lng": 27.88312,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 38,
+    "nightsTotal": 4980352,
+    "airports": [
+      "VAR",
+      "BOJ",
+      "CND"
+    ]
+  },
+  {
+    "id": "FR005C",
+    "name": "Bordeaux",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 44.843,
+    "lng": -0.65757,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 39,
+    "nightsTotal": 4977983,
+    "airports": [
+      "BOD",
+      "EGC"
+    ]
+  },
+  {
+    "id": "DE009C",
+    "name": "Dresden",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 51.06645,
+    "lng": 13.78348,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 41,
+    "nightsTotal": 4709886,
+    "airports": [
+      "PRG",
+      "BER"
+    ]
+  },
+  {
+    "id": "MT001C",
+    "name": "Greater Valletta",
+    "country": "Malta",
+    "countryCode": "MT",
+    "lat": 35.88496,
+    "lng": 14.47993,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 42,
+    "nightsTotal": 4505598,
+    "airports": [
+      "MLA",
+      "CIY"
+    ]
+  },
+  {
+    "id": "FI001C",
+    "name": "Helsinki/Helsingfors",
+    "country": "Finland",
+    "countryCode": "FI",
+    "lat": 60.23363,
+    "lng": 25.04294,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 43,
+    "nightsTotal": 4489741,
+    "airports": [
+      "HEL",
+      "TLL"
+    ]
+  },
+  {
+    "id": "SE002C",
+    "name": "Göteborg",
+    "country": "Sweden",
+    "countryCode": "SE",
+    "lat": 57.64096,
+    "lng": 11.98894,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 46,
+    "nightsTotal": 4194404,
+    "airports": [
+      "GOT"
+    ]
+  },
+  {
+    "id": "FR004C",
+    "name": "Marseille",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 43.30294,
+    "lng": 5.45869,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 47,
+    "nightsTotal": 4168918,
+    "airports": [
+      "MRS",
+      "FNI",
+      "NCE"
+    ]
+  },
+  {
+    "id": "IT009C",
+    "name": "Bologna",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 44.49798,
+    "lng": 11.33344,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 49,
+    "nightsTotal": 4146877,
+    "airports": [
+      "BLQ",
+      "FRL",
+      "PMF",
+      "VRN",
+      "RMI",
+      "PSA",
+      "VCE",
+      "TSF"
+    ]
+  },
+  {
+    "id": "DE007C",
+    "name": "Stuttgart",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 48.77458,
+    "lng": 9.17201,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 50,
+    "nightsTotal": 4086683,
+    "airports": [
+      "STR",
+      "FKB",
+      "FMM",
+      "FDH"
+    ]
+  },
+  {
+    "id": "FR014C",
+    "name": "Cannes-Antibes",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 43.56293,
+    "lng": 7.01026,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 51,
+    "nightsTotal": 3862025,
+    "airports": [
+      "NCE",
+      "CUF",
+      "MRS"
+    ]
+  },
+  {
+    "id": "FR006C",
+    "name": "Toulouse",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 43.60464,
+    "lng": 1.40262,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 52,
+    "nightsTotal": 3776400,
+    "airports": [
+      "TLS",
+      "CCF",
+      "LDE",
+      "RDZ"
+    ]
+  },
+  {
+    "id": "CH003C",
+    "name": "Geneva",
+    "country": "Switzerland",
+    "countryCode": "CH",
+    "lat": 46.19819,
+    "lng": 6.1236,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 53,
+    "nightsTotal": 3715068,
+    "airports": [
+      "LYS",
+      "DLE",
+      "GNB"
+    ]
+  },
+  {
+    "id": "DE008C",
+    "name": "Leipzig",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 51.35082,
+    "lng": 12.38969,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 54,
+    "nightsTotal": 3602857,
+    "airports": [
+      "BER"
+    ]
+  },
+  {
+    "id": "IT004C",
+    "name": "Torino",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 45.07162,
+    "lng": 7.67785,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 55,
+    "nightsTotal": 3580221,
+    "airports": [
+      "TRN",
+      "CUF",
+      "MXP",
+      "GOA"
+    ]
+  },
+  {
+    "id": "FR049C",
+    "name": "Fréjus",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 43.46528,
+    "lng": 6.80274,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 56,
+    "nightsTotal": 3565541,
+    "airports": [
+      "NCE",
+      "MRS",
+      "CUF"
+    ]
+  },
+  {
+    "id": "DE014C",
+    "name": "Nürnberg",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 49.43639,
+    "lng": 11.07925,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 57,
+    "nightsTotal": 3560930,
+    "airports": [
+      "NUE"
+    ]
+  },
+  {
+    "id": "NO001C",
+    "name": "Oslo",
+    "country": "Norway",
+    "countryCode": "NO",
+    "lat": 60.62923,
+    "lng": 9.04327,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 58,
+    "nightsTotal": 3507801,
+    "airports": [
+      "OSL"
+    ]
+  },
+  {
+    "id": "ES006C",
+    "name": "Málaga",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 36.76767,
+    "lng": -4.42448,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 59,
+    "nightsTotal": 3445157,
+    "airports": [
+      "AGP",
+      "GRX",
+      "SVQ"
+    ]
+  },
+  {
+    "id": "FR009C",
+    "name": "Strasbourg",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 48.56738,
+    "lng": 7.7461,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 60,
+    "nightsTotal": 3403421,
+    "airports": [
+      "FKB",
+      "SCN",
+      "BSL",
+      "STR"
+    ]
+  },
+  {
+    "id": "RO001C",
+    "name": "București",
+    "country": "Romania",
+    "countryCode": "RO",
+    "lat": 44.44148,
+    "lng": 26.08779,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 62,
+    "nightsTotal": 3398817,
+    "airports": [
+      "BBU",
+      "OTP",
+      "GHV"
+    ]
+  },
+  {
+    "id": "LV001C",
+    "name": "Rīga",
+    "country": "Latvia",
+    "countryCode": "LV",
+    "lat": 56.97808,
+    "lng": 24.12232,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 63,
+    "nightsTotal": 3317681,
+    "airports": [
+      "RIX"
+    ]
+  },
+  {
+    "id": "EE001C",
+    "name": "Tallinn",
+    "country": "Estonia",
+    "countryCode": "EE",
+    "lat": 59.40595,
+    "lng": 24.73856,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 64,
+    "nightsTotal": 3265373,
+    "airports": [
+      "TLL",
+      "HEL"
+    ]
+  },
+  {
+    "id": "IT012C",
+    "name": "Verona",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 45.4487,
+    "lng": 11.00223,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 65,
+    "nightsTotal": 3103472,
+    "airports": [
+      "VRN",
+      "PMF",
+      "TSF",
+      "BLQ",
+      "BGY",
+      "VCE"
+    ]
+  },
+  {
+    "id": "NL038C",
+    "name": "Roosendaal",
+    "country": "Netherlands",
+    "countryCode": "NL",
+    "lat": 51.51318,
+    "lng": 4.42452,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 66,
+    "nightsTotal": 2995808,
+    "airports": [
+      "EIN",
+      "BRU",
+      "AMS",
+      "MST",
+      "CRL",
+      "NRN",
+      "LIL"
+    ]
+  },
+  {
+    "id": "ES048C",
+    "name": "Fuengirola",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 36.56436,
+    "lng": -4.61327,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 67,
+    "nightsTotal": 2872239,
+    "airports": [
+      "AGP",
+      "GRX",
+      "TTU",
+      "SVQ",
+      "TNG"
+    ]
+  },
+  {
+    "id": "SK001C",
+    "name": "Bratislava",
+    "country": "Slovakia",
+    "countryCode": "SK",
+    "lat": 48.14883,
+    "lng": 17.11907,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 68,
+    "nightsTotal": 2850755,
+    "airports": [
+      "BTS",
+      "VIE",
+      "BRQ"
+    ]
+  },
+  {
+    "id": "IT069C",
+    "name": "Ravenna",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 44.41285,
+    "lng": 12.19315,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 69,
+    "nightsTotal": 2842778,
+    "airports": [
+      "FRL",
+      "RMI",
+      "BLQ",
+      "VCE",
+      "AOI",
+      "TSF",
+      "PUY",
+      "PEG"
+    ]
+  },
+  {
+    "id": "PL006C",
+    "name": "Gdańsk",
+    "country": "Poland",
+    "countryCode": "PL",
+    "lat": 54.3592,
+    "lng": 18.63479,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 70,
+    "nightsTotal": 2808935,
+    "airports": [
+      "GDN",
+      "BZG"
+    ]
+  },
+  {
+    "id": "FR003C",
+    "name": "Lille",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 50.63196,
+    "lng": 3.10087,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 71,
+    "nightsTotal": 2746122,
+    "airports": [
+      "LIL",
+      "CRL",
+      "BRU",
+      "BVA"
+    ]
+  },
+  {
+    "id": "HR005C",
+    "name": "Split",
+    "country": "HR",
+    "countryCode": "HR",
+    "lat": 43.52099,
+    "lng": 16.5144,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 72,
+    "nightsTotal": 2734632,
+    "airports": [
+      "SPU",
+      "ZAD",
+      "BNX",
+      "SJJ"
+    ]
+  },
+  {
+    "id": "HR001C",
+    "name": "Zagreb",
+    "country": "HR",
+    "countryCode": "HR",
+    "lat": 45.80991,
+    "lng": 16.00003,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 73,
+    "nightsTotal": 2638962,
+    "airports": [
+      "ZAG",
+      "LJU",
+      "RJK"
+    ]
+  },
+  {
+    "id": "AT004C",
+    "name": "Salzburg",
+    "country": "Austria",
+    "countryCode": "AT",
+    "lat": 47.79786,
+    "lng": 13.04658,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 75,
+    "nightsTotal": 2589018,
+    "airports": [
+      "SZG",
+      "LNZ"
+    ]
+  },
+  {
+    "id": "LT001C",
+    "name": "Vilnius",
+    "country": "Lithuania",
+    "countryCode": "LT",
+    "lat": 54.69257,
+    "lng": 25.27244,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 76,
+    "nightsTotal": 2485685,
+    "airports": [
+      "VNO",
+      "KUN"
+    ]
+  },
+  {
+    "id": "ES021C",
+    "name": "Alicante/Alacant",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 38.40715,
+    "lng": -0.50088,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 77,
+    "nightsTotal": 2361821,
+    "airports": [
+      "ALC",
+      "RMU",
+      "VLC"
+    ]
+  },
+  {
+    "id": "DE012C",
+    "name": "Bremen",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 53.10864,
+    "lng": 8.78604,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 78,
+    "nightsTotal": 2350379,
+    "airports": [
+      "BRE",
+      "HAM",
+      "FMO",
+      "LBC"
+    ]
+  },
+  {
+    "id": "DE013C",
+    "name": "Hannover",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 52.37949,
+    "lng": 9.76968,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 79,
+    "nightsTotal": 2338758,
+    "airports": [
+      "BRE",
+      "PAD",
+      "HAM",
+      "FMO"
+    ]
+  },
+  {
+    "id": "IT006C",
+    "name": "Genova",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 44.44157,
+    "lng": 8.89313,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 80,
+    "nightsTotal": 2297499,
+    "airports": [
+      "GOA",
+      "CUF",
+      "PMF",
+      "TRN",
+      "MXP",
+      "PSA"
+    ]
+  },
+  {
+    "id": "DE040C",
+    "name": "Rostock",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 54.2128,
+    "lng": 12.21988,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 81,
+    "nightsTotal": 2288907,
+    "airports": [
+      "LBC"
+    ]
+  },
+  {
+    "id": "FR007C",
+    "name": "Nantes",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 47.23043,
+    "lng": -1.57551,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 82,
+    "nightsTotal": 2287970,
+    "airports": [
+      "NTE",
+      "LRH"
+    ]
+  },
+  {
+    "id": "PL004C",
+    "name": "Wrocław",
+    "country": "Poland",
+    "countryCode": "PL",
+    "lat": 51.12769,
+    "lng": 16.99607,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 83,
+    "nightsTotal": 2258982,
+    "airports": [
+      "WRO",
+      "POZ"
+    ]
+  },
+  {
+    "id": "BE006C",
+    "name": "Brugge",
+    "country": "Belgium",
+    "countryCode": "BE",
+    "lat": 51.26597,
+    "lng": 3.2222,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 84,
+    "nightsTotal": 2238300,
+    "airports": [
+      "LIL",
+      "BRU",
+      "CRL"
+    ]
+  },
+  {
+    "id": "SI001C",
+    "name": "Ljubljana",
+    "country": "Slovenia",
+    "countryCode": "SI",
+    "lat": 46.07102,
+    "lng": 14.49529,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 85,
+    "nightsTotal": 2227669,
+    "airports": [
+      "LJU",
+      "KLU",
+      "TRS",
+      "RJK",
+      "ZAG",
+      "PUY"
+    ]
+  },
+  {
+    "id": "BE002C",
+    "name": "Antwerpen",
+    "country": "Belgium",
+    "countryCode": "BE",
+    "lat": 51.24644,
+    "lng": 4.39735,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 86,
+    "nightsTotal": 2147007,
+    "airports": [
+      "BRU",
+      "EIN",
+      "CRL",
+      "MST",
+      "LIL",
+      "AMS",
+      "NRN"
+    ]
+  },
+  {
+    "id": "ES086C",
+    "name": "Chiclana de la Frontera",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 36.39977,
+    "lng": -6.11,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 87,
+    "nightsTotal": 2126500,
+    "airports": [
+      "TNG",
+      "TTU",
+      "SVQ",
+      "AGP"
+    ]
+  },
+  {
+    "id": "ES005C",
+    "name": "Zaragoza",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 41.68146,
+    "lng": -0.92655,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 89,
+    "nightsTotal": 2110331,
+    "airports": [
+      "ZAZ"
+    ]
+  },
+  {
+    "id": "FR011C",
+    "name": "Montpellier",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 43.6248,
+    "lng": 3.85047,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 90,
+    "nightsTotal": 2097450,
+    "airports": [
+      "FNI",
+      "BZR",
+      "MRS",
+      "PGF",
+      "CCF",
+      "RDZ"
+    ]
+  },
+  {
+    "id": "DE089C",
+    "name": "Lübeck",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 53.87245,
+    "lng": 10.72755,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 93,
+    "nightsTotal": 2047281,
+    "airports": [
+      "LBC",
+      "HAM"
+    ]
+  },
+  {
+    "id": "ES061C",
+    "name": "Cartagena",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 37.64565,
+    "lng": -1.09142,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 94,
+    "nightsTotal": 2021857,
+    "airports": [
+      "RMU",
+      "ALC",
+      "LEI"
+    ]
+  },
+  {
+    "id": "HR007C",
+    "name": "Zadar",
+    "country": "HR",
+    "countryCode": "HR",
+    "lat": 44.14281,
+    "lng": 15.24573,
+    "tier": "large",
+    "tierRank": 2,
+    "rank": 95,
+    "nightsTotal": 2020302,
+    "airports": [
+      "ZAD",
+      "SPU",
+      "RJK",
+      "PUY"
+    ]
+  },
+  {
+    "id": "BG001C",
+    "name": "Sofia",
+    "country": "Bulgaria",
+    "countryCode": "BG",
+    "lat": 42.67345,
+    "lng": 23.36488,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 96,
+    "nightsTotal": 1973362,
+    "airports": [
+      "SOF",
+      "PDV",
+      "INI"
+    ]
+  },
+  {
+    "id": "IT005C",
+    "name": "Palermo",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 38.13026,
+    "lng": 13.33101,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 97,
+    "nightsTotal": 1964765,
+    "airports": [
+      "PMO",
+      "TPS"
+    ]
+  },
+  {
+    "id": "NL018C",
+    "name": "Groningen",
+    "country": "Netherlands",
+    "countryCode": "NL",
+    "lat": 53.21863,
+    "lng": 6.62066,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 98,
+    "nightsTotal": 1908657,
+    "airports": [
+      "FMO",
+      "BRE"
+    ]
+  },
+  {
+    "id": "ES089C",
+    "name": "Eivissa",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 38.91371,
+    "lng": 1.41885,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 99,
+    "nightsTotal": 1879289,
+    "airports": [
+      "IBZ",
+      "PMI"
+    ]
+  },
+  {
+    "id": "SE003C",
+    "name": "Malmö",
+    "country": "Sweden",
+    "countryCode": "SE",
+    "lat": 55.56579,
+    "lng": 13.01911,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 100,
+    "nightsTotal": 1878472,
+    "airports": [
+      "MMX",
+      "CPH"
+    ]
+  },
+  {
+    "id": "IT040C",
+    "name": "Pisa",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 43.67233,
+    "lng": 10.35423,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 101,
+    "nightsTotal": 1861048,
+    "airports": [
+      "PSA",
+      "BLQ",
+      "PMF",
+      "GOA",
+      "FRL"
+    ]
+  },
+  {
+    "id": "FR040C",
+    "name": "Bayonne",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 43.48765,
+    "lng": -1.50227,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 102,
+    "nightsTotal": 1856341,
+    "airports": [
+      "BIQ",
+      "BIO",
+      "VIT",
+      "LDE"
+    ]
+  },
+  {
+    "id": "ES063C",
+    "name": "San Sebastián/Donostia",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 43.3058,
+    "lng": -1.96796,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 103,
+    "nightsTotal": 1834974,
+    "airports": [
+      "BIQ",
+      "BIO",
+      "VIT"
+    ]
+  },
+  {
+    "id": "DE025C",
+    "name": "Freiburg im Breisgau",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 47.99265,
+    "lng": 7.81806,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 104,
+    "nightsTotal": 1822338,
+    "airports": [
+      "BSL",
+      "FKB",
+      "STR",
+      "FDH",
+      "SCN"
+    ]
+  },
+  {
+    "id": "RO023C",
+    "name": "Constanța",
+    "country": "Romania",
+    "countryCode": "RO",
+    "lat": 44.18385,
+    "lng": 28.59803,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 106,
+    "nightsTotal": 1767115,
+    "airports": [
+      "CND",
+      "VAR"
+    ]
+  },
+  {
+    "id": "IT027C",
+    "name": "Padova",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 45.40338,
+    "lng": 11.8832,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 107,
+    "nightsTotal": 1764999,
+    "airports": [
+      "TSF",
+      "VCE",
+      "VRN",
+      "BLQ",
+      "TRS",
+      "FRL",
+      "PMF"
+    ]
+  },
+  {
+    "id": "ES020C",
+    "name": "Córdoba",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 37.84933,
+    "lng": -4.70181,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 108,
+    "nightsTotal": 1759412,
+    "airports": [
+      "GRX",
+      "SVQ",
+      "AGP"
+    ]
+  },
+  {
+    "id": "DE032C",
+    "name": "Bonn",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 50.7058,
+    "lng": 7.10985,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 109,
+    "nightsTotal": 1753783,
+    "airports": [
+      "CGN",
+      "HHN",
+      "MST",
+      "DTM",
+      "NRN",
+      "PAD",
+      "LUX",
+      "EIN"
+    ]
+  },
+  {
+    "id": "IE003C",
+    "name": "Limerick",
+    "country": "Ireland",
+    "countryCode": "IE",
+    "lat": 52.64069,
+    "lng": -8.62486,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 110,
+    "nightsTotal": 1727408,
+    "airports": [
+      "SNN",
+      "KIR",
+      "ORK",
+      "NOC"
+    ]
+  },
+  {
+    "id": "EL002C",
+    "name": "Thessaloniki",
+    "country": "Greece",
+    "countryCode": "EL",
+    "lat": 40.63796,
+    "lng": 22.95236,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 111,
+    "nightsTotal": 1726227,
+    "airports": [
+      "SKG"
+    ]
+  },
+  {
+    "id": "CH004C",
+    "name": "Basel",
+    "country": "Switzerland",
+    "countryCode": "CH",
+    "lat": 47.52469,
+    "lng": 7.60033,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 116,
+    "nightsTotal": 1695604,
+    "airports": [
+      "BSL",
+      "FKB",
+      "FDH"
+    ]
+  },
+  {
+    "id": "DE006C",
+    "name": "Essen",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 51.43386,
+    "lng": 7.01711,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 117,
+    "nightsTotal": 1665817,
+    "airports": [
+      "DTM",
+      "NRN",
+      "CGN",
+      "FMO",
+      "PAD",
+      "MST",
+      "EIN"
+    ]
+  },
+  {
+    "id": "DE100C",
+    "name": "Heidelberg",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 49.40552,
+    "lng": 8.69421,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 118,
+    "nightsTotal": 1652607,
+    "airports": [
+      "FKB",
+      "STR",
+      "SCN",
+      "HHN"
+    ]
+  },
+  {
+    "id": "CH006C",
+    "name": "Lucerne",
+    "country": "Switzerland",
+    "countryCode": "CH",
+    "lat": 47.05464,
+    "lng": 8.27868,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 120,
+    "nightsTotal": 1645281,
+    "airports": [
+      "BSL",
+      "FDH"
+    ]
+  },
+  {
+    "id": "DE081C",
+    "name": "Mannheim",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 49.49953,
+    "lng": 8.50041,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 121,
+    "nightsTotal": 1619687,
+    "airports": [
+      "FKB",
+      "HHN",
+      "STR",
+      "SCN"
+    ]
+  },
+  {
+    "id": "ES040C",
+    "name": "Gandia",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 38.97969,
+    "lng": -0.21326,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 122,
+    "nightsTotal": 1614545,
+    "airports": [
+      "VLC",
+      "ALC",
+      "CDT",
+      "IBZ"
+    ]
+  },
+  {
+    "id": "FR043C",
+    "name": "Avignon",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 43.94014,
+    "lng": 4.84436,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 124,
+    "nightsTotal": 1552900,
+    "airports": [
+      "FNI",
+      "MRS",
+      "BZR"
+    ]
+  },
+  {
+    "id": "ES011C",
+    "name": "Santiago de Compostela",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 42.8944,
+    "lng": -8.51076,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 125,
+    "nightsTotal": 1537069,
+    "airports": [
+      "SCQ"
+    ]
+  },
+  {
+    "id": "PL005C",
+    "name": "Poznań",
+    "country": "Poland",
+    "countryCode": "PL",
+    "lat": 52.40646,
+    "lng": 16.9231,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 126,
+    "nightsTotal": 1515397,
+    "airports": [
+      "POZ",
+      "BZG",
+      "WRO"
+    ]
+  },
+  {
+    "id": "FR016C",
+    "name": "Rennes",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 48.1141,
+    "lng": -1.65703,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 127,
+    "nightsTotal": 1470617,
+    "airports": [
+      "NTE"
+    ]
+  },
+  {
+    "id": "NO002C",
+    "name": "Bergen",
+    "country": "Norway",
+    "countryCode": "NO",
+    "lat": 60.35861,
+    "lng": 5.42877,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 128,
+    "nightsTotal": 1470395,
+    "airports": [
+      "BGO",
+      "HAU"
+    ]
+  },
+  {
+    "id": "AT005C",
+    "name": "Innsbruck",
+    "country": "Austria",
+    "countryCode": "AT",
+    "lat": 47.28915,
+    "lng": 11.38076,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 129,
+    "nightsTotal": 1458222,
+    "airports": [
+      "FMM",
+      "SZG",
+      "FDH"
+    ]
+  },
+  {
+    "id": "NL037C",
+    "name": "Rotterdam",
+    "country": "Netherlands",
+    "countryCode": "NL",
+    "lat": 51.92294,
+    "lng": 4.42254,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 130,
+    "nightsTotal": 1458000,
+    "airports": [
+      "AMS",
+      "EIN",
+      "BRU",
+      "NRN",
+      "MST"
+    ]
+  },
+  {
+    "id": "DE010C",
+    "name": "Dortmund",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 51.51608,
+    "lng": 7.47489,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 131,
+    "nightsTotal": 1440863,
+    "airports": [
+      "DTM",
+      "PAD",
+      "FMO",
+      "CGN",
+      "NRN",
+      "MST",
+      "EIN"
+    ]
+  },
+  {
+    "id": "ES008C",
+    "name": "Palmas de Gran Canaria, Las",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 28.09044,
+    "lng": -15.45554,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 132,
+    "nightsTotal": 1428423,
+    "airports": [
+      "LPA",
+      "TFN",
+      "TFS"
+    ]
+  },
+  {
+    "id": "IT015C",
+    "name": "Trieste",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 45.66402,
+    "lng": 13.79862,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 133,
+    "nightsTotal": 1391122,
+    "airports": [
+      "TRS",
+      "RJK",
+      "LJU",
+      "PUY",
+      "VCE",
+      "KLU",
+      "TSF"
+    ]
+  },
+  {
+    "id": "DE083C",
+    "name": "Münster",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 51.95432,
+    "lng": 7.62364,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 134,
+    "nightsTotal": 1387307,
+    "airports": [
+      "FMO",
+      "DTM",
+      "PAD",
+      "NRN",
+      "CGN",
+      "BRE"
+    ]
+  },
+  {
+    "id": "IT008C",
+    "name": "Bari",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 41.10304,
+    "lng": 16.8458,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 135,
+    "nightsTotal": 1372257,
+    "airports": [
+      "BRI",
+      "BDS"
+    ]
+  },
+  {
+    "id": "FR033C",
+    "name": "Aix-en-Provence",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 43.5361,
+    "lng": 5.39859,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 136,
+    "nightsTotal": 1361060,
+    "airports": [
+      "MRS",
+      "FNI",
+      "NCE"
+    ]
+  },
+  {
+    "id": "FR013C",
+    "name": "Tours",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 47.36822,
+    "lng": 0.68885,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 137,
+    "nightsTotal": 1358819,
+    "airports": [
+      "TUF",
+      "PIS"
+    ]
+  },
+  {
+    "id": "DE038C",
+    "name": "Potsdam",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 52.42618,
+    "lng": 13.02871,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 138,
+    "nightsTotal": 1338886,
+    "airports": [
+      "BER"
+    ]
+  },
+  {
+    "id": "ES073C",
+    "name": "Tarragona",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 41.13164,
+    "lng": 1.26106,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 140,
+    "nightsTotal": 1297129,
+    "airports": [
+      "REU",
+      "BCN"
+    ]
+  },
+  {
+    "id": "RO026C",
+    "name": "Brașov",
+    "country": "Romania",
+    "countryCode": "RO",
+    "lat": 45.63767,
+    "lng": 25.58135,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 141,
+    "nightsTotal": 1279808,
+    "airports": [
+      "GHV",
+      "SBZ",
+      "OTP",
+      "TGM",
+      "BBU",
+      "BCM"
+    ]
+  },
+  {
+    "id": "DE019C",
+    "name": "Wiesbaden",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 50.0792,
+    "lng": 8.26038,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 142,
+    "nightsTotal": 1278891,
+    "airports": [
+      "HHN",
+      "CGN",
+      "SCN",
+      "FKB"
+    ]
+  },
+  {
+    "id": "ES067C",
+    "name": "Salamanca",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 40.96299,
+    "lng": -5.66806,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 143,
+    "nightsTotal": 1259737,
+    "airports": []
+  },
+  {
+    "id": "FR021C",
+    "name": "Clermont-Ferrand",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 45.78354,
+    "lng": 3.10464,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 144,
+    "nightsTotal": 1245154,
+    "airports": [
+      "LIG"
+    ]
+  },
+  {
+    "id": "IT018C",
+    "name": "Pescara",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 42.45057,
+    "lng": 14.21111,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 145,
+    "nightsTotal": 1243874,
+    "airports": [
+      "PSR",
+      "AOI"
+    ]
+  },
+  {
+    "id": "FI006C",
+    "name": "Vantaa/Vanda",
+    "country": "Finland",
+    "countryCode": "FI",
+    "lat": 60.32646,
+    "lng": 24.85793,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 146,
+    "nightsTotal": 1243424,
+    "airports": [
+      "HEL",
+      "TLL",
+      "TKU"
+    ]
+  },
+  {
+    "id": "PL002C",
+    "name": "Łódź",
+    "country": "Poland",
+    "countryCode": "PL",
+    "lat": 51.76649,
+    "lng": 19.48027,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 147,
+    "nightsTotal": 1223062,
+    "airports": [
+      "LCJ",
+      "WMI",
+      "WAW",
+      "RDO",
+      "KTW"
+    ]
+  },
+  {
+    "id": "CH001C",
+    "name": "Bern",
+    "country": "Switzerland",
+    "countryCode": "CH",
+    "lat": 46.93687,
+    "lng": 7.42729,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 148,
+    "nightsTotal": 1220521,
+    "airports": [
+      "BSL"
+    ]
+  },
+  {
+    "id": "PT007C",
+    "name": "Ponta Delgada",
+    "country": "Portugal",
+    "countryCode": "PT",
+    "lat": 37.81939,
+    "lng": -25.7287,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 149,
+    "nightsTotal": 1216082,
+    "airports": []
+  },
+  {
+    "id": "BE011C",
+    "name": "Oostende",
+    "country": "Belgium",
+    "countryCode": "BE",
+    "lat": 51.21653,
+    "lng": 2.93912,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 150,
+    "nightsTotal": 1213388,
+    "airports": [
+      "LIL",
+      "BRU",
+      "CRL"
+    ]
+  },
+  {
+    "id": "BE003C",
+    "name": "Gent",
+    "country": "Belgium",
+    "countryCode": "BE",
+    "lat": 51.07434,
+    "lng": 3.72527,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 151,
+    "nightsTotal": 1210552,
+    "airports": [
+      "BRU",
+      "LIL",
+      "CRL",
+      "EIN",
+      "MST"
+    ]
+  },
+  {
+    "id": "FR020C",
+    "name": "Dijon",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 47.32431,
+    "lng": 5.03861,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 152,
+    "nightsTotal": 1193421,
+    "airports": [
+      "DLE"
+    ]
+  },
+  {
+    "id": "FR038C",
+    "name": "Annecy",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 45.90409,
+    "lng": 6.11042,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 153,
+    "nightsTotal": 1188801,
+    "airports": [
+      "LYS",
+      "GNB",
+      "DLE",
+      "TRN"
+    ]
+  },
+  {
+    "id": "FI002C",
+    "name": "Tampere/Tammerfors",
+    "country": "Finland",
+    "countryCode": "FI",
+    "lat": 61.62936,
+    "lng": 23.88139,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 154,
+    "nightsTotal": 1181113,
+    "airports": []
+  },
+  {
+    "id": "IT014C",
+    "name": "Trento",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 46.0615,
+    "lng": 11.11076,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 155,
+    "nightsTotal": 1174037,
+    "airports": [
+      "VRN",
+      "TSF",
+      "VCE",
+      "BGY"
+    ]
+  },
+  {
+    "id": "FR054C",
+    "name": "La Rochelle",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 46.1675,
+    "lng": -1.16804,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 156,
+    "nightsTotal": 1159867,
+    "airports": [
+      "LRH",
+      "NTE",
+      "PIS"
+    ]
+  },
+  {
+    "id": "FR017C",
+    "name": "Reims",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 49.26153,
+    "lng": 4.0405,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 157,
+    "nightsTotal": 1149818,
+    "airports": [
+      "XCR",
+      "ORY",
+      "CRL",
+      "BVA"
+    ]
+  },
+  {
+    "id": "DE033C",
+    "name": "Karlsruhe",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 49.01132,
+    "lng": 8.41267,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 158,
+    "nightsTotal": 1149181,
+    "airports": [
+      "FKB",
+      "STR",
+      "SCN",
+      "HHN"
+    ]
+  },
+  {
+    "id": "DE026C",
+    "name": "Regensburg",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 49.01301,
+    "lng": 12.1137,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 159,
+    "nightsTotal": 1143996,
+    "airports": [
+      "NUE"
+    ]
+  },
+  {
+    "id": "IT016C",
+    "name": "Perugia",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 43.13647,
+    "lng": 12.395,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 160,
+    "nightsTotal": 1104628,
+    "airports": [
+      "PEG",
+      "AOI",
+      "RMI",
+      "FRL",
+      "FCO",
+      "CIA"
+    ]
+  },
+  {
+    "id": "FR012C",
+    "name": "Grenoble",
+    "country": "France",
+    "countryCode": "FR",
+    "lat": 45.17684,
+    "lng": 5.7285,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 161,
+    "nightsTotal": 1102420,
+    "airports": [
+      "GNB",
+      "LYS"
+    ]
+  },
+  {
+    "id": "CH005C",
+    "name": "Lausanne",
+    "country": "Switzerland",
+    "countryCode": "CH",
+    "lat": 46.55342,
+    "lng": 6.65981,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 162,
+    "nightsTotal": 1084116,
+    "airports": [
+      "DLE",
+      "BSL"
+    ]
+  },
+  {
+    "id": "NL027C",
+    "name": "Hoorn",
+    "country": "Netherlands",
+    "countryCode": "NL",
+    "lat": 52.62989,
+    "lng": 5.07192,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 163,
+    "nightsTotal": 1074335,
+    "airports": [
+      "AMS",
+      "EIN",
+      "NRN"
+    ]
+  },
+  {
+    "id": "NL033C",
+    "name": "Nijmegen",
+    "country": "Netherlands",
+    "countryCode": "NL",
+    "lat": 51.8386,
+    "lng": 5.83684,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 165,
+    "nightsTotal": 1052948,
+    "airports": [
+      "NRN",
+      "EIN",
+      "AMS",
+      "MST",
+      "DTM",
+      "FMO",
+      "BRU",
+      "CGN"
+    ]
+  },
+  {
+    "id": "DE086C",
+    "name": "Aachen",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 50.7605,
+    "lng": 6.10898,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 166,
+    "nightsTotal": 1043978,
+    "airports": [
+      "MST",
+      "CGN",
+      "EIN",
+      "NRN",
+      "BRU",
+      "CRL",
+      "HHN",
+      "LUX",
+      "DTM"
+    ]
+  },
+  {
+    "id": "IT073C",
+    "name": "Bergamo",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 45.71113,
+    "lng": 9.67678,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 167,
+    "nightsTotal": 1039285,
+    "airports": [
+      "BGY",
+      "MXP",
+      "VRN",
+      "PMF"
+    ]
+  },
+  {
+    "id": "ES015C",
+    "name": "Santander",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 43.46458,
+    "lng": -3.83307,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 168,
+    "nightsTotal": 1036233,
+    "airports": [
+      "SDR",
+      "BIO",
+      "VIT"
+    ]
+  },
+  {
+    "id": "ES025C",
+    "name": "A Coruña",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 43.29465,
+    "lng": -8.38836,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 169,
+    "nightsTotal": 1035997,
+    "airports": [
+      "SCQ"
+    ]
+  },
+  {
+    "id": "IT010C",
+    "name": "Catania",
+    "country": "Italy",
+    "countryCode": "IT",
+    "lat": 37.4703,
+    "lng": 15.03457,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 171,
+    "nightsTotal": 1016676,
+    "airports": [
+      "CTA",
+      "CIY",
+      "REG"
+    ]
+  },
+  {
+    "id": "DE091C",
+    "name": "Kassel",
+    "country": "Germany",
+    "countryCode": "DE",
+    "lat": 51.3111,
+    "lng": 9.45991,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 172,
+    "nightsTotal": 1015754,
+    "airports": [
+      "PAD",
+      "DTM"
+    ]
+  },
+  {
+    "id": "ES022C",
+    "name": "Vigo",
+    "country": "Spain",
+    "countryCode": "ES",
+    "lat": 42.20269,
+    "lng": -8.71454,
+    "tier": "medium",
+    "tierRank": 3,
+    "rank": 173,
+    "nightsTotal": 1013331,
+    "airports": [
+      "SCQ",
+      "OPO"
+    ]
+  }
+]

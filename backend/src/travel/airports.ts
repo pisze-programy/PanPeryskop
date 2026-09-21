@@ -76,6 +76,18 @@ export function airportCatalog(): Airport[] {
   return [...catalog.values()];
 }
 
+// EuroAirport Basel Mulhouse Freiburg is ONE airport with three IATA codes. The
+// carriers disagree: Ryanair lists BSL, Wizzair lists BSL and MLH as two separate
+// stations with the same name, the same 28 routes and coordinates 0.5 km apart.
+// Without this map the destination list shows the same airport twice, at the same
+// price. Add a pair here only when it is the same physical airport.
+const AIRPORT_ALIASES: Record<string, string> = { MLH: 'BSL' };
+
+/** The one code we use for a physical airport. */
+export function canonicalIata(iata: string): string {
+  return AIRPORT_ALIASES[iata] ?? iata;
+}
+
 export function foldCity(city: string): string {
   return diacriticFold(city).replace(/[^a-z0-9]+/g, ' ');
 }
@@ -160,7 +172,8 @@ function wizzairDestinations(iata: string): Set<string> {
 /** Union of reachable airports from `origin` across both providers, with geo. */
 export function destinationsFrom(origin: string): Destination[] {
   const byIata = new Map<string, Destination>();
-  const add = (iata: string, provider: 'ryanair' | 'wizzair') => {
+  const add = (raw: string, provider: 'ryanair' | 'wizzair') => {
+    const iata = canonicalIata(raw);
     if (iata === origin) return;
     const info = catalog.get(iata);
     if (!info) return;

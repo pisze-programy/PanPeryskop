@@ -211,6 +211,13 @@ export async function fetchRyanairWindow(origin: string, dest: string, eventDay:
   return liveRyanairWindow(db, origin, dest, eventDay);
 }
 
+/** Every day of `month` (YYYY-MM-01), both directions. Two provider calls. */
+export async function fetchRyanairMonth(origin: string, dest: string, month: string, db: D1Database): Promise<FlightWindow> {
+  const outPrices = await fetchRyanairCheapestPerDay(db, origin, dest, month);
+  const retPrices = await fetchRyanairCheapestPerDay(db, dest, origin, month);
+  return buildMonthWindow(month, (day) => buildCell(day, outPrices), (day) => buildCell(day, retPrices));
+}
+
 // ---- Live Wizzair (timetable) ----
 
 const WIZZAIR_VERSION_KEY = 'wizz:version';
@@ -306,6 +313,23 @@ function wizzairDays(flights: WizzairFlight[], range: [number, number], eventDay
   return days.map((day) => wizzairCell(byDay.get(day), day));
 }
 
+/** `YYYY-MM-DD` for every day of the month `YYYY-MM-01`. */
+export function monthDays(month: string): string[] {
+  const [year, mon] = month.split('-').map(Number);
+  const count = new Date(Date.UTC(year, mon, 0)).getUTCDate();
+  return Array.from({ length: count }, (_, i) => `${month.slice(0, 8)}${String(i + 1).padStart(2, '0')}`);
+}
+
+/** Pure mapping: one cell per day of the month, for the calendar view. */
+export function buildMonthWindow(
+  month: string,
+  outboundCell: (day: string) => FlightCell,
+  returningCell: (day: string) => FlightCell,
+): FlightWindow {
+  const days = monthDays(month);
+  return { outbound: days.map(outboundCell), returning: days.map(returningCell) };
+}
+
 export function buildWizzairWindow(data: WizzairTimetable, eventDay: string): FlightWindow {
   if (data.noMarket) return { outbound: [], returning: [] };
   return {
@@ -356,6 +380,22 @@ async function cachedWizzairTimetable(db: D1Database, origin: string, dest: stri
 
 export async function fetchWizzairWindow(origin: string, dest: string, eventDay: string, db: D1Database): Promise<FlightWindow> {
   return buildWizzairWindow(await cachedWizzairTimetable(db, origin, dest, eventDay), eventDay);
+}
+
+/** Every day of `month` (YYYY-MM-01), both directions. One provider call. */
+export async function fetchWizzairMonth(origin: string, dest: string, month: string, db: D1Database): Promise<FlightWindow> {
+  const data = await wizzairMonth(db, origin, dest, month);
+  if (data.noMarket) return { outbound: [], returning: [] };
+  const byDay = (flights: WizzairFlight[]) => {
+    const map = new Map<string, WizzairFlight>();
+    for (const f of flights) {
+      if (typeof f.departureDate === 'string') map.set(f.departureDate.slice(0, 10), f);
+    }
+    return map;
+  };
+  const out = byDay(data.outboundFlights ?? []);
+  const ret = byDay(data.returnFlights ?? []);
+  return buildMonthWindow(month, (day) => wizzairCell(out.get(day), day), (day) => wizzairCell(ret.get(day), day));
 }
 
 export async function fetchWizzairFlyingDays(origin: string, dest: string, eventDay: string, db: D1Database): Promise<string[]> {

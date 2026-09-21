@@ -1,9 +1,56 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { epochDay, dateOfEpochDay, packMask, unpackMask, maskHas, buildRouteList, buildDueRoutes, saveRouteDays, routeId } from '../src/travel/routeDays';
-import { monthsBetween } from '../src/travel/flightsApi';
+import { monthsBetween, monthDays, buildMonthWindow } from '../src/travel/flightsApi';
 import { reachableEvents, type TravelEventRow } from '../src/travel/reachability';
-import { destinationsFrom } from '../src/travel/airports';
+import { destinationsFrom, canonicalIata } from '../src/travel/airports';
+
+test('airports: a multi-code airport appears once in the destination list', () => {
+  // EuroAirport Basel Mulhouse Freiburg: Ryanair lists BSL, Wizzair lists MLH.
+  assert.equal(canonicalIata('MLH'), 'BSL');
+  const codes = destinationsFrom('POZ').map((d) => d.iata);
+  assert.ok(codes.includes('BSL'), 'POZ flies to Basel');
+  assert.ok(!codes.includes('MLH'), 'MLH is the same airport as BSL');
+});
+
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad;
+  const dLng = (lng2 - lng1) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(a));
+}
+
+test('airports: no origin lists the same physical airport twice', () => {
+  for (const origin of ['POZ', 'WAW', 'WMI', 'KRK', 'WRO', 'GDN', 'KTW', 'SZZ']) {
+    const dests = destinationsFrom(origin);
+    for (let i = 0; i < dests.length; i++) {
+      for (let j = i + 1; j < dests.length; j++) {
+        const km = distanceKm(dests[i].lat, dests[i].lng, dests[j].lat, dests[j].lng);
+        assert.ok(km > 2, `${origin}: ${dests[i].iata} and ${dests[j].iata} are ${km.toFixed(1)} km apart`);
+      }
+    }
+  }
+});
+
+test('flights: monthDays covers every day, including leap February', () => {
+  assert.deepEqual(monthDays('2026-10-01').length, 31);
+  assert.equal(monthDays('2026-10-01')[0], '2026-10-01');
+  assert.equal(monthDays('2026-10-01')[30], '2026-10-31');
+  assert.equal(monthDays('2026-09-01').length, 30);
+  assert.equal(monthDays('2026-02-01').length, 28);
+  assert.equal(monthDays('2028-02-01').length, 29);
+});
+
+test('flights: buildMonthWindow emits one cell per day', () => {
+  const cell = (day: string): { date: string; hour: string | null; price: number | null } => ({
+    date: day, hour: null, price: day === '2026-09-15' ? 99 : null,
+  });
+  const window = buildMonthWindow('2026-09-01', cell, cell);
+  assert.equal(window.outbound.length, 30);
+  assert.equal(window.returning.length, 30);
+  assert.equal(window.outbound.find((c) => c.price === 99)?.date, '2026-09-15');
+});
 
 test('routeDays: epoch day round-trips', () => {
   assert.equal(dateOfEpochDay(epochDay('2026-10-15')), '2026-10-15');

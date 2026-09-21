@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "gen:templates": "tsx scripts/gen-templates.ts",
     "gen:catalogue": "tsx src/travel/gen-catalogue.ts",
+    "gen:cities": "tsx src/travel/gen-cities.ts",
     "db:migrate": "wrangler d1 migrations apply panperyskop-db --config wrangler.toml",
     "db:create": "wrangler d1 execute panperyskop-db --file=./schema/schema.sql --config wrangler.toml",
     "cf-typegen": "wrangler types --config wrangler.toml"

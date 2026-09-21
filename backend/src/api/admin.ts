@@ -14,6 +14,7 @@ import { ingestRestaurants } from '../seed/manual/restaurants';import { getLastS
 import { upsertTravelEvents, sanitizeManifest, TravelManifest, TravelEvent } from '../travel/store';
 import { refreshViatorDestinations } from '../travel/viator';
 import { buildDueRoutes, saveRouteDays, routeDaysHorizon } from '../travel/routeDays';
+import { CITY_ENTRIES, saveCities } from '../travel/cities';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -199,6 +200,14 @@ adminRoutes.post('/seed/restaurants', async (c) => {
   const results = await ingestRestaurants(c.env);
   const ok = results.filter((r) => r.status === 'ok').length;
   return c.json({ ok: true, ingested: ok, failed: results.length - ok, results });
+});
+
+// Manual city-break import. The list is generated from the Eurostat extract by
+// `npm run gen:cities` — re-run after the CSV changes. Idempotent by city id.
+adminRoutes.post('/seed/cities', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const saved = await saveCities(c.env.DB, CITY_ENTRIES);
+  return c.json({ ok: true, saved });
 });
 
 // Warm one day of kupbilecik events into R2. The official API returns the WHOLE

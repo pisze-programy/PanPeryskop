@@ -1,6 +1,6 @@
 {
-  "version": "51c2a9d32e7942411cbccf0fa1e4b1748c7585c95b7683a156eb85dd570ab03e",
-  "generatedAt": "2026-09-18T15:55:37.326Z",
+  "version": "ba053122a4bf0eb49cc93ba2cf0f7404bd0559db7d295cc482da14404f08d11e",
+  "generatedAt": "2026-09-21T07:57:02.233Z",
   "schemaVersion": 1,
   "minAppBuild": 36,
   "cities": [
@@ -274,17 +274,6 @@
         "country": "Switzerland",
         "lat": 47.5896,
         "lng": 7.52991,
-        "providers": [
-          "wizzair"
-        ]
-      },
-      {
-        "iata": "MLH",
-        "name": "Basel-Mulhouse-Freiburg",
-        "city": "Basel-Mulhouse-Freiburg",
-        "country": "France",
-        "lat": 47.600833333333334,
-        "lng": 7.529166666666667,
         "providers": [
           "wizzair"
         ]
@@ -1134,17 +1123,6 @@
         ]
       },
       {
-        "iata": "MLH",
-        "name": "Basel-Mulhouse-Freiburg",
-        "city": "Basel-Mulhouse-Freiburg",
-        "country": "France",
-        "lat": 47.600833333333334,
-        "lng": 7.529166666666667,
-        "providers": [
-          "wizzair"
-        ]
-      },
-      {
         "iata": "BGY",
         "name": "Milan Bergamo",
         "city": "Bergamo",
@@ -1874,17 +1852,6 @@
         "country": "Switzerland",
         "lat": 47.5896,
         "lng": 7.52991,
-        "providers": [
-          "wizzair"
-        ]
-      },
-      {
-        "iata": "MLH",
-        "name": "Basel-Mulhouse-Freiburg",
-        "city": "Basel-Mulhouse-Freiburg",
-        "country": "France",
-        "lat": 47.600833333333334,
-        "lng": 7.529166666666667,
         "providers": [
           "wizzair"
         ]
@@ -3995,17 +3962,6 @@
         ]
       },
       {
-        "iata": "MLH",
-        "name": "Basel-Mulhouse-Freiburg",
-        "city": "Basel-Mulhouse-Freiburg",
-        "country": "France",
-        "lat": 47.600833333333334,
-        "lng": 7.529166666666667,
-        "providers": [
-          "wizzair"
-        ]
-      },
-      {
         "iata": "BGY",
         "name": "Milan Bergamo",
         "city": "Bergamo",
@@ -4500,17 +4456,6 @@
         "country": "Switzerland",
         "lat": 47.5896,
         "lng": 7.52991,
-        "providers": [
-          "wizzair"
-        ]
-      },
-      {
-        "iata": "MLH",
-        "name": "Basel-Mulhouse-Freiburg",
-        "city": "Basel-Mulhouse-Freiburg",
-        "country": "France",
-        "lat": 47.600833333333334,
-        "lng": 7.529166666666667,
         "providers": [
           "wizzair"
         ]

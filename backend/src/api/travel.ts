@@ -2,11 +2,12 @@ import { CONFIG, type TravelTag } from '../config/index';
 import { Hono, type Context } from 'hono';
 import { isPlaceKind, type TravelPlace } from '../travel/places';
 import { airportForCity } from '../travel/airports';
-import { fetchRyanairWindow, fetchWizzairWindow, readFlightCache, writeFlightCache } from '../travel/flightsApi';
+import { fetchRyanairMonth, fetchRyanairWindow, fetchWizzairMonth, fetchWizzairWindow, readFlightCache, writeFlightCache } from '../travel/flightsApi';
 import { busBookingUrl, fetchBusDay, resolveBusCity } from '../travel/flixbus';
 import { mintRedirect } from '../analytics/redirect';
 import { haversineKm, reachableEvents, type ReachableEvent, type TravelEventRow } from '../travel/reachability';
 import { buildCatalogue } from '../travel/catalogue';
+import { cityBreakForDay } from '../travel/cities';
 import { viatorNearestCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
 import { staysWidgetUrl, type StayTheme, type StayView } from '../travel/stay22';
 import { alertFlightFailure } from '../travel/alerts';
@@ -55,6 +56,20 @@ travelRoutes.get('/catalogue', (c) => {
   c.header('ETag', CATALOGUE_ETAG);
   c.header('Cache-Control', 'no-cache');
   return c.json(CATALOGUE);
+});
+
+// Empty origins is a valid request: every city comes back unreachable, which is
+// the "ignore the day" variant the app can switch to.
+travelRoutes.get('/cities', async (c) => {
+  const q = c.req.query();
+  const origins = String(q.origins ?? q.origin ?? '')
+    .split(',')
+    .map((s) => s.trim().toUpperCase())
+    .filter((s) => CONFIG.travel.api.iataPattern.test(s));
+  const day = q.day ?? '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: 'day required (YYYY-MM-DD)' }, 400);
+  const { cities, airports } = await cityBreakForDay(c.env.DB, origins, day);
+  return c.json({ cities, airports });
 });
 
 travelRoutes.get('/events', async (c) => {
@@ -274,22 +289,31 @@ async function viatorAttractions(
   }
 }
 
-function flightParams(q: Record<string, string | undefined>): { origin: string; destination: string; eventDay: string } | null {
+function flightRoute(q: Record<string, string | undefined>): { origin: string; destination: string } | null {
   const origin = q.origin?.toUpperCase() ?? '';
   const destination = q.destination?.toUpperCase() ?? '';
-  const eventDay = q.eventDay ?? '';
-  if (!CONFIG.travel.api.iataPattern.test(origin) || !CONFIG.travel.api.iataPattern.test(destination) || !/^\d{4}-\d{2}-\d{2}$/.test(eventDay)) return null;
-  return { origin, destination, eventDay };
+  if (!CONFIG.travel.api.iataPattern.test(origin) || !CONFIG.travel.api.iataPattern.test(destination)) return null;
+  return { origin, destination };
 }
 
 async function flightHandler(c: Context<{ Bindings: Env }>, airline: 'ryanair' | 'wizzair'): Promise<Response> {
   const q = c.req.query();
-  const params = flightParams(q);
-  if (!params) return c.json({ error: 'origin, destination, eventDay required (IATA, YYYY-MM-DD)' }, 400);
+  const route = flightRoute(q);
+  if (!route) return c.json({ error: 'origin and destination required (IATA)' }, 400);
+  // `month` returns the whole month for the city-break calendar; `eventDay`
+  // returns the ±7 day window around an event. Same response shape.
+  const month = q.month ?? '';
+  const eventDay = q.eventDay ?? '';
+  if (!month && !/^\d{4}-\d{2}-\d{2}$/.test(eventDay)) return c.json({ error: 'eventDay or month required' }, 400);
+  if (month && !/^\d{4}-\d{2}-01$/.test(month)) return c.json({ error: 'month must be YYYY-MM-01' }, 400);
   try {
-    const window = airline === 'ryanair'
-      ? await fetchRyanairWindow(params.origin, params.destination, params.eventDay, c.env.DB)
-      : await fetchWizzairWindow(params.origin, params.destination, params.eventDay, c.env.DB);
+    const window = month
+      ? await (airline === 'ryanair'
+        ? fetchRyanairMonth(route.origin, route.destination, month, c.env.DB)
+        : fetchWizzairMonth(route.origin, route.destination, month, c.env.DB))
+      : await (airline === 'ryanair'
+        ? fetchRyanairWindow(route.origin, route.destination, eventDay, c.env.DB)
+        : fetchWizzairWindow(route.origin, route.destination, eventDay, c.env.DB));
     return c.json(window);
   } catch (e) {
     const detail = (e as Error).message;

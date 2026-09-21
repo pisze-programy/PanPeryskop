@@ -13,6 +13,7 @@ import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
 import { ingestRestaurants } from '../seed/manual/restaurants';import { getLastSeedDay, seedDue } from '../seed/cadence';
 import { upsertTravelEvents, sanitizeManifest, TravelManifest, TravelEvent } from '../travel/store';
 import { refreshViatorDestinations } from '../travel/viator';
+import { buildDueRoutes, saveRouteDays, routeDaysHorizon } from '../travel/routeDays';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -540,4 +541,26 @@ adminRoutes.post('/travel/viator/refresh', async (c) => {
   } catch (e) {
     return c.json({ error: (e as Error).message }, 502);
   }
+});
+
+// Materialized flight schedule. The VPS fetches (residential egress, Webshare);
+// the Worker only hands out the work-list and stores the result.
+adminRoutes.get('/travel/route-days/due', async (c) => {
+  if (!unitAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const requested = Number(c.req.query('limit'));
+  const limit = Number.isFinite(requested) && requested > 0 ? Math.min(Math.floor(requested), 400) : 100;
+  // The drain saves and immediately asks again. A replica read would still show
+  // the saved rows as due, and the run would stop early.
+  const routes = await buildDueRoutes(c.env.DB.withSession('first-primary'), limit);
+  return c.json({ ...routeDaysHorizon(), routes });
+});
+
+adminRoutes.post('/travel/route-days', async (c) => {
+  if (!unitAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ entries?: unknown }>().catch(() => null);
+  const entries = Array.isArray(body?.entries) ? body.entries : null;
+  if (!entries || entries.length === 0) return c.json({ error: 'entries[] required' }, 400);
+  if (entries.length > 400) return c.json({ error: 'too many entries' }, 400);
+  const saved = await saveRouteDays(c.env.DB, entries as never);
+  return c.json({ ok: true, saved });
 });

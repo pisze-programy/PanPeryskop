@@ -27,10 +27,10 @@ export interface FlightWindow {
 
 
 /** Raw farefinder GET. 404 → null (no such route); any other non-2xx throws. */
-async function fetchFareJson(url: string): Promise<any | null> {
+async function fetchFareJson(url: string, timeoutMs: number = CONFIG.travel.flights.timeoutMs): Promise<any | null> {
   const res = await fetchWithRetry(() => fetch(url, {
     headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'application/json' },
-    signal: AbortSignal.timeout(CONFIG.travel.flights.timeoutMs),
+    signal: AbortSignal.timeout(timeoutMs),
   }));
   if (res.status === 404) return null;
   if (res.status === 429 || res.status >= 500) {
@@ -41,18 +41,27 @@ async function fetchFareJson(url: string): Promise<any | null> {
 }
 
 const TRANSIENT_RETRY_DELAY_MS = 400;
+const RATE_LIMIT_RETRY_DELAY_MS = 2_000;
+const REQUEST_ATTEMPTS = 3;
 
-/** One delayed retry for a network error, a timeout, 429 or 5xx. */
-async function fetchWithRetry(makeRequest: () => Promise<Response>): Promise<Response> {
-  const transient = (res: Response) => res.status === 429 || res.status >= 500;
-  try {
-    const res = await makeRequest();
-    if (!transient(res)) return res;
-    await new Promise((resolve) => setTimeout(resolve, TRANSIENT_RETRY_DELAY_MS));
-    return await makeRequest();
-  } catch (error) {
-    await new Promise((resolve) => setTimeout(resolve, TRANSIENT_RETRY_DELAY_MS));
-    return await makeRequest();
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function transientStatus(res: Response): boolean {
+  return res.status === 429 || res.status >= 500;
+}
+
+async function fetchWithRetry(makeRequest: () => Promise<Response>, isTransient = transientStatus): Promise<Response> {
+  let last: Response | null = null;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      last = await makeRequest();
+      if (!isTransient(last) || attempt >= REQUEST_ATTEMPTS) return last;
+    } catch (error) {
+      last = null;
+      if (attempt >= REQUEST_ATTEMPTS) throw error;
+    }
+    const backoff = last !== null && last.status >= 500 ? RATE_LIMIT_RETRY_DELAY_MS : TRANSIENT_RETRY_DELAY_MS;
+    await sleep(backoff * attempt);
   }
 }
 
@@ -68,6 +77,12 @@ export async function readFlightCache(db: D1Database, key: string): Promise<any 
 
 export async function writeFlightCache(db: D1Database, key: string, value: unknown, ttlMs: number): Promise<void> {
   await writeCache(db, key, value, ttlMs);
+}
+
+/** Drop expired cache rows. The table has an expires_at index but no other job. */
+export async function pruneFlightCache(db: D1Database): Promise<number> {
+  const result = await db.prepare('DELETE FROM flight_cache WHERE expires_at < ?').bind(Date.now()).run();
+  return Number(result.meta?.changes ?? 0);
 }
 
 async function cachedJson(db: D1Database, key: string, ttlMs: number, fetchFn: () => Promise<any | null>, failureTtlMs = 0): Promise<any | null> {
@@ -232,10 +247,10 @@ async function wizzairApiBase(db: D1Database): Promise<string> {
     if (!res.ok) throw new Error(`Wizzair site ${res.status}`);
     return parseWizzairVersion(await res.text());
   });
-  return `${cfg.apiHost}/${typeof version === 'string' ? version : cfg.fallbackVersion}/Api`;
+  return `${cfg.apiHost}/${typeof version === 'string' ? version : cfg.apiVersion}/Api`;
 }
 
-async function postWizzairTimetable(apiBase: string, origin: string, dest: string, fromDay: string, toDay: string): Promise<Response> {
+async function postWizzairTimetable(apiBase: string, origin: string, dest: string, fromDay: string, toDay: string, timeoutMs: number = CONFIG.travel.flights.timeoutMs): Promise<Response> {
   const body = {
     flightList: [
       { departureStation: origin, arrivalStation: dest, from: fromDay, to: toDay },
@@ -256,7 +271,7 @@ async function postWizzairTimetable(apiBase: string, origin: string, dest: strin
       Referer: 'https://www.wizzair.com/',
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(CONFIG.travel.flights.timeoutMs),
+    signal: AbortSignal.timeout(timeoutMs),
   }));
 }
 
@@ -306,6 +321,16 @@ export function monthsInWindow(eventDay: string): string[] {
   return [...new Set([monthKey(first), monthKey(last)])];
 }
 
+/** First day of every month in [fromDay, toDay]. */
+export function monthsBetween(fromDay: string, toDay: string): string[] {
+  const last = monthKey(toDay);
+  const out: string[] = [];
+  for (let cursor = monthKey(fromDay); cursor <= last; cursor = monthKey(addDaysWarsaw(cursor, 32))) {
+    out.push(cursor);
+  }
+  return out;
+}
+
 export function mergeWizzairMonths(months: WizzairTimetable[]): WizzairTimetable {
   return {
     outboundFlights: months.flatMap((m) => m.outboundFlights ?? []),
@@ -341,4 +366,55 @@ export async function fetchWizzairFlyingDays(origin: string, dest: string, event
     if (typeof flight.departureDate === 'string') days.add(flight.departureDate.slice(0, 10));
   }
   return [...days];
+}
+
+/** Flying days for a route in [fromDay, toDay], both directions pooled. Uses the
+ *  shared per-month cache, so the batch and the price path do not double-fetch. */
+export async function fetchWizzairFlyingDaysInRange(
+  db: D1Database, origin: string, dest: string, fromDay: string, toDay: string,
+): Promise<string[]> {
+  const days = new Set<string>();
+  for (const month of monthsBetween(fromDay, toDay)) {
+    const data = await wizzairMonth(db, origin, dest, month);
+    for (const flight of [...(data.outboundFlights ?? []), ...(data.returnFlights ?? [])]) {
+      if (typeof flight.departureDate === 'string') days.add(flight.departureDate.slice(0, 10));
+    }
+  }
+  return [...days].filter((day) => day >= fromDay && day <= toDay);
+}
+
+// ---- VPS drain: provider-only fetch, no D1 and no cache ----
+
+const DIRECT_FETCH_TIMEOUT_MS = 20_000;
+
+// The version is a constant: the site page is 1.9 MB, so a per-run fetch costs
+// far more than it saves. A stale value shows up as a failed run and alerts.
+function wizzairApiBaseDirect(): string {
+  const cfg = CONFIG.travel.flights.wizzair;
+  return `${cfg.apiHost}/${cfg.apiVersion}/Api`;
+}
+
+export async function fetchRyanairAvailabilitiesDirect(origin: string, dest: string): Promise<string[]> {
+  const data = await fetchFareJson(`${CONFIG.travel.flights.fareBase}/${origin}/${dest}/availabilities`, DIRECT_FETCH_TIMEOUT_MS);
+  return Array.isArray(data) ? data.filter((d): d is string => typeof d === 'string') : [];
+}
+
+/** A 400 is often transient, so a market rejection needs every attempt to fail. */
+async function fetchWizzairTimetableDirect(origin: string, dest: string, fromDay: string, toDay: string): Promise<WizzairTimetable> {
+  const send = async () => postWizzairTimetable(wizzairApiBaseDirect(), origin, dest, fromDay, toDay, DIRECT_FETCH_TIMEOUT_MS);
+  const res = await fetchWithRetry(send, (r) => r.status === 400 || r.status === 404 || r.status >= 500);
+  if (res.status === 400 || res.status === 404) return { noMarket: true };
+  if (!res.ok) throw new Error(`Wizzair timetable ${res.status}`);
+  return (await res.json()) as WizzairTimetable;
+}
+
+export async function fetchWizzairFlyingDaysInRangeDirect(origin: string, dest: string, fromDay: string, toDay: string): Promise<string[]> {
+  const days = new Set<string>();
+  for (const month of monthsBetween(fromDay, toDay)) {
+    const data = await fetchWizzairTimetableDirect(origin, dest, month, addDaysWarsaw(month, 30));
+    for (const flight of [...(data.outboundFlights ?? []), ...(data.returnFlights ?? [])]) {
+      if (typeof flight.departureDate === 'string') days.add(flight.departureDate.slice(0, 10));
+    }
+  }
+  return [...days].filter((day) => day >= fromDay && day <= toDay);
 }

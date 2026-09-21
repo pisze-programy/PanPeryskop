@@ -113,6 +113,12 @@ export const travel = {
     outboundOffsets: [-3, -2, -1],
     returnOffsets: [1, 2, 3],
   },
+  // Materialized flight schedule (route_days). The schedule is seasonal, so the
+  // TTL is long. The VPS fetches it through Webshare; the Worker only reads.
+  routeDays: {
+    horizonDays: 90,
+    ttlMs: 14 * 24 * 3_600_000,
+  },
   flights: {
     fareBase: 'https://www.ryanair.com/api/farfnd/3/oneWayFares',
     userAgent:
@@ -137,7 +143,7 @@ export const travel = {
       pageUrl: 'https://wizzair.com/en-gb',
       apiHost: 'https://be.wizzair.com',
       versionPattern: 'be\\.wizzair\\.com/(\\d+\\.\\d+\\.\\d+)/Api',
-      fallbackVersion: '29.17.0',
+      apiVersion: '29.17.0',
       versionTtlMs: 7 * 24 * 3_600_000,
       windowTtlMs: 24 * 3_600_000,
     },

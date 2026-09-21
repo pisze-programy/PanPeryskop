@@ -23,6 +23,7 @@ import {pruneSeedData, pruneSeedManifests} from './seed/pipeline/cleanup';
 import {alertFailedUnits, daysReadyToReconcile, sweepStuckRaw} from './seed/reconcile';
 import {getLastSeedDay, setLastSeedDay, seedDue} from './seed/cadence';
 import {refreshViatorDestinations} from './travel/viator';
+import {pruneFlightCache} from './travel/flightsApi';
 // Nominatim pace per executor: the Worker egresses from Cloudflare's shared
 // datacenter IPs — the OSM policy caps regular (daily cron) bulk geocoding at
 // 4 req/min (the VPS rotates residential IPs via Webshare and keeps 1/s).
@@ -152,7 +153,8 @@ export default withSentry<Env, SeedQueueMessage>(
       ctx.waitUntil(
         pruneSeedData(env, 'cron')
           .then(() => pruneSeedManifests(env))
-          .then(() => console.log('seed cleanup cron done'))
+          .then(() => pruneFlightCache(env.DB))
+          .then((dropped) => console.log(`seed cleanup cron done (flight_cache -${dropped})`))
           .catch((e) => console.error(`seed cleanup cron failed: ${(e as Error).message}`))
       );
       return;

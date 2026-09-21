@@ -19,7 +19,7 @@ const ORIGIN_CITIES: Array<{ id: string; airports: string[] }> = [
   { id: 'bialystok', airports: ['SZY'] },
 ];
 
-const ORIGIN_AIRPORTS = ['WAW', 'WMI', 'KRK', 'GDN', 'POZ', 'WRO', 'KTW', 'LCJ', 'SZZ', 'BZG', 'LUZ', 'RZE', 'RDO', 'SZY'];
+export const ORIGIN_AIRPORTS = ['WAW', 'WMI', 'KRK', 'GDN', 'POZ', 'WRO', 'KTW', 'LCJ', 'SZZ', 'BZG', 'LUZ', 'RZE', 'RDO', 'SZY'];
 
 export interface CatalogueCity {
   id: string;

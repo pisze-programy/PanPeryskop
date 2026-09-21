@@ -11,6 +11,7 @@ import { CONFIG } from '../config/index';
 import { addDaysWarsaw, warsawDateOf } from '../seed/core/dates';
 import { destinationsFrom, type Destination } from './airports';
 import { fetchRyanairAvailabilities, fetchWizzairFlyingDays } from './flightsApi';
+import { loadRouteDays } from './routeDays';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -148,12 +149,39 @@ function routesFor(origin: string, events: TravelEventRow[]): { routes: Route[];
 }
 
 export async function reachableEvents(origin: string, events: TravelEventRow[], db: D1Database): Promise<ReachabilityResult> {
-  const { routes, nearbyByEvent } = routesFor(origin, events);
-  const flyingByRoute = new Map<string, RouteDays | null>();
-  let okRoutes = 0;
-  let failedRoutes = 0;
+  const { nearbyByEvent } = routesFor(origin, events);
+  const dests = new Set<string>();
+  for (const nearby of nearbyByEvent.values()) for (const d of nearby) dests.add(d.iata);
+  const table = await loadRouteDays(db, origin, [...dests]);
 
-  await mapPool(routes, CONFIG.travel.flights.routeConcurrency, async (route) => {
+  const flyingByRoute = new Map<string, RouteDays | null>();
+  // Routes the table does not know yet (a fresh table, or a new route). They get
+  // one live lookup each. Once the drain has covered them this list is empty.
+  const fallback: Route[] = [];
+  const seenFallback = new Set<string>();
+
+  for (const [event, nearby] of nearbyByEvent) {
+    const eventDay = warsawDateOf(event.start_ms);
+    for (const dest of nearby) {
+      const entry = table.get(dest.iata);
+      const missing = dest.providers.has('ryanair') && entry?.ryanair == null
+        || dest.providers.has('wizzair') && entry?.wizzair == null;
+      if (missing) {
+        const route: Route = { dest, eventDay };
+        const key = routeKey(route);
+        if (!seenFallback.has(key)) { seenFallback.add(key); fallback.push(route); }
+        continue;
+      }
+      flyingByRoute.set(routeKey({ dest, eventDay }), {
+        ryanair: entry?.ryanair ?? new Set<string>(),
+        wizzair: entry?.wizzair ?? new Set<string>(),
+      });
+    }
+  }
+
+  let okRoutes = flyingByRoute.size;
+  let failedRoutes = 0;
+  await mapPool(fallback, CONFIG.travel.flights.routeConcurrency, async (route) => {
     try {
       flyingByRoute.set(routeKey(route), await withRetry(() => routeFlyingDays(origin, route, db)));
       okRoutes++;

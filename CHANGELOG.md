@@ -4,6 +4,22 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 67, 2026-09-21
+
+### Fixed
+- A city is reachable through the airports around it again. The sheet no longer
+  asks the selected day whether a flight exists: it asks whether the origin
+  flies to any airport of the city. Poznań → Milan shows flights through
+  Bergamo, and the bus appears only when no airport of the city has a flight.
+- The airport list of a city comes back from the 150 km radius, so Milan has
+  Bergamo, Paris has Orly, and 133 cities are reachable from Poznań instead of
+  108.
+
+### Changed
+- Every airport is offered with the carriers that really serve it, from the
+  catalogue instead of the selected day, so Ryanair and Wizzair of one airport
+  stay comparable by price and no option is ever empty.
+
 ## [1.3.0] — build 66, 2026-09-21
 
 ### Changed

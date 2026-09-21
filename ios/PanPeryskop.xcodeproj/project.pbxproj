@@ -164,7 +164,6 @@
 		D6FD31B42607CB3427509708 /* TeamCrest.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED579B795740245608314A73 /* TeamCrest.swift */; };
 		D828417310A3109AF1D893E7 /* LoadingOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31390352664649563409CC4 /* LoadingOverlay.swift */; };
 		D89A9EB5504B168620F6B4C0 /* StaysSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E1BFD90E217C0EFCC9C793 /* StaysSheet.swift */; };
-		DA7E2F4BC1EB78470DCAA852 /* CityHeroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3834D79E7C7BEB33310948B2 /* CityHeroView.swift */; };
 		DBD6230E0E6F6FA7C7DA9056 /* MapAppPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18B96DC041ACB25C8EF41626 /* MapAppPickerSheet.swift */; };
 		DE4BA108589D6E9F8B89CD6D /* DayListSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55DBE95A96A407C58FB5BF55 /* DayListSheet.swift */; };
 		DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBDD7756E22141DD95593257 /* City.swift */; };
@@ -234,7 +233,6 @@
 		346DA0596DA155F6593B75F7 /* AppCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCamera.swift; sourceTree = "<group>"; };
 		36ABC560FFD3EB5403C95231 /* BusSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusSkeleton.swift; sourceTree = "<group>"; };
 		37AB53DA95A6D6FBE3DDD950 /* DestinationMapPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DestinationMapPage.swift; sourceTree = "<group>"; };
-		3834D79E7C7BEB33310948B2 /* CityHeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityHeroView.swift; sourceTree = "<group>"; };
 		388F0A52F3FBB02B1B85B952 /* TripsEventSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsEventSheet.swift; sourceTree = "<group>"; };
 		3A1DB588A3A33BFAD0FE5A20 /* TravelEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelEvent.swift; sourceTree = "<group>"; };
 		3A583A3FD1B86291E17FDEAF /* PlaceRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceRowView.swift; sourceTree = "<group>"; };
@@ -497,7 +495,6 @@
 				D7804B40F897EB064C34DF64 /* CarrierFlightCard.swift */,
 				FA400C231962F949D76A3830 /* CityBreakSheet.swift */,
 				3E623531CBFA87ECD9BA406B /* CityFlightSheet.swift */,
-				3834D79E7C7BEB33310948B2 /* CityHeroView.swift */,
 				682C03AEF0EB077C934D1BB2 /* CityPalette.swift */,
 				37AB53DA95A6D6FBE3DDD950 /* DestinationMapPage.swift */,
 				D676D24F12D7E46EE15AB3F9 /* DestinationMapRail.swift */,
@@ -871,7 +868,6 @@
 				DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */,
 				9F903F153A7F48F5BE292EB7 /* CityBreakSheet.swift in Sources */,
 				F7FA670864146D4652705754 /* CityFlightSheet.swift in Sources */,
-				DA7E2F4BC1EB78470DCAA852 /* CityHeroView.swift in Sources */,
 				288824434B9765FEC9A39E4A /* CityListView.swift in Sources */,
 				5F59AD531B53B7633FEFEAC6 /* CityPalette.swift in Sources */,
 				055A4335E8E7618BBEEC6605 /* CityPinView.swift in Sources */,
@@ -1164,7 +1160,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1224,7 +1220,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

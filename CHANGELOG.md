@@ -4,6 +4,22 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 59, 2026-09-21
+
+### Changed
+- A city-break sheet has no photo section: only the Wikipedia lead image is kept,
+  as the sticky header background. When a city has no photo, the header shows the
+  country gradient alone.
+- The city sticky header fills its leading edge with the city photo, faded into
+  the country → tier gradient.
+- The flight calendar opens on the month picked on the map, and always marks the
+  best fare of the month on screen.
+- "Sprawdź dostępne terminy" is a single centred line again.
+
+### Removed
+- The city photo gallery and its R2 objects. The nearby-Commons source was not
+  good enough; only the lead image and the pin thumbnail remain.
+
 ## [1.3.0] — build 58, 2026-09-21
 
 ### Added

@@ -1,6 +1,9 @@
 import SwiftUI
+
 struct CityWeatherSection: View {
     let city: TravelCity
+
+    @Environment(\.region) private var region
 
     private var facts: CityFacts { city.facts }
 
@@ -10,36 +13,44 @@ struct CityWeatherSection: View {
                 .padding(.horizontal, Theme.Spacing.l)
             SurfaceCard {
                 HStack(spacing: 0) {
-                    temperature
-                    Divider().frame(height: 44)
-                    column("Wilgotność", "\(facts.humidityNow)%")
-                    Divider().frame(height: 44)
-                    column("Powietrze", "\(facts.airQualityNow) AQI")
+                    segment(value: "\(Int(facts.tempNowC.rounded()))°C", label: "Temperatura")
+                    divider
+                    segment(value: "\(facts.humidityNow)%", label: "Wilgotność")
+                    divider
+                    segment(
+                        value: region.airQualityLabel(facts.airQualityNow),
+                        suffix: "\(facts.airQualityNow) AQI",
+                        label: "Powietrze"
+                    )
                 }
-                .frame(maxWidth: .infinity)
             }
             .padding(.horizontal, Theme.Spacing.l)
         }
     }
 
-    private var temperature: some View {
-        VStack(spacing: Theme.Spacing.xs) {
-            Text("\(Int(facts.tempNowC.rounded()))°C")
-                .font(.title.weight(.bold))
-            Text("teraz")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
+    private var divider: some View {
+        Divider().frame(height: 40)
     }
 
-    private func column(_ label: String, _ value: String) -> some View {
+    private func segment(value: String, suffix: String? = nil, label: String) -> some View {
         VStack(spacing: Theme.Spacing.xs) {
-            Text(value)
-                .font(.headline.weight(.semibold))
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(value)
+                    .font(.headline.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                if let suffix {
+                    Text(suffix)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
             Text(label)
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity)
     }

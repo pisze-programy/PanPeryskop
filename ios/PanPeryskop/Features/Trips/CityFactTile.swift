@@ -1,7 +1,9 @@
 import SwiftUI
+
 struct CityFactTile: View {
     let icon: String
     let value: String
+    var suffix: String? = nil
     let label: String
 
     var body: some View {
@@ -9,14 +11,23 @@ struct CityFactTile: View {
             Image(systemName: icon)
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(.secondary)
-            Text(value)
-                .font(.title3.weight(.bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(value)
+                    .font(.title3.weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                if let suffix {
+                    Text(suffix)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
             Text(label)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Theme.Spacing.m)

@@ -1,4 +1,5 @@
 import SwiftUI
+
 struct CityFactsSheet: View {
     let city: TravelCity
 
@@ -8,6 +9,12 @@ struct CityFactsSheet: View {
 
     private var facts: CityFacts { city.facts }
 
+    private struct Row {
+        let label: String
+        let value: String
+        var positive: Bool? = nil
+    }
+
     var body: some View {
         SheetShell(detent: $detent) {
             ScrollView(showsIndicators: false) {
@@ -16,7 +23,7 @@ struct CityFactsSheet: View {
                         .font(.title3.weight(.bold))
                         .padding(.horizontal, Theme.Spacing.l)
                     ForEach(rows, id: \.label) { row in
-                        factRow(row.label, row.value)
+                        factRow(row)
                     }
                 }
                 .padding(.vertical, Theme.Spacing.l)
@@ -24,44 +31,49 @@ struct CityFactsSheet: View {
         }
     }
 
-    private var rows: [(label: String, value: String)] {
+    private var rows: [Row] {
         [
-            ("Koszt życia", "\(region.price(Double(facts.costLocalUsd))) / miesiąc"),
-            ("Na miejscu", "\(region.price(Double(max(1, facts.costLocalUsd / 30)))) / dzień"),
-            ("Internet", "\(facts.internetMbps) Mb/s"),
-            ("Temperatura teraz", temp(facts.tempNowC)),
-            ("Wilgotność", "\(facts.humidityNow)%"),
-            ("Jakość powietrza teraz", "\(facts.airQualityNow) AQI"),
-            ("Jakość powietrza rocznie", "\(facts.airQualityYear) AQI"),
-            ("Bezpieczeństwo", score(facts.safety)),
-            ("Czystość", score(facts.cleanliness)),
-            ("Rozrywka", score(facts.fun)),
-            ("Nocne życie", score(facts.nightlife)),
-            ("Pieszo", score(facts.walkability)),
-            ("Opieka zdrowotna", score(facts.healthcare)),
-            ("Angielski", score(facts.english)),
-            ("Przyjazne LGBTQ+", score(facts.lgbtFriendly)),
-            ("Przyjazne kobietom", score(facts.femaleFriendly)),
-            ("Ogólnie", score(facts.overall)),
-            ("Mieszkańcy", city.population.formatted(.number.notation(.compactName))),
+            Row(label: "Koszt życia", value: "\(region.price(Double(facts.costLocalUsd))) / miesiąc"),
+            Row(label: "Na miejscu", value: "\(region.price(Double(max(1, facts.costLocalUsd / 30)))) / dzień"),
+            Row(label: "Internet", value: "\(facts.internetMbps) Mb/s"),
+            Row(label: "Temperatura", value: temp(facts.tempNowC)),
+            Row(label: "Wilgotność", value: "\(facts.humidityNow)%"),
+            Row(label: "Powietrze", value: "\(region.airQualityLabel(facts.airQualityNow)), \(facts.airQualityNow) AQI"),
+            Row(label: "Powietrze rocznie", value: "\(region.airQualityLabel(facts.airQualityYear)), \(facts.airQualityYear) AQI"),
+            Row(label: "Bezpieczeństwo", value: score(facts.safety), positive: region.isPositiveScore(facts.safety)),
+            Row(label: "Czystość", value: score(facts.cleanliness), positive: region.isPositiveScore(facts.cleanliness)),
+            Row(label: "Rozrywka", value: score(facts.fun), positive: region.isPositiveScore(facts.fun)),
+            Row(label: "Nocne życie", value: score(facts.nightlife), positive: region.isPositiveScore(facts.nightlife)),
+            Row(label: "Zwiedzanie pieszo", value: score(facts.walkability), positive: region.isPositiveScore(facts.walkability)),
+            Row(label: "Opieka zdrowotna", value: score(facts.healthcare), positive: region.isPositiveScore(facts.healthcare)),
+            Row(label: "Angielski", value: score(facts.english), positive: region.isPositiveScore(facts.english)),
+            Row(label: "Przyjazne LGBTQ+", value: score(facts.lgbtFriendly), positive: region.isPositiveScore(facts.lgbtFriendly)),
+            Row(label: "Przyjazne kobietom", value: score(facts.femaleFriendly), positive: region.isPositiveScore(facts.femaleFriendly)),
+            Row(label: "Ocena", value: score(facts.overall), positive: region.isPositiveScore(facts.overall)),
+            Row(label: "Mieszkańcy", value: city.population.formatted(.number.notation(.compactName))),
         ]
     }
 
-    private func factRow(_ label: String, _ value: String) -> some View {
+    private func factRow(_ row: Row) -> some View {
         HStack(spacing: Theme.Spacing.m) {
-            Text(label)
+            Text(row.label)
                 .font(.subheadline)
             Spacer(minLength: Theme.Spacing.s)
-            Text(value)
+            Text(row.value)
                 .font(.subheadline.weight(.semibold))
+                .foregroundColor(color(for: row.positive))
         }
         .padding(.horizontal, Theme.Spacing.l)
         .padding(.vertical, Theme.Spacing.s)
     }
 
+    private func color(for positive: Bool?) -> Color {
+        guard let positive else { return .primary }
+        return positive ? .green : .red
+    }
+
     private func score(_ value: Double?) -> String {
-        guard let value else { return region.scoreLabel(nil) }
-        return "\(String(format: "%.1f", value)) · \(region.scoreLabel(value))"
+        region.scoreLabel(value)
     }
 
     private func temp(_ value: Double) -> String {

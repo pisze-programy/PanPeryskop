@@ -55,6 +55,20 @@ extension Region {
         default: return "Świetnie"
         }
     }
+
+    func isPositiveScore(_ value: Double?) -> Bool {
+        guard let value else { return false }
+        return value >= 3
+    }
+
+    func airQualityLabel(_ aqi: Int) -> String {
+        switch aqi {
+        case ..<51: return "Dobra"
+        case ..<101: return "Umiarkowana"
+        case ..<151: return "Niezdrowa"
+        default: return "Zła"
+        }
+    }
 }
 
 private struct RegionKey: EnvironmentKey {

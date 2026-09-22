@@ -11,6 +11,17 @@ private enum StickyBarMetrics {
     static let imageFadeStart: CGFloat = 0.5
 }
 
+private struct StickyBarLeadingInsetKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    var stickyBarLeadingInset: CGFloat {
+        get { self[StickyBarLeadingInsetKey.self] }
+        set { self[StickyBarLeadingInsetKey.self] = newValue }
+    }
+}
+
 /// Sticky bar chrome for a sheet's top inset: the bar material, two corner glows,
 /// an optional leading image, a divider and the top padding that clears the drag
 /// indicator. Content is the bar's own row. Shared by the event gamestrip and the
@@ -18,20 +29,21 @@ private enum StickyBarMetrics {
 struct StickyBar<Content: View>: View {
     let leadingColor: Color
     let trailingColor: Color
-    /// Fills the leading edge, behind the colour wash. The content is inset past it.
+    /// Fills the leading edge, behind the colour wash. The row insets itself past
+    /// it through the environment, so a full-width child stays centred.
     var leadingImage: URL? = nil
     var topPadding: CGFloat = 18
     var bottomPadding: CGFloat = 10
     @ViewBuilder var content: () -> Content
 
     private var leadingInset: CGFloat {
-        leadingImage == nil ? Theme.Spacing.l : StickyBarMetrics.imageWidth + Theme.Spacing.s
+        leadingImage == nil ? 0 : StickyBarMetrics.imageWidth + Theme.Spacing.s
     }
 
     var body: some View {
         VStack(spacing: 0) {
             content()
-                .padding(.leading, leadingInset)
+                .environment(\.stickyBarLeadingInset, leadingInset)
                 .padding(.trailing, Theme.Spacing.l)
                 .padding(.top, topPadding)
                 .padding(.bottom, bottomPadding)

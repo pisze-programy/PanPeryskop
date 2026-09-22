@@ -41,10 +41,12 @@ struct TripsGamestrip: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity)
+                        .padding(.leading, leadingInset)
                         .padding(.horizontal, Theme.Spacing.l)
                 }
                 row
                     .frame(height: Self.rowHeight)
+                    .padding(.leading, leadingInset)
                     .padding(.horizontal, Theme.Spacing.l)
                     .padding(.top, league == nil ? 0 : Self.badgeSpacing)
                     .frame(maxWidth: .infinity)
@@ -53,6 +55,8 @@ struct TripsGamestrip: View {
             .contentShape(Rectangle())
         }
     }
+
+    @Environment(\.stickyBarLeadingInset) private var leadingInset
 
     @ViewBuilder
     private var dots: some View {

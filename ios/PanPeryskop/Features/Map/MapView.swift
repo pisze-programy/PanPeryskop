@@ -211,10 +211,15 @@ struct MapScreen: View {
 
     private func handleGroupTap(_ group: MapGroup) {
         Haptics.impact(.medium)
+        guard category == .trips else {
+            openStoryViewer(group.posts)
+            return
+        }
         tripsViewModel.selectGroup(posts: group.posts, cities: group.cities)
     }
 
     private func handleCityTap(_ city: CityPin) {
+        guard category == .trips else { return }
         Haptics.impact(.medium)
         tripsViewModel.selectGroup(posts: [], cities: [city.city])
     }
@@ -227,8 +232,13 @@ struct MapScreen: View {
             cameraController.flyToAboveSheet(post.coordinate)
             return
         }
+        openStoryViewer([post])
+    }
+
+    private func openStoryViewer(_ posts: [Post]) {
+        guard !posts.isEmpty else { return }
         Haptics.impact(.medium)
-        storyPosts = [post]
+        storyPosts = posts
         selectedStoryIndex = 0
         showStoryViewer = true
     }

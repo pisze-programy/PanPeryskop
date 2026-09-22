@@ -55,6 +55,8 @@ targets:
             CFBundleURLSchemes:
               - panperyskop
         ITSAppUsesNonExemptEncryption: false
+        LSApplicationQueriesSchemes:
+          - comgooglemaps
         # Provider links often use cleartext http; the in-app browser must load them.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true

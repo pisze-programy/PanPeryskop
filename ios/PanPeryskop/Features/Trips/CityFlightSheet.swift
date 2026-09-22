@@ -28,7 +28,10 @@ struct CityFlightSheet: View {
         self.city = city
         self._outbound = outbound
         self._returning = returning
-        let start = FlightPickerRules.openingMonth(now: Date(), maxNights: AppConstants.cityBreakMaxNights)
+        let start = FlightPickerRules.openingMonth(
+            now: viewModel.anchorDate,
+            maxNights: AppConstants.cityBreakMaxNights
+        )
         self._outboundMonth = State(initialValue: start)
         self._returningMonth = State(initialValue: start)
     }
@@ -94,17 +97,11 @@ struct CityFlightSheet: View {
         "Loty \(from) → \(to)"
     }
 
-    private var anchorDate: Date { viewModel.anchorDate }
-
     private var maxMonth: Date { Self.maxMonthDate }
+
     private static var maxMonthDate: Date {
         let calendar = AppConstants.warsawCalendar
-        return calendar.date(byAdding: .month, value: windowMonths, to: startOfMonth(Date())) ?? Date()
-    }
-
-    private static func startOfMonth(_ date: Date) -> Date {
-        let calendar = AppConstants.warsawCalendar
-        return calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+        return calendar.date(byAdding: .month, value: windowMonths, to: FlightPickerRules.monthStart(Date())) ?? Date()
     }
 
     private var outboundLoadKey: String {
@@ -149,38 +146,6 @@ struct CityFlightSheet: View {
         returningWindow = loaded
     }
 
-
-    private func isInMonth(_ isoDay: String?, month: Date) -> Bool {
-        guard let isoDay else { return false }
-        return isoDay.hasPrefix(String(FlightPricesService.monthKey(month).prefix(7)))
-    }
-
-    private func returnMonth(for cell: FlightWindowCell?) -> Date {
-        let calendar = AppConstants.warsawCalendar
-        guard let cell, let date = AppConstants.isoDayFormatter.date(from: cell.date) else {
-            return startOfMonth(anchorDate)
-        }
-        let daysInMonth = calendar.range(of: .day, in: .month, for: date)?.count ?? 30
-        let day = calendar.component(.day, from: date)
-        let crosses = day > daysInMonth - AppConstants.cityBreakMaxNights
-        return calendar.date(byAdding: .month, value: crosses ? 1 : 0, to: startOfMonth(date)) ?? date
-    }
-
-    private func startOfMonth(_ date: Date) -> Date {
-        let calendar = AppConstants.warsawCalendar
-        return calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
-    }
-
-
-
-
-    private func cheapest(_ cells: [FlightWindowCell]?) -> FlightWindowCell? {
-        cells?.filter { $0.price != nil }.min { ($0.price ?? 0) < ($1.price ?? 0) }
-    }
-
-    private func iso(_ date: Date) -> String {
-        AppConstants.isoDayFormatter.string(from: date)
-    }
 
     private var railSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {

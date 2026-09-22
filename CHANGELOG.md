@@ -4,6 +4,24 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 77, 2026-09-21
+
+### Fixed
+- Tapping an event in the city row flies the camera to it. The selection read
+  the city before the event, so the camera never moved and the arcs sat off
+  screen.
+- The sheet swaps its page instead of closing and reopening. Its identity was
+  derived from the content, so every tap built a new sheet and threw away the
+  pager, the detent and the scroll.
+- The nearby events arrive enriched, like every other event. The request dropped
+  the origins, so the events carried no reachable airports and the flight layer
+  had nothing to draw.
+- The tapped event gets a map pin, like any other selected event.
+- The card no longer prints 00:00. It shows the weekday and the day always, and
+  the hour only when the source has one; a run shows its distance instead. It
+  also carries the category: the runner or the stadium glyph on the event's own
+  gradient, and the distance from the city.
+
 ## [1.3.0] — build 76, 2026-09-21
 
 ### Fixed

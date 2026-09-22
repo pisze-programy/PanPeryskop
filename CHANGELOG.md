@@ -4,6 +4,20 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 70, 2026-09-21
+
+### Changed
+- City pins stop jumping. Which city is a pin is now decided by the city and a
+  quantized zoom band, never by the exact camera: the grid is anchored to
+  absolute coordinates and the cell size and the pin cap are fixed per band, so
+  a pan and a zoom inside a band change nothing.
+- Every reachable city is drawn. The promoted ones are photo pins, the rest are
+  small dots that stay on the map instead of vanishing at the viewport edge.
+- Population decides what is promoted, not the cost band: a large cheap city
+  outranks a small expensive resort. The cost band stays a colour.
+- A dot is one circle with no image and no shadow, so a hundred of them cost
+  less than the photo pins they replace.
+
 ## [1.3.0] — build 69, 2026-09-21
 
 ### Fixed

@@ -17,6 +17,7 @@
 		07CB964C3A45392653C0B44F /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7F68B1F72B4083E78FF6757 /* APIError.swift */; };
 		08B0C68FD7DF3872E59C4B48 /* CityBreakSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9294BC2606E70A427B3479 /* CityBreakSection.swift */; };
 		0918FE4E0FEC09D1BA828E15 /* CityFactTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2CC218C25CE581CC5E20D9E /* CityFactTile.swift */; };
+		098D9B44E5D886B75A451707 /* CityDotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D6D78D4F88A3A7B153E9916 /* CityDotView.swift */; };
 		0A6E5B2B3DB370A6ADFB2FF0 /* CityThumbStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF9BD12ADF7FF4864CC5D301 /* CityThumbStore.swift */; };
 		0A79842AD863C1903699D649 /* CityFactsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578D2FB4E54F91427DBDD247 /* CityFactsSection.swift */; };
 		0D51FDA1694C2ECA08DA3F5E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1F6D48B0D6B33CDCFC980CBD /* Assets.xcassets */; };
@@ -222,6 +223,7 @@
 		0AE2CB33037E6D96F692E131 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		0AF85F0B111F42C315E257A2 /* MediaCompressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCompressor.swift; sourceTree = "<group>"; };
 		0AFF2D3AC0370D62EABBDC9C /* MyPost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPost.swift; sourceTree = "<group>"; };
+		0D6D78D4F88A3A7B153E9916 /* CityDotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityDotView.swift; sourceTree = "<group>"; };
 		0DC053E7CD5C92EC950CB5B2 /* StaysSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaysSection.swift; sourceTree = "<group>"; };
 		11E809F59619A854A20553D0 /* CityAirportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityAirportTests.swift; sourceTree = "<group>"; };
 		1360B7C265CAD15F9C8300A1 /* PriceInfoSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceInfoSheet.swift; sourceTree = "<group>"; };
@@ -591,6 +593,7 @@
 			isa = PBXGroup;
 			children = (
 				88D958DB4EABF432525E84D7 /* ArcBuilder.swift */,
+				0D6D78D4F88A3A7B153E9916 /* CityDotView.swift */,
 				CD4E014F459275D98EE0FC41 /* CityListView.swift */,
 				67CA59032213170BE005320C /* CityPinView.swift */,
 				55DBE95A96A407C58FB5BF55 /* DayListSheet.swift */,
@@ -908,6 +911,7 @@
 				DE7C5DB8BC87FCA5491719C8 /* City.swift in Sources */,
 				08B0C68FD7DF3872E59C4B48 /* CityBreakSection.swift in Sources */,
 				9F903F153A7F48F5BE292EB7 /* CityBreakSheet.swift in Sources */,
+				098D9B44E5D886B75A451707 /* CityDotView.swift in Sources */,
 				0918FE4E0FEC09D1BA828E15 /* CityFactTile.swift in Sources */,
 				0A79842AD863C1903699D649 /* CityFactsSection.swift in Sources */,
 				FAE01515AE976CBE1B98A47D /* CityFactsSheet.swift in Sources */,
@@ -1212,7 +1216,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 69;
+				CURRENT_PROJECT_VERSION = 70;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1272,7 +1276,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 69;
+				CURRENT_PROJECT_VERSION = 70;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

@@ -210,7 +210,8 @@ export async function cityBreakForDay(db: DbReader, origins: string[], day: stri
   const { results } = await db
     .prepare(
       `SELECT id, name, name_pl, country, country_code, lat, lng, band_rank, cost_usd,
-       population, airports, image_url, image_large_url, video_url,
+       population, airports, image_url, image_large_url,
+       image_credit_name, image_credit_url, image_photo_url, video_url,
               nearby, next, similar, facts
        FROM travel_cities ORDER BY band_rank, cost_usd DESC`,
     )

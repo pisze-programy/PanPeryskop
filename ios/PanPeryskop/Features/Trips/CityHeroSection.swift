@@ -1,17 +1,17 @@
 import SwiftUI
 
 /// The first scrollable section: the photo, the Polish name and the country.
+/// The bundled thumbnail fills the frame at once, then the large photo fades in
+/// on top. Both fill the same rectangle, so the sheet never jumps.
 struct CityHeroSection: View {
     let city: TravelCity
-
-    @State private var loaded = false
 
     private static let height: CGFloat = 220
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            placeholder
-            hero
+            thumbnail
+            RemoteImage(url: city.heroURL)
             scrim
             labels
         }
@@ -22,33 +22,17 @@ struct CityHeroSection: View {
         .padding(.top, Theme.Spacing.s)
     }
 
-    /// The bundled thumbnail fills the frame from the first moment, so the sheet
-    /// never jumps when the large photo arrives. It is the same picture, only
-    /// soft, and it is free.
-    private var placeholder: some View {
-        Group {
-            if let image = CityThumbStore.image(for: city.id) {
-                Image(uiImage: image).resizable().aspectRatio(contentMode: .fill)
-            } else {
-                CityPalette.gradient(countryCode: city.countryCode, bandRank: city.bandRank).first
+    private var thumbnail: some View {
+        Rectangle()
+            .fill(CityPalette.gradient(countryCode: city.countryCode, bandRank: city.bandRank).first ?? .gray)
+            .overlay {
+                if let image = CityThumbStore.image(for: city.id) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
-    }
-
-    private var hero: some View {
-        AsyncImage(url: city.heroURL) { phase in
-            if case .success(let image) = phase {
-                image.resizable().aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
-                    .opacity(loaded ? 1 : 0)
-                    .onAppear { withAnimation(.easeInOut(duration: 0.3)) { loaded = true } }
-            } else {
-                Color.clear
-            }
-        }
+            .clipped()
     }
 
     private var scrim: some View {

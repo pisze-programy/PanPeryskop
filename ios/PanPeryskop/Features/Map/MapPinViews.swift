@@ -65,23 +65,16 @@ struct SinglePostPin: View {
                     }
 
                 if let url = post.resolvedThumbURL, !post.isRestaurant {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        case .empty:
-                            ZStack {
-                                Color.white.opacity(0.2)
-                                ProgressView().tint(.white)
-                            }
-                        case .failure:
-                            fallbackIcon
-                        @unknown default:
-                            fallbackIcon
+                    // The icon sits under the photo, so a failed load still shows
+                    // a pin instead of a hole. The store caches the decoded
+                    // image, so a recycled pin does not re-request it.
+                    fallbackIcon
+                        .frame(width: 44, height: 44)
+                        .clipShape(Circle())
+                        .overlay {
+                            RemoteImage(url: url, fadesIn: false)
+                                .clipShape(Circle())
                         }
-                    }
-                    .frame(width: 44, height: 44)
-                    .clipShape(Circle())
                 } else {
                     fallbackIcon
                         .frame(width: 44, height: 44)

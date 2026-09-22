@@ -30,7 +30,7 @@ struct CityFlightSheet: View {
         self._returning = returning
         let start = Self.startOfMonth(viewModel.anchorDate)
         self._outboundMonth = State(initialValue: start)
-        self._returningMonth = State(initialValue: Self.returnMonth(after: start))
+        self._returningMonth = State(initialValue: start)
     }
 
     var body: some View {
@@ -97,12 +97,6 @@ struct CityFlightSheet: View {
     private var anchorDate: Date { viewModel.anchorDate }
 
     private var maxMonth: Date { Self.maxMonthDate }
-    private static func returnMonth(after month: Date) -> Date {
-        let calendar = AppConstants.warsawCalendar
-        let next = calendar.date(byAdding: .month, value: 1, to: month) ?? month
-        return min(next, maxMonthDate)
-    }
-
     private static var maxMonthDate: Date {
         let calendar = AppConstants.warsawCalendar
         return calendar.date(byAdding: .month, value: windowMonths, to: startOfMonth(Date())) ?? Date()
@@ -136,11 +130,6 @@ struct CityFlightSheet: View {
             return
         }
         outboundWindow = loaded
-        if outbound == nil || !isInMonth(outbound?.date, month: outboundMonth) {
-            outbound = defaultOutbound(loaded)
-        }
-        let target = Self.returnMonth(after: Self.startOfMonth(outboundMonth))
-        if target != returningMonth { returningMonth = target }
     }
 
     private func loadReturning() async {
@@ -158,26 +147,8 @@ struct CityFlightSheet: View {
             return
         }
         returningWindow = loaded
-        if returning == nil || !isInMonth(returning?.date, month: returningMonth) {
-            returning = defaultReturning(loaded)
-        }
-    }
-    private func defaultOutbound(_ window: FlightWindowResponse) -> FlightWindowCell? {
-        let anchor = AppConstants.isoDayFormatter.string(from: anchorDate)
-        if let exact = window.outbound.first(where: { $0.date == anchor && $0.price != nil }) { return exact }
-        if let best = bestPair, isInMonth(iso(best.outbound.date), month: outboundMonth) {
-            return window.outbound.first { $0.date == iso(best.outbound.date) }
-        }
-        return cheapest(window.outbound)
     }
 
-    private func defaultReturning(_ window: FlightWindowResponse) -> FlightWindowCell? {
-        let after = outbound?.date ?? ""
-        if let best = bestPair, iso(best.returning.date) > after, isInMonth(iso(best.returning.date), month: returningMonth) {
-            return window.returning.first { $0.date == iso(best.returning.date) }
-        }
-        return cheapest(window.returning.filter { $0.date > after }) ?? cheapest(window.returning)
-    }
 
     private func isInMonth(_ isoDay: String?, month: Date) -> Bool {
         guard let isoDay else { return false }
@@ -200,25 +171,8 @@ struct CityFlightSheet: View {
         return calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
     }
 
-    private var bestPair: FlightPair? {
-        guard let out = outboundWindow?.outbound.compactMap(\.cell),
-              let ret = returningWindow?.returning.compactMap(\.cell) else { return nil }
-        return FlightScoring.findBestCityTrip(outbound: out, returning: ret, anchor: anchorDate)
-    }
 
-    private var bestOutboundDate: String? {
-        if let best = bestPair, isInMonth(iso(best.outbound.date), month: outboundMonth) {
-            return iso(best.outbound.date)
-        }
-        return cheapest(outboundWindow?.outbound)?.date
-    }
 
-    private var bestReturnDate: String? {
-        if let best = bestPair, isInMonth(iso(best.returning.date), month: returningMonth) {
-            return iso(best.returning.date)
-        }
-        return cheapest(returningWindow?.returning)?.date
-    }
 
     private func cheapest(_ cells: [FlightWindowCell]?) -> FlightWindowCell? {
         cells?.filter { $0.price != nil }.min { ($0.price ?? 0) < ($1.price ?? 0) }
@@ -241,8 +195,6 @@ struct CityFlightSheet: View {
                         selectedOptionId = option.id
                         outboundWindow = nil
                         returningWindow = nil
-                        outbound = nil
-                        returning = nil
                     }
                 )
                 .padding(.horizontal, Theme.Spacing.l)
@@ -264,7 +216,6 @@ struct CityFlightSheet: View {
                         clearInvalidReturn()
                     }
                 ),
-                bestDate: bestOutboundDate,
                 disabledThrough: nil,
                 failed: outboundFailed,
                 onRetry: { await loadOutbound() }
@@ -280,7 +231,6 @@ struct CityFlightSheet: View {
                 cells: returningWindow?.returning ?? [],
                 month: $returningMonth,
                 selected: $returning,
-                bestDate: bestReturnDate,
                 disabledThrough: outbound?.date,
                 failed: returningFailed,
                 onRetry: { await loadReturning() }
@@ -293,7 +243,6 @@ struct CityFlightSheet: View {
         cells: [FlightWindowCell],
         month: Binding<Date>,
         selected: Binding<FlightWindowCell?>,
-        bestDate: String?,
         disabledThrough: String?,
         failed: Bool,
         onRetry: @escaping () async -> Void
@@ -312,7 +261,6 @@ struct CityFlightSheet: View {
                     minMonth: Date(),
                     maxMonth: maxMonth,
                     selected: selected,
-                    bestDate: bestDate,
                     disabledThrough: disabledThrough,
                     onMonthChange: { month.wrappedValue = $0 }
                 )
@@ -343,7 +291,7 @@ struct CityFlightSheet: View {
         Int((outbound?.price ?? 0) + (returning?.price ?? 0))
     }
 
-    private var hasSelection: Bool { outbound != nil && returning != nil }
+    private var hasSelection: Bool { outbound != nil }
 
     private var hasAnyFare: Bool {
         (outboundWindow?.outbound.contains { $0.price != nil } ?? false)

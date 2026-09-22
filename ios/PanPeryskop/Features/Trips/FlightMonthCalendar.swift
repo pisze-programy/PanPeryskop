@@ -10,7 +10,6 @@ struct FlightMonthCalendar: View {
     let minMonth: Date
     let maxMonth: Date
     @Binding var selected: FlightWindowCell?
-    let bestDate: String?
     /// Days up to and including this ISO day cannot be picked (the return leg
     /// cannot leave before the outbound).
     let disabledThrough: String?
@@ -104,7 +103,6 @@ struct FlightMonthCalendar: View {
     private func dayCell(_ cell: FlightWindowCell) -> some View {
         let hasPrice = cell.price != nil
         let isSelected = selected?.date == cell.date
-        let isBest = bestDate == cell.date
         let isDisabled = disabledThrough.map { cell.date <= $0 } ?? false
         let isPickable = hasPrice && !isDisabled
         return Button {
@@ -122,8 +120,7 @@ struct FlightMonthCalendar: View {
             }
             .frame(maxWidth: .infinity, minHeight: Self.cellHeight)
             .background(background(isSelected: isSelected), in: shape)
-            .overlay(shape.stroke(borderColor(isSelected: isSelected, isBest: isBest), lineWidth: 1.5))
-            .overlay(alignment: .topTrailing) { bestStar(isBest) }
+            .overlay(shape.stroke(borderColor(isSelected: isSelected), lineWidth: 1.5))
             .opacity(isPickable ? 1 : 0.35)
         }
         .buttonStyle(.plain)
@@ -138,19 +135,8 @@ struct FlightMonthCalendar: View {
         isSelected ? Color.accentColor.opacity(0.18) : Theme.Palette.surface
     }
 
-    private func borderColor(isSelected: Bool, isBest: Bool) -> Color {
-        if isSelected { return .accentColor }
-        return isBest ? .orange : .clear
-    }
-
-    @ViewBuilder
-    private func bestStar(_ isBest: Bool) -> some View {
-        if isBest {
-            Image(systemName: "star.fill")
-                .font(.system(size: 7))
-                .foregroundColor(.orange)
-                .padding(3)
-        }
+    private func borderColor(isSelected: Bool) -> Color {
+        isSelected ? .accentColor : .clear
     }
 
     // MARK: - Month math

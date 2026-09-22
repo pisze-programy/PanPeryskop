@@ -112,7 +112,9 @@ struct CityBreakPage: View {
     private func sectionView(_ section: CityBreakSection) -> some View {
         switch section {
         case .hero:
-            CityHeroSection(city: city)
+            CityHeroSection(city: city) { url in
+                browserItem = BrowserItem(url: url, access: .open)
+            }
         case .flights:
             flightsSection
         case .facts:
@@ -121,6 +123,10 @@ struct CityBreakPage: View {
         case .weather:
             CityWeatherSection(city: city)
                 .padding(.top, Theme.Spacing.section)
+        case .cityEvents:
+            CityEventsSection(city: city) { event in
+                viewModel.selectNearbyEvent(event)
+            }
         case .nearby:
             CityNearbySection(cities: nearbyCities) { other in
                 viewModel.selectGroup(posts: [], cities: [other])
@@ -131,7 +137,8 @@ struct CityBreakPage: View {
                 event: event,
                 airportCoordinate: airportCoordinate,
                 checkin: outbound?.date,
-                checkout: returning?.date
+                checkout: returning?.date,
+                anchors: [.centre]
             )
             .padding(.top, Theme.Spacing.section)
         case .places:
@@ -148,7 +155,8 @@ struct CityBreakPage: View {
             }
             .padding(.top, Theme.Spacing.section)
         case .sources:
-            CitySourcesSection()
+            TripsSectionFooter(text: "Ceny są orientacyjne i mogą się zmienić u dostawcy", showsPriceInfo: true)
+                .padding(.horizontal, Theme.Spacing.l)
                 .padding(.top, Theme.Spacing.section)
         }
     }

@@ -114,7 +114,6 @@ struct EventGroup: Identifiable {
         if let first = events.first { return first.id }
         return cities.first.map { "cities:\($0.id)" } ?? "group"
     }
-    var isGroup: Bool { events.count + cities.count > 1 }
 }
 
 struct FlightWindowResponse: Codable {

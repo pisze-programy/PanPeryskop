@@ -1,8 +1,5 @@
 import SwiftUI
 import CoreLocation
-
-/// Browser policy for an external link. Runs may leave the fixed allow-list
-/// because race websites redirect to arbitrary hosts.
 enum BrowserAccess {
     case restricted
     case open

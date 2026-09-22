@@ -1,6 +1,7 @@
 import SwiftUI
 struct CityHeroSection: View {
     let city: TravelCity
+    let onOpenURL: (URL) -> Void
 
     @Environment(\.region) private var region
 
@@ -13,11 +14,30 @@ struct CityHeroSection: View {
             scrim
             labels
         }
+        .overlay(alignment: .bottomTrailing) { creditBadge }
         .frame(maxWidth: .infinity)
         .frame(height: Self.height)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
         .padding(.horizontal, Theme.Spacing.l)
         .padding(.top, Theme.Spacing.s)
+    }
+
+    @ViewBuilder
+    private var creditBadge: some View {
+        if let credit = city.imageCredit,
+           let url = URL(string: credit.photoUrl),
+           !credit.author.isEmpty {
+            Button {
+                onOpenURL(url)
+            } label: {
+                Text("Photo by \(credit.author) via Unsplash")
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.75))
+                    .padding(.horizontal, Theme.Spacing.s)
+                    .padding(.bottom, Theme.Spacing.s)
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     private var thumbnail: some View {

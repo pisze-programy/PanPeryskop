@@ -1,9 +1,5 @@
 import SwiftUI
 import CoreLocation
-
-/// City-break flights. A dedicated sheet: the airport minimap, then a month
-/// calendar per leg, then a sticky buy button. The two calendars keep their own
-/// month, so an October outbound with a November return works.
 struct CityFlightSheet: View {
     @ObservedObject var viewModel: TripsViewModel
     let city: TravelCity
@@ -32,7 +28,6 @@ struct CityFlightSheet: View {
         self.city = city
         self._outbound = outbound
         self._returning = returning
-        // The day picked on the map decides the month the calendar opens on.
         let start = Self.startOfMonth(viewModel.anchorDate)
         self._outboundMonth = State(initialValue: start)
         self._returningMonth = State(initialValue: Self.returnMonth(after: start))
@@ -63,13 +58,6 @@ struct CityFlightSheet: View {
         .task(id: outboundLoadKey) { await loadOutbound() }
         .task(id: returningLoadKey) { await loadReturning() }
     }
-
-    // MARK: - Options
-
-    /// Every airport of the city the origin flies to, times the carriers that
-    /// really serve it. The carriers come from the catalogue, not from the
-    /// selected day, so no option is ever empty and both carriers of one airport
-    /// stay comparable by price.
     private var options: [FlightOption] {
         let wanted = Set(city.airports)
         return viewModel.destinations
@@ -88,9 +76,6 @@ struct CityFlightSheet: View {
     private func origin(for destination: Destination) -> Airport {
         TripsViewModel.origin(for: destination, among: viewModel.originAirports)
     }
-
-    /// The carrier may fly from a sibling airport of the origin city: Wizzair
-    /// answers a Warsaw Chopin request from Modlin. The response says which.
     private var outboundStation: FlightStation? {
         outboundWindow?.outboundStation ?? returningWindow?.outboundStation
     }
@@ -112,9 +97,6 @@ struct CityFlightSheet: View {
     private var anchorDate: Date { viewModel.anchorDate }
 
     private var maxMonth: Date { Self.maxMonthDate }
-
-    /// The return opens on the month after the outbound, capped at the range end:
-    /// a December outbound keeps both calendars in December.
     private static func returnMonth(after month: Date) -> Date {
         let calendar = AppConstants.warsawCalendar
         let next = calendar.date(byAdding: .month, value: 1, to: month) ?? month
@@ -130,8 +112,6 @@ struct CityFlightSheet: View {
         let calendar = AppConstants.warsawCalendar
         return calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
     }
-
-    // MARK: - Loading
 
     private var outboundLoadKey: String {
         "\(selectedOption?.id ?? "")|out|\(FlightPricesService.monthKey(outboundMonth))"
@@ -159,7 +139,6 @@ struct CityFlightSheet: View {
         if outbound == nil || !isInMonth(outbound?.date, month: outboundMonth) {
             outbound = defaultOutbound(loaded)
         }
-        // Keep the return one month ahead of the outbound it defaulted to.
         let target = Self.returnMonth(after: Self.startOfMonth(outboundMonth))
         if target != returningMonth { returningMonth = target }
     }
@@ -183,9 +162,6 @@ struct CityFlightSheet: View {
             returning = defaultReturning(loaded)
         }
     }
-
-    /// The month on screen decides the selection: a new month always marks its
-    /// best day, so the calendar never opens on an arbitrary first fare.
     private func defaultOutbound(_ window: FlightWindowResponse) -> FlightWindowCell? {
         let anchor = AppConstants.isoDayFormatter.string(from: anchorDate)
         if let exact = window.outbound.first(where: { $0.date == anchor && $0.price != nil }) { return exact }
@@ -251,8 +227,6 @@ struct CityFlightSheet: View {
     private func iso(_ date: Date) -> String {
         AppConstants.isoDayFormatter.string(from: date)
     }
-
-    // MARK: - Views
 
     private var railSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {

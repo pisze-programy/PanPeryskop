@@ -5,7 +5,7 @@ struct StaysSheet: View {
     let event: TravelEvent
     let airportCoordinate: CLLocationCoordinate2D?
     @Binding var anchor: StaysAnchor
-    var venueIsAirport: Bool = false
+    var options: [StaysAnchor] = StaysAnchor.allCases
     let checkin: String
     let checkout: String
     let onClose: () -> Void
@@ -63,7 +63,7 @@ struct StaysSheet: View {
             await loader.load(query)
         }
         .sheet(isPresented: $showSort) {
-            StaysSortSheet(sort: $sort, anchor: $anchor, venueIsAirport: venueIsAirport, checkin: checkin, checkout: checkout)
+            StaysSortSheet(sort: $sort, anchor: $anchor, options: options, checkin: checkin, checkout: checkout)
         }
     }
 

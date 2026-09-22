@@ -16,6 +16,29 @@ extension APIClient {
         return try await get("/travel/events", params: params, timeout: AppConstants.travelRequestTimeout)
     }
 
+    static func getTravelEventsNear(
+        lat: Double,
+        lng: Double,
+        radiusKm: Double,
+        from: Int64,
+        to: Int64,
+        tags: String
+    ) async throws -> TravelEventsResponse {
+        let dLat = radiusKm / 111.0
+        let dLng = radiusKm / (111.0 * max(cos(lat * .pi / 180), 0.1))
+        let params = [
+            "from": String(from),
+            "to": String(to),
+            "limit": "1000",
+            "tags": tags,
+            "sw_lat": String(lat - dLat),
+            "sw_lng": String(lng - dLng),
+            "ne_lat": String(lat + dLat),
+            "ne_lng": String(lng + dLng),
+        ]
+        return try await get("/travel/events", params: params, timeout: AppConstants.travelRequestTimeout)
+    }
+
     /// City-break destinations for one day, with the connections that serve them
     /// from the origin airports. `reachable` is false when no route flies that day.
     static func getCities(origins: [String], day: String) async throws -> TravelCitiesResponse {

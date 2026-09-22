@@ -14,6 +14,7 @@ struct TravelCity: Codable, Identifiable, Equatable {
     let population: Int
     let imageUrl: String
     let imageLargeUrl: String
+    let imageCredit: CityImageCredit?
     let videoUrl: String?
     let nearby: [String]
     let next: [String]
@@ -52,6 +53,12 @@ extension TravelCity {
     func countryName(language: String) -> String {
         CountryNames.name(countryCode, language: language) ?? country
     }
+}
+
+struct CityImageCredit: Codable, Equatable {
+    let photoUrl: String
+    let author: String
+    let authorUrl: String
 }
 
 struct CityConnection: Codable, Equatable {

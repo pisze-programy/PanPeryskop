@@ -16,7 +16,6 @@ struct CityPinView: View, Equatable {
         }
         .frame(width: Self.ringDiameter, height: Self.ringDiameter)
         .scaleEffect(scale)
-        .transition(.scale.combined(with: .opacity))
     }
 
     private var photo: some View {

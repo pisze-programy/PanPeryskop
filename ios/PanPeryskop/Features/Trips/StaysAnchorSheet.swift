@@ -2,7 +2,7 @@ import SwiftUI
 
 struct StaysAnchorSheet: View {
     @Binding var anchor: StaysAnchor
-    var venueIsAirport: Bool = false
+    var options: [StaysAnchor] = StaysAnchor.allCases
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -10,7 +10,7 @@ struct StaysAnchorSheet: View {
             Text("Gdzie szukać noclegu")
                 .font(Theme.Typo.sectionTitle)
                 .padding(Theme.Spacing.l)
-            ForEach(StaysAnchor.options(venueIsAirport: venueIsAirport)) { option in
+            ForEach(options) { option in
                 SheetOptionRow(title: option.label, isSelected: option == anchor) {
                     anchor = option
                     dismiss()

@@ -6,6 +6,12 @@ struct CityNearbySection: View {
     @Environment(\.region) private var region
 
     var body: some View {
+        Group {
+            if !cities.isEmpty { section }
+        }
+    }
+
+    private var section: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             TripsSectionHeader(title: "W okolicy")
                 .padding(.horizontal, Theme.Spacing.l)

@@ -267,6 +267,15 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         return true
     }
 
+    func selectNearbyEvent(_ event: TravelEvent) {
+        if !events.contains(where: { $0.id == event.id }) { events.append(event) }
+        _ = selectTravelEvent(postId: event.id)
+        NotificationCenter.default.post(
+            name: .centerMapOnCoordinate,
+            object: MapCenterPayload(lat: event.lat, lng: event.lng)
+        )
+    }
+
     func selectGroup(posts: [Post], cities: [TravelCity]) {
         clearLoadingScene()
         let groupEvents = posts.compactMap { p in events.first { $0.id == p.id } }

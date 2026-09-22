@@ -38,11 +38,18 @@ export interface CityEntry {
   airports: string[];
   imageUrl: string;
   imageLargeUrl: string;
+  imageCredit: ImageCredit | null;
   videoUrl: string | null;
   nearby: string[];
   next: string[];
   similar: string[];
   facts: CityFacts;
+}
+
+export interface ImageCredit {
+  photoUrl: string;
+  author: string;
+  authorUrl: string;
 }
 
 export interface CityConnection {
@@ -63,13 +70,12 @@ export interface CityView {
   population: number;
   imageUrl: string;
   imageLargeUrl: string;
+  imageCredit: ImageCredit | null;
   videoUrl: string | null;
   nearby: string[];
   next: string[];
   similar: string[];
   facts: CityFacts;
-  /** The airports that serve the city. Independent of the day, so the flight
-   *  calendar opens for every city. */
   airports: string[];
   reachable: boolean;
   connections: CityConnection[];
@@ -91,6 +97,9 @@ interface CityRow {
   airports: string;
   image_url: string;
   image_large_url: string;
+  image_credit_name: string | null;
+  image_credit_url: string | null;
+  image_photo_url: string | null;
   video_url: string | null;
   nearby: string;
   next: string;
@@ -105,6 +114,15 @@ function parseList(raw: string): string[] {
   } catch {
     return [];
   }
+}
+
+function creditFrom(row: CityRow): ImageCredit | null {
+  if (!row.image_photo_url) return null;
+  return {
+    photoUrl: row.image_photo_url,
+    author: row.image_credit_name ?? '',
+    authorUrl: row.image_credit_url ?? '',
+  };
 }
 
 function parseFacts(raw: string): CityFacts {
@@ -122,7 +140,8 @@ export async function saveCities(db: D1Database, entries: CityEntry[]): Promise<
       .prepare(
         `INSERT INTO travel_cities
            (id, name, name_pl, country, country_code, lat, lng, band_rank, cost_usd,
-            population, airports, image_url, image_large_url, video_url,
+            population, airports, image_url, image_large_url,
+            image_credit_name, image_credit_url, image_photo_url, video_url,
             nearby, next, similar, facts, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
@@ -131,7 +150,11 @@ export async function saveCities(db: D1Database, entries: CityEntry[]): Promise<
            band_rank=excluded.band_rank, cost_usd=excluded.cost_usd,
            population=excluded.population,
            airports=excluded.airports, image_url=excluded.image_url,
-           image_large_url=excluded.image_large_url, video_url=excluded.video_url,
+           image_large_url=excluded.image_large_url,
+           image_credit_name=excluded.image_credit_name,
+           image_credit_url=excluded.image_credit_url,
+           image_photo_url=excluded.image_photo_url,
+           video_url=excluded.video_url,
            nearby=excluded.nearby, next=excluded.next, similar=excluded.similar,
            facts=excluded.facts, updated_at=excluded.updated_at`,
       )
@@ -139,7 +162,9 @@ export async function saveCities(db: D1Database, entries: CityEntry[]): Promise<
         entry.id, entry.name, entry.namePl, entry.country, entry.countryCode,
         entry.lat, entry.lng, entry.bandRank, entry.costUsd, entry.population,
         JSON.stringify(entry.airports),
-        entry.imageUrl, entry.imageLargeUrl, entry.videoUrl,
+        entry.imageUrl, entry.imageLargeUrl,
+        entry.imageCredit?.author ?? null, entry.imageCredit?.authorUrl ?? null,
+        entry.imageCredit?.photoUrl ?? null, entry.videoUrl,
         JSON.stringify(entry.nearby), JSON.stringify(entry.next), JSON.stringify(entry.similar),
         JSON.stringify(entry.facts), now,
       ),
@@ -207,6 +232,7 @@ export async function cityBreakForDay(db: DbReader, origins: string[], day: stri
       population: row.population,
       imageUrl: row.image_url,
       imageLargeUrl: row.image_large_url,
+      imageCredit: creditFrom(row),
       videoUrl: row.video_url,
       nearby: parseList(row.nearby),
       next: parseList(row.next),

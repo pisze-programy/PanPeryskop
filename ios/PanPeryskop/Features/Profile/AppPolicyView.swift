@@ -45,6 +45,10 @@ struct AppPolicyView: View {
                 Text("Zdjęcia miast pochodzą z Wikimedia Commons i są udostępniane na licencjach Creative Commons (CC BY / CC BY-SA). Źródło każdego zdjęcia jest zapisane przy mieście.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                Label("© Unsplash", systemImage: "photo.on.rectangle")
+                Text("Zdjęcia miast pochodzą także z Unsplash (unsplash.com) i są używane na licencji Unsplash. Autor zdjęcia jest podany przy zdjęciu.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
 
             Section("Źródła wydarzeń") {

@@ -19,9 +19,7 @@ struct MapKitMapView: View {
     @State private var arcs: [FlightArc] = []
     @State private var allClusters: [MapCluster] = []
 
-    private var radiusKey: Int {
-        Int((clusterRadiusDegrees * 100_000).rounded())
-    }
+    @State private var clusteredRadius: Double = 0
 
     private var arcsFingerprint: String {
         guard case .arc(let first) = overlays.first else { return "none" }
@@ -29,7 +27,6 @@ struct MapKitMapView: View {
     }
 
     private struct Derived {
-        var visible: [MapOverlay] = []
         var clusters: [MapCluster] = []
         var airports: [AirportPin] = []
     }
@@ -85,14 +82,9 @@ struct MapKitMapView: View {
     }
 
     private static let pitchDegrees: Double = 60
-    /// `.realistic` renders 3D terrain, which costs GPU on every frame of a
-    /// camera move at this pitch. False is the measured value.
     private static let usesRealisticTerrain = false
-    /// Screen fraction where a tapped pin is placed (see `MapCameraController.flyToAboveSheet`).
     private static let sheetAvoidFraction = CGPoint(x: 0.5, y: 0.40)
     private static let clusterPixels: Double = 48
-    /// Marker scale at continent zoom and at city zoom. Between the two spans the
-    /// scale is interpolated, so pins do not cover a whole country when zoomed out.
     private static let markerMinScale: CGFloat = 0.45
     private static let markerFullScaleSpan: Double = 2
     private static let markerMinScaleSpan: Double = 22
@@ -104,12 +96,16 @@ struct MapKitMapView: View {
         let t = (span - Self.markerFullScaleSpan) / (Self.markerMinScaleSpan - Self.markerFullScaleSpan)
         return 1 - CGFloat(t) * (1 - Self.markerMinScale)
     }
-
-    /// A dense screen shrinks markers further, so the map stays readable.
     private var clusterRadiusDegrees: Double {
         let screenHeight = UIScreen.main.bounds.height
         let degreesPerPixel = visibleRegion.span.latitudeDelta / Double(screenHeight)
         return max(degreesPerPixel * Self.clusterPixels, 0.00005)
+    }
+
+    private func reclusterIfRadiusChanged() {
+        let radius = clusterRadiusDegrees
+        guard clusteredRadius == 0 || abs(radius - clusteredRadius) / clusteredRadius > 0.2 else { return }
+        recluster()
     }
 
     private func flightArcs(_ visible: [MapOverlay]) -> [FlightArc] {
@@ -128,7 +124,9 @@ struct MapKitMapView: View {
             case .airport, .arc, .group: continue
             }
         }
-        allClusters = clusterItems(items, radiusDegrees: clusterRadiusDegrees)
+        let radius = clusterRadiusDegrees
+        clusteredRadius = radius
+        allClusters = clusterItems(items, radiusDegrees: radius)
         refreshVisible()
     }
 
@@ -142,23 +140,18 @@ struct MapKitMapView: View {
             lat >= lat0 && lat <= lat1 && lng >= lng0 && lng <= lng1
         }
 
-        var visible: [MapOverlay] = []
         var airports: [AirportPin] = []
         for overlay in overlays {
             switch overlay {
-            case .arc:
-                visible.append(overlay)
             case .airport(let a):
                 guard inBox(a.coord.latitude, a.coord.longitude) else { continue }
-                visible.append(overlay)
                 airports.append(a)
-            case .pin, .city, .group:
+            case .pin, .city, .arc, .group:
                 continue
             }
         }
 
         derived = Derived(
-            visible: visible,
             clusters: allClusters.filter { inBox($0.coord.latitude, $0.coord.longitude) },
             airports: airports
         )
@@ -245,9 +238,9 @@ struct MapKitMapView: View {
                 onRegionChange(swLat, swLng, neLat, neLng)
                 onCameraSettled(region)
             }
-            .onChange(of: regionKey) { _, _ in refreshVisible() }
-            .onChange(of: radiusKey) { _, _ in
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { recluster() }
+            .onChange(of: regionKey) { _, _ in
+                refreshVisible()
+                reclusterIfRadiusChanged()
             }
             .onChange(of: arcsFingerprint) { _, _ in arcs = flightArcs(overlays) }
             .onChange(of: overlaysFingerprint) { _, _ in recluster() }
@@ -281,10 +274,6 @@ struct MapKitMapView: View {
                         ))
                         return
                     }
-                    // Exact for a tilted camera: the projection is translation-
-                    // equivariant in ground space, so shifting the center by the
-                    // ground vector (pin − targetCoord) lands the pin on `target`
-                    // even at 60° pitch. A screen-space translation would not.
                     let center = visibleRegion.center
                     let newCenter = CLLocationCoordinate2D(
                         latitude: center.latitude + coordinate.latitude - targetCoord.latitude,

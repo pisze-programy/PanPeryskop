@@ -71,6 +71,12 @@ export interface CityFacts {
   overall: number | null;
 }
 
+export interface ImageCredit {
+  photoUrl: string;
+  author: string;
+  authorUrl: string;
+}
+
 export interface CityEntry {
   id: string;
   name: string;
@@ -85,6 +91,7 @@ export interface CityEntry {
   airports: string[];
   imageUrl: string;
   imageLargeUrl: string;
+  imageCredit: ImageCredit | null;
   videoUrl: string | null;
   nearby: string[];
   next: string[];
@@ -209,13 +216,29 @@ function tabs(html: string): { near: string[]; next: string[]; similar: string[]
   return { near: read('near'), next: read('next'), similar: read('similar') };
 }
 
-async function neighbourLinks(shortSlug: string): Promise<{ near: string[]; next: string[]; similar: string[] }> {
+/** The Unsplash credit block the city page carries for its hero photo. */
+function credit(html: string): ImageCredit | null {
+  const start = html.indexOf('mediaCredits');
+  if (start < 0) return null;
+  const block = html.slice(start, start + 1200);
+  const hrefs = [...block.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+  const photoUrl = hrefs.find((href) => href.includes('unsplash.com/photos/'));
+  if (!photoUrl) return null;
+  const authorUrl = hrefs.find((href) => href.includes('unsplash.com/@'));
+  const nameMatch = block.match(/unsplash\.com\/@[^"]*"[^>]*>([^<]+)</);
+  return {
+    photoUrl,
+    author: nameMatch?.[1]?.trim() ?? '',
+    authorUrl: authorUrl ?? '',
+  };
+}
+
+async function cityPage(shortSlug: string): Promise<{ html: string }> {
   try {
-    const html = await cachedHtml(`near-${shortSlug}.html`, `https://nomads.com/near/${shortSlug}`);
-    return tabs(html);
+    return { html: await cachedHtml(`near-${shortSlug}.html`, `https://nomads.com/near/${shortSlug}`) };
   } catch (error) {
-    console.log(`no neighbours for ${shortSlug}: ${(error as Error).message}`);
-    return { near: [], next: [], similar: [] };
+    console.log(`no page for ${shortSlug}: ${(error as Error).message}`);
+    return { html: '' };
   }
 }
 
@@ -338,7 +361,8 @@ async function main(): Promise<void> {
     const namePl = names.get(city.name.toLowerCase()) ?? names.get(fold(city.name))
       ?? NAME_OVERRIDES[city.name];
     if (!namePl) console.log(`no Polish name: ${city.name}`);
-    const links = await neighbourLinks(city.short_slug);
+    const page = await cityPage(city.short_slug);
+    const links = tabs(page.html);
     entries.push({
       id: city.long_slug,
       name: city.name,
@@ -353,6 +377,7 @@ async function main(): Promise<void> {
       airports: cityAirports(city.name, city.latitude, city.longitude),
       imageUrl: city.image,
       imageLargeUrl: city.image_large,
+      imageCredit: credit(page.html),
       videoUrl: null,
       nearby: links.near,
       next: links.next,

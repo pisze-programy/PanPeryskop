@@ -6,18 +6,27 @@ struct StaysSection: View {
     let airportCoordinate: CLLocationCoordinate2D?
     let checkin: String?
     let checkout: String?
+    var anchors: [StaysAnchor]
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var anchor: StaysAnchor
 
-    private var venueIsAirport: Bool { event.venueIsAirport == true }
+    private var showsAnchorFilter: Bool { anchors.count > 1 }
 
-    init(event: TravelEvent, airportCoordinate: CLLocationCoordinate2D?, checkin: String?, checkout: String?) {
+    init(
+        event: TravelEvent,
+        airportCoordinate: CLLocationCoordinate2D?,
+        checkin: String?,
+        checkout: String?,
+        anchors: [StaysAnchor]? = nil
+    ) {
         self.event = event
         self.airportCoordinate = airportCoordinate
         self.checkin = checkin
         self.checkout = checkout
-        _anchor = State(initialValue: event.venueIsAirport == true ? .centre : .event)
+        let resolved = anchors ?? StaysAnchor.options(venueIsAirport: event.venueIsAirport == true)
+        self.anchors = resolved
+        _anchor = State(initialValue: resolved.first ?? .centre)
     }
     @State private var showsFullSheet = false
     @State private var showsAnchorSheet = false
@@ -26,10 +35,7 @@ struct StaysSection: View {
     @State private var isVisible = false
     @State private var hasAppeared = false
     @StateObject private var loader = StaysWidgetLoader()
-
-    // The widget swaps in its minimized bar ("Odkrywaj na mapie") at 349 pt or less.
     private static let mapHeight: CGFloat = 360
-    // WebKit warms up the first web view in the process; wait out the scroll first.
     private static let settleDelayMilliseconds = 500
 
     private var theme: String { colorScheme == .dark ? "dark" : "light" }
@@ -84,22 +90,22 @@ struct StaysSection: View {
                 event: event,
                 airportCoordinate: airportCoordinate,
                 anchor: $anchor,
-                venueIsAirport: venueIsAirport,
+                options: anchors,
                 checkin: stayDates.checkin,
                 checkout: stayDates.checkout,
                 onClose: { showsFullSheet = false }
             )
         }
         .sheet(isPresented: $showsAnchorSheet) {
-            StaysAnchorSheet(anchor: $anchor, venueIsAirport: venueIsAirport)
+            StaysAnchorSheet(anchor: $anchor, options: anchors)
         }
     }
 
     private var header: some View {
         TripsSectionHeader(
             title: "Noclegi",
-            filterLabel: anchor.label,
-            onFilter: { showsAnchorSheet = true }
+            filterLabel: showsAnchorFilter ? anchor.label : nil,
+            onFilter: showsAnchorFilter ? { showsAnchorSheet = true } : nil
         )
         .padding(.horizontal, Theme.Spacing.l)
     }

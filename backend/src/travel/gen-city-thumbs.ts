@@ -17,7 +17,7 @@ interface CityEntry {
 }
 
 function thumbUrl(imageUrl: string): string {
-  return imageUrl.replace(/width=\d+,height=\d+,quality=\d+/, 'width=200,height=200,quality=70');
+  return imageUrl.replace(/width=\d+,height=\d+,quality=\d+/, 'width=400,height=200,quality=70');
 }
 
 async function download(id: string, url: string): Promise<string> {
@@ -33,7 +33,7 @@ async function download(id: string, url: string): Promise<string> {
 }
 
 function encode(source: string, target: string): void {
-  execFileSync('cwebp', ['-quiet', '-q', '82', '-resize', '200', '200', source, '-o', target]);
+  execFileSync('cwebp', ['-quiet', '-q', '82', '-resize', '400', '200', source, '-o', target]);
 }
 
 async function main(): Promise<void> {

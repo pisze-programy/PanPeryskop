@@ -223,12 +223,12 @@ struct MapScreen: View {
         let post = pin.post
         if category == .trips {
             Haptics.impact(.medium)
-            guard tripsViewModel.selectTravelEvent(postId: post.id, group: pin.group) else { return }
+            guard tripsViewModel.selectTravelEvent(postId: post.id) else { return }
             cameraController.flyToAboveSheet(post.coordinate)
             return
         }
         Haptics.impact(.medium)
-        storyPosts = pin.group.isEmpty ? [post] : pin.group
+        storyPosts = [post]
         selectedStoryIndex = 0
         showStoryViewer = true
     }

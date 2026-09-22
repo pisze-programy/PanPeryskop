@@ -11,9 +11,4 @@ enum CityThumbStore {
         return image
     }
 
-    static func preload(_ ids: [String]) {
-        for id in ids where cache.object(forKey: id as NSString) == nil {
-            _ = image(for: id)
-        }
-    }
 }

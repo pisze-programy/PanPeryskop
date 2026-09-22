@@ -156,9 +156,13 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         return TagSorting.sorted(pills, counts: tagCounts).compactMap { TravelTag(rawValue: $0.id) }
     }
 
-    /// Every city stays on the map. A city with no flight on the selected day is
-    /// muted, not dropped: a silent drop looks like a missing city.
-    private var visibleCities: [TravelCity] { cities }
+    /// Every city the origin can actually fly to, whatever the day: one of its
+    /// airports is served from here. A city with none is not a city break from
+    /// this origin, so the map and the count leave it out.
+    private var visibleCities: [TravelCity] {
+        let served = Set(mergedDestinations.map(\.iata))
+        return cities.filter { city in city.airports.contains { served.contains($0) } }
+    }
 
     /// The airports of the selected city. Warszawa has two; the rest have one.
     /// Cached per city — read on every map render.
@@ -625,7 +629,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
                 let resp = try await APIClient.getCities(origins: origins, day: day)
                 guard !Task.isCancelled, let self else { return }
                 self.cities = resp.cities
-                self.cityBreakCount = resp.cities.filter(\.reachable).count
+                self.cityBreakCount = self.visibleCities.count
                 self.refreshTagCounts()
             } catch {
                 guard !(error is CancellationError) else { return }

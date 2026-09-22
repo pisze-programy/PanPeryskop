@@ -4,6 +4,19 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 69, 2026-09-21
+
+### Fixed
+- The loading arcs animate again. They are read straight from the overlay list
+  instead of from the memoized layer set: the loading scene changes only their
+  progress, so the memo never saw a change and the arcs froze, then jumped when
+  the scene switched.
+
+### Changed
+- The map no longer draws 3D terrain. The realistic elevation is GPU work on
+  every frame of a camera move at a 60° pitch, so the flat style is the
+  measured value.
+
 ## [1.3.0] — build 68, 2026-09-21
 
 ### Changed

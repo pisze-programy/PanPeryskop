@@ -22,8 +22,13 @@ struct MapKitMapView: View {
     @State private var clusteredRadius: Double = 0
 
     private var arcsFingerprint: String {
-        guard case .arc(let first) = overlays.first else { return "none" }
-        return "\(first.id)|\(first.progress)"
+        var parts: [String] = []
+        for overlay in overlays {
+            guard case .arc(let arc) = overlay else { continue }
+            parts.append("\(arc.id):\(arc.progress)")
+            if parts.count >= 40 { break }
+        }
+        return parts.joined(separator: "|")
     }
 
     private struct Derived {

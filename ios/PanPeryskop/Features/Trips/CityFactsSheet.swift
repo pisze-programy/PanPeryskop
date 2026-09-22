@@ -38,8 +38,8 @@ struct CityFactsSheet: View {
             Row(label: "Internet", value: "\(facts.internetMbps) Mb/s"),
             Row(label: "Temperatura", value: temp(facts.tempNowC)),
             Row(label: "Wilgotność", value: "\(facts.humidityNow)%"),
-            Row(label: "Powietrze", value: "\(region.airQualityLabel(facts.airQualityNow)), \(facts.airQualityNow) AQI"),
-            Row(label: "Powietrze rocznie", value: "\(region.airQualityLabel(facts.airQualityYear)), \(facts.airQualityYear) AQI"),
+            Row(label: "Jakość powietrza", value: region.airQualityLabel(facts.airQualityNow)),
+            Row(label: "Jakość powietrza / rok", value: region.airQualityLabel(facts.airQualityYear)),
             Row(label: "Bezpieczeństwo", value: score(facts.safety), positive: region.isPositiveScore(facts.safety)),
             Row(label: "Czystość", value: score(facts.cleanliness), positive: region.isPositiveScore(facts.cleanliness)),
             Row(label: "Rozrywka", value: score(facts.fun), positive: region.isPositiveScore(facts.fun)),
@@ -68,8 +68,7 @@ struct CityFactsSheet: View {
     }
 
     private func color(for positive: Bool?) -> Color {
-        guard let positive else { return .primary }
-        return positive ? .green : .red
+        positive == true ? .green : .primary
     }
 
     private func score(_ value: Double?) -> String {

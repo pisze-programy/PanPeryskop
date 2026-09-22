@@ -3,21 +3,27 @@ import Foundation
 /// Distances offered by a run event. The provider sends "21.10km"; we show
 /// "21.1 km". Sorted by value, smallest first.
 enum RunDistances {
-    static func tags(_ meta: TravelEventMeta?) -> [String] {
+    static func tags(_ meta: TravelEventMeta?, language: String) -> [String] {
         let items = list(meta)
         if !items.isEmpty { return items.map(\.label) }
-        if let single = meta?.distance, !single.isEmpty { return [single] }
+        if let single = meta?.distance, !single.isEmpty { return [label(raw: single, language: language)] }
         return []
     }
 
-    static func range(_ meta: TravelEventMeta?) -> String? {
+    static func range(_ meta: TravelEventMeta?, language: String) -> String? {
         let items = list(meta)
         guard let first = items.first, let last = items.last else {
-            if let single = meta?.distance, !single.isEmpty { return single }
-            return nil
+            guard let single = meta?.distance, !single.isEmpty else { return nil }
+            return label(raw: single, language: language)
         }
         guard first.kilometers != last.kilometers else { return first.label }
         return "\(first.label) – \(last.label)"
+    }
+
+    static func label(raw: String, language: String) -> String {
+        if let word = Vocabulary.word(raw, language: language) { return word }
+        if let item = Item(raw: raw) { return item.label }
+        return raw
     }
 
     private static func list(_ meta: TravelEventMeta?) -> [Item] {

@@ -23,7 +23,7 @@ struct CityFactsSection: View {
             columns: [GridItem(.flexible(), spacing: Theme.Spacing.s), GridItem(.flexible(), spacing: Theme.Spacing.s)],
             spacing: Theme.Spacing.s
         ) {
-            CityFactTile(icon: "dollarsign.circle", value: dailyCost, suffix: "/ dzień", label: "Koszty")
+            CityFactTile(icon: "dollarsign.circle", value: dailyCost, suffix: "/ dzień", label: "Koszt")
             CityFactTile(icon: "checkmark.shield", value: score(facts.safety), label: "Bezpieczeństwo")
             CityFactTile(icon: "figure.walk", value: score(facts.walkability), label: "Zwiedzanie pieszo")
             CityFactTile(icon: "moon.stars", value: score(facts.nightlife), label: "Nocne życie")

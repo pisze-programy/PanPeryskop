@@ -6,6 +6,7 @@ struct CityEventsSection: View {
     let origins: [String]
     let onSelect: (TravelEvent) -> Void
 
+    @Environment(\.region) private var region
     @State private var events: [TravelEvent] = []
 
     private static let radiusKm = 50.0
@@ -58,10 +59,19 @@ struct CityEventsSection: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
-                Text(whereLabel(event))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                HStack(spacing: Theme.Spacing.xs) {
+                    if let detail = detailLabel(event) {
+                        Text(detail)
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Theme.Palette.surfaceRaised, in: Capsule())
+                    }
+                    Text(whereLabel(event))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: 0)
         }
@@ -99,11 +109,14 @@ struct CityEventsSection: View {
         return "\(weekday) \(day), \(time)"
     }
 
+    private func detailLabel(_ event: TravelEvent) -> String? {
+        let detail = event.isRun ? RunDistances.range(event.metaData, language: region.languageCode) : event.metaData?.league
+        guard let detail, !detail.isEmpty else { return nil }
+        return detail
+    }
+
     private func whereLabel(_ event: TravelEvent) -> String {
-        let place = "\(event.city) · \(distanceKm(to: event)) km"
-        let detail = event.isRun ? RunDistances.range(event.metaData) : event.metaData?.league
-        guard let detail, !detail.isEmpty else { return place }
-        return "\(detail) · \(place)"
+        "\(event.city) · \(distanceKm(to: event)) km od centrum"
     }
 
     private func distanceKm(to event: TravelEvent) -> Int {
@@ -117,16 +130,23 @@ struct CityEventsSection: View {
         let from = Int64(now.timeIntervalSince1970 * 1000)
         let to = Int64(now.addingTimeInterval(Double(AppConstants.travelHorizonDays) * 86_400).timeIntervalSince1970 * 1000)
         let tags = "\(TripsViewModel.TravelTag.runs.rawValue),\(TripsViewModel.TravelTag.football.rawValue)"
-        let response = try? await APIClient.getTravelEventsNear(
-            lat: city.lat,
-            lng: city.lng,
-            radiusKm: Self.radiusKm,
-            from: from,
-            to: to,
-            tags: tags,
-            origins: origins
-        )
-        guard !Task.isCancelled else { return }
-        events = (response?.events ?? []).sorted { $0.start_ms < $1.start_ms }
+        do {
+            let response = try await APIClient.getTravelEventsNear(
+                lat: city.lat,
+                lng: city.lng,
+                radiusKm: Self.radiusKm,
+                from: from,
+                to: to,
+                tags: tags,
+                origins: origins
+            )
+            guard !Task.isCancelled else { return }
+            events = response.events
+                .filter { Double(distanceKm(to: $0)) <= Self.radiusKm }
+                .sorted { $0.start_ms < $1.start_ms }
+        } catch {
+            guard !(error is CancellationError) else { return }
+            print("Failed to load city events:", error)
+        }
     }
 }

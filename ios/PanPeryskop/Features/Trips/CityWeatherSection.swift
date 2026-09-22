@@ -17,11 +17,7 @@ struct CityWeatherSection: View {
                     divider
                     segment(value: "\(facts.humidityNow)%", label: "Wilgotność")
                     divider
-                    segment(
-                        value: region.airQualityLabel(facts.airQualityNow),
-                        suffix: "\(facts.airQualityNow) AQI",
-                        label: "Powietrze"
-                    )
+                    segment(value: region.airQualityLabel(facts.airQualityNow), label: "Jakość powietrza")
                 }
             }
             .padding(.horizontal, Theme.Spacing.l)
@@ -32,20 +28,12 @@ struct CityWeatherSection: View {
         Divider().frame(height: 40)
     }
 
-    private func segment(value: String, suffix: String? = nil, label: String) -> some View {
+    private func segment(value: String, label: String) -> some View {
         VStack(spacing: Theme.Spacing.xs) {
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text(value)
-                    .font(.headline.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                if let suffix {
-                    Text(suffix)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-            }
+            Text(value)
+                .font(.headline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(label)
                 .font(.caption)
                 .foregroundColor(.secondary)

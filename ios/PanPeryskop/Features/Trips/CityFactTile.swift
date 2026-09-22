@@ -8,9 +8,14 @@ struct CityFactTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Image(systemName: icon)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(.secondary)
+            HStack(spacing: Theme.Spacing.xs) {
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                Text(label)
+                    .font(.caption)
+                    .lineLimit(1)
+            }
+            .foregroundColor(.secondary)
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(value)
                     .font(.title3.weight(.bold))
@@ -23,11 +28,6 @@ struct CityFactTile: View {
                         .lineLimit(1)
                 }
             }
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Theme.Spacing.m)

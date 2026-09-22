@@ -46,7 +46,7 @@ extension Region {
         return "\(value.formatted(.number.grouping(.automatic))) \(currencySymbol)"
     }
     func scoreLabel(_ value: Double?) -> String {
-        guard let value else { return "brak danych" }
+        guard let value else { return "---" }
         switch value {
         case ..<2: return "Słabo"
         case ..<3: return "Przeciętnie"

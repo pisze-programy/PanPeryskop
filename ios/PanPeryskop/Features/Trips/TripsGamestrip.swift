@@ -57,6 +57,7 @@ struct TripsGamestrip: View {
     }
 
     @Environment(\.stickyBarLeadingInset) private var leadingInset
+    @Environment(\.region) private var region
 
     @ViewBuilder
     private var dots: some View {
@@ -139,7 +140,7 @@ struct TripsGamestrip: View {
 
     private var runDetail: some View {
         HStack(spacing: Self.detailSpacing) {
-            if let range = RunDistances.range(meta) {
+            if let range = RunDistances.range(meta, language: region.languageCode) {
                 Text(range)
                     .foregroundColor(runColor)
             }

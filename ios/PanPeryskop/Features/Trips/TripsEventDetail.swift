@@ -16,6 +16,7 @@ struct TripsEventDetail: View {
 
     @State private var distancesWidth: CGFloat = 0
     @State private var distancesContainer: CGFloat = 0
+    @Environment(\.region) private var region
 
     private var meta: TravelEventMeta? { event.metaData }
 
@@ -107,7 +108,7 @@ struct TripsEventDetail: View {
 
     private var distanceTags: [String] {
         guard event.isRun else { return [] }
-        return RunDistances.tags(meta)
+        return RunDistances.tags(meta, language: region.languageCode)
     }
 
     private var placeLabel: String {

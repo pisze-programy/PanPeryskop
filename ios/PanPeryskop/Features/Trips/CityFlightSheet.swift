@@ -214,6 +214,7 @@ struct CityFlightSheet: View {
                     set: { picked in
                         outbound = picked
                         clearInvalidReturn()
+                        moveReturningMonthIfNeeded()
                     }
                 ),
                 disabledThrough: nil,
@@ -318,12 +319,31 @@ struct CityFlightSheet: View {
 
     private var buyTitle: String {
         if hasSelection { return "Kup w \(selectedOption?.carrier.displayName ?? "")" }
+        if isLoadingFares { return "Ładowanie…" }
         return hasAnyFare ? "Wybierz terminy aby kupić bilet" : "Bilety wyprzedane"
     }
 
+    private var isLoadingFares: Bool {
+        outboundWindow == nil && returningWindow == nil && !outboundFailed && !returningFailed
+    }
+
     private func clearInvalidReturn() {
-        guard let out = outbound?.date, let back = returning?.date, back <= out else { return }
+        guard let out = outbound?.date else {
+            returning = nil
+            return
+        }
+        guard let back = returning?.date,
+              !FlightPickerRules.isReturnAllowed(back, after: out, maxNights: AppConstants.cityBreakMaxNights)
+        else { return }
         returning = nil
+    }
+
+    private func moveReturningMonthIfNeeded() {
+        guard let outbound = outbound,
+              let date = AppConstants.isoDayFormatter.date(from: outbound.date) else { return }
+        let month = FlightPickerRules.monthStart(date)
+        guard month > returningMonth else { return }
+        returningMonth = min(month, maxMonth)
     }
 
     private func openBooking() {

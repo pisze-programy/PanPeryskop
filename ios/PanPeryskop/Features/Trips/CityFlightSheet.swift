@@ -257,10 +257,17 @@ struct CityFlightSheet: View {
                 title: legTitle(outboundStation?.from ?? origin(for: option.destination).iata, outboundStation?.to ?? option.destination.iata),
                 cells: outboundWindow?.outbound ?? [],
                 month: $outboundMonth,
-                selected: $outbound,
+                selected: Binding(
+                    get: { outbound },
+                    set: { picked in
+                        outbound = picked
+                        clearInvalidReturn()
+                    }
+                ),
                 bestDate: bestOutboundDate,
                 disabledThrough: nil,
-                failed: outboundFailed
+                failed: outboundFailed,
+                onRetry: { await loadOutbound() }
             )
         }
     }
@@ -275,7 +282,8 @@ struct CityFlightSheet: View {
                 selected: $returning,
                 bestDate: bestReturnDate,
                 disabledThrough: outbound?.date,
-                failed: returningFailed
+                failed: returningFailed,
+                onRetry: { await loadReturning() }
             )
         }
     }
@@ -287,12 +295,13 @@ struct CityFlightSheet: View {
         selected: Binding<FlightWindowCell?>,
         bestDate: String?,
         disabledThrough: String?,
-        failed: Bool
+        failed: Bool,
+        onRetry: @escaping () async -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             if failed {
                 ErrorState(message: "Nie udało się pobrać lotów") {
-                    Task { await loadOutbound() }
+                    Task { await onRetry() }
                 }
                 .padding(.horizontal, Theme.Spacing.l)
             } else {
@@ -334,7 +343,7 @@ struct CityFlightSheet: View {
         Int((outbound?.price ?? 0) + (returning?.price ?? 0))
     }
 
-    private var hasSelection: Bool { outbound != nil || returning != nil }
+    private var hasSelection: Bool { outbound != nil && returning != nil }
 
     private var hasAnyFare: Bool {
         (outboundWindow?.outbound.contains { $0.price != nil } ?? false)
@@ -344,6 +353,11 @@ struct CityFlightSheet: View {
     private var buyTitle: String {
         if hasSelection { return "Kup w \(selectedOption?.carrier.displayName ?? "")" }
         return hasAnyFare ? "Wybierz terminy aby kupić bilet" : "Bilety wyprzedane"
+    }
+
+    private func clearInvalidReturn() {
+        guard let out = outbound?.date, let back = returning?.date, back <= out else { return }
+        returning = nil
     }
 
     private func openBooking() {

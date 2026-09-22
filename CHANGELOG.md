@@ -4,6 +4,14 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 75, 2026-09-21
+
+### Fixed
+- A tapped cluster on the Lokalne map opens the story preview again. The
+  everywhere-cluster work routed every cluster tap into the trips sheet, so the
+  Lokalne map lost its story viewer. A cluster now opens the stories in the
+  events category and the cluster sheet in the trips category.
+
 ## [1.3.0] — build 74, 2026-09-21
 
 ### Fixed

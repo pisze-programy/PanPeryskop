@@ -22,7 +22,8 @@ extension APIClient {
         radiusKm: Double,
         from: Int64,
         to: Int64,
-        tags: String
+        tags: String,
+        origins: [String] = []
     ) async throws -> TravelEventsResponse {
         let dLat = radiusKm / 111.0
         let dLng = radiusKm / (111.0 * max(cos(lat * .pi / 180), 0.1))
@@ -36,7 +37,9 @@ extension APIClient {
             "ne_lat": String(lat + dLat),
             "ne_lng": String(lng + dLng),
         ]
-        return try await get("/travel/events", params: params, timeout: AppConstants.travelRequestTimeout)
+        var all = params
+        if !origins.isEmpty { all["origins"] = origins.joined(separator: ",") }
+        return try await get("/travel/events", params: all, timeout: AppConstants.travelRequestTimeout)
     }
 
     /// City-break destinations for one day, with the connections that serve them

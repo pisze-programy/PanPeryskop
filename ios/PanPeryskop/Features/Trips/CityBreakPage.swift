@@ -124,7 +124,7 @@ struct CityBreakPage: View {
             CityWeatherSection(city: city)
                 .padding(.top, Theme.Spacing.section)
         case .cityEvents:
-            CityEventsSection(city: city) { event in
+            CityEventsSection(city: city, origins: viewModel.originIatas) { event in
                 viewModel.selectNearbyEvent(event)
             }
         case .nearby:

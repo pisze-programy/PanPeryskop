@@ -107,12 +107,13 @@ struct Destination: Codable, Identifiable, Hashable {
 }
 
 struct EventGroup: Identifiable {
-    let events: [TravelEvent]
+    var events: [TravelEvent]
     var cities: [TravelCity] = []
 
-    var id: String {
-        if let first = events.first { return first.id }
-        return cities.first.map { "cities:\($0.id)" } ?? "group"
+    var id: String { "cluster" }
+
+    var contentId: String {
+        events.first?.id ?? cities.first?.id ?? "empty"
     }
 }
 

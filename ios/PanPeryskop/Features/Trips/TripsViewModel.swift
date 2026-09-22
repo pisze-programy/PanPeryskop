@@ -260,6 +260,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         guard let event = events.first(where: { $0.id == postId }) else { return false }
         clearLoadingScene()
         selectedTravelEvent = event
+        selectedCityBreak = nil
         showFlightLayer = true
         let groupEvents = group
             .compactMap { p in events.first { $0.id == p.id } }
@@ -269,6 +270,9 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     func selectNearbyEvent(_ event: TravelEvent) {
         if !events.contains(where: { $0.id == event.id }) { events.append(event) }
+        if !cachedPosts.contains(where: { $0.id == event.id }), let post = event.asPost {
+            cachedPosts.append(post)
+        }
         _ = selectTravelEvent(postId: event.id)
     }
 
@@ -286,7 +290,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         clearLoadingScene()
         let groupEvents = posts.compactMap { p in events.first { $0.id == p.id } }
         selectedTravelEvent = groupEvents.first
-        selectedCityBreak = cities.first
+        selectedCityBreak = groupEvents.isEmpty ? cities.first : nil
         showFlightLayer = !groupEvents.isEmpty || !cities.isEmpty
         selectedEventGroup = EventGroup(events: groupEvents, cities: cities)
     }

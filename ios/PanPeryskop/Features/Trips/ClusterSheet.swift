@@ -81,7 +81,7 @@ struct ClusterSheet: View {
         .sheet(item: $mapPicker) { request in
             MapAppPickerSheet(coordinate: request.coordinate, title: request.title)
         }
-        .onChange(of: viewModel.selectedEventGroup?.id) { _, _ in
+        .onChange(of: viewModel.selectedEventGroup?.contentId) { _, _ in
             activeIndex = 0
             expanded = nil
             detent = .medium

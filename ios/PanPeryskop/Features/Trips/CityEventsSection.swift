@@ -5,10 +5,8 @@ struct CityEventsSection: View {
     let onSelect: (TravelEvent) -> Void
 
     @State private var events: [TravelEvent] = []
-    @State private var loaded = false
 
     private static let radiusKm = 50.0
-    private static let horizonDays = 120
     private static let cardWidth: CGFloat = 168
     private static let cardHeight: CGFloat = 92
 
@@ -20,16 +18,15 @@ struct CityEventsSection: View {
     }()
 
     var body: some View {
-        Group {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             if !events.isEmpty {
-                VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-                    TripsSectionHeader(title: "Wydarzenia w okolicy")
-                        .padding(.horizontal, Theme.Spacing.l)
-                    slider
-                }
-                .padding(.top, Theme.Spacing.section)
+                TripsSectionHeader(title: "Wydarzenia w okolicy")
+                    .padding(.horizontal, Theme.Spacing.l)
+                slider
             }
+            Color.clear.frame(height: 0)
         }
+        .padding(.top, Theme.Spacing.section)
         .task(id: city.id) { await load() }
     }
 
@@ -79,7 +76,7 @@ struct CityEventsSection: View {
     private func load() async {
         let now = Date()
         let from = Int64(now.timeIntervalSince1970 * 1000)
-        let to = Int64(now.addingTimeInterval(Double(Self.horizonDays) * 86_400).timeIntervalSince1970 * 1000)
+        let to = Int64(now.addingTimeInterval(Double(AppConstants.travelHorizonDays) * 86_400).timeIntervalSince1970 * 1000)
         let tags = "\(TripsViewModel.TravelTag.runs.rawValue),\(TripsViewModel.TravelTag.football.rawValue)"
         let response = try? await APIClient.getTravelEventsNear(
             lat: city.lat,
@@ -91,6 +88,5 @@ struct CityEventsSection: View {
         )
         guard !Task.isCancelled else { return }
         events = (response?.events ?? []).sorted { $0.start_ms < $1.start_ms }
-        loaded = true
     }
 }

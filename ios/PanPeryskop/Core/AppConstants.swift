@@ -19,6 +19,10 @@ enum AppConstants {
     /// The small frames-per-second readout on the map. Off for production.
     static let showsFPS = true
 
+    /// The forward window for flights, running and football. One number for all
+    /// three: the day slider, the flight months and the city events row.
+    static let travelHorizonDays = 90
+
     /// Showtime marker for an UNKNOWN start time — mirrors backend `UNKNOWN_TIME`
     /// ("00:00" = all-day events, never time-filtered).
     static let unknownTime = "00:00"

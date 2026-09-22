@@ -87,7 +87,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     /// Day-browser range, shared by the slider and the day sheet.
     static let minDayOffset = 0
-    static let maxDayOffset = 89
+    static let maxDayOffset = AppConstants.travelHorizonDays - 1
     static var dayOffsets: [Int] { Array(minDayOffset...maxDayOffset) }
 
     init() {
@@ -270,10 +270,16 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     func selectNearbyEvent(_ event: TravelEvent) {
         if !events.contains(where: { $0.id == event.id }) { events.append(event) }
         _ = selectTravelEvent(postId: event.id)
-        NotificationCenter.default.post(
-            name: .centerMapOnCoordinate,
-            object: MapCenterPayload(lat: event.lat, lng: event.lng)
-        )
+    }
+
+    var selectionId: String? { selectedCityBreak?.id ?? selectedTravelEvent?.id }
+
+    var selectionCoordinate: CLLocationCoordinate2D? {
+        if let city = selectedCityBreak {
+            return CLLocationCoordinate2D(latitude: city.lat, longitude: city.lng)
+        }
+        guard let event = selectedTravelEvent else { return nil }
+        return CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
     }
 
     func selectGroup(posts: [Post], cities: [TravelCity]) {

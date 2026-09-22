@@ -147,9 +147,9 @@ struct MapScreen: View {
         .sheet(item: $tripsViewModel.selectedEventGroup) { _ in
             ClusterSheet(viewModel: tripsViewModel)
         }
-        .onChange(of: tripsViewModel.selectedCityBreak?.id) { _, _ in
-            guard let city = tripsViewModel.selectedCityBreak else { return }
-            cameraController.flyToAboveSheet(CLLocationCoordinate2D(latitude: city.lat, longitude: city.lng))
+        .onChange(of: tripsViewModel.selectionId) { _, _ in
+            guard let coordinate = tripsViewModel.selectionCoordinate else { return }
+            cameraController.flyToAboveSheet(coordinate)
         }
         .onChange(of: tripsViewModel.selectedEventGroup?.id) { _, id in
             guard id == nil else { return }
@@ -228,8 +228,7 @@ struct MapScreen: View {
         let post = pin.post
         if category == .trips {
             Haptics.impact(.medium)
-            guard tripsViewModel.selectTravelEvent(postId: post.id) else { return }
-            cameraController.flyToAboveSheet(post.coordinate)
+            _ = tripsViewModel.selectTravelEvent(postId: post.id)
             return
         }
         openStoryViewer([post])

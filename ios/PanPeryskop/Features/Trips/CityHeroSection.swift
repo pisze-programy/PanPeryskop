@@ -2,6 +2,8 @@ import SwiftUI
 struct CityHeroSection: View {
     let city: TravelCity
 
+    @Environment(\.region) private var region
+
     private static let height: CGFloat = 220
 
     var body: some View {
@@ -54,6 +56,6 @@ struct CityHeroSection: View {
     }
 
     private var subtitle: String {
-        "\(city.country) · \(city.population.formatted(.number.notation(.compactName)))"
+        "\(city.countryName(language: region.languageCode)) · \(city.population.formatted(.number.notation(.compactName)))"
     }
 }

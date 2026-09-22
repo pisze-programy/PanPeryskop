@@ -8,8 +8,6 @@ struct CityBreakPage: View {
     var dotsIndex = 0
     var scrollTopToken = 0
     var onTapHeader: () -> Void = {}
-
-    @State private var current: TravelCity
     @State private var showsFlights = false
     @State private var expanded: PlaceKind?
     @State private var browserItem: BrowserItem?
@@ -30,22 +28,23 @@ struct CityBreakPage: View {
         self.dotsIndex = dotsIndex
         self.scrollTopToken = scrollTopToken
         self.onTapHeader = onTapHeader
-        _current = State(initialValue: city)
     }
 
     private static let topId = "city-break-top"
 
-    private var event: TravelEvent { current.asTravelEvent(day: viewModel.anchorDate) }
+    private var event: TravelEvent { city.asTravelEvent(day: viewModel.anchorDate) }
 
     private var airportCoordinate: CLLocationCoordinate2D? {
-        guard let connection = current.connections.first,
+        guard let connection = city.connections.first,
               let destination = viewModel.destinations.first(where: { $0.iata == connection.iata }) else { return nil }
         return CLLocationCoordinate2D(latitude: destination.lat, longitude: destination.lng)
     }
 
     private var nearbyCities: [TravelCity] {
-        let wanted = current.nearby
-        return wanted.compactMap { id in viewModel.cities.first(where: { $0.id == id }) }
+        let served = Set(viewModel.destinations.map(\.iata))
+        return city.nearby
+            .compactMap { id in viewModel.cities.first(where: { $0.id == id }) }
+            .filter { city in city.airports.contains { served.contains($0) } }
     }
 
     var body: some View {
@@ -53,17 +52,17 @@ struct CityBreakPage: View {
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 0) {
                     Color.clear.frame(height: 0).id(Self.topId)
-                    ForEach(CityBreakSection.sections(for: current)) { section in
+                    ForEach(CityBreakSection.sections(for: city)) { section in
                         sectionView(section)
                     }
                 }
                 .padding(.bottom, Theme.Spacing.xl)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .onChange(of: current.id) { _, _ in
+            .onChange(of: city.id) { _, _ in
                 NotificationCenter.default.post(
                     name: .centerMapOnCoordinate,
-                    object: MapCenterPayload(lat: current.lat, lng: current.lng)
+                    object: MapCenterPayload(lat: city.lat, lng: city.lng)
                 )
                 withAnimation(AppConstants.springStandard) {
                     proxy.scrollTo(Self.topId, anchor: .top)
@@ -75,7 +74,7 @@ struct CityBreakPage: View {
                 }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
-                TripsGamestrip(event: event, city: current, dotsCount: dotsCount, dotsIndex: dotsIndex, onTap: {
+                TripsGamestrip(event: event, city: city, dotsCount: dotsCount, dotsIndex: dotsIndex, onTap: {
                     onTapHeader()
                     withAnimation(AppConstants.springStandard) {
                         proxy.scrollTo(Self.topId, anchor: .top)
@@ -86,7 +85,7 @@ struct CityBreakPage: View {
         .sheet(isPresented: $showsFlights) {
             CityFlightSheet(
                 viewModel: viewModel,
-                city: current,
+                city: city,
                 outbound: $outbound,
                 returning: $returning
             )
@@ -113,18 +112,18 @@ struct CityBreakPage: View {
     private func sectionView(_ section: CityBreakSection) -> some View {
         switch section {
         case .hero:
-            CityHeroSection(city: current)
+            CityHeroSection(city: city)
         case .flights:
             flightsSection
         case .facts:
-            CityFactsSection(city: current)
+            CityFactsSection(city: city)
                 .padding(.top, Theme.Spacing.section)
         case .weather:
-            CityWeatherSection(city: current)
+            CityWeatherSection(city: city)
                 .padding(.top, Theme.Spacing.section)
         case .nearby:
             CityNearbySection(cities: nearbyCities) { other in
-                current = other
+                viewModel.selectGroup(posts: [], cities: [other])
             }
             .padding(.top, Theme.Spacing.section)
         case .stays:
@@ -155,7 +154,7 @@ struct CityBreakPage: View {
     }
 
     private var reachableAirports: [Destination] {
-        let wanted = Set(current.airports)
+        let wanted = Set(city.airports)
         return viewModel.destinations.filter { wanted.contains($0.iata) }
     }
 
@@ -175,7 +174,7 @@ struct CityBreakPage: View {
     private var busSection: some View {
         BusDirectionSection(
             fromCity: viewModel.selectedCity.name,
-            toCity: current.displayName,
+            toCity: city.displayName,
             days: busDays,
             eventDay: viewModel.anchorDate,
             eventIcon: "bus",

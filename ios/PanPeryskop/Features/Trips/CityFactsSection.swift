@@ -39,7 +39,7 @@ struct CityFactsSection: View {
             showsAll = true
         } label: {
             HStack(spacing: Theme.Spacing.s) {
-                Text("Wszystkie dane")
+                Text("Więcej informacji o mieście")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")

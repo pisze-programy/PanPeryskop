@@ -3,6 +3,8 @@ struct CityNearbySection: View {
     let cities: [TravelCity]
     let onSelect: (TravelCity) -> Void
 
+    @Environment(\.region) private var region
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             TripsSectionHeader(title: "W okolicy")
@@ -29,7 +31,7 @@ struct CityNearbySection: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.primary)
                     .lineLimit(1)
-                Text(city.country)
+                Text(city.countryName(language: region.languageCode))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)

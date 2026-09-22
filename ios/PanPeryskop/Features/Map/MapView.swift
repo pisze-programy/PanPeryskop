@@ -147,8 +147,9 @@ struct MapScreen: View {
         .sheet(item: $tripsViewModel.selectedEventGroup) { _ in
             ClusterSheet(viewModel: tripsViewModel)
         }
-        .sheet(item: $tripsViewModel.selectedCityBreak) { city in
-            CityBreakSheet(viewModel: tripsViewModel, city: city)
+        .onChange(of: tripsViewModel.selectedCityBreak?.id) { _, _ in
+            guard let city = tripsViewModel.selectedCityBreak else { return }
+            cameraController.flyToAboveSheet(CLLocationCoordinate2D(latitude: city.lat, longitude: city.lng))
         }
         .onChange(of: tripsViewModel.selectedEventGroup?.id) { _, id in
             guard id == nil else { return }
@@ -215,8 +216,7 @@ struct MapScreen: View {
 
     private func handleCityTap(_ city: CityPin) {
         Haptics.impact(.medium)
-        tripsViewModel.selectedCityBreak = city.city
-        cameraController.flyToAboveSheet(city.coordinate)
+        tripsViewModel.selectGroup(posts: [], cities: [city.city])
     }
 
     private func handlePinTap(_ pin: MapPin) {

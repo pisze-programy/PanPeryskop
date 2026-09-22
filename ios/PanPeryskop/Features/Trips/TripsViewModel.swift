@@ -121,11 +121,18 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     private static let legacyAirportPref = "trips.last_airport_iata"
 
+    private var flightDestinations: [Destination] {
+        if let event = selectedTravelEvent { return reachableDestinations(for: event) }
+        guard let city = selectedCityBreak else { return [] }
+        let wanted = Set(city.airports)
+        return destinations.filter { wanted.contains($0.iata) }
+    }
+
     var overlays: [MapOverlay] {
         var result: [MapOverlay] = isLoaderActive && !showFlightLayer ? loadingArcs : []
-        if showFlightLayer, let selected = selectedTravelEvent {
-            for dest in reachableDestinations(for: selected) {
-                result.append(contentsOf: arcs(for: dest, allowed: selected.reachableCarriers?[dest.iata]))
+        if showFlightLayer {
+            for dest in flightDestinations {
+                result.append(contentsOf: arcs(for: dest, allowed: selectedTravelEvent?.reachableCarriers?[dest.iata]))
                 result.append(.airport(AirportPin(iata: dest.iata, coord: CLLocationCoordinate2D(latitude: dest.lat, longitude: dest.lng), airlines: dest.providers)))
             }
         }
@@ -263,9 +270,9 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     func selectGroup(posts: [Post], cities: [TravelCity]) {
         clearLoadingScene()
         let groupEvents = posts.compactMap { p in events.first { $0.id == p.id } }
-        let lead = groupEvents.first
-        selectedTravelEvent = lead
-        showFlightLayer = lead != nil
+        selectedTravelEvent = groupEvents.first
+        selectedCityBreak = cities.first
+        showFlightLayer = !groupEvents.isEmpty || !cities.isEmpty
         selectedEventGroup = EventGroup(events: groupEvents, cities: cities)
     }
 

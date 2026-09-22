@@ -4,6 +4,34 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 74, 2026-09-21
+
+### Fixed
+- Country names are Polish again. The lookup used the region language code
+  ("pl_PL") as a key into a table keyed "pl", so it never matched and every city
+  fell back to the English name. Foundation now supplies the name.
+- City pins no longer fly in when the map moves. The regroup happens only when
+  the radius really changes, not on the span drift a tilted camera produces
+  while panning, and the entry transition is gone.
+- "W okolicy" hides when every city near it is unreachable, instead of leaving a
+  header over an empty row.
+- "Wydarzenia w okolicy" renders only when there are events, and draws them in a
+  plain row, not a lazy one.
+
+### Changed
+- Dead code removed: an unused layer, two unused pin groups, an unused group
+  flag and an unused thumbnail preload.
+
+## [1.3.0] — build 73, 2026-09-21
+
+### Added
+- A city tap now runs the same path as an event tap: the flight layer opens with
+  the city's arcs and airports, and the cluster sheet shows the city page.
+
+### Changed
+- Country names come from one place, and the nearby cities are filtered to the
+  ones the origin can fly to.
+
 ## [1.3.0] — build 72, 2026-09-21
 
 ### Changed

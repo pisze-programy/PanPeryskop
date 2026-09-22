@@ -22,7 +22,6 @@ struct MapKitMapView: View {
     /// bucket every overlay on every frame.
     private struct Derived {
         var visible: [MapOverlay] = []
-        var arcs: [FlightArc] = []
         var clusters: [PostCluster] = []
         var cities: [CityPin] = []
         var airports: [AirportPin] = []
@@ -81,6 +80,9 @@ struct MapKitMapView: View {
     }
 
     private static let pitchDegrees: Double = 60
+    /// `.realistic` renders 3D terrain, which costs GPU on every frame of a
+    /// camera move at this pitch. False is the measured value.
+    private static let usesRealisticTerrain = false
     /// Screen fraction where a tapped pin is placed (see `MapCameraController.flyToAboveSheet`).
     private static let sheetAvoidFraction = CGPoint(x: 0.5, y: 0.40)
     private static let clusterPixels: Double = 48
@@ -191,7 +193,6 @@ struct MapKitMapView: View {
         let visible = visibleOverlays
         derived = Derived(
             visible: visible,
-            arcs: flightArcs(visible),
             clusters: pinClusters(visible),
             cities: cityPins(visible),
             airports: airportPins(visible)
@@ -217,7 +218,10 @@ struct MapKitMapView: View {
     }
 
     var body: some View {
-        let arcs = derived.arcs
+        // The arcs are read straight from the overlay list, not from the memo:
+        // the loading scene changes only their progress, so a memo gated on the
+        // overlay identity would freeze them and then jump on the scene change.
+        let arcs = flightArcs(overlays)
         let clusters = derived.clusters
         let cities = derived.cities
         let airports = derived.airports
@@ -274,7 +278,7 @@ struct MapKitMapView: View {
                     }
                 }
             }
-            .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
+            .mapStyle(.standard(elevation: Self.usesRealisticTerrain ? .realistic : .flat, pointsOfInterest: .excludingAll))
             .onMapCameraChange(frequency: .onEnd) { ctx in
                 let region = ctx.region
                 visibleRegion = region

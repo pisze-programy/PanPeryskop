@@ -65,11 +65,17 @@ struct CityFlightSheet: View {
         let wanted = Set(city.airports)
         return viewModel.destinations
             .filter { wanted.contains($0.iata) }
+            .sorted { distanceKm($0) < distanceKm($1) }
             .flatMap { destination in
                 destination.providers
                     .sorted { $0.rawValue < $1.rawValue }
                     .map { FlightOption(destination: destination, carrier: $0) }
             }
+    }
+
+    private func distanceKm(_ destination: Destination) -> Double {
+        CLLocation(latitude: destination.lat, longitude: destination.lng)
+            .distance(from: CLLocation(latitude: city.lat, longitude: city.lng))
     }
 
     private var selectedOption: FlightOption? {
@@ -163,8 +169,53 @@ struct CityFlightSheet: View {
                     }
                 )
                 .padding(.horizontal, Theme.Spacing.l)
+                airportCaption(selected)
             }
         }
+    }
+
+    private func airportCaption(_ option: FlightOption) -> some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Image(systemName: "mappin.and.ellipse")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Text("\(option.destination.city) · \(airportDistanceKm) km od centrum")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            Button {
+                Haptics.selection()
+                openDirections()
+            } label: {
+                Text("Jak dojechać?")
+                    .font(.caption.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.accentColor)
+        }
+        .padding(.horizontal, Theme.Spacing.l)
+    }
+
+    private var airportDistanceKm: Int {
+        guard let option = selectedOption else { return 0 }
+        let meters = CLLocation(latitude: option.destination.lat, longitude: option.destination.lng)
+            .distance(from: CLLocation(latitude: city.lat, longitude: city.lng))
+        return Int((meters / 1000).rounded())
+    }
+
+    private func openDirections() {
+        guard let option = selectedOption else { return }
+        let origin = "\(option.destination.lat),\(option.destination.lng)"
+        let destination = "\(city.lat),\(city.lng)"
+        let web = "https://www.google.com/maps/dir/?api=1&origin=\(origin)&destination=\(destination)&travelmode=transit"
+        let app = "comgooglemaps://?saddr=\(origin)&daddr=\(destination)&directionsmode=transit"
+        if let url = URL(string: app), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+            return
+        }
+        guard let fallback = URL(string: web) else { return }
+        UIApplication.shared.open(fallback)
     }
 
     @ViewBuilder
@@ -305,13 +356,12 @@ struct CityFlightSheet: View {
     }
 
     private func clearInvalidReturn() {
-        guard let out = outbound?.date else {
-            returning = nil
-            return
-        }
-        guard let back = returning?.date,
-              !FlightPickerRules.isReturnAllowed(back, after: out, maxNights: AppConstants.cityBreakMaxNights)
-        else { return }
+        let maxNights = AppConstants.cityBreakMaxNights
+        guard FlightPickerRules.shouldClearReturn(
+            outbound: outbound?.date,
+            returning: returning?.date,
+            maxNights: maxNights
+        ) else { return }
         returning = nil
     }
 

@@ -12,8 +12,13 @@ enum FlightPickerRules {
         return nights >= 1 && nights <= maxNights
     }
 
-    static func latestReturn(after outbound: String, maxNights: Int) -> String? {
-        guard let start = AppConstants.isoDayFormatter.date(from: outbound),
+    static func shouldClearReturn(outbound: String?, returning: String?, maxNights: Int) -> Bool {
+        guard let returning else { return false }
+        guard let outbound else { return true }
+        return !isReturnAllowed(returning, after: outbound, maxNights: maxNights)
+    }
+
+    static func latestReturn(after outbound: String, maxNights: Int) -> String? {        guard let start = AppConstants.isoDayFormatter.date(from: outbound),
               let end = AppConstants.warsawCalendar.date(byAdding: .day, value: maxNights, to: start) else { return nil }
         return AppConstants.isoDayFormatter.string(from: end)
     }

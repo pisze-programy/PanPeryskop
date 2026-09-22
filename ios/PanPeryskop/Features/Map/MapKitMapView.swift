@@ -17,6 +17,11 @@ struct MapKitMapView: View {
     @State private var currentCameraDistance: CLLocationDistance
     @State private var derived = Derived()
     @State private var arcs: [FlightArc] = []
+    @State private var allClusters: [MapCluster] = []
+
+    private var radiusKey: Int {
+        Int((clusterRadiusDegrees * 100_000).rounded())
+    }
 
     private var arcsFingerprint: String {
         guard case .arc(let first) = overlays.first else { return "none" }
@@ -114,7 +119,20 @@ struct MapKitMapView: View {
         }
     }
 
-    private func rebuild() {
+    private func recluster() {
+        var items: [MapClusterItem] = []
+        for overlay in overlays {
+            switch overlay {
+            case .city(let pin): items.append(.city(pin.city))
+            case .pin(let p): items.append(.post(p.post))
+            case .airport, .arc, .group: continue
+            }
+        }
+        allClusters = clusterItems(items, radiusDegrees: clusterRadiusDegrees)
+        refreshVisible()
+    }
+
+    private func refreshVisible() {
         let pad = clusterRadiusDegrees
         let lat0 = visibleRegion.center.latitude - visibleRegion.span.latitudeDelta / 2 - pad
         let lat1 = visibleRegion.center.latitude + visibleRegion.span.latitudeDelta / 2 + pad
@@ -125,31 +143,23 @@ struct MapKitMapView: View {
         }
 
         var visible: [MapOverlay] = []
-        var items: [MapClusterItem] = []
         var airports: [AirportPin] = []
         for overlay in overlays {
             switch overlay {
-            case .city(let pin):
-                items.append(.city(pin.city))
             case .arc:
                 visible.append(overlay)
-            case .pin(let p):
-                guard inBox(p.post.lat, p.post.lng) else { continue }
-                visible.append(overlay)
-                items.append(.post(p.post))
             case .airport(let a):
                 guard inBox(a.coord.latitude, a.coord.longitude) else { continue }
                 visible.append(overlay)
                 airports.append(a)
-            case .group:
+            case .pin, .city, .group:
                 continue
             }
         }
 
-        arcs = flightArcs(overlays)
         derived = Derived(
             visible: visible,
-            clusters: clusterItems(items, radiusDegrees: pad),
+            clusters: allClusters.filter { inBox($0.coord.latitude, $0.coord.longitude) },
             airports: airports
         )
     }
@@ -235,13 +245,15 @@ struct MapKitMapView: View {
                 onRegionChange(swLat, swLng, neLat, neLng)
                 onCameraSettled(region)
             }
-            .onChange(of: regionKey) { _, _ in
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { rebuild() }
+            .onChange(of: regionKey) { _, _ in refreshVisible() }
+            .onChange(of: radiusKey) { _, _ in
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { recluster() }
             }
             .onChange(of: arcsFingerprint) { _, _ in arcs = flightArcs(overlays) }
-            .onChange(of: overlaysFingerprint) { _, _ in rebuild() }
+            .onChange(of: overlaysFingerprint) { _, _ in recluster() }
             .onAppear {
-                rebuild()
+                arcs = flightArcs(overlays)
+                recluster()
                 cameraController.bind { region, distance in
                     visibleRegion = region
                     let resolved = distance ?? MapKitMapView.cameraDistance(for: region)

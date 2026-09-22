@@ -13,6 +13,7 @@ struct FlightMonthCalendar: View {
     /// Days up to and including this ISO day cannot be picked (the return leg
     /// cannot leave before the outbound).
     let disabledThrough: String?
+    var disabledAfter: String? = nil
     let onMonthChange: (Date) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -103,7 +104,8 @@ struct FlightMonthCalendar: View {
     private func dayCell(_ cell: FlightWindowCell) -> some View {
         let hasPrice = cell.price != nil
         let isSelected = selected?.date == cell.date
-        let isDisabled = disabledThrough.map { cell.date <= $0 } ?? false
+        let isDisabled = (disabledThrough.map { cell.date <= $0 } ?? false)
+            || (disabledAfter.map { cell.date > $0 } ?? false)
         let isPickable = hasPrice && !isDisabled
         return Button {
             selected = isSelected ? nil : cell

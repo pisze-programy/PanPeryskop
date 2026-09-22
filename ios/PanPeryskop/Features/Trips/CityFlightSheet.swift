@@ -28,7 +28,7 @@ struct CityFlightSheet: View {
         self.city = city
         self._outbound = outbound
         self._returning = returning
-        let start = Self.startOfMonth(viewModel.anchorDate)
+        let start = FlightPickerRules.openingMonth(now: Date(), maxNights: AppConstants.cityBreakMaxNights)
         self._outboundMonth = State(initialValue: start)
         self._returningMonth = State(initialValue: start)
     }
@@ -225,17 +225,33 @@ struct CityFlightSheet: View {
 
     @ViewBuilder
     private var returningCalendar: some View {
-        if let option = selectedOption {
+        if outbound == nil {
+            noOutboundHint
+        } else if let option = selectedOption {
             calendar(
                 title: legTitle(returningStation?.from ?? option.destination.iata, returningStation?.to ?? origin(for: option.destination).iata),
                 cells: returningWindow?.returning ?? [],
                 month: $returningMonth,
                 selected: $returning,
                 disabledThrough: outbound?.date,
+                disabledAfter: latestReturn,
                 failed: returningFailed,
                 onRetry: { await loadReturning() }
             )
         }
+    }
+
+    private var noOutboundHint: some View {
+        Text("Najpierw wybierz dzień wylotu")
+            .font(.footnote)
+            .foregroundColor(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.Spacing.l)
+    }
+
+    private var latestReturn: String? {
+        guard let outbound = outbound?.date else { return nil }
+        return FlightPickerRules.latestReturn(after: outbound, maxNights: AppConstants.cityBreakMaxNights)
     }
 
     private func calendar(
@@ -244,6 +260,7 @@ struct CityFlightSheet: View {
         month: Binding<Date>,
         selected: Binding<FlightWindowCell?>,
         disabledThrough: String?,
+        disabledAfter: String? = nil,
         failed: Bool,
         onRetry: @escaping () async -> Void
     ) -> some View {
@@ -262,6 +279,7 @@ struct CityFlightSheet: View {
                     maxMonth: maxMonth,
                     selected: selected,
                     disabledThrough: disabledThrough,
+                    disabledAfter: disabledAfter,
                     onMonthChange: { month.wrappedValue = $0 }
                 )
             }

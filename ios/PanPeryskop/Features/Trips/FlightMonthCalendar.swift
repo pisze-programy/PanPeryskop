@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// One month of flight prices for a city break. A 7-column grid: day number,
-/// departure hour and fare. Days without a fare are greyed out; the fare is
-/// coloured green → amber → red against the cheapest and dearest day of the month.
 struct FlightMonthCalendar: View {
     let title: String
     let cells: [FlightWindowCell]
@@ -10,8 +7,6 @@ struct FlightMonthCalendar: View {
     let minMonth: Date
     let maxMonth: Date
     @Binding var selected: FlightWindowCell?
-    /// Days up to and including this ISO day cannot be picked (the return leg
-    /// cannot leave before the outbound).
     let disabledThrough: String?
     var disabledAfter: String? = nil
     let onMonthChange: (Date) -> Void
@@ -141,8 +136,6 @@ struct FlightMonthCalendar: View {
         isSelected ? .accentColor : .clear
     }
 
-    // MARK: - Month math
-
     private var monthStart: Date { Self.startOfMonth(month) }
     private var minMonthStart: Date { Self.startOfMonth(minMonth) }
     private var maxMonthStart: Date { Self.startOfMonth(maxMonth) }
@@ -160,7 +153,6 @@ struct FlightMonthCalendar: View {
         return calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
     }
 
-    /// One entry per grid slot: nil pads the days before the first of the month.
     private var slots: [FlightWindowCell?] {
         let calendar = AppConstants.warsawCalendar
         let days = calendar.range(of: .day, in: .month, for: monthStart) ?? 1..<1
@@ -184,8 +176,6 @@ struct FlightMonthCalendar: View {
         guard let price = cell.price else { return "—" }
         return "\(Int(price))"
     }
-
-    // MARK: - Price colour
 
     private var priceRange: (min: Double, max: Double)? {
         let prices = cells.compactMap(\.price)

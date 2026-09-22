@@ -4,6 +4,20 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 76, 2026-09-21
+
+### Fixed
+- The city events row never loaded. Its request hung off a container that
+  rendered nothing while the list was empty, so the fetch never started and the
+  list could never fill. The request now runs from the section itself.
+- The row sits above "W okolicy", as asked.
+
+### Changed
+- One horizon for flights, running and football: 90 days, from one constant. The
+  day slider and the city events row read the same number.
+- One selection path: the camera flies above the sheet from the map, from the
+  pager and from the city events row, through one shared selection.
+
 ## [1.3.0] — build 75, 2026-09-21
 
 ### Fixed

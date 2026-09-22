@@ -143,7 +143,10 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
                 result.append(.pin(MapPin(post: post)))
             }
         }
-        if isTagSelected(TravelTag.citybreak.rawValue) {
+        // Cities wait for the loading scene like the event pins do: drawing them
+        // during the arc animation re-rendered the whole city layer on all 30
+        // frames of the scene.
+        if showPins, isTagSelected(TravelTag.citybreak.rawValue) {
             for city in visibleCities {
                 result.append(.city(CityPin(city: city)))
             }

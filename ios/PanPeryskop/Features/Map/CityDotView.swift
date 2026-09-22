@@ -3,7 +3,7 @@ import SwiftUI
 /// A city that is not promoted to a pin: one circle, one stroke. No image, no
 /// shadow, no animation modifier — a dot must stay cheap when a hundred are on
 /// screen. It stays on the map instead of vanishing, so panning never jumps.
-struct CityDotView: View {
+struct CityDotView: View, Equatable {
     let city: TravelCity
     var scale: CGFloat = 1
 

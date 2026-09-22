@@ -16,6 +16,15 @@ struct MapKitMapView: View {
     @State private var visibleRegion: MKCoordinateRegion
     @State private var currentCameraDistance: CLLocationDistance
     @State private var derived = Derived()
+    @State private var arcs: [FlightArc] = []
+
+    /// The loading scene changes only each arc's progress, so the overlay
+    /// identity never moves and a memo keyed on it would freeze the arcs. They
+    /// get their own key.
+    private var arcsFingerprint: String {
+        guard case .arc(let first) = overlays.first else { return "none" }
+        return "\(first.id)|\(first.progress)"
+    }
 
     /// The layers a render draws. Rebuilt only when the region settles or the
     /// data changes, never per animation frame.
@@ -24,6 +33,7 @@ struct MapKitMapView: View {
         var clusters: [PostCluster] = []
         var pins: [CityPin] = []
         var dots: [CityPin] = []
+        var cityClusters: [CityCluster] = []
         var airports: [AirportPin] = []
     }
 
@@ -33,15 +43,17 @@ struct MapKitMapView: View {
     /// inside a band changes nothing, so pins cannot jump.
     private struct CityBand {
         let cellDegrees: Double
-        let pinCap: Int
     }
 
     private static let cityBands: [CityBand] = [
-        CityBand(cellDegrees: 6, pinCap: 18),
-        CityBand(cellDegrees: 2, pinCap: 22),
-        CityBand(cellDegrees: 0.6, pinCap: 60),
-        CityBand(cellDegrees: 0.15, pinCap: 400),
+        CityBand(cellDegrees: 6),
+        CityBand(cellDegrees: 2),
+        CityBand(cellDegrees: 0.6),
+        CityBand(cellDegrees: 0.15),
     ]
+
+    /// A cell with this many cities or more shows a count badge instead of a pin.
+    private static let clusterThreshold = 4
 
     private var cityBandIndex: Int {
         let span = visibleRegion.span.latitudeDelta
@@ -131,45 +143,39 @@ struct MapKitMapView: View {
         return max(degreesPerPixel * Self.clusterPixels, 0.00005)
     }
 
-    /// Overlays within the visible region (+ cluster padding) — only visible content
-    /// is clustered/rendered, so a stale pin never skews a cluster near the edge.
-    private var visibleOverlays: [MapOverlay] {
-        let pad = clusterRadiusDegrees
-        let lat0 = visibleRegion.center.latitude - visibleRegion.span.latitudeDelta / 2 - pad
-        let lat1 = visibleRegion.center.latitude + visibleRegion.span.latitudeDelta / 2 + pad
-        let lng0 = visibleRegion.center.longitude - visibleRegion.span.longitudeDelta / 2 - pad
-        let lng1 = visibleRegion.center.longitude + visibleRegion.span.longitudeDelta / 2 + pad
-        return overlays.filter {
-            switch $0 {
-            case .pin(let p):
-                return p.post.lat >= lat0 && p.post.lat <= lat1 && p.post.lng >= lng0 && p.post.lng <= lng1
-            case .city:
-                // The city layer is not viewport-clipped. MapKit does not draw
-                // what is off screen, and clipping here made a pin pop in at the
-                // edge as a full photo with no transition.
-                return false
-            case .airport(let a):
-                return a.coord.latitude >= lat0 && a.coord.latitude <= lat1 && a.coord.longitude >= lng0 && a.coord.longitude <= lng1
-            case .arc:
-                return true
-            }
+    /// Cities aggregate by proximity: one pin per band cell, the largest city in
+    /// it, and a count badge where a cell holds several. There is **no** global
+    /// cap: a cap ranked the whole continent and left a whole region with no pin
+    /// at all. The grid is anchored to absolute coordinates and the cell size is
+    /// fixed per band, so a pan never reshuffles a winner.
+    private func cityLayers(_ cities: [CityPin], band: CityBand) -> CityLayer {
+        var buckets: [String: [CityPin]] = [:]
+        for pin in cities {
+            buckets[cellKey(pin.city, cell: band.cellDegrees), default: []].append(pin)
         }
+        var layer = CityLayer()
+        for group in buckets.values {
+            let ranked = group.sorted { isMoreImportant($0.city, than: $1.city) }
+            guard let lead = ranked.first else { continue }
+            if ranked.count >= Self.clusterThreshold {
+                layer.clusters.append(CityCluster(
+                    id: "city-cluster:\(lead.id)",
+                    coord: lead.coordinate,
+                    count: ranked.count,
+                    lead: lead.city
+                ))
+            } else {
+                layer.pins.append(lead)
+            }
+            layer.dots.append(contentsOf: ranked.dropFirst())
+        }
+        return layer
     }
 
-    /// One promoted pin per band cell, the largest city in it, capped. Every
-    /// other reachable city stays as a dot. The cell grid is anchored to
-    /// absolute coordinates, so a pan does not move a cell or reshuffle a winner.
-    private func cityLayers(_ cities: [CityPin], band: CityBand) -> (pins: [CityPin], dots: [CityPin]) {
-        var winners: [String: CityPin] = [:]
-        for pin in cities {
-            let key = cellKey(pin.city, cell: band.cellDegrees)
-            if let current = winners[key], !isMoreImportant(pin.city, than: current.city) { continue }
-            winners[key] = pin
-        }
-        let ranked = winners.values.sorted { isMoreImportant($0.city, than: $1.city) }
-        let pins = Array(ranked.prefix(band.pinCap))
-        let promoted = Set(pins.map(\.id))
-        return (pins, cities.filter { !promoted.contains($0.id) })
+    private struct CityLayer {
+        var pins: [CityPin] = []
+        var dots: [CityPin] = []
+        var clusters: [CityCluster] = []
     }
 
     /// A cell index that is square on screen: the longitude step shrinks with
@@ -188,21 +194,6 @@ struct MapKitMapView: View {
         return city.name < other.name
     }
 
-    private func pinClusters(_ visible: [MapOverlay]) -> [PostCluster] {
-        let pins = visible.compactMap { overlay -> Post? in
-            if case .pin(let p) = overlay { return p.post }
-            return nil
-        }
-        return makeClusters(pins, radiusDegrees: clusterRadiusDegrees)
-    }
-
-    private func airportPins(_ visible: [MapOverlay]) -> [AirportPin] {
-        visible.compactMap { overlay in
-            if case .airport(let a) = overlay { return a }
-            return nil
-        }
-    }
-
     private func flightArcs(_ visible: [MapOverlay]) -> [FlightArc] {
         visible.compactMap { overlay in
             if case .arc(let a) = overlay { return a }
@@ -210,19 +201,51 @@ struct MapKitMapView: View {
         }
     }
 
+    /// One pass over the overlay list builds every layer. The old shape walked
+    /// the whole list once for the visible set and again for the cities, on every
+    /// camera settle.
     private func rebuild() {
-        let visible = visibleOverlays
-        let cities = overlays.compactMap { overlay -> CityPin? in
-            if case .city(let pin) = overlay { return pin }
-            return nil
+        let pad = clusterRadiusDegrees
+        let lat0 = visibleRegion.center.latitude - visibleRegion.span.latitudeDelta / 2 - pad
+        let lat1 = visibleRegion.center.latitude + visibleRegion.span.latitudeDelta / 2 + pad
+        let lng0 = visibleRegion.center.longitude - visibleRegion.span.longitudeDelta / 2 - pad
+        let lng1 = visibleRegion.center.longitude + visibleRegion.span.longitudeDelta / 2 + pad
+        func inBox(_ lat: Double, _ lng: Double) -> Bool {
+            lat >= lat0 && lat <= lat1 && lng >= lng0 && lng <= lng1
         }
-        let layers = cityLayers(cities, band: Self.cityBands[cityBandIndex])
+
+        var visible: [MapOverlay] = []
+        var posts: [Post] = []
+        var airports: [AirportPin] = []
+        var cities: [CityPin] = []
+        for overlay in overlays {
+            switch overlay {
+            case .city(let pin):
+                // Never viewport-clipped: MapKit does not draw what is off
+                // screen, and clipping made a pin pop in at the edge.
+                cities.append(pin)
+            case .arc:
+                visible.append(overlay)
+            case .pin(let p):
+                guard inBox(p.post.lat, p.post.lng) else { continue }
+                visible.append(overlay)
+                posts.append(p.post)
+            case .airport(let a):
+                guard inBox(a.coord.latitude, a.coord.longitude) else { continue }
+                visible.append(overlay)
+                airports.append(a)
+            }
+        }
+
+        let layer = cityLayers(cities, band: Self.cityBands[cityBandIndex])
+        arcs = flightArcs(overlays)
         derived = Derived(
             visible: visible,
-            clusters: pinClusters(visible),
-            pins: layers.pins,
-            dots: layers.dots,
-            airports: airportPins(visible)
+            clusters: makeClusters(posts, radiusDegrees: pad),
+            pins: layer.pins,
+            dots: layer.dots,
+            cityClusters: layer.clusters,
+            airports: airports
         )
     }
 
@@ -248,8 +271,8 @@ struct MapKitMapView: View {
         // The arcs are read straight from the overlay list, not from the memo:
         // the loading scene changes only their progress, so a memo gated on the
         // overlay identity would freeze them and then jump on the scene change.
-        let arcs = flightArcs(overlays)
         let clusters = derived.clusters
+        let cityClusters = derived.cityClusters
         let dots = derived.dots
         let pins = derived.pins
         let airports = derived.airports
@@ -281,9 +304,17 @@ struct MapKitMapView: View {
                     } label: { EmptyView() }
                 }
 
+                ForEach(cityClusters) { cluster in
+                    Annotation(coordinate: cluster.coord, anchor: .center) {
+                        CityClusterView(cluster: cluster, scale: scale)
+                            .onTapGesture { onTap(.city(CityPin(city: cluster.lead))) }
+                    } label: { EmptyView() }
+                }
+
                 ForEach(dots) { pin in
                     Annotation(coordinate: pin.coordinate, anchor: .center) {
                         CityDotView(city: pin.city, scale: scale)
+                            .equatable()
                             .onTapGesture { onTap(.city(pin)) }
                     } label: { EmptyView() }
                 }
@@ -291,6 +322,7 @@ struct MapKitMapView: View {
                 ForEach(pins) { pin in
                     Annotation(coordinate: pin.coordinate, anchor: .center) {
                         CityPinView(city: pin.city, scale: scale)
+                            .equatable()
                             .onTapGesture { onTap(.city(pin)) }
                     } label: { EmptyView() }
                 }
@@ -322,6 +354,7 @@ struct MapKitMapView: View {
                 onCameraSettled(region)
             }
             .onChange(of: regionKey) { _, _ in rebuild() }
+            .onChange(of: arcsFingerprint) { _, _ in arcs = flightArcs(overlays) }
             .onChange(of: cityBandIndex) { _, _ in
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { rebuild() }
             }

@@ -4,6 +4,59 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- The city facts read as a label and a value: the icon and the label share the
+  first line, the value follows on its own. "Koszt", not "Koszty".
+- Air quality reads in words only, in the sheet and in the details: "Jakość
+  powietrza" and "Jakość powietrza / rok", without the AQI number, which told
+  the traveller nothing.
+- A positive city score is green and nothing else. A negative one is plain text,
+  not red, so the sheet stops reading as a warning list.
+- A missing value shows "---".
+- A provider word with a fixed language goes through one map per language with a
+  fallback, so a run distance reads "Półmaraton" and a data refresh cannot
+  bypass it.
+- The city events card separates the run distance from the distance to the
+  city, and filters to a real 50 km.
+- The sheet keeps one identity, so the pager swaps its page instead of closing
+  and reopening.
+- The nearby events arrive enriched, like every other event, and get a pin.
+
+### Removed
+- The every-cluster work that sent a Lokalne cluster tap into the trips sheet.
+
+## [1.3.0] — build 78, 2026-09-21
+
+### Fixed
+- A run distance no longer reaches the user in English. The provider sends
+  "Half marathon" when it has no number, and that string went straight to the
+  card. Named distances now have Polish names, in the city row and in the event
+  detail both.
+- The city events card separates the two numbers it used to run together: the
+  run distance is a chip, and the distance from the city reads "X km od
+  centrum".
+- The events are filtered to a real 50 km, not to the rectangle that was asked
+  of the server, whose corners reach 70.
+- A failed city events request is logged instead of looking like an empty area.
+- The arc layer updates on any arc change, not only when the first one moves.
+
+## [1.3.0] — build 78, 2026-09-21
+
+### Fixed
+- A provider word no longer reaches the user in a foreign language. A run
+  distance that reads "Half marathon" is translated through one word map per
+  language, with a fallback to the original, so adding a language is one table
+  and a data refresh cannot bypass it. The rule is in DEVELOPMENT.md.
+- The city events card separates the two numbers it used to run together: the
+  run distance is a chip, and the distance from the city reads "X km od
+  centrum".
+- The events are filtered to a real 50 km, not to the rectangle asked of the
+  server, whose corners reach 70.
+- A failed city events request is logged instead of looking like an empty area.
+- The arc layer updates on any arc change, not only when the first one moves.
+
 ## [1.3.0] — build 77, 2026-09-21
 
 ### Fixed

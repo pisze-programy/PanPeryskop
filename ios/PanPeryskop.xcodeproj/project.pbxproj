@@ -76,6 +76,7 @@
 		4CD1C73466FE411096D5566A /* NoZoomWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976EDD1ED98A9C8ED3F352BD /* NoZoomWebView.swift */; };
 		4F1DE6D265333AD7AC276477 /* YPImagePicker in Frameworks */ = {isa = PBXBuildFile; productRef = 5A701F52FD63A75ECBD6B80F /* YPImagePicker */; };
 		51739AEF329E613222A6397A /* DestinationMapRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = D676D24F12D7E46EE15AB3F9 /* DestinationMapRail.swift */; };
+		54E8234FB097ED138A912454 /* Vocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF71EEE52842B6BA52064030 /* Vocabulary.swift */; };
 		56525116676B8E617ED58262 /* TripsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 259F31AC0D0EAFCDA98D8E24 /* TripsViewModel.swift */; };
 		571FF37AE65DC0D3A943DD0F /* MyContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E97C8E770CF2282546537D /* MyContentView.swift */; };
 		57258F7837AD459C9CD34DAF /* Airline+Booking.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796BB29CEB4FAE4F2BC4585D /* Airline+Booking.swift */; };
@@ -388,6 +389,7 @@
 		DC285092C6C1F446940D3AD0 /* DescriptionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStepView.swift; sourceTree = "<group>"; };
 		DD54C307453E7CDCB0E1A721 /* MapTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapTypes.swift; sourceTree = "<group>"; };
 		DE29E582EABB5B2FB291846E /* PlacesListModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesListModel.swift; sourceTree = "<group>"; };
+		DF71EEE52842B6BA52064030 /* Vocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vocabulary.swift; sourceTree = "<group>"; };
 		E2576064A0730F213CBEAAB8 /* OnboardingGradient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingGradient.swift; sourceTree = "<group>"; };
 		E2CC218C25CE581CC5E20D9E /* CityFactTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityFactTile.swift; sourceTree = "<group>"; };
 		E347A53F6B6F4E0A89EA4C6E /* PlaceRowSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceRowSkeleton.swift; sourceTree = "<group>"; };
@@ -519,6 +521,7 @@
 				4BC0942470390E231F8D1020 /* RegionStore.swift */,
 				966D1BFAA7477826BACF207A /* StayRange.swift */,
 				2F1EB481F59516E748139BF1 /* TagSorting.swift */,
+				DF71EEE52842B6BA52064030 /* Vocabulary.swift */,
 				F5B4B4D980C2B673BA8E3BF6 /* WebKitWarmup.swift */,
 			);
 			path = Core;
@@ -1070,6 +1073,7 @@
 				56525116676B8E617ED58262 /* TripsViewModel.swift in Sources */,
 				B75E0DBA2194C2670F968BDD /* User.swift in Sources */,
 				137265F67501E28A4DD4A653 /* VenueMap.swift in Sources */,
+				54E8234FB097ED138A912454 /* Vocabulary.swift in Sources */,
 				746604D0A9FC4F42B4B5E7F7 /* WebKitWarmup.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1228,7 +1232,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 77;
+				CURRENT_PROJECT_VERSION = 79;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1288,7 +1292,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 77;
+				CURRENT_PROJECT_VERSION = 79;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

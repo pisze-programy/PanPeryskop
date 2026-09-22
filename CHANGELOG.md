@@ -4,6 +4,24 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 72, 2026-09-21
+
+### Changed
+- One cluster for the whole map. Cities and events cluster together with the
+  same radius and the same look, so one filter set gives one cluster of
+  everything that is on the map, and a change of filter changes what the cluster
+  holds.
+- Tapping a cluster opens the cluster, not one member: the same sheet with the
+  same horizontal pager, now paging over events and cities. A cluster of runs
+  opens the runs, a cluster of cities opens the cities, a mixed cluster opens
+  both.
+- The zoom span decides the radius, exactly as it does for events: a country
+  shows single pins, a continent shows clusters. No bands, no caps, no dots.
+
+### Removed
+- The city dots, the city count badges and the band table. They mixed three
+  shapes on one map and a user could not tell what any of them meant.
+
 ## [1.3.0] — build 71, 2026-09-21
 
 ### Fixed

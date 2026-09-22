@@ -246,10 +246,22 @@ struct CityFlightSheet: View {
                     selected: selected,
                     disabledThrough: disabledThrough,
                     disabledAfter: disabledAfter,
+                    subtitle: nightsLabel,
+                    isLoading: isLoading(cells),
                     onMonthChange: { month.wrappedValue = $0 }
                 )
             }
         }
+    }
+
+    private var nightsLabel: String? {
+        guard let out = outbound?.date, let back = returning?.date,
+              let nights = FlightPickerRules.nights(from: out, to: back) else { return nil }
+        return nights == 1 ? "1 noc" : "\(nights) noce"
+    }
+
+    private func isLoading(_ cells: [FlightWindowCell]) -> Bool {
+        cells.isEmpty && !outboundFailed && !returningFailed
     }
 
     private var buyBar: some View {

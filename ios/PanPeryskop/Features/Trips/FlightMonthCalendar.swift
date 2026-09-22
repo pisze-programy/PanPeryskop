@@ -9,6 +9,8 @@ struct FlightMonthCalendar: View {
     @Binding var selected: FlightWindowCell?
     let disabledThrough: String?
     var disabledAfter: String? = nil
+    var subtitle: String? = nil
+    var isLoading = false
     let onMonthChange: (Date) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -28,8 +30,13 @@ struct FlightMonthCalendar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             header
-            weekdayHeader
-            grid
+            if isLoading {
+                SkeletonBlock(height: Self.cellHeight * 4)
+                    .padding(.horizontal, Theme.Spacing.l)
+            } else {
+                weekdayHeader
+                grid
+            }
         }
     }
 
@@ -38,6 +45,14 @@ struct FlightMonthCalendar: View {
             Text(title)
                 .font(.subheadline.weight(.semibold))
             Spacer(minLength: 0)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, Theme.Spacing.s)
+                    .padding(.vertical, 3)
+                    .background(Theme.Palette.surface, in: Capsule())
+            }
             arrow("chevron.left", enabled: canGoBack) { shift(-1) }
             Text(AppConstants.monthYearFormatter.string(from: month))
                 .font(.subheadline.weight(.bold))

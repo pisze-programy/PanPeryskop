@@ -6,282 +6,57 @@ All notable changes to PanPeryskop. Format based on
 
 ## [Unreleased]
 
-### Changed
-- The city facts read as a label and a value: the icon and the label share the
-  first line, the value follows on its own. "Koszt", not "Koszty".
-- Air quality reads in words only, in the sheet and in the details: "Jakość
-  powietrza" and "Jakość powietrza / rok", without the AQI number, which told
-  the traveller nothing.
-- A positive city score is green and nothing else. A negative one is plain text,
-  not red, so the sheet stops reading as a warning list.
-- A missing value shows "---".
-- A provider word with a fixed language goes through one map per language with a
-  fallback, so a run distance reads "Półmaraton" and a data refresh cannot
-  bypass it.
-- The city events card separates the run distance from the distance to the
-  city, and filters to a real 50 km.
-- The sheet keeps one identity, so the pager swaps its page instead of closing
-  and reopening.
-- The nearby events arrive enriched, like every other event, and get a pin.
-
-### Removed
-- The every-cluster work that sent a Lokalne cluster tap into the trips sheet.
-
-## [1.3.0] — build 78, 2026-09-21
-
-### Fixed
-- A run distance no longer reaches the user in English. The provider sends
-  "Half marathon" when it has no number, and that string went straight to the
-  card. Named distances now have Polish names, in the city row and in the event
-  detail both.
-- The city events card separates the two numbers it used to run together: the
-  run distance is a chip, and the distance from the city reads "X km od
-  centrum".
-- The events are filtered to a real 50 km, not to the rectangle that was asked
-  of the server, whose corners reach 70.
-- A failed city events request is logged instead of looking like an empty area.
-- The arc layer updates on any arc change, not only when the first one moves.
-
-## [1.3.0] — build 78, 2026-09-21
-
-### Fixed
-- A provider word no longer reaches the user in a foreign language. A run
-  distance that reads "Half marathon" is translated through one word map per
-  language, with a fallback to the original, so adding a language is one table
-  and a data refresh cannot bypass it. The rule is in DEVELOPMENT.md.
-- The city events card separates the two numbers it used to run together: the
-  run distance is a chip, and the distance from the city reads "X km od
-  centrum".
-- The events are filtered to a real 50 km, not to the rectangle asked of the
-  server, whose corners reach 70.
-- A failed city events request is logged instead of looking like an empty area.
-- The arc layer updates on any arc change, not only when the first one moves.
-
-## [1.3.0] — build 77, 2026-09-21
-
-### Fixed
-- Tapping an event in the city row flies the camera to it. The selection read
-  the city before the event, so the camera never moved and the arcs sat off
-  screen.
-- The sheet swaps its page instead of closing and reopening. Its identity was
-  derived from the content, so every tap built a new sheet and threw away the
-  pager, the detent and the scroll.
-- The nearby events arrive enriched, like every other event. The request dropped
-  the origins, so the events carried no reachable airports and the flight layer
-  had nothing to draw.
-- The tapped event gets a map pin, like any other selected event.
-- The card no longer prints 00:00. It shows the weekday and the day always, and
-  the hour only when the source has one; a run shows its distance instead. It
-  also carries the category: the runner or the stadium glyph on the event's own
-  gradient, and the distance from the city.
-
-## [1.3.0] — build 76, 2026-09-21
-
-### Fixed
-- The city events row never loaded. Its request hung off a container that
-  rendered nothing while the list was empty, so the fetch never started and the
-  list could never fill. The request now runs from the section itself.
-- The row sits above "W okolicy", as asked.
-
-### Changed
-- One horizon for flights, running and football: 90 days, from one constant. The
-  day slider and the city events row read the same number.
-- One selection path: the camera flies above the sheet from the map, from the
-  pager and from the city events row, through one shared selection.
-
-## [1.3.0] — build 75, 2026-09-21
-
-### Fixed
-- A tapped cluster on the Lokalne map opens the story preview again. The
-  everywhere-cluster work routed every cluster tap into the trips sheet, so the
-  Lokalne map lost its story viewer. A cluster now opens the stories in the
-  events category and the cluster sheet in the trips category.
-
-## [1.3.0] — build 74, 2026-09-21
-
-### Fixed
-- Country names are Polish again. The lookup used the region language code
-  ("pl_PL") as a key into a table keyed "pl", so it never matched and every city
-  fell back to the English name. Foundation now supplies the name.
-- City pins no longer fly in when the map moves. The regroup happens only when
-  the radius really changes, not on the span drift a tilted camera produces
-  while panning, and the entry transition is gone.
-- "W okolicy" hides when every city near it is unreachable, instead of leaving a
-  header over an empty row.
-- "Wydarzenia w okolicy" renders only when there are events, and draws them in a
-  plain row, not a lazy one.
-
-### Changed
-- Dead code removed: an unused layer, two unused pin groups, an unused group
-  flag and an unused thumbnail preload.
-
-## [1.3.0] — build 73, 2026-09-21
-
 ### Added
-- A city tap now runs the same path as an event tap: the flight layer opens with
-  the city's arcs and airports, and the cluster sheet shows the city page.
 
-### Changed
-- Country names come from one place, and the nearby cities are filtered to the
-  ones the origin can fly to.
-
-## [1.3.0] — build 72, 2026-09-21
-
-### Changed
-- One cluster for the whole map. Cities and events cluster together with the
-  same radius and the same look, so one filter set gives one cluster of
-  everything that is on the map, and a change of filter changes what the cluster
-  holds.
-- Tapping a cluster opens the cluster, not one member: the same sheet with the
-  same horizontal pager, now paging over events and cities. A cluster of runs
-  opens the runs, a cluster of cities opens the cities, a mixed cluster opens
-  both.
-- The zoom span decides the radius, exactly as it does for events: a country
-  shows single pins, a continent shows clusters. No bands, no caps, no dots.
-
-### Removed
-- The city dots, the city count badges and the band table. They mixed three
-  shapes on one map and a user could not tell what any of them meant.
-
-## [1.3.0] — build 71, 2026-09-21
-
-### Fixed
-- City pins appear where you are looking. The pin cap ranked the whole
-  continent, so a region whose cities were not in the global top 18 showed no
-  pins at all. There is no global cap now: every band cell gives one pin, so a
-  fragment of six cities gives four pins.
-- The city layer waits for the loading scene, like the event pins. Drawing it
-  during the arc animation re-rendered the whole city layer on all thirty frames
-  of the scene, which is where the frames went.
-
-### Changed
-- A band cell with four cities or more shows one count badge instead of a pin, so
-  a dense area stays readable.
-- The layer rebuild is one pass over the overlay list instead of two, the arcs
-  are keyed on their own identity, and the pin and dot views are equatable, so
-  SwiftUI can skip the ones whose inputs did not change.
-
-## [1.3.0] — build 70, 2026-09-21
-
-### Changed
-- City pins stop jumping. Which city is a pin is now decided by the city and a
-  quantized zoom band, never by the exact camera: the grid is anchored to
-  absolute coordinates and the cell size and the pin cap are fixed per band, so
-  a pan and a zoom inside a band change nothing.
-- Every reachable city is drawn. The promoted ones are photo pins, the rest are
-  small dots that stay on the map instead of vanishing at the viewport edge.
-- Population decides what is promoted, not the cost band: a large cheap city
-  outranks a small expensive resort. The cost band stays a colour.
-- A dot is one circle with no image and no shadow, so a hundred of them cost
-  less than the photo pins they replace.
-
-## [1.3.0] — build 69, 2026-09-21
-
-### Fixed
-- The loading arcs animate again. They are read straight from the overlay list
-  instead of from the memoized layer set: the loading scene changes only their
-  progress, so the memo never saw a change and the arcs froze, then jumped when
-  the scene switched.
-
-### Changed
-- The map no longer draws 3D terrain. The realistic elevation is GPU work on
-  every frame of a camera move at a 60° pitch, so the flat style is the
-  measured value.
-
-## [1.3.0] — build 68, 2026-09-21
-
-### Changed
-- The map shows only the cities the origin can fly to, whatever the day: a city
-  with no served airport is left out. Poznań draws 133 cities instead of 327.
-- The city tag count uses the same rule, so the badge matches the map.
-
-## [1.3.0] — build 67, 2026-09-21
-
-### Fixed
-- A city is reachable through the airports around it again. The sheet no longer
-  asks the selected day whether a flight exists: it asks whether the origin
-  flies to any airport of the city. Poznań → Milan shows flights through
-  Bergamo, and the bus appears only when no airport of the city has a flight.
-- The airport list of a city comes back from the 150 km radius, so Milan has
-  Bergamo, Paris has Orly, and 133 cities are reachable from Poznań instead of
-  108.
-
-### Changed
-- Every airport is offered with the carriers that really serve it, from the
-  catalogue instead of the selected day, so Ryanair and Wizzair of one airport
-  stay comparable by price and no option is ever empty.
-
-## [1.3.0] — build 66, 2026-09-21
-
-### Changed
-- The map layers are rebuilt only when the camera settles or the data changes,
-  never once per animation frame. A camera move used to filter and bucket every
-  overlay on every frame of the animation.
-
-## [1.3.0] — build 65, 2026-09-21
-
-### Added
+- City breaks. The Europa map shows European cities with a photo, beside the
+  running events and the football matches. A city opens a sheet with the
+  airports that serve it, the flights, the stays, what to see, the cities near
+  it, the events within 50 km and the country facts.
+- The city list is rebuilt from one source: 327 European cities with a Polish
+  name, a position, the airports, the cost, the scores, the weather, the
+  neighbours and a photo credit. The list ships to the app as a seed.
+- The city page runs on the same parts as an event page: one sheet with one
+  horizontal pager, and a page is an event or a city.
+- Tapping a city flies the camera above the sheet and opens the flight layer
+  with the city's airports and their arcs, exactly like tapping an event.
 - A global region: region, country, language and currency in one place, read
-  from the environment and changeable in onboarding and the profile. Prices are
-  shown in the local currency, and every 0–5 score is shown in words.
-- The hero opens on the bundled thumbnail, so the photo never jumps when the
-  large one arrives.
-- The city header shows the population and the cost rank instead of repeating
-  the country.
+  from the environment, changeable in onboarding and the profile. Country names
+  come from Foundation, and a provider word with a fixed language goes through
+  one map per language with a fallback to the original.
+- The city events row: running events and matches within 50 km, from today for
+  90 days, with the category, the day, the hour when the source has one and the
+  distance from the city.
+- A frames-per-second readout for the test builds, and a release flag that turns
+  it off.
 
 ### Changed
-- A city pin falls back to the airports within 150 km when the carriers name no
-  city of their own: 33 cities have none left, down from 181.
-- Picking a neighbour from the horizontal list moves the map to it and returns
-  the sheet to the top.
-- The weather row fills the full width.
 
-## [1.3.0] — build 64, 2026-09-21
+- One cluster for the whole map. Cities and events cluster together, with one
+  radius, one look and one tap, so one filter set gives one cluster of
+  everything on the map. The zoom span decides the radius: a country shows
+  single pins, a continent shows clusters.
+- The map no longer draws 3D terrain. The realistic elevation was the largest
+  single cost of a camera move at the 60 degree pitch.
+- The city tiles read as a label and a value. Air quality reads in words only.
+  A positive score is green and nothing else, and a missing value is "---".
+- The flight picker keeps its two calendars and stops choosing for the user: no
+  dates are written until a day is tapped, the two months are independent, and
+  the buy bar enables on an outbound alone so a one-way ticket works.
 
-### Changed
-- City pins are chosen by the screen, not by a cost band. One pin per screen
-  cell, the most important city in it. A country with three cities shows three
-  pins at once; a continent shows about a hundred. The band ladder used to hide
-  a whole country until the map was zoomed in.
+### Fixed
 
-## [1.3.0] — build 63, 2026-09-21
+- The Lokalne map opens the story preview again when a cluster is tapped.
+- A city is reachable through the airports around it, so Poznan reaches Milan
+  through Bergamo, and the bus appears only when no airport of the city flies.
+- City pins stop jumping: a regroup needs a real change of the radius, not the
+  span drift a tilted camera produces while panning.
+- The flight requests are paced. One provider call at a time, 600 ms apart, and
+  two callers for the same month share one request.
 
-### Changed
-- A city with no flight from the origin no longer shows a "no flights" message.
-  The bus search takes its place, as a placeholder until the bus calendar lands.
+### Removed
 
-## [1.3.0] — build 62, 2026-09-21
-
-### Changed
-- The city map no longer drops frames. The overlay list is filtered once per
-  frame instead of five times, clustering is a single pass instead of a
-  pairwise scan, and the city pin reads its photo from the app bundle instead
-  of downloading it 327 times.
-- The flight calendar opens for every city. It is built from the city's
-  airports, not from the flights of the selected day, so another date or
-  another airport is always one tap away.
-- A city without a flight on the selected day says so and keeps the calendar
-  open, instead of hiding it.
-
-### Added
-- 327 city pin photos in the app bundle (2.5 MB).
-- A small frames-per-second readout in the bottom-left corner, on for the
-  test builds only.
-
-## [1.3.0] — build 61, 2026-09-21
-
-### Added
-- The city list is rebuilt: 327 European cities with Polish names, a photo, the
-  cost, the scores, the weather and the neighbours. The city sheet shows a hero
-  photo, six facts with a "Wszystkie dane" sheet, the weather now, the cities
-  near it, and the licence text.
-- A city without a direct flight says so and offers another date, instead of
-  disappearing from the map.
-- The city map layer has five cost bands: the dearest cities show at continent
-  zoom, the cheapest when you zoom in.
-
-### Changed
-- The city pin carries the city photo, and a city without a flight is faded.
+- The city dots, the city count badges and the band table, which mixed three
+  shapes on one map.
 
 ## [1.3.0] — build 60, 2026-09-21
 

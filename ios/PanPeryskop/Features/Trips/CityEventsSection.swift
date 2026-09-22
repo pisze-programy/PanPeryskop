@@ -10,7 +10,8 @@ struct CityEventsSection: View {
     @State private var events: [TravelEvent] = []
 
     private static let radiusKm = 50.0
-    private static let cardWidth: CGFloat = 220
+    private static let cardWidth: CGFloat = 240
+    private static let cardHeight: CGFloat = 104
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
@@ -47,57 +48,46 @@ struct CityEventsSection: View {
     }
 
     private func cardLabel(_ event: TravelEvent) -> some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.s) {
-            categoryBadge(event)
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(event.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                Text(whenLabel(event))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                HStack(spacing: Theme.Spacing.xs) {
-                    if let detail = detailLabel(event) {
-                        Text(detail)
-                            .font(.caption2.weight(.semibold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Theme.Palette.surfaceRaised, in: Capsule())
-                    }
-                    Text(whereLabel(event))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-            }
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text(event.title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 0)
+            categoryLine(event)
+            Text(whereLabel(event))
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
         }
-        .frame(width: Self.cardWidth, alignment: .leading)
+        .frame(width: Self.cardWidth, height: Self.cardHeight, alignment: .topLeading)
         .padding(Theme.Spacing.m)
         .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
         .contentShape(Rectangle())
     }
 
-    private func categoryBadge(_ event: TravelEvent) -> some View {
-        let style = event.pinStyle
-        return ZStack {
-            LinearGradient(
-                colors: [
-                    Color(hex: style?.startHex ?? 0x0d48bd),
-                    Color(hex: style?.endHex ?? 0xc6007e),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Image(systemName: style?.icon ?? "sportscourt.fill")
-                .font(.caption.weight(.bold))
-                .foregroundColor(.white)
+    private func categoryLine(_ event: TravelEvent) -> some View {
+        HStack(spacing: Theme.Spacing.xs) {
+            Image(systemName: event.isRun ? "figure.run" : "sportscourt.fill")
+                .font(.caption2.weight(.semibold))
+                .foregroundColor(RunPalette.color(for: event))
+            Text(whenLabel(event))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            if let detail = detailLabel(event) {
+                Text(detail)
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Theme.Palette.surfaceRaised, in: Capsule())
+            }
         }
-        .frame(width: 36, height: 36)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.chip))
     }
 
     private func whenLabel(_ event: TravelEvent) -> String {
@@ -110,9 +100,8 @@ struct CityEventsSection: View {
     }
 
     private func detailLabel(_ event: TravelEvent) -> String? {
-        let detail = event.isRun ? RunDistances.range(event.metaData, language: region.languageCode) : event.metaData?.league
-        guard let detail, !detail.isEmpty else { return nil }
-        return detail
+        guard event.isRun else { return nil }
+        return RunDistances.range(event.metaData, language: region.languageCode)
     }
 
     private func whereLabel(_ event: TravelEvent) -> String {

@@ -1,7 +1,4 @@
 import Foundation
-
-/// The city-break sheet, in the order a traveller decides: the photo, the dates
-/// and the fare, the city facts, the weather, what is nearby, then the bookings.
 enum CityBreakSection: String, CaseIterable, Identifiable {
     case hero
     case flights

@@ -1,6 +1,4 @@
 import SwiftUI
-
-/// The cities the source lists as near this one. Rows open that city's sheet.
 struct CityNearbySection: View {
     let cities: [TravelCity]
     let onSelect: (TravelCity) -> Void

@@ -1,7 +1,4 @@
 import UIKit
-
-/// City pin images ship in the bundle: no request, no decode per frame. The
-/// cache holds the decoded image, so a recycled annotation view is a set.
 @MainActor
 enum CityThumbStore {
     private static let cache = NSCache<NSString, UIImage>()

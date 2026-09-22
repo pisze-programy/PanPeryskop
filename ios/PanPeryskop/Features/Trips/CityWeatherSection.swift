@@ -1,6 +1,4 @@
 import SwiftUI
-
-/// The weather in the city right now.
 struct CityWeatherSection: View {
     let city: TravelCity
 

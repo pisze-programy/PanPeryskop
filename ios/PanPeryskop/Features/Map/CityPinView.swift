@@ -1,6 +1,4 @@
 import SwiftUI
-
-/// A promoted city: the photo in a circle, in the country colour.
 struct CityPinView: View, Equatable {
     let city: TravelCity
     var scale: CGFloat = 1

@@ -1,6 +1,4 @@
 import SwiftUI
-
-/// The six facts that decide a short break, then everything else on request.
 struct CityFactsSection: View {
     let city: TravelCity
     @State private var showsAll = false

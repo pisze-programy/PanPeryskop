@@ -1,7 +1,4 @@
 import UIKit
-
-/// Remote images with an in-memory cache and off-main decoding. `AsyncImage`
-/// keeps no cache, so every re-render re-requested and re-decoded the picture.
 @MainActor
 final class RemoteImageStore {
     static let shared = RemoteImageStore()

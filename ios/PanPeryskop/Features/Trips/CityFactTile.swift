@@ -1,6 +1,4 @@
 import SwiftUI
-
-/// One city fact: a big value with a short label under it.
 struct CityFactTile: View {
     let icon: String
     let value: String

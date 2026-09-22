@@ -1,8 +1,5 @@
 import Foundation
 import SwiftUI
-
-/// The region the app runs in. Onboarding sets it, the profile can change it,
-/// and every screen reads it from the environment. Persisted by id.
 @MainActor
 final class RegionStore: ObservableObject {
     static let shared = RegionStore()

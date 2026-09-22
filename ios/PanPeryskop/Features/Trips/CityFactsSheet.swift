@@ -1,6 +1,4 @@
 import SwiftUI
-
-/// Every city fact we hold, in one sheet.
 struct CityFactsSheet: View {
     let city: TravelCity
 

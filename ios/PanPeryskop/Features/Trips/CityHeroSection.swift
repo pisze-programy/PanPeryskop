@@ -1,8 +1,4 @@
 import SwiftUI
-
-/// The first scrollable section: the photo, the Polish name and the country.
-/// The bundled thumbnail fills the frame at once, then the large photo fades in
-/// on top. Both fill the same rectangle, so the sheet never jumps.
 struct CityHeroSection: View {
     let city: TravelCity
 

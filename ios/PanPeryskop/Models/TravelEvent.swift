@@ -108,9 +108,13 @@ struct Destination: Codable, Identifiable, Hashable {
 
 struct EventGroup: Identifiable {
     let events: [TravelEvent]
+    var cities: [TravelCity] = []
 
-    var id: String { events[0].id }
-    var isGroup: Bool { events.count > 1 }
+    var id: String {
+        if let first = events.first { return first.id }
+        return cities.first.map { "cities:\($0.id)" } ?? "group"
+    }
+    var isGroup: Bool { events.count + cities.count > 1 }
 }
 
 struct FlightWindowResponse: Codable {

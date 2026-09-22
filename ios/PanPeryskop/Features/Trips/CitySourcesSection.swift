@@ -1,6 +1,4 @@
 import SwiftUI
-
-/// The licence text for the city data and the photo.
 struct CitySourcesSection: View {
     var body: some View {
         TripsSectionFooter(

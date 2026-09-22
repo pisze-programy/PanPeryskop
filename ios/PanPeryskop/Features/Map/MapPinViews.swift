@@ -2,17 +2,28 @@ import SwiftUI
 import MapKit
 
 struct ClusterBadge: View {
-    let cluster: PostCluster
+    let cluster: MapCluster
     let currentUserId: String?
     let onTap: () -> Void
 
     var body: some View {
-        if cluster.count == 1, let post = cluster.singlePost {
+        if cluster.count == 1, let item = cluster.items.first {
+            single(item)
+        } else {
+            ClusterPin(count: cluster.count, oldestTimedPost: cluster.oldestTimedPost)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onTap)
+        }
+    }
+
+    @ViewBuilder
+    private func single(_ item: MapClusterItem) -> some View {
+        if let post = item.post {
             SinglePostPin(post: post, currentUserId: currentUserId)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onTap)
-        } else {
-            ClusterPin(cluster: cluster)
+        } else if let city = item.city {
+            CityPinView(city: city)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onTap)
         }
@@ -169,21 +180,16 @@ private func iconForType(_ type: Post.MediaType) -> String {
 
 
 struct ClusterPin: View {
-    let cluster: PostCluster
+    let count: Int
+    let oldestTimedPost: TimeInterval?
 
     private static let ttlHours: Double = AppConstants.postTTLHours
 
     @State private var sheenPhase: CGFloat = -1.4
 
-    /// Restaurants are evergreen, so they carry no TTL. Only the timed members
-    /// drive the ring; a cluster of restaurants alone has none.
-    private var timedPosts: [Post] { cluster.posts.filter { !$0.isRestaurant } }
-
-    private var oldest: Post? { timedPosts.min(by: { $0.created_at < $1.created_at }) }
-
     private var ageHours: Double {
-        guard let oldest else { return 0 }
-        return Double(Date().timeIntervalSince1970 - TimeInterval(oldest.created_at) / 1000) / AppConstants.secondsPerHour
+        guard let oldestTimedPost else { return 0 }
+        return Double(Date().timeIntervalSince1970 - oldestTimedPost / 1000) / AppConstants.secondsPerHour
     }
 
     private var ringColor: Color {
@@ -193,14 +199,14 @@ struct ClusterPin: View {
     }
 
     private func progress(at date: Date) -> Double {
-        guard let oldest else { return 0 }
-        let elapsed = date.timeIntervalSince1970 - TimeInterval(oldest.created_at) / 1000
+        guard let oldestTimedPost else { return 0 }
+        let elapsed = date.timeIntervalSince1970 - oldestTimedPost / 1000
         return min(max(elapsed / (Self.ttlHours * AppConstants.secondsPerHour), 0), 1)
     }
 
     @ViewBuilder
     private var ring: some View {
-        if oldest == nil {
+        if oldestTimedPost == nil {
             Circle().fill(Color.black.opacity(0.25))
         } else {
             TimelineView(.periodic(from: .now, by: 30)) { context in
@@ -226,7 +232,7 @@ struct ClusterPin: View {
                 .fill(Color.accentColor)
                 .frame(width: 44, height: 44)
 
-            Text("\(cluster.count)")
+            Text("\(count)")
                 .font(.system(size: 17, weight: .bold))
                 .foregroundColor(.white)
         }

@@ -1,8 +1,5 @@
 import SwiftUI
 import QuartzCore
-
-/// Frames per second, small, bottom-left. A debug aid: set
-/// `AppConstants.showsFPS` to false before a production build.
 struct FPSOverlay: View {
     @State private var fps = 0
 

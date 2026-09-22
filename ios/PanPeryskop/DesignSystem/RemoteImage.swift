@@ -1,8 +1,4 @@
 import SwiftUI
-
-/// A remote image that fills its space and is clipped to it. The clear rectangle
-/// takes the proposed size, so the picture never changes the layout: the same
-/// frame as whatever sits under it.
 struct RemoteImage: View {
     let url: URL?
     var fadesIn = true

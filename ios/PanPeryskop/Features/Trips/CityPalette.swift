@@ -1,9 +1,5 @@
 import SwiftUI
 import UIKit
-
-/// Colour identity for a city break. The gradient runs from the country colour to
-/// a lighter shade of it; the cost band sets how much lighter the far end is, so
-/// the dearest cities stay saturated and the cheapest fade out.
 enum CityPalette {
     static func gradient(countryCode: String, bandRank: Int) -> [Color] {
         let base = base(countryCode: countryCode)

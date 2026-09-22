@@ -20,7 +20,7 @@ private struct MapPickerRequest: Identifiable {
     let title: String
 }
 
-struct TripsEventSheet: View {
+struct ClusterSheet: View {
     @ObservedObject var viewModel: TripsViewModel
     @State private var activeIndex: Int? = 0
     @State private var detent: PresentationDetent = .medium
@@ -34,6 +34,23 @@ struct TripsEventSheet: View {
     private static let warmupDelayMilliseconds = 600
 
     private var events: [TravelEvent] { viewModel.selectedEventGroup?.events ?? [] }
+
+    private enum ClusterPage: Identifiable {
+        case event(TravelEvent)
+        case city(TravelCity)
+
+        var id: String {
+            switch self {
+            case .event(let event): return "event:\(event.id)"
+            case .city(let city): return "city:\(city.id)"
+            }
+        }
+    }
+
+    private var pages: [ClusterPage] {
+        let group = viewModel.selectedEventGroup
+        return (group?.events ?? []).map(ClusterPage.event) + (group?.cities ?? []).map(ClusterPage.city)
+    }
 
     private var currentEvent: TravelEvent? {
         let index = activeIndex ?? 0
@@ -82,37 +99,54 @@ struct TripsEventSheet: View {
     private var pager: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 0) {
-                ForEach(Array(events.enumerated()), id: \.offset) { index, event in
-                    TripsEventPage(
-                        event: event,
-                        origins: viewModel.originAirports,
-                        viewModel: viewModel,
-                        isActive: (activeIndex ?? 0) == index,
-                        dotsCount: events.count,
-                        dotsIndex: index,
-                        scrollTopToken: scrollTopToken,
-                        onTapHeader: { scrollTopToken += 1 },
-                        onOpenURL: openBrowser,
-                        onOpenMap: { coordinate, title in
-                            mapPicker = MapPickerRequest(coordinate: coordinate, title: title)
-                        },
-                        onExpand: expandPlaces,
-                        onPlannerChange: { coord in
-                            guard (activeIndex ?? 0) == index else { return }
-                            airportCoordinate = coord
-                        }
-                    )
-                    .frame(width: pageWidth)
+                ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
+                    pageView(page, index: index)
+                        .frame(width: pageWidth)
                 }
             }
             .scrollTargetLayout()
         }
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: $activeIndex)
-        .scrollDisabled(events.count <= 1)
+        .scrollDisabled(pages.count <= 1)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { _, width in
             guard width > 0 else { return }
             pageWidth = width
+        }
+    }
+
+    @ViewBuilder
+    private func pageView(_ page: ClusterPage, index: Int) -> some View {
+        switch page {
+        case .event(let event):
+            ClusterEventPage(
+                event: event,
+                origins: viewModel.originAirports,
+                viewModel: viewModel,
+                isActive: (activeIndex ?? 0) == index,
+                dotsCount: pages.count,
+                dotsIndex: index,
+                scrollTopToken: scrollTopToken,
+                onTapHeader: { scrollTopToken += 1 },
+                onOpenURL: openBrowser,
+                onOpenMap: { coordinate, title in
+                    mapPicker = MapPickerRequest(coordinate: coordinate, title: title)
+                },
+                onExpand: expandPlaces,
+                onPlannerChange: { coord in
+                    guard (activeIndex ?? 0) == index else { return }
+                    airportCoordinate = coord
+                }
+            )
+        case .city(let city):
+            CityBreakPage(
+                viewModel: viewModel,
+                city: city,
+                dotsCount: pages.count,
+                dotsIndex: index,
+                scrollTopToken: scrollTopToken,
+                onTapHeader: { scrollTopToken += 1 }
+            )
         }
     }
 
@@ -126,7 +160,7 @@ struct TripsEventSheet: View {
     }
 }
 
-struct TripsEventPage: View {
+struct ClusterEventPage: View {
     let event: TravelEvent
     let origins: [Airport]
     @ObservedObject var viewModel: TripsViewModel

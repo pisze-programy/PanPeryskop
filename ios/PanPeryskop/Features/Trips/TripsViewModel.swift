@@ -260,6 +260,15 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         return true
     }
 
+    func selectGroup(posts: [Post], cities: [TravelCity]) {
+        clearLoadingScene()
+        let groupEvents = posts.compactMap { p in events.first { $0.id == p.id } }
+        let lead = groupEvents.first
+        selectedTravelEvent = lead
+        showFlightLayer = lead != nil
+        selectedEventGroup = EventGroup(events: groupEvents, cities: cities)
+    }
+
     private func clearSelection() {
         selectedTravelEvent = nil
         showFlightLayer = false

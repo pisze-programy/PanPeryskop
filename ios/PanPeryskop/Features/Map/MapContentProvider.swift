@@ -8,6 +8,7 @@ enum MapOverlay: Identifiable {
     case city(CityPin)
     case airport(AirportPin)
     case arc(FlightArc)
+    case group(MapGroup)
 
     var id: String {
         switch self {
@@ -15,19 +16,25 @@ enum MapOverlay: Identifiable {
         case .city(let c): return "city:\(c.id)"
         case .airport(let a): return "airport:\(a.iata)"
         case .arc(let a): return "arc:\(a.id)"
+        case .group(let g): return "group:\(g.id)"
         }
     }
 }
 
 struct MapPin {
     let post: Post
-    /// Non-empty when tapped via a cluster — the group the card shows.
     var group: [Post] = []
 }
 
-/// A city-break destination. Its own layer: it never joins the event cluster.
+struct MapGroup: Identifiable {
+    let id: String
+    var posts: [Post] = []
+    var cities: [TravelCity] = []
+}
+
 struct CityPin: Identifiable {
     let city: TravelCity
+    var group: [TravelCity] = []
     var id: String { city.id }
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: city.lat, longitude: city.lng)

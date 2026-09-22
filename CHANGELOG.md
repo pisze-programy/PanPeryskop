@@ -4,6 +4,24 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.0] — build 71, 2026-09-21
+
+### Fixed
+- City pins appear where you are looking. The pin cap ranked the whole
+  continent, so a region whose cities were not in the global top 18 showed no
+  pins at all. There is no global cap now: every band cell gives one pin, so a
+  fragment of six cities gives four pins.
+- The city layer waits for the loading scene, like the event pins. Drawing it
+  during the arc animation re-rendered the whole city layer on all thirty frames
+  of the scene, which is where the frames went.
+
+### Changed
+- A band cell with four cities or more shows one count badge instead of a pin, so
+  a dense area stays readable.
+- The layer rebuild is one pass over the overlay list instead of two, the arcs
+  are keyed on their own identity, and the pin and dot views are equatable, so
+  SwiftUI can skip the ones whose inputs did not change.
+
 ## [1.3.0] — build 70, 2026-09-21
 
 ### Changed

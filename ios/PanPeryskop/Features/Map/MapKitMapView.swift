@@ -18,13 +18,37 @@ struct MapKitMapView: View {
     @State private var derived = Derived()
 
     /// The layers a render draws. Rebuilt only when the region settles or the
-    /// data changes, never per animation frame: a camera move used to filter and
-    /// bucket every overlay on every frame.
+    /// data changes, never per animation frame.
     private struct Derived {
         var visible: [MapOverlay] = []
         var clusters: [PostCluster] = []
-        var cities: [CityPin] = []
+        var pins: [CityPin] = []
+        var dots: [CityPin] = []
         var airports: [AirportPin] = []
+    }
+
+    /// A city layer declutters on quantized zoom bands. A band has a fixed cell
+    /// size and a fixed pin cap, so which city is a pin depends on the city and
+    /// the band — never on the exact camera. Panning changes nothing, and a zoom
+    /// inside a band changes nothing, so pins cannot jump.
+    private struct CityBand {
+        let cellDegrees: Double
+        let pinCap: Int
+    }
+
+    private static let cityBands: [CityBand] = [
+        CityBand(cellDegrees: 6, pinCap: 18),
+        CityBand(cellDegrees: 2, pinCap: 22),
+        CityBand(cellDegrees: 0.6, pinCap: 60),
+        CityBand(cellDegrees: 0.15, pinCap: 400),
+    ]
+
+    private var cityBandIndex: Int {
+        let span = visibleRegion.span.latitudeDelta
+        if span > 8 { return 0 }
+        if span > 3 { return 1 }
+        if span > 1 { return 2 }
+        return 3
     }
 
     /// Cheap identity for the overlay list: a count plus the two ends.
@@ -101,14 +125,6 @@ struct MapKitMapView: View {
     }
 
     /// A dense screen shrinks markers further, so the map stays readable.
-    private func densityScale(_ rendered: Int) -> CGFloat {
-        switch rendered {
-        case 240...: return 0.72
-        case 140...: return 0.85
-        default: return 1
-        }
-    }
-
     private var clusterRadiusDegrees: Double {
         let screenHeight = UIScreen.main.bounds.height
         let degreesPerPixel = visibleRegion.span.latitudeDelta / Double(screenHeight)
@@ -127,8 +143,11 @@ struct MapKitMapView: View {
             switch $0 {
             case .pin(let p):
                 return p.post.lat >= lat0 && p.post.lat <= lat1 && p.post.lng >= lng0 && p.post.lng <= lng1
-            case .city(let c):
-                return c.city.lat >= lat0 && c.city.lat <= lat1 && c.city.lng >= lng0 && c.city.lng <= lng1
+            case .city:
+                // The city layer is not viewport-clipped. MapKit does not draw
+                // what is off screen, and clipping here made a pin pop in at the
+                // edge as a full photo with no transition.
+                return false
             case .airport(let a):
                 return a.coord.latitude >= lat0 && a.coord.latitude <= lat1 && a.coord.longitude >= lng0 && a.coord.longitude <= lng1
             case .arc:
@@ -137,34 +156,36 @@ struct MapKitMapView: View {
         }
     }
 
-    /// One city pin per screen cell, the most important city in it. The cap
-    /// follows the screen, not the data: a country with three cities shows three
-    /// pins, and a continent shows about a hundred. A band threshold hid a whole
-    /// country until the user zoomed in.
-    private func cityPins(_ visible: [MapOverlay]) -> [CityPin] {
-        let cell = cityCellDegrees
-        var best: [String: CityPin] = [:]
-        for overlay in visible {
-            guard case .city(let pin) = overlay else { continue }
-            let lat = Int((pin.city.lat / cell).rounded(.down))
-            let lng = Int((pin.city.lng / cell).rounded(.down))
-            let key = "\(lat):\(lng)"
-            if let current = best[key], !isMoreImportant(pin.city, than: current.city) { continue }
-            best[key] = pin
+    /// One promoted pin per band cell, the largest city in it, capped. Every
+    /// other reachable city stays as a dot. The cell grid is anchored to
+    /// absolute coordinates, so a pan does not move a cell or reshuffle a winner.
+    private func cityLayers(_ cities: [CityPin], band: CityBand) -> (pins: [CityPin], dots: [CityPin]) {
+        var winners: [String: CityPin] = [:]
+        for pin in cities {
+            let key = cellKey(pin.city, cell: band.cellDegrees)
+            if let current = winners[key], !isMoreImportant(pin.city, than: current.city) { continue }
+            winners[key] = pin
         }
-        return Array(best.values)
+        let ranked = winners.values.sorted { isMoreImportant($0.city, than: $1.city) }
+        let pins = Array(ranked.prefix(band.pinCap))
+        let promoted = Set(pins.map(\.id))
+        return (pins, cities.filter { !promoted.contains($0.id) })
     }
 
-    /// About 64 pt on screen, so a cell holds one pin.
-    private var cityCellDegrees: Double {
-        let screenHeight = UIScreen.main.bounds.height
-        let degreesPerPixel = visibleRegion.span.latitudeDelta / Double(screenHeight)
-        return max(degreesPerPixel * 64, 0.00005)
+    /// A cell index that is square on screen: the longitude step shrinks with
+    /// the cosine of the latitude.
+    private func cellKey(_ city: TravelCity, cell: Double) -> String {
+        let lat = Int((city.lat / cell).rounded(.down))
+        let scale = max(cos(city.lat * .pi / 180), 0.01)
+        let lng = Int((city.lng * scale / cell).rounded(.down))
+        return "\(lat):\(lng)"
     }
 
+    /// Population decides what is promoted: a big cheap city outranks a small
+    /// expensive resort. The cost band stays a colour, not a rank.
     private func isMoreImportant(_ city: TravelCity, than other: TravelCity) -> Bool {
-        if city.bandRank != other.bandRank { return city.bandRank < other.bandRank }
-        return city.population > other.population
+        if city.population != other.population { return city.population > other.population }
+        return city.name < other.name
     }
 
     private func pinClusters(_ visible: [MapOverlay]) -> [PostCluster] {
@@ -191,10 +212,16 @@ struct MapKitMapView: View {
 
     private func rebuild() {
         let visible = visibleOverlays
+        let cities = overlays.compactMap { overlay -> CityPin? in
+            if case .city(let pin) = overlay { return pin }
+            return nil
+        }
+        let layers = cityLayers(cities, band: Self.cityBands[cityBandIndex])
         derived = Derived(
             visible: visible,
             clusters: pinClusters(visible),
-            cities: cityPins(visible),
+            pins: layers.pins,
+            dots: layers.dots,
             airports: airportPins(visible)
         )
     }
@@ -223,9 +250,10 @@ struct MapKitMapView: View {
         // overlay identity would freeze them and then jump on the scene change.
         let arcs = flightArcs(overlays)
         let clusters = derived.clusters
-        let cities = derived.cities
+        let dots = derived.dots
+        let pins = derived.pins
         let airports = derived.airports
-        let scale = zoomScale * densityScale(clusters.count + cities.count + airports.count)
+        let scale = zoomScale
         return GeometryReader { geo in
             MapReader { proxy in
                 Map(
@@ -253,14 +281,17 @@ struct MapKitMapView: View {
                     } label: { EmptyView() }
                 }
 
-                ForEach(cities) { pin in
+                ForEach(dots) { pin in
                     Annotation(coordinate: pin.coordinate, anchor: .center) {
-                        CityPinView(
-                            city: pin.city,
-                            isExpanded: true,
-                            scale: scale
-                        )
-                        .onTapGesture { onTap(.city(pin)) }
+                        CityDotView(city: pin.city, scale: scale)
+                            .onTapGesture { onTap(.city(pin)) }
+                    } label: { EmptyView() }
+                }
+
+                ForEach(pins) { pin in
+                    Annotation(coordinate: pin.coordinate, anchor: .center) {
+                        CityPinView(city: pin.city, scale: scale)
+                            .onTapGesture { onTap(.city(pin)) }
                     } label: { EmptyView() }
                 }
 
@@ -291,6 +322,9 @@ struct MapKitMapView: View {
                 onCameraSettled(region)
             }
             .onChange(of: regionKey) { _, _ in rebuild() }
+            .onChange(of: cityBandIndex) { _, _ in
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { rebuild() }
+            }
             .onChange(of: overlaysFingerprint) { _, _ in rebuild() }
             .onAppear {
                 rebuild()

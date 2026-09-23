@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTmEvent, tmTag, tmImage, tmStartMs } from '../src/seed/providers/ticketmaster';
+import { parseTmEvent, tmTag, tmImage, tmStartMs, tmIso } from '../src/seed/providers/ticketmaster';
 import { aggregateDayCandidates } from '../src/seed/core/aggregate';
 
 // 2026-09-23T12:30:00Z is 14:30 in Warsaw — the instant the API reports for PL.
@@ -108,6 +108,12 @@ test('tmStartMs: dateTime wins over localDate, TBA yields null', () => {
   assert.equal(tmStartMs({ dates: { start: { localDate: '2026-09-23', localTime: '14:30:00' } } }), DAY_MS);
   assert.equal(tmStartMs({ dates: { start: { dateTBA: true } } }), null);
   assert.equal(tmStartMs({}), null);
+});
+
+test('tmIso: no milliseconds — the API rejects them with DIS1015', () => {
+  // Probed live: ".000Z" is a 400, "Z" is a 200.
+  assert.equal(tmIso(Date.parse('2026-09-22T22:00:00.000Z')), '2026-09-22T22:00:00Z');
+  assert.equal(tmIso(Date.parse('2026-09-30T22:00:00.500Z')), '2026-09-30T22:00:00Z');
 });
 
 test('aggregate: two performances of one event-day-venue collapse into showtimes[]', () => {

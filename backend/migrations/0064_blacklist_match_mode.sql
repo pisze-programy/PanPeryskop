@@ -1,0 +1,11 @@
+-- Blacklist rules gain an explicit match mode.
+--
+-- 'fuzzy' (the default, NULL for existing rows) keeps the original behaviour: the
+-- rule pattern's tokens must be contained in the candidate title (≥ 0.8). That is
+-- greedy — a six-token pattern also matches a one-token title like "koncert" —
+-- so it is a poor fit for "ban this exact recurring junk".
+--
+-- 'exact' compares the diacritic-folded, token-joined title for EQUALITY. The ban
+-- is then a concrete entry: one title, added to the table by hand, nothing else.
+-- The source scope still applies, so the entry can name the providers it covers.
+ALTER TABLE event_blacklist ADD COLUMN match_mode TEXT;

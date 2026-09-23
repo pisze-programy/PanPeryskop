@@ -15,6 +15,7 @@ import { upsertTravelEvents, sanitizeManifest, TravelManifest, TravelEvent } fro
 import { refreshViatorDestinations } from '../travel/viator';
 import { buildDueRoutes, saveRouteDays, routeDaysHorizon } from '../travel/routeDays';
 import { CITY_ENTRIES, saveCities } from '../travel/cities';
+import { blacklistMatch, ruleSources } from '../seed/core/blacklist';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -68,9 +69,70 @@ adminRoutes.get('/seed/existing', async (c) => {
 adminRoutes.get('/seed/blacklist', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const { results } = await c.env.DB
-    .prepare('SELECT id, pattern, venue, partner_id, partner_name FROM event_blacklist WHERE active = 1')
-    .all<{ id: string; pattern: string; venue: string | null; partner_id: string | null; partner_name: string | null }>();
+    .prepare('SELECT id, pattern, venue, partner_id, partner_name, sources, match_mode FROM event_blacklist WHERE active = 1')
+    .all<{ id: string; pattern: string; venue: string | null; partner_id: string | null; partner_name: string | null; sources: string | null; match_mode: string | null }>();
   return c.json({ rules: results ?? [] });
+});
+
+// Preview a blacklist rule against the CURRENT event posts, before it is saved.
+// Same matcher as seed ingest, so the counts are exactly what the rule would drop.
+// Returns the per-source split and the matched titles — a rule with a source scope
+// shows precisely which providers lose events.
+adminRoutes.post('/seed/blacklist/preview', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = (await c.req.json<{ pattern?: string; venue?: string; partner_id?: string; sources?: string; match_mode?: string }>().catch(() => ({}))) as { pattern?: string; venue?: string; partner_id?: string; sources?: string; match_mode?: string };
+  const rule = {
+    pattern: (body.pattern ?? '').trim(),
+    venue: (body.venue ?? '').trim(),
+    partnerId: (body.partner_id ?? '').trim(),
+    sources: (body.sources ?? '').trim(),
+    matchMode: body.match_mode === 'exact' ? 'exact' : 'fuzzy',
+  };
+  const { results } = await c.env.DB.prepare(
+    "SELECT description, partner_id, external_id FROM posts WHERE category='events' AND status IN ('approved','pending')"
+  ).all<{ description: string | null; partner_id: string | null; external_id: string | null }>();
+  const bySource: Record<string, number> = {};
+  const titles: Record<string, number> = {};
+  for (const r of results ?? []) {
+    const desc = r.description || '';
+    const m = /^(.+?):\s*\d{2}:\d{2},\s*(.*)$/.exec(desc);
+    const title = m ? m[1].trim() : desc.trim();
+    const venue = m ? (m[2].split(',')[0] || '').trim() : '';
+    const source = ((r.external_id || '').split('-')[0] || '').trim();
+    if (!blacklistMatch(rule, { title, venue, partnerId: r.partner_id, source })) continue;
+    bySource[source || '(brak)'] = (bySource[source || '(brak)'] || 0) + 1;
+    titles[title] = (titles[title] || 0) + 1;
+  }
+  const sortedTitles = Object.entries(titles).sort((a, b) => b[1] - a[1]).slice(0, 40);
+  return c.json({
+    rule,
+    sourceList: ruleSources(rule.sources),
+    total: Object.values(bySource).reduce((a, b) => a + b, 0),
+    bySource,
+    titles: Object.fromEntries(sortedTitles),
+  });
+});
+
+// Add a blacklist rule (bearer, for CLI/seed use). Same validation as the
+// dashboard: at least a pattern or an organizer, sources limited to real
+// provider ids, match_mode 'fuzzy' (default) or 'exact'.
+adminRoutes.post('/seed/blacklist', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ pattern?: string; venue?: string; partner_id?: string; partner_name?: string; sources?: string; match_mode?: string; note?: string }>().catch(() => ({} as { pattern?: string; venue?: string; partner_id?: string; partner_name?: string; sources?: string; match_mode?: string; note?: string }));
+  const pattern = (body.pattern ?? '').trim();
+  const partnerId = (body.partner_id ?? '').trim();
+  if (!pattern && !partnerId) return c.json({ error: 'Wymagany wzorzec tytułu lub organizator' }, 400);
+  if (pattern.length > 200) return c.json({ error: 'Za długi wzorzec' }, 400);
+  const list = ruleSources(body.sources ?? '');
+  const bad = list.filter((s) => !isProviderId(s));
+  if (bad.length > 0) return c.json({ error: `Nieznane źródło: ${bad.join(', ')}` }, 400);
+  const matchMode = body.match_mode === 'exact' ? 'exact' : 'fuzzy';
+  const rule = { pattern, venue: (body.venue ?? '').trim(), partnerId, sources: list.join(','), matchMode };
+  const id = crypto.randomUUID();
+  await c.env.DB.prepare(
+    'INSERT INTO event_blacklist (id, pattern, venue, partner_id, partner_name, sources, match_mode, note, active, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)'
+  ).bind(id, pattern, rule.venue || null, partnerId || null, (body.partner_name ?? '').trim() || null, rule.sources || null, matchMode, (body.note ?? '').trim() || null, Date.now(), 'admin').run();
+  return c.json({ ok: true, id, rule }, 201);
 });
 
 // Seed cadence — the VPS warms and the orchestrator read this to run only on

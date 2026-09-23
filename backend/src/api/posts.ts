@@ -207,6 +207,7 @@ postsRoutes.post('/', async (c) => {
       title: parsed ? parsed.title : description,
       venue: parsed ? (parsed.loc.split(',')[0] || '').trim() : '',
       partnerId,
+      source: (externalId.split('-')[0] || '').trim(),
     });
     if (bl) {
       return c.json({ error: `blacklisted: ${blacklistReason(bl)}` }, 400);

@@ -154,6 +154,11 @@ export function parseTmEvent(e: TmEvent): SeedCandidate[] {
   }];
 }
 
+/** The API rejects milliseconds (DIS1015): it wants exactly YYYY-MM-DDTHH:MM:SSZ. */
+export function tmIso(ms: number): string {
+  return new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
 /** One page of the Discovery API over the whole seed window. */
 async function fetchPage(ctx: SeedContext, page: number): Promise<{ events: TmEvent[]; pages: number }> {
   const key = ctx.env.TICKETMASTER_CONSUMER_KEY;
@@ -168,8 +173,8 @@ async function fetchPage(ctx: SeedContext, page: number): Promise<{ events: TmEv
   url.searchParams.set('sort', 'date,asc');
   // A ±1 day margin: the API filters on the UTC instant, while the unit window is
   // a set of Warsaw calendar days. Out-of-window rows are dropped by the sink.
-  url.searchParams.set('startDateTime', new Date(ctx.dayStart - DAY_MS).toISOString());
-  url.searchParams.set('endDateTime', new Date(warsawMidnightMs(addDaysWarsaw(ctx.day, windowDays)) + DAY_MS).toISOString());
+  url.searchParams.set('startDateTime', tmIso(ctx.dayStart - DAY_MS));
+  url.searchParams.set('endDateTime', tmIso(warsawMidnightMs(addDaysWarsaw(ctx.day, windowDays)) + DAY_MS));
 
   await paced();
   const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });

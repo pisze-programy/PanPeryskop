@@ -97,7 +97,7 @@ export async function ingestWinnerRow(
     // Blacklist gate BEFORE geo and media: a matched rule drops the row without
     // spending a geocode or a download. Same order as handleIngest.
     const blacklistRules = await loadBlacklistRules(env.DB as D1Database);
-    const bl = findBlacklist(blacklistRules, { title: row.title, venue: row.raw_venue, partnerId: row.partner_id });
+    const bl = findBlacklist(blacklistRules, { title: row.title, venue: row.raw_venue, partnerId: row.partner_id, source: row.provider });
     if (bl) {
       await env.DB.prepare(`UPDATE seed_raw SET status='duplicate', reason=?, updated_at=? WHERE id=?`)
         .bind(blacklistReason(bl), now(), row.id)

@@ -5,7 +5,7 @@ import {
 } from '../src/seed/core/blacklist';
 
 const rule = (r: Partial<BlacklistRule>): BlacklistRule => ({
-  id: 'r', pattern: '', venue: '', partnerId: '', partnerName: '', active: true, ...r,
+  id: 'r', pattern: '', venue: '', partnerId: '', partnerName: '', sources: '', matchMode: 'fuzzy', active: true, ...r,
 });
 
 // Real spam families (goingapp data, 2026-07..09 window).
@@ -65,6 +65,96 @@ test('blacklist: reason string reflects pattern/organizer', () => {
 });
 
 test('blacklist: ruleFromRow normalizes null D1 columns to empty strings', () => {
-  const r = ruleFromRow({ pattern: 'x', venue: null, partner_id: null, partner_name: 'Presto' });
-  assert.deepEqual(r, { pattern: 'x', venue: '', partnerId: '', partnerName: 'Presto' });
+  const r = ruleFromRow({ pattern: 'x', venue: null, partner_id: null, partner_name: 'Presto', sources: null, match_mode: null });
+  assert.deepEqual(r, { pattern: 'x', venue: '', partnerId: '', partnerName: 'Presto', sources: '', matchMode: 'fuzzy' });
+});
+
+// ---- exact mode -------------------------------------------------------------
+// Explicit bans. The fuzzy containment is greedy — a six-token pattern also
+// matches a one-token title like "koncert" — so the recurring junk gets a
+// concrete entry instead: one exact title, nothing else.
+
+const EXACT_SOURCES = 'kupbilecik,ebilet,eventim,going,ticketmaster';
+
+test('exact: the same title on a listed provider is caught', () => {
+  const r = rule({ pattern: 'Koncert Chopinowski', matchMode: 'exact', sources: EXACT_SOURCES });
+  assert.equal(blacklistMatch(r, { title: 'Koncert Chopinowski', venue: 'Sala', source: 'ebilet' }), true);
+});
+
+test('exact: case and diacritics do not matter', () => {
+  const r = rule({ pattern: 'Koncert Przy Świecach', matchMode: 'exact', sources: EXACT_SOURCES });
+  assert.equal(blacklistMatch(r, { title: 'KONCERT PRZY SWIECACH', venue: 'Sala', source: 'kupbilecik' }), true);
+  assert.equal(blacklistMatch(r, { title: 'koncert przy świecach', venue: 'Sala', source: 'kupbilecik' }), true);
+});
+
+test('exact: a longer or shorter title never matches', () => {
+  const r = rule({ pattern: 'Koncert Chopinowski', matchMode: 'exact', sources: EXACT_SOURCES });
+  assert.equal(blacklistMatch(r, { title: 'Koncert Chopinowski w Sali Koncertowej Fryderyk', venue: 'Sala', source: 'ebilet' }), false);
+  assert.equal(blacklistMatch(r, { title: 'Koncert', venue: 'Sala', source: 'ebilet' }), false);
+  assert.equal(blacklistMatch(r, { title: 'Recital Chopinowski Jana Widlarza', venue: 'Sala', source: 'ebilet' }), false);
+});
+
+test('exact: the source scope still applies', () => {
+  const r = rule({ pattern: 'Koncert Chopinowski', matchMode: 'exact', sources: EXACT_SOURCES });
+  assert.equal(blacklistMatch(r, { title: 'Koncert Chopinowski', venue: 'Sala', source: 'meetup' }), false);
+});
+
+test('fuzzy stays the default when no mode is given', () => {
+  const r = rule({ pattern: 'Koncert Chopinowski', sources: EXACT_SOURCES });
+  // Containment still fires on a superset title.
+  assert.equal(blacklistMatch(r, { title: 'Koncert Chopinowski w Sali Koncertowej Fryderyk', venue: 'Sala', source: 'ebilet' }), true);
+});
+
+test('exact: the reason marks the exact mode', () => {
+  assert.equal(
+    blacklistReason({ pattern: 'Koncert Chopinowski', partnerName: '', sources: 'ebilet', matchMode: 'exact' }),
+    'blacklist: Koncert Chopinowski = [ebilet]'
+  );
+});
+
+// ---- source scope -----------------------------------------------------------
+// A partner-scoped rule only ever fired for `going` (the one provider carrying an
+// organizer id), so the same recurring junk from ebilet/eventim/kupbilecik was
+// unstoppable. A source scope blocks it there and leaves other providers alone.
+
+const CHOPIN = 'Koncert Chopinowski w Sali Koncertowej Fryderyk';
+const JUNK_SOURCES = 'kupbilecik,ebilet,eventim,going,ticketmaster';
+
+test('blacklist: a source-scoped rule catches the pattern on the listed providers', () => {
+  const r = rule({ pattern: 'Chopinowski', sources: JUNK_SOURCES });
+  for (const source of JUNK_SOURCES.split(',')) {
+    assert.equal(blacklistMatch(r, { title: CHOPIN, venue: 'Sala Koncertowa Fryderyk', source }), true, source);
+  }
+});
+
+test('blacklist: a source-scoped rule leaves every other provider alone', () => {
+  const r = rule({ pattern: 'Chopinowski', sources: JUNK_SOURCES });
+  // The Meetup case: a one-off "Halloween przy świecach" on an unlisted provider survives.
+  assert.equal(blacklistMatch(r, { title: 'Halloween przy świecach', venue: 'Klub', source: 'meetup' }), false);
+  assert.equal(blacklistMatch(r, { title: CHOPIN, venue: 'Sala Koncertowa Fryderyk', source: 'meetup' }), false);
+  assert.equal(blacklistMatch(r, { title: CHOPIN, venue: 'Sala Koncertowa Fryderyk', source: 'luma' }), false);
+});
+
+test('blacklist: an empty source scope keeps the old every-provider behaviour', () => {
+  const r = rule({ pattern: 'Chopinowski', sources: '' });
+  assert.equal(blacklistMatch(r, { title: CHOPIN, venue: 'Sala Koncertowa Fryderyk', source: 'meetup' }), true);
+  assert.equal(blacklistMatch(r, { title: CHOPIN, venue: 'Sala Koncertowa Fryderyk', source: null }), true);
+});
+
+test('blacklist: source matching is trimmed and case-insensitive', () => {
+  const r = rule({ pattern: 'Chopinowski', sources: ' Kupbilecik , eBilet ' });
+  assert.equal(blacklistMatch(r, { title: CHOPIN, venue: 'Sala Koncertowa Fryderyk', source: 'kupbilecik' }), true);
+  assert.equal(blacklistMatch(r, { title: CHOPIN, venue: 'Sala Koncertowa Fryderyk', source: 'eventim' }), false);
+});
+
+test('blacklist: a source-scoped rule still needs the title to match', () => {
+  const r = rule({ pattern: 'Chopinowski', sources: JUNK_SOURCES });
+  assert.equal(blacklistMatch(r, { title: 'Tenorzy przy świecach', venue: 'Sala', source: 'kupbilecik' }), false);
+});
+
+test('blacklist: the reason names the source scope', () => {
+  assert.equal(
+    blacklistReason({ pattern: 'Chopinowski', partnerName: '', sources: 'kupbilecik,ebilet' }),
+    'blacklist: Chopinowski [kupbilecik,ebilet]'
+  );
 });

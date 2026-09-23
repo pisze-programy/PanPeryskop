@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FlightMonthCalendar: View {
     let title: String
+    var route: String? = nil
     let cells: [FlightWindowCell]
     let month: Date
     let minMonth: Date
@@ -9,7 +10,6 @@ struct FlightMonthCalendar: View {
     @Binding var selected: FlightWindowCell?
     let disabledThrough: String?
     var disabledAfter: String? = nil
-    var subtitle: String? = nil
     var isLoading = false
     let onMonthChange: (Date) -> Void
 
@@ -41,23 +41,24 @@ struct FlightMonthCalendar: View {
     }
 
     private var header: some View {
-        HStack(spacing: Theme.Spacing.s) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-            Spacer(minLength: 0)
-            if let subtitle {
-                Text(subtitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, Theme.Spacing.s)
-                    .padding(.vertical, 3)
-                    .background(Theme.Palette.surface, in: Capsule())
+        VStack(spacing: Theme.Spacing.s) {
+            HStack(spacing: Theme.Spacing.s) {
+                arrow("chevron.left", enabled: canGoBack) { shift(-1) }
+                Spacer(minLength: 0)
+                Text(AppConstants.monthYearFormatter.string(from: month))
+                    .font(.title3.weight(.bold))
+                Spacer(minLength: 0)
+                arrow("chevron.right", enabled: canGoForward) { shift(1) }
             }
-            arrow("chevron.left", enabled: canGoBack) { shift(-1) }
-            Text(AppConstants.monthYearFormatter.string(from: month))
-                .font(.subheadline.weight(.bold))
-                .frame(minWidth: 118)
-            arrow("chevron.right", enabled: canGoForward) { shift(1) }
+            VStack(spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                if let route {
+                    Text(route)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
         }
         .padding(.horizontal, Theme.Spacing.l)
     }

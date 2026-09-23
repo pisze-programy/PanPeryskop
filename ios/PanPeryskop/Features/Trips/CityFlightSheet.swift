@@ -100,7 +100,7 @@ struct CityFlightSheet: View {
     }
 
     private func legTitle(_ from: String, _ to: String) -> String {
-        "Loty \(from) → \(to)"
+        "\(from)/\(to)"
     }
 
     private var maxMonth: Date { Self.maxMonthDate }
@@ -222,7 +222,8 @@ struct CityFlightSheet: View {
     private var outboundCalendar: some View {
         if let option = selectedOption {
             calendar(
-                title: legTitle(outboundStation?.from ?? origin(for: option.destination).iata, outboundStation?.to ?? option.destination.iata),
+                title: "Wylot",
+                route: legTitle(outboundStation?.from ?? origin(for: option.destination).iata, outboundStation?.to ?? option.destination.iata),
                 cells: outboundWindow?.outbound ?? [],
                 month: $outboundMonth,
                 selected: Binding(
@@ -246,7 +247,8 @@ struct CityFlightSheet: View {
             noOutboundHint
         } else if let option = selectedOption {
             calendar(
-                title: legTitle(returningStation?.from ?? option.destination.iata, returningStation?.to ?? origin(for: option.destination).iata),
+                title: "Powrót",
+                route: legTitle(returningStation?.from ?? option.destination.iata, returningStation?.to ?? origin(for: option.destination).iata),
                 cells: returningWindow?.returning ?? [],
                 month: $returningMonth,
                 selected: $returning,
@@ -273,6 +275,7 @@ struct CityFlightSheet: View {
 
     private func calendar(
         title: String,
+        route: String,
         cells: [FlightWindowCell],
         month: Binding<Date>,
         selected: Binding<FlightWindowCell?>,
@@ -290,6 +293,7 @@ struct CityFlightSheet: View {
             } else {
                 FlightMonthCalendar(
                     title: title,
+                    route: route,
                     cells: cells,
                     month: month.wrappedValue,
                     minMonth: Date(),
@@ -297,12 +301,17 @@ struct CityFlightSheet: View {
                     selected: selected,
                     disabledThrough: disabledThrough,
                     disabledAfter: disabledAfter,
-                    subtitle: nightsLabel,
                     isLoading: isLoading(cells),
                     onMonthChange: { month.wrappedValue = $0 }
                 )
             }
         }
+    }
+
+    private var buyTrailing: String? {
+        guard hasSelection else { return nil }
+        if let nights = nightsLabel { return "\(nights) · \(total) zł" }
+        return "\(total) zł"
     }
 
     private var nightsLabel: String? {
@@ -320,7 +329,7 @@ struct CityFlightSheet: View {
             Divider()
             CapsuleButton(
                 title: buyTitle,
-                trailingText: hasSelection ? "\(total) zł" : nil,
+                trailingText: buyTrailing,
                 tint: selectedOption?.carrier.color ?? .accentColor,
                 fullWidth: true,
                 isEnabled: hasSelection,

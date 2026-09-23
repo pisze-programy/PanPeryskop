@@ -93,23 +93,37 @@ struct EventFlightSection: View {
     @ViewBuilder
     private var mapRail: some View {
         if let selected = selectedOption {
-            DestinationMapRail(
-                origin: origin(for: selected.destination),
-                options: options,
-                selected: selected,
-                onSelect: { option in
-                    selectedId = option.id
-                    onSelectDestination(option.destination)
+            VStack(spacing: Theme.Spacing.s) {
+                rail(selected: selected)
+                if options.count > 1 {
+                    PageDots(count: options.count, index: railIndex)
+                        .padding(.horizontal, Theme.Spacing.l)
                 }
-            )
-            .padding(.horizontal, Theme.Spacing.l)
-            AirportAccessRow(
-                airportName: selected.destination.city,
-                airport: CLLocationCoordinate2D(latitude: selected.destination.lat, longitude: selected.destination.lng),
-                centre: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
-            )
-            .padding(.horizontal, Theme.Spacing.l)
+                AirportAccessRow(
+                    airportName: selected.destination.city,
+                    airport: CLLocationCoordinate2D(latitude: selected.destination.lat, longitude: selected.destination.lng),
+                    centre: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
+                )
+                .padding(.horizontal, Theme.Spacing.l)
+            }
         }
+    }
+
+    private func rail(selected: FlightOption) -> some View {
+        DestinationMapRail(
+            origin: origin(for: selected.destination),
+            options: options,
+            selected: selected,
+            onSelect: { option in
+                selectedId = option.id
+                onSelectDestination(option.destination)
+            }
+        )
+        .padding(.horizontal, Theme.Spacing.l)
+    }
+
+    private var railIndex: Int {
+        options.firstIndex { $0.id == selectedOption?.id } ?? 0
     }
 
     @ViewBuilder

@@ -14,10 +14,12 @@ struct FlightMonthCalendar: View {
     let onMonthChange: (Date) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @State private var shimmerPhase: Double = 0
 
     private static let columnCount = 7
     private static let cellHeight: CGFloat = 56
     private static let cellRadius: CGFloat = 8
+    private static let gridSpacing: CGFloat = 4
 
     private static let weekdaySymbols: [String] = {
         var calendar = AppConstants.warsawCalendar
@@ -30,37 +32,42 @@ struct FlightMonthCalendar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             header
+            weekdayHeader
             if isLoading {
-                SkeletonBlock(height: Self.cellHeight * 4)
-                    .padding(.horizontal, Theme.Spacing.l)
+                loadingGrid
             } else {
-                weekdayHeader
                 grid
             }
+        }
+        .onChange(of: isLoading) { _, loading in
+            shimmerPhase = loading ? 1 : 0
+        }
+        .onAppear {
+            shimmerPhase = isLoading ? 1 : 0
         }
     }
 
     private var header: some View {
-        VStack(spacing: Theme.Spacing.s) {
-            HStack(spacing: Theme.Spacing.s) {
-                arrow("chevron.left", enabled: canGoBack) { shift(-1) }
-                Spacer(minLength: 0)
-                Text(AppConstants.monthYearFormatter.string(from: month))
-                    .font(.title3.weight(.bold))
-                Spacer(minLength: 0)
-                arrow("chevron.right", enabled: canGoForward) { shift(1) }
-            }
+        HStack(spacing: Theme.Spacing.s) {
+            arrow("chevron.left", enabled: canGoBack) { shift(-1) }
+            Spacer(minLength: 0)
             VStack(spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                if let route {
-                    Text(route)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Text(AppConstants.monthYearFormatter.string(from: month))
+                    .font(.subheadline.weight(.bold))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
             }
+            Spacer(minLength: 0)
+            arrow("chevron.right", enabled: canGoForward) { shift(1) }
         }
-        .padding(.horizontal, Theme.Spacing.l)
+        .padding(.horizontal, Theme.Spacing.s)
+    }
+
+    private var subtitle: String {
+        guard let route else { return title }
+        return "\(title): \(route)"
     }
 
     private func arrow(_ systemName: String, enabled: Bool, action: @escaping () -> Void) -> some View {
@@ -91,12 +98,46 @@ struct FlightMonthCalendar: View {
     }
 
     private var grid: some View {
-        LazyVGrid(columns: columns, spacing: 4) {
+        LazyVGrid(columns: columns, spacing: Self.gridSpacing) {
             ForEach(Array(slots.enumerated()), id: \.offset) { _, slot in
                 daySlot(slot)
             }
         }
         .padding(.horizontal, Theme.Spacing.s)
+    }
+
+    private var loadingGrid: some View {
+        LazyVGrid(columns: columns, spacing: Self.gridSpacing) {
+            ForEach(Array(slots.enumerated()), id: \.offset) { _, slot in
+                if slot != nil {
+                    skeletonCell
+                } else {
+                    Color.clear.frame(height: Self.cellHeight)
+                }
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.s)
+    }
+
+    private var skeletonCell: some View {
+        RoundedRectangle(cornerRadius: Self.cellRadius, style: .continuous)
+            .fill(Color(.systemGray5))
+            .frame(maxWidth: .infinity, minHeight: Self.cellHeight)
+            .overlay(
+                RoundedRectangle(cornerRadius: Self.cellRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.clear, Color.primary.opacity(0.12), .clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .opacity(shimmerPhase)
+            )
+            .animation(
+                .easeInOut(duration: 1.1).repeatForever(autoreverses: true),
+                value: shimmerPhase
+            )
     }
 
     private var columns: [GridItem] {

@@ -51,20 +51,16 @@ struct DestinationMapRail: View {
                 setActive(selected?.id ?? options.first?.id)
             }
             .onAppear { setActive(selected?.id ?? options.first?.id) }
-
-            if options.count > 1 {
-                PageDots(count: options.count, index: currentIndex)
-            }
         }
+    }
+
+    var currentIndex: Int {
+        options.firstIndex { $0.id == (selected?.id ?? activeId) } ?? 0
     }
 
     private func setActive(_ id: String?) {
         isSyncing = true
         activeId = id
         DispatchQueue.main.async { isSyncing = false }
-    }
-
-    private var currentIndex: Int {
-        options.firstIndex { $0.id == (selected?.id ?? activeId) } ?? 0
     }
 }

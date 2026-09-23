@@ -100,7 +100,7 @@ struct CityFlightSheet: View {
     }
 
     private func legTitle(_ from: String, _ to: String) -> String {
-        "\(from)/\(to)"
+        "\(from) → \(to)"
     }
 
     private var maxMonth: Date { Self.maxMonthDate }
@@ -169,9 +169,17 @@ struct CityFlightSheet: View {
                     }
                 )
                 .padding(.horizontal, Theme.Spacing.l)
+                if options.count > 1 {
+                    PageDots(count: options.count, index: selectedIndex)
+                        .padding(.horizontal, Theme.Spacing.l)
+                }
                 airportCaption(selected)
             }
         }
+    }
+
+    private var selectedIndex: Int {
+        options.firstIndex { $0.id == selectedOption?.id } ?? 0
     }
 
     private func airportCaption(_ option: FlightOption) -> some View {

@@ -16,6 +16,7 @@ enum AllowedWebDomains {
         "ebilet.pl", "tradedoubler.com",
         "booking.com", "airbnb.com", "espn.com",
         "viator.com",
+        "ticketmaster.pl", "ra.co",
     ]
 
     /// Exact host or a subdomain of a registrable domain, e.g. "bilety.helios.pl".

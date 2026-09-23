@@ -23,6 +23,8 @@ const ALLOWED_HOSTS = [
   'ebilet.pl',
   'goingapp.pl',
   'maratonypolskie.pl',
+  'ticketmaster.pl',
+  'ra.co',
 ];
 
 export type RedirectKind = 'flight' | 'bus' | 'place' | 'event' | 'stay';

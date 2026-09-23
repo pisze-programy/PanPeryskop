@@ -180,7 +180,19 @@ struct CityEventsSection: View {
     }
 
     private func footLabel(_ event: TravelEvent) -> String {
-        "\(placeName(event)) · \(distanceKm(to: event)) km od centrum"
+        "\(placeName(event)) · \(distanceLabel(to: event))"
+    }
+
+    private func distanceLabel(to event: TravelEvent) -> String {
+        AirportDirections.distanceLabel(from: coordinate, to: coordinate(of: event))
+    }
+
+    private var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: city.lat, longitude: city.lng)
+    }
+
+    private func coordinate(of event: TravelEvent) -> CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
     }
 
     private func placeName(_ event: TravelEvent) -> String {

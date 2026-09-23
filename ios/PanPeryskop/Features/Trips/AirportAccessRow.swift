@@ -14,7 +14,7 @@ struct AirportAccessRow: View {
             Image(systemName: "mappin.and.ellipse")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            Text("\(airportName) · \(distanceKm) km od centrum")
+            Text("\(airportName) · \(AirportDirections.distanceLabel(from: airport, to: centre))")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
@@ -29,10 +29,6 @@ struct AirportAccessRow: View {
             .buttonStyle(.plain)
             .foregroundColor(.accentColor)
         }
-    }
-
-    private var distanceKm: Int {
-        AirportDirections.distanceKm(from: airport, to: centre)
     }
 
     private func open() {

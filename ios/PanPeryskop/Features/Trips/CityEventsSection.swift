@@ -12,6 +12,7 @@ struct CityEventsSection: View {
     private static let radiusKm = 50.0
     private static let cardWidth: CGFloat = 240
     private static let crestSize: CGFloat = 32
+    private static let maxDistanceChips = 2
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
@@ -89,16 +90,29 @@ struct CityEventsSection: View {
     }
 
     private func matchContent(_ event: TravelEvent) -> some View {
-        HStack(spacing: Theme.Spacing.s) {
-            crest(event.home, code: event.metaData?.homeCode, color: event.metaData?.homeColor)
+        VStack(spacing: Theme.Spacing.xs) {
+            if let league = event.metaData?.league, !league.isEmpty {
+                Text(league)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            HStack(spacing: Theme.Spacing.s) {
+                Spacer(minLength: 0)
+                crest(event.home, code: event.metaData?.homeCode, color: event.metaData?.homeColor)
+                Text("vs")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+                crest(event.away, code: event.metaData?.awayCode, color: event.metaData?.awayColor)
+                Spacer(minLength: 0)
+            }
             Text(event.title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(.primary)
                 .lineLimit(2)
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            crest(event.away, code: event.metaData?.awayCode, color: event.metaData?.awayColor)
+                .multilineTextAlignment(.center)
         }
+        .frame(maxWidth: .infinity)
     }
 
     private func crest(_ name: String?, code: String?, color: String?) -> some View {
@@ -127,8 +141,11 @@ struct CityEventsSection: View {
         let distances = RunDistances.tags(event.metaData, language: region.languageCode)
         if !distances.isEmpty {
             HStack(spacing: Theme.Spacing.xs) {
-                ForEach(distances, id: \.self) { distance in
+                ForEach(distances.prefix(Self.maxDistanceChips), id: \.self) { distance in
                     DistanceTag(label: distance, tint: RunPalette.color(for: event))
+                }
+                if distances.count > Self.maxDistanceChips {
+                    DistanceTag(label: "+\(distances.count - Self.maxDistanceChips)", tint: RunPalette.color(for: event))
                 }
             }
         }
@@ -163,9 +180,15 @@ struct CityEventsSection: View {
     }
 
     private func footLabel(_ event: TravelEvent) -> String {
-        let place = "\(event.city) · \(distanceKm(to: event)) km"
-        guard let league = event.metaData?.league, !league.isEmpty else { return place }
-        return "\(league) · \(place)"
+        "\(placeName(event)) · \(distanceKm(to: event)) km od centrum"
+    }
+
+    private func placeName(_ event: TravelEvent) -> String {
+        guard let code = event.metaData?.countryCode,
+              let country = CountryNames.name(code, language: region.languageCode) else {
+            return event.city
+        }
+        return "\(event.city), \(country)"
     }
 
     private func distanceKm(to event: TravelEvent) -> Int {

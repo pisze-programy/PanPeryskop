@@ -78,22 +78,24 @@ struct TripsGamestrip: View {
     }
 
     private func cityRow(_ city: TravelCity) -> some View {
-        VStack(alignment: .leading, spacing: Self.centerSpacing) {
-            Text(city.displayName)
+        VStack(spacing: Self.centerSpacing) {
+            Text(cityLine(city))
                 .font(.subheadline.weight(.bold))
                 .lineLimit(1)
-            Text(metaLine(city))
+            Text(populationLine(city))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
-    private func metaLine(_ city: TravelCity) -> String {
-        let country = city.countryName(language: region.languageCode)
-        let population = city.population.formatted(.number.notation(.compactName))
-        return "\(country) · \(population)"
+    private func cityLine(_ city: TravelCity) -> String {
+        "\(city.displayName), \(city.countryName(language: region.languageCode))"
+    }
+
+    private func populationLine(_ city: TravelCity) -> String {
+        "Populacja: \(city.population.formatted(.number.notation(.compactName)))"
     }
 
     private var soccerRow: some View {

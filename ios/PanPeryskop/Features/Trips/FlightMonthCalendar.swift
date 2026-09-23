@@ -14,7 +14,6 @@ struct FlightMonthCalendar: View {
     let onMonthChange: (Date) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
-    @State private var shimmerPhase: Double = 0
 
     private static let columnCount = 7
     private static let cellHeight: CGFloat = 56
@@ -38,12 +37,6 @@ struct FlightMonthCalendar: View {
             } else {
                 grid
             }
-        }
-        .onChange(of: isLoading) { _, loading in
-            shimmerPhase = loading ? 1 : 0
-        }
-        .onAppear {
-            shimmerPhase = isLoading ? 1 : 0
         }
     }
 
@@ -108,36 +101,15 @@ struct FlightMonthCalendar: View {
 
     private var loadingGrid: some View {
         LazyVGrid(columns: columns, spacing: Self.gridSpacing) {
-            ForEach(Array(slots.enumerated()), id: \.offset) { _, slot in
+            ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
                 if slot != nil {
-                    skeletonCell
+                    SkeletonDayCell(index: index, height: Self.cellHeight, radius: Self.cellRadius)
                 } else {
                     Color.clear.frame(height: Self.cellHeight)
                 }
             }
         }
         .padding(.horizontal, Theme.Spacing.s)
-    }
-
-    private var skeletonCell: some View {
-        RoundedRectangle(cornerRadius: Self.cellRadius, style: .continuous)
-            .fill(Color(.systemGray5))
-            .frame(maxWidth: .infinity, minHeight: Self.cellHeight)
-            .overlay(
-                RoundedRectangle(cornerRadius: Self.cellRadius, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [.clear, Color.primary.opacity(0.12), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .opacity(shimmerPhase)
-            )
-            .animation(
-                .easeInOut(duration: 1.1).repeatForever(autoreverses: true),
-                value: shimmerPhase
-            )
     }
 
     private var columns: [GridItem] {

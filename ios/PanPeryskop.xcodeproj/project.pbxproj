@@ -160,6 +160,7 @@
 		B725B3D59CA1A854B8FD94BF /* StaysTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B171B30D45987AE19320EA7 /* StaysTests.swift */; };
 		B74D6FA1CD2E0F713682F96E /* BusDayStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD3CE6D19B4678638F0B58D0 /* BusDayStrip.swift */; };
 		B75E0DBA2194C2670F968BDD /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0C2297077E1CF861F55EF2 /* User.swift */; };
+		BACD56369B1D68417D7564A4 /* SkeletonDayCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45380EE06E085EF7F6210197 /* SkeletonDayCell.swift */; };
 		BB2ED3E2827B55E14509332D /* DayLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CAC8E5C2632EA80740D6BFD /* DayLabels.swift */; };
 		BBCD3606093C80EF805A22B6 /* TripsEventPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4272F73CBB4736D74B923499 /* TripsEventPlanner.swift */; };
 		BE62FFC601918AAB716C4DA0 /* AirportDirectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CCEA9B764EBB4C374184582 /* AirportDirectionsTests.swift */; };
@@ -274,6 +275,7 @@
 		4243C0678522339A2173990C /* YPImagePicker */ = {isa = PBXFileReference; lastKnownFileType = folder; name = YPImagePicker; path = vendor/YPImagePicker; sourceTree = SOURCE_ROOT; };
 		4272F73CBB4736D74B923499 /* TripsEventPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsEventPlanner.swift; sourceTree = "<group>"; };
 		44E2600CD901D47BDA2BB05D /* DateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateTests.swift; sourceTree = "<group>"; };
+		45380EE06E085EF7F6210197 /* SkeletonDayCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonDayCell.swift; sourceTree = "<group>"; };
 		45BBEA564F679F629608030C /* StoryContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryContent.swift; sourceTree = "<group>"; };
 		47B3F0EC9D5925DDB27B7B9D /* StoryShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryShareSheet.swift; sourceTree = "<group>"; };
 		4962ABEB84A69F22E8AB6ED3 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
@@ -593,6 +595,7 @@
 				1360B7C265CAD15F9C8300A1 /* PriceInfoSheet.swift */,
 				A2E604C948E764A378B1CC45 /* RunDistances.swift */,
 				9E24106BABF1C88CC96C2B26 /* RunPalette.swift */,
+				45380EE06E085EF7F6210197 /* SkeletonDayCell.swift */,
 				C32C04F87C2920BF4421489D /* Stay22MapView.swift */,
 				B70A144AB9F7016638B58AAA /* StaysAnchor.swift */,
 				140AFF403C2BBDE47B612F2B /* StaysAnchorPoint.swift */,
@@ -1050,6 +1053,7 @@
 				6E7D05D552F8F432721CEE08 /* SheetOptionRow.swift in Sources */,
 				5F1441DC9B82420DC0EAEDA1 /* SheetShell.swift in Sources */,
 				3534B66D1565F3397D89524D /* Skeleton.swift in Sources */,
+				BACD56369B1D68417D7564A4 /* SkeletonDayCell.swift in Sources */,
 				E4F79ED77CCE3432181190AE /* Stay22MapView.swift in Sources */,
 				CBA26C98A2E111C597502213 /* StayRange.swift in Sources */,
 				AC57FD488D2290E431742F0F /* StaysAnchor.swift in Sources */,

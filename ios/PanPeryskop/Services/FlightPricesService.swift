@@ -14,6 +14,7 @@ final class FlightPricesService {
     private var nextCallAt = Date.distantPast
 
     private static let minimumSpacing: TimeInterval = 0.6
+    private static let minimumLoad: TimeInterval = 1.0
     private static let ttl: TimeInterval = 30 * 60
 
     func flights(airline: Airline, origin: String, destination: String, eventDay: Date) async -> FlightWindowResponse? {
@@ -41,14 +42,26 @@ final class FlightPricesService {
         }
         if let task = running[key] { return await task.value }
         let task = Task { [weak self] in
-            await self?.waitForTurn()
-            return await load()
+            guard let self else { return nil as FlightWindowResponse? }
+            await self.waitForTurn()
+            return await self.paced(load)
         }
         running[key] = task
         let window = await task.value
         running[key] = nil
         if let window { cache[key] = Entry(fetchedAt: Date(), window: window) }
         return window
+    }
+
+    /// Hold the result for a minimum time. The month calendar draws a skeleton
+    /// while it waits, and a fast answer would flash it for a few frames. The
+    /// floor also keeps the request rate gentle.
+    private func paced(_ load: @escaping () async -> FlightWindowResponse?) async -> FlightWindowResponse? {
+        let started = Date()
+        let answer = await load()
+        let remaining = Self.minimumLoad - Date().timeIntervalSince(started)
+        if remaining > 0 { try? await Task.sleep(for: .seconds(remaining)) }
+        return answer
     }
 
     private func waitForTurn() async {

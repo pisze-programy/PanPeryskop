@@ -15,8 +15,11 @@ struct CityFlightSheet: View {
     @State private var returningWindow: FlightWindowResponse?
     @State private var outboundFailed = false
     @State private var returningFailed = false
+    @State private var outboundLoading = true
+    @State private var returningLoading = true
 
     private static let windowMonths = 3
+    private static let returningAnchor = "returning-calendar"
 
     init(
         viewModel: TripsViewModel,
@@ -39,14 +42,23 @@ struct CityFlightSheet: View {
     var body: some View {
         SheetShell(detent: $detent) {
             NavigationStack {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                        railSection
-                        outboundCalendar
-                        returningCalendar
+                ScrollViewReader { proxy in
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                            railSection
+                            outboundCalendar
+                            returningCalendar
+                                .id(Self.returningAnchor)
+                        }
+                        .padding(.top, Theme.Spacing.m)
+                        .padding(.bottom, Theme.Spacing.xl)
                     }
-                    .padding(.top, Theme.Spacing.m)
-                    .padding(.bottom, Theme.Spacing.xl)
+                    .onChange(of: outbound?.date) { _, date in
+                        guard date != nil else { return }
+                        withAnimation(AppConstants.springStandard) {
+                            proxy.scrollTo(Self.returningAnchor, anchor: .top)
+                        }
+                    }
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) { buyBar }
                 .navigationTitle("Wybierz terminy")
@@ -121,36 +133,52 @@ struct CityFlightSheet: View {
     private func loadOutbound() async {
         guard let option = selectedOption else { return }
         outboundFailed = false
-        let loaded = await FlightPricesService.shared.month(
+        outboundLoading = true
+        async let loaded = FlightPricesService.shared.month(
             airline: option.carrier,
             origin: origin(for: option.destination).iata,
             destination: option.destination.iata,
             month: outboundMonth
         )
+        await holdSkeleton()
+        let result = await loaded
         guard !Task.isCancelled else { return }
-        guard let loaded else {
+        outboundLoading = false
+        guard let result else {
             outboundFailed = true
             return
         }
-        outboundWindow = loaded
+        outboundWindow = result
     }
 
     private func loadReturning() async {
         guard let option = selectedOption else { return }
         returningFailed = false
-        let loaded = await FlightPricesService.shared.month(
+        returningLoading = true
+        async let loaded = FlightPricesService.shared.month(
             airline: option.carrier,
             origin: origin(for: option.destination).iata,
             destination: option.destination.iata,
             month: returningMonth
         )
+        await holdSkeleton()
+        let result = await loaded
         guard !Task.isCancelled else { return }
-        guard let loaded else {
+        returningLoading = false
+        guard let result else {
             returningFailed = true
             return
         }
-        returningWindow = loaded
+        returningWindow = result
     }
+
+    /// A cached month answers at once, and the skeleton would flash for a few
+    /// frames. Hold it for a fixed beat so every month change reads the same.
+    private func holdSkeleton() async {
+        try? await Task.sleep(for: .seconds(Self.skeletonHold))
+    }
+
+    private static let skeletonHold: Double = 1.0
 
 
     private var railSection: some View {
@@ -209,6 +237,7 @@ struct CityFlightSheet: View {
                 ),
                 disabledThrough: nil,
                 failed: outboundFailed,
+                isLoading: outboundLoading,
                 onRetry: { await loadOutbound() }
             )
         }
@@ -228,6 +257,7 @@ struct CityFlightSheet: View {
                 disabledThrough: outbound?.date,
                 disabledAfter: latestReturn,
                 failed: returningFailed,
+                isLoading: returningLoading,
                 onRetry: { await loadReturning() }
             )
         }
@@ -255,6 +285,7 @@ struct CityFlightSheet: View {
         disabledThrough: String?,
         disabledAfter: String? = nil,
         failed: Bool,
+        isLoading: Bool,
         onRetry: @escaping () async -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
@@ -274,7 +305,7 @@ struct CityFlightSheet: View {
                     selected: selected,
                     disabledThrough: disabledThrough,
                     disabledAfter: disabledAfter,
-                    isLoading: isLoading(cells),
+                    isLoading: isLoading,
                     onMonthChange: { month.wrappedValue = $0 }
                 )
             }
@@ -291,10 +322,6 @@ struct CityFlightSheet: View {
         guard let out = outbound?.date, let back = returning?.date,
               let nights = FlightPickerRules.nights(from: out, to: back) else { return nil }
         return nights == 1 ? "1 noc" : "\(nights) noce"
-    }
-
-    private func isLoading(_ cells: [FlightWindowCell]) -> Bool {
-        cells.isEmpty && !outboundFailed && !returningFailed
     }
 
     private var buyBar: some View {

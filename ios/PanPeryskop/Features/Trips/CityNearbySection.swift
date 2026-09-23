@@ -1,6 +1,9 @@
 import SwiftUI
+import CoreLocation
+
 struct CityNearbySection: View {
     let cities: [TravelCity]
+    let from: CLLocationCoordinate2D
     let onSelect: (TravelCity) -> Void
 
     @Environment(\.region) private var region
@@ -33,7 +36,7 @@ struct CityNearbySection: View {
         } label: {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 photo(city)
-                Text(city.displayName)
+                Text(cityLine(city))
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.primary)
                     .lineLimit(1)
@@ -46,6 +49,14 @@ struct CityNearbySection: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func cityLine(_ city: TravelCity) -> String {
+        "\(city.displayName), \(AirportDirections.distanceKm(from: from, to: coordinate(city))) km"
+    }
+
+    private func coordinate(_ city: TravelCity) -> CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: city.lat, longitude: city.lng)
     }
 
     private func photo(_ city: TravelCity) -> some View {

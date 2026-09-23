@@ -125,6 +125,7 @@
 		83396805BC14D994957C701C /* CityWeatherSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8BB0F643D8F5D9DE19A786 /* CityWeatherSection.swift */; };
 		84D197577717604F47047F82 /* RailSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD67997E1977E7A508573268 /* RailSliderView.swift */; };
 		855D4453DB1274F73B0CBCCB /* MapOverlayExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CBAFAB9586FD8D5B7797BA3 /* MapOverlayExtensions.swift */; };
+		85A674B5860A678FA414D654 /* URL+Normalized.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6A61775F927FA9665A2DAD5 /* URL+Normalized.swift */; };
 		865B30B4758B9A2B6B009B45 /* BusDirectionSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF8563CB5C3F29E88B69063 /* BusDirectionSection.swift */; };
 		86AFF281A5884F71C0D2E94E /* DescriptionStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC285092C6C1F446940D3AD0 /* DescriptionStepView.swift */; };
 		86BD8A6F871DB769FEFE8CF3 /* ArcBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE51F539CAB5E7E9E94B8224 /* ArcBuilderTests.swift */; };
@@ -380,6 +381,7 @@
 		C3B2A69E63454D375845BF49 /* StaysWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaysWidget.swift; sourceTree = "<group>"; };
 		C41651AB7F2A0B22B355538B /* TripsGamestrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsGamestrip.swift; sourceTree = "<group>"; };
 		C53BFA172897E68BBD834C31 /* OnboardingVideoBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingVideoBackground.swift; sourceTree = "<group>"; };
+		C6A61775F927FA9665A2DAD5 /* URL+Normalized.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "URL+Normalized.swift"; sourceTree = "<group>"; };
 		C8CD6BD0A4BED70D4ED47F42 /* PlacePreviewLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacePreviewLoader.swift; sourceTree = "<group>"; };
 		C95457CAA92DD74C0DD79D61 /* TransportMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportMode.swift; sourceTree = "<group>"; };
 		C9FE43E3CC773AD637F3A523 /* Post.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Post.swift; sourceTree = "<group>"; };
@@ -538,6 +540,7 @@
 				4BC0942470390E231F8D1020 /* RegionStore.swift */,
 				966D1BFAA7477826BACF207A /* StayRange.swift */,
 				2F1EB481F59516E748139BF1 /* TagSorting.swift */,
+				C6A61775F927FA9665A2DAD5 /* URL+Normalized.swift */,
 				DF71EEE52842B6BA52064030 /* Vocabulary.swift */,
 				F5B4B4D980C2B673BA8E3BF6 /* WebKitWarmup.swift */,
 			);
@@ -1100,6 +1103,7 @@
 				5E29A955BAA528C8A2BFB052 /* TripsSectionHeader.swift in Sources */,
 				58769822566001813543CB5B /* TripsSheetSection.swift in Sources */,
 				56525116676B8E617ED58262 /* TripsViewModel.swift in Sources */,
+				85A674B5860A678FA414D654 /* URL+Normalized.swift in Sources */,
 				B75E0DBA2194C2670F968BDD /* User.swift in Sources */,
 				137265F67501E28A4DD4A653 /* VenueMap.swift in Sources */,
 				54E8234FB097ED138A912454 /* Vocabulary.swift in Sources */,

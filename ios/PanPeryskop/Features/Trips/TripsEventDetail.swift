@@ -120,8 +120,7 @@ struct TripsEventDetail: View {
 
     private var linkURL: URL? {
         let raw = event.isRun ? (event.link ?? meta?.website) : event.link
-        guard let raw, let url = URL(string: raw) else { return nil }
-        return url
+        return URL.normalized(raw)
     }
 
     private var linkAccess: BrowserAccess {

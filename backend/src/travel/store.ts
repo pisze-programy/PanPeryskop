@@ -41,6 +41,17 @@ function isTravelEvent(v: unknown): v is TravelEvent {
   );
 }
 
+/** A provider sometimes ships a doubly-prefixed website ("http://Http://…"),
+ *  which the browser refuses. Keep one scheme and reject anything unusable. */
+export function normalizeLink(link: string | null | undefined): string | null {
+  const raw = (link ?? '').trim();
+  if (!raw) return null;
+  const stripped = raw.replace(/^(https?:\/\/)+/i, '');
+  if (!stripped || /\s/.test(stripped)) return null;
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}/i.test(stripped)) return null;
+  return `https://${stripped}`;
+}
+
 /** Validate + dedupe manifest events; throws on a malformed row. */
 export function sanitizeManifest(manifest: TravelManifest): TravelEvent[] {
   const seen = new Set<string>();
@@ -51,7 +62,7 @@ export function sanitizeManifest(manifest: TravelManifest): TravelEvent[] {
     const key = `${e.provider}:${e.externalId}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(e);
+    out.push({ ...e, link: normalizeLink(e.link) });
   }
   return out;
 }

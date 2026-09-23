@@ -128,7 +128,10 @@ struct CityBreakPage: View {
                 viewModel.selectNearbyEvent(event)
             }
         case .nearby:
-            CityNearbySection(cities: nearbyCities) { other in
+            CityNearbySection(
+                cities: nearbyCities,
+                from: CLLocationCoordinate2D(latitude: city.lat, longitude: city.lng)
+            ) { other in
                 viewModel.selectGroup(posts: [], cities: [other])
             }
             .padding(.top, Theme.Spacing.section)

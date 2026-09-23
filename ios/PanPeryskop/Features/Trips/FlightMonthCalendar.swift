@@ -104,6 +104,7 @@ struct FlightMonthCalendar: View {
             ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
                 if slot != nil {
                     SkeletonDayCell(index: index, height: Self.cellHeight, radius: Self.cellRadius)
+                        .id("\(monthKey)-\(index)")
                 } else {
                     Color.clear.frame(height: Self.cellHeight)
                 }
@@ -114,6 +115,10 @@ struct FlightMonthCalendar: View {
 
     private var columns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: 4), count: Self.columnCount)
+    }
+
+    private var monthKey: String {
+        AppConstants.monthYearFormatter.string(from: month)
     }
 
     @ViewBuilder

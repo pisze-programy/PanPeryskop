@@ -255,7 +255,10 @@ struct ClusterEventPage: View {
                 )
             }
         case .nearby:
-            CityNearbySection(cities: viewModel.nearbyCities(for: event)) { other in
+            CityNearbySection(
+                cities: viewModel.nearbyCities(for: event),
+                from: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
+            ) { other in
                 viewModel.selectGroup(posts: [], cities: [other])
             }
             .padding(.top, Theme.Spacing.section)

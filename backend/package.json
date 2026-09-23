@@ -12,7 +12,8 @@
     "gen:cities": "tsx src/travel/gen-cities.ts",
     "db:migrate": "wrangler d1 migrations apply panperyskop-db --config wrangler.toml",
     "db:create": "wrangler d1 execute panperyskop-db --file=./schema/schema.sql --config wrangler.toml",
-    "cf-typegen": "wrangler types --config wrangler.toml"
+    "cf-typegen": "wrangler types --config wrangler.toml",
+    "set:photos": "tsx src/travel/set-city-photos.ts"
   },
   "dependencies": {
     "@cloudflare/puppeteer": "^1.3.0",

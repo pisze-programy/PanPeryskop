@@ -67,8 +67,6 @@ struct CityEventsSection: View {
 
     private func badge(_ event: TravelEvent) -> some View {
         HStack(spacing: Theme.Spacing.xs) {
-            Image(systemName: categoryIcon(event))
-                .font(.caption2.weight(.bold))
             Text(categoryLabel(event))
                 .font(.caption2.weight(.bold))
                 .tracking(0.5)
@@ -162,10 +160,6 @@ struct CityEventsSection: View {
             .font(.caption2)
             .foregroundColor(.secondary)
             .lineLimit(1)
-    }
-
-    private func categoryIcon(_ event: TravelEvent) -> String {
-        event.isRun ? "figure.run" : "sportscourt.fill"
     }
 
     private func categoryLabel(_ event: TravelEvent) -> String {

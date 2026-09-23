@@ -16,14 +16,22 @@ interface CityEntry {
   imageUrl: string;
 }
 
-function thumbUrl(imageUrl: string): string {
+/** The 400x200 hero crop. Handles both shapes: the Unsplash query form
+ *  (`w=600&h=600`) and the older resize proxy path (`width=600,height=600`). */
+export function thumbUrl(imageUrl: string): string {
+  if (/images\.unsplash\.com/.test(imageUrl)) {
+    return imageUrl
+      .replace(/([?&])w=\d+/, `$1w=400`)
+      .replace(/([?&])h=\d+/, `$1h=200`);
+  }
   return imageUrl.replace(/width=\d+,height=\d+,quality=\d+/, 'width=400,height=200,quality=70');
 }
 
 async function download(id: string, url: string): Promise<string> {
   mkdirSync(CACHE, { recursive: true });
   const file = join(CACHE, `${id}.webp`);
-  if (existsSync(file)) return file;
+  const source = existsSync(file) ? readFileSync(file) : null;
+  if (source) return file;
   const res = await fetch(url, { headers: { 'User-Agent': AGENT } });
   if (!res.ok) throw new Error(`${url} -> ${res.status}`);
   const buffer = Buffer.from(await res.arrayBuffer());
@@ -39,16 +47,19 @@ function encode(source: string, target: string): void {
 async function main(): Promise<void> {
   mkdirSync(OUT, { recursive: true });
   const cities = JSON.parse(readFileSync(CITIES, 'utf8')) as CityEntry[];
+  const force = process.argv.includes('--force');
   let raw = 0;
   let encoded = 0;
   let failed = 0;
+  let made = 0;
   for (const city of cities) {
     const target = join(OUT, `${city.id}.webp`);
-    if (!existsSync(target)) {
+    if (force || !existsSync(target)) {
       try {
         const source = await download(city.id, thumbUrl(city.imageUrl));
         raw += statSync(source).size;
         encode(source, target);
+        made += 1;
         await new Promise((resolve) => setTimeout(resolve, 40));
       } catch (error) {
         failed += 1;
@@ -58,7 +69,7 @@ async function main(): Promise<void> {
     }
     encoded += statSync(target).size;
   }
-  console.log(`thumbs: ${cities.length} cities, ${failed} failed`);
+  console.log(`thumbs: ${cities.length} cities, ${made} written, ${failed} failed`);
   console.log(`downloaded: ${(raw / 1024 / 1024).toFixed(2)} MB`);
   console.log(`bundle: ${(encoded / 1024 / 1024).toFixed(2)} MB (${(encoded / cities.length / 1024).toFixed(1)} KB each)`);
 }

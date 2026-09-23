@@ -47,6 +47,28 @@ const NAME_OVERRIDES: Record<string, string> = {
   'A Coruna': 'A Coruña',
 };
 
+/** The photo fields for one city. A photo already replaced by hand stays: the
+ *  runner `npm run set:photos` resolves each Unsplash credit to its
+ *  images.unsplash.com file, and a rebuild must not put the Nomads file back.
+ *  The Nomads photo is the first default; the Unsplash credit is the second. */
+function cityPhoto(
+  slug: string,
+  nomadsImage: string,
+  nomadsLarge: string,
+  pageCredit: ImageCredit | null,
+  existing: ExistingCity | undefined
+): Pick<CityEntry, 'imageUrl' | 'imageLargeUrl' | 'imageCredit'> {
+  const handSet = existing && /images\.unsplash\.com/.test(existing.imageUrl);
+  if (handSet) {
+    return {
+      imageUrl: existing.imageUrl,
+      imageLargeUrl: existing.imageLargeUrl,
+      imageCredit: existing.imageCredit ?? pageCredit,
+    };
+  }
+  return { imageUrl: nomadsImage, imageLargeUrl: nomadsLarge, imageCredit: pageCredit };
+}
+
 const SETTLEMENT_TYPES = new Set([
   'Q486972', 'Q515', 'Q3957', 'Q532', 'Q1549591', 'Q1637706', 'Q15284',
   'Q902814', 'Q634', 'Q1777138', 'Q15239622', 'Q15303838',
@@ -75,6 +97,23 @@ export interface ImageCredit {
   photoUrl: string;
   author: string;
   authorUrl: string;
+}
+
+/** The fields the photo runner wrote into data/cities.json, read back on a
+ *  rebuild so a replaced photo survives. */
+interface ExistingCity {
+  id: string;
+  imageUrl: string;
+  imageLargeUrl: string;
+  imageCredit: ImageCredit | null;
+}
+
+function readExistingCities(): Map<string, ExistingCity> {
+  const out = new Map<string, ExistingCity>();
+  if (!existsSync(OUT)) return out;
+  const rows = JSON.parse(readFileSync(OUT, 'utf8')) as ExistingCity[];
+  for (const row of rows) out.set(row.id, row);
+  return out;
 }
 
 export interface CityEntry {
@@ -217,8 +256,7 @@ function tabs(html: string): { near: string[]; next: string[]; similar: string[]
 }
 
 /** The Unsplash credit block the city page carries for its hero photo. */
-function credit(html: string): ImageCredit | null {
-  const start = html.indexOf('mediaCredits');
+function credit(html: string): ImageCredit | null {  const start = html.indexOf('mediaCredits');
   if (start < 0) return null;
   const block = html.slice(start, start + 1200);
   const hrefs = [...block.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
@@ -333,6 +371,7 @@ function report(entries: CityEntry[], edges: number[]): void {
 async function main(): Promise<void> {
   const all = await cached<{ cities: NomadsCity[] }>('cities.json', 'https://nomads.com/api/cities');
   const europe = all.cities.filter((c) => c.region === 'Europe');
+  const existing = readExistingCities();
 
   const facts = new Map<string, NomadsFacts>();
   for (const country of [...new Set(europe.map((c) => c.country))]) {
@@ -375,9 +414,13 @@ async function main(): Promise<void> {
       costUsd: cost,
       population: city.population,
       airports: cityAirports(city.name, city.latitude, city.longitude),
-      imageUrl: city.image,
-      imageLargeUrl: city.image_large,
-      imageCredit: credit(page.html),
+      ...cityPhoto(
+        city.long_slug,
+        city.image,
+        city.image_large,
+        credit(page.html),
+        existing.get(city.long_slug)
+      ),
       videoUrl: null,
       nearby: links.near,
       next: links.next,

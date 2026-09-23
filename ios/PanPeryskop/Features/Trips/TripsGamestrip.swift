@@ -33,7 +33,7 @@ struct TripsGamestrip: View {
     }
 
     private var bar: some View {
-        StickyBar(leadingColor: leadingGlow, trailingColor: trailingGlow, leadingImage: city?.pinURL) {
+        StickyBar(leadingColor: leadingGlow, trailingColor: trailingGlow, leadingImage: city.flatMap { CityThumbStore.image(for: $0.id) }) {
             VStack(spacing: 0) {
                 if let league {
                     Text(league)

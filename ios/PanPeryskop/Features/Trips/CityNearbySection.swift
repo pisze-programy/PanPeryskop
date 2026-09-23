@@ -8,6 +8,9 @@ struct CityNearbySection: View {
 
     @Environment(\.region) private var region
 
+    private static let cardWidth: CGFloat = 180
+    private static let photoHeight: CGFloat = 120
+
     var body: some View {
         Group {
             if !cities.isEmpty { section }
@@ -19,7 +22,7 @@ struct CityNearbySection: View {
             TripsSectionHeader(title: "W okolicy")
                 .padding(.horizontal, Theme.Spacing.l)
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: Theme.Spacing.s) {
+                LazyHStack(alignment: .top, spacing: Theme.Spacing.s) {
                     ForEach(cities) { city in
                         card(city)
                     }
@@ -37,13 +40,14 @@ struct CityNearbySection: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 photo(city)
                 nameLine(city)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(city.countryName(language: region.languageCode))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-            .frame(width: 140, alignment: .leading)
+            .frame(width: Self.cardWidth, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -63,12 +67,16 @@ struct CityNearbySection: View {
     }
 
     private func photo(_ city: TravelCity) -> some View {
-        AsyncImage(url: city.pinURL) { image in
-            image.resizable().aspectRatio(contentMode: .fill)
-        } placeholder: {
-            CityPalette.gradient(countryCode: city.countryCode, bandRank: city.bandRank).first
-        }
-        .frame(width: 140, height: 92)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
+        Rectangle()
+            .fill(CityPalette.gradient(countryCode: city.countryCode, bandRank: city.bandRank).first ?? .gray)
+            .overlay {
+                if let image = CityThumbStore.image(for: city.id) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                }
+            }
+            .frame(width: Self.cardWidth, height: Self.photoHeight)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
     }
 }

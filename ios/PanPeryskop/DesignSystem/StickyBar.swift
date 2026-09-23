@@ -31,7 +31,7 @@ struct StickyBar<Content: View>: View {
     let trailingColor: Color
     /// Fills the leading edge, behind the colour wash. The row insets itself past
     /// it through the environment, so a full-width child stays centred.
-    var leadingImage: URL? = nil
+    var leadingImage: UIImage? = nil
     var topPadding: CGFloat = 18
     var bottomPadding: CGFloat = 10
     @ViewBuilder var content: () -> Content
@@ -66,13 +66,11 @@ struct StickyBar<Content: View>: View {
         .overlay(alignment: .bottom) { edgeShadow }
     }
 
-    private func imageLayer(_ url: URL, height: CGFloat) -> some View {
-        AsyncImage(url: url) { image in
-            image.resizable().aspectRatio(contentMode: .fill)
-        } placeholder: {
-            Color.clear
-        }
-        .frame(width: StickyBarMetrics.imageWidth, height: height)
+    private func imageLayer(_ image: UIImage, height: CGFloat) -> some View {
+        Image(uiImage: image)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(width: StickyBarMetrics.imageWidth, height: height)
         .clipped()
         .opacity(StickyBarMetrics.imageOpacity)
         .mask(

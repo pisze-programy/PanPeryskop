@@ -48,7 +48,6 @@ struct CityFacts: Codable, Equatable {
 extension TravelCity {
     var displayName: String { namePl.isEmpty ? name : namePl }
     var heroURL: URL? { URL(string: imageLargeUrl) }
-    var pinURL: URL? { URL(string: imageUrl) }
 
     func countryName(language: String) -> String {
         CountryNames.name(countryCode, language: language) ?? country

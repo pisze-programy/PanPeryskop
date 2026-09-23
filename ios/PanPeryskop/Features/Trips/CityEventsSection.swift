@@ -13,6 +13,7 @@ struct CityEventsSection: View {
     private static let cardWidth: CGFloat = 240
     private static let crestSize: CGFloat = 32
     private static let maxDistanceChips = 2
+    private static let contentHeight: CGFloat = 80
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
@@ -82,11 +83,14 @@ struct CityEventsSection: View {
 
     @ViewBuilder
     private func content(_ event: TravelEvent) -> some View {
-        if event.isRun {
-            runContent(event)
-        } else {
-            matchContent(event)
+        Group {
+            if event.isRun {
+                runContent(event)
+            } else {
+                matchContent(event)
+            }
         }
+        .frame(maxWidth: .infinity, minHeight: Self.contentHeight, alignment: .top)
     }
 
     private func matchContent(_ event: TravelEvent) -> some View {
@@ -106,6 +110,7 @@ struct CityEventsSection: View {
                 crest(event.away, code: event.metaData?.awayCode, color: event.metaData?.awayColor)
                 Spacer(minLength: 0)
             }
+            Spacer(minLength: 0)
             Text(event.title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(.primary)
@@ -132,6 +137,7 @@ struct CityEventsSection: View {
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+            Spacer(minLength: 0)
             distanceChips(event)
         }
     }

@@ -23,6 +23,7 @@ struct FlightMonthCalendar: View {
     private static let weekdaySymbols: [String] = {
         var calendar = AppConstants.warsawCalendar
         calendar.locale = Locale(identifier: "pl_PL")
+        calendar.firstWeekday = 2
         let symbols = calendar.veryShortWeekdaySymbols
         let first = calendar.firstWeekday - 1
         return (0..<7).map { symbols[(first + $0) % 7].uppercased() }

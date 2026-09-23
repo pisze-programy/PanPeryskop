@@ -17,7 +17,7 @@ enum AppConstants {
     static let postTTLMs: Int64 = 24 * hourMs
 
     /// The small frames-per-second readout on the map. Off for production.
-    static let showsFPS = true
+    static let showsFPS = false
 
     /// The forward window for flights, running and football. One number for all
     /// three: the day slider, the flight months and the city events row.

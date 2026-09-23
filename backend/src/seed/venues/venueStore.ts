@@ -37,7 +37,7 @@ export function venueKey(name: string): string {
 export async function upsertVenue(db: D1Database, v: VenueInput): Promise<string | null> {
   if (!v.name || typeof v.lat !== 'number' || typeof v.lng !== 'number') return null;
   const now = Date.now();
-  const rows = await loadVenuePool(db, v.city);
+  const rows = await loadUpsertPool(db, v.city);
 
   let best: VenueRow | null = null;
   let bestScore = 0;
@@ -109,7 +109,9 @@ export async function resolveVenueGeo(
 
 // Load the candidate venue rows. With a known city ONLY exact same-city rows are
 // candidates — city-less rows are ambiguous ("Amfiteatr" could be any city's).
-// Coordinate-less stubs are excluded (see resolveVenueGeo note).
+// An upsert that carries its own coordinates loosens this (see loadUpsertPool):
+// a row without a city must not hide the venue it names, because the name and the
+// coordinates together decide the match. Coordinate-less stubs stay excluded.
 async function loadVenuePool(db: D1Database, city?: string | null): Promise<VenueRow[]> {
   if (city) {
     const { results } = await db.prepare('SELECT * FROM venues WHERE city = ? AND lat IS NOT NULL AND lng IS NOT NULL')
@@ -117,6 +119,17 @@ async function loadVenuePool(db: D1Database, city?: string | null): Promise<Venu
     return results || [];
   }
   const { results } = await db.prepare('SELECT * FROM venues WHERE lat IS NOT NULL AND lng IS NOT NULL').all<VenueRow>();
+  return results || [];
+}
+
+/** The upsert pool: same-city rows plus city-less rows. A provider that did not
+ *  know the city must not hide its venue from one that does — "NIEBO" and
+ *  "Klub Niebo" are one club, though only one of the two rows carries a city. */
+async function loadUpsertPool(db: D1Database, city: string | null): Promise<VenueRow[]> {
+  if (!city) return loadVenuePool(db, null);
+  const { results } = await db.prepare(
+    'SELECT * FROM venues WHERE (city = ? OR city IS NULL) AND lat IS NOT NULL AND lng IS NOT NULL'
+  ).bind(venueKey(city)).all<VenueRow>();
   return results || [];
 }
 

@@ -129,7 +129,9 @@ function mockDb() {
               return null;
             },
             all: async () => ({
-              results: sql.includes('WHERE city = ?')
+              results: sql.includes('(city = ? OR city IS NULL)')
+                ? db._venues.filter((r) => r.city === null || (r.city || '').toLowerCase() === String(params[0] ?? '').toLowerCase())
+                : sql.includes('WHERE city = ?')
                 ? db._venues.filter((r) => (r.city || '').toLowerCase() === String(params[0] ?? '').toLowerCase())
                 : [...db._venues],
             }),
@@ -223,4 +225,19 @@ test('venueStore: exact-name city-less venue resolves even when a city is known'
   assert.ok(Math.abs(geo!.lat - 51.1094845) < 0.001);
   // A DIFFERENT name must NOT fuzzy-match the city-less row (no cross-city leak).
   assert.equal(await resolveVenueGeo(db, 'Katedra', 'wrocław'), null);
+});
+test('venueStore: a city-less row does not hide its venue from a city match', async () => {
+  const db = mockDb();
+  // The real case: ebilet stored "Klub Niebo" with no city; RA then sent "NIEBO"
+  // with Warszawa. Two rows for one club reached the map as two venues, and the
+  // same gig lived twice.
+  await upsertVenue(db, { name: 'Klub Niebo', lat: 52.2415, lng: 21.0196, city: null, provider: 'ebilet' });
+  const id = await upsertVenue(db, { name: 'NIEBO', lat: 52.2415, lng: 21.0196, city: 'warszawa', provider: 'residentadvisor' });
+  assert.equal(id, venueKey('Klub Niebo'), 'one club, one row');
+});
+
+test('venueStore: a city-less row still cannot answer a geo lookup for another city', async () => {
+  const db = mockDb();
+  await upsertVenue(db, { name: 'Amfiteatr Wolskiego Centrum Kultury', lat: 52.2309856, lng: 20.9492338, provider: 'going' });
+  assert.equal(await resolveVenueGeo(db, 'Amfiteatr', 'krakow'), null, 'the upsert pool loosens, the lookup does not');
 });

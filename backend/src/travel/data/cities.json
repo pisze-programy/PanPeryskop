@@ -202,7 +202,6 @@
   "videoUrl": null,
   "nearby": [
    "luton-united-kingdom",
-   "reading-united-kingdom",
    "brighton-united-kingdom",
    "cambridge-united-kingdom",
    "oxford-united-kingdom",
@@ -817,7 +816,6 @@
   },
   "videoUrl": null,
   "nearby": [
-   "reading-united-kingdom",
    "luton-united-kingdom",
    "cheltenham-united-kingdom",
    "coventry-united-kingdom",
@@ -1604,10 +1602,8 @@
    "exeter-united-kingdom",
    "nantes-france",
    "brighton-united-kingdom",
-   "rouen-france",
    "bath-united-kingdom",
    "bristol-united-kingdom",
-   "reading-united-kingdom",
    "cardiff-united-kingdom"
   ],
   "next": [
@@ -1691,7 +1687,6 @@
    "norwich-united-kingdom",
    "leicester-united-kingdom",
    "oxford-united-kingdom",
-   "reading-united-kingdom",
    "coventry-united-kingdom",
    "nottingham-united-kingdom",
    "birmingham-united-kingdom",
@@ -2042,13 +2037,11 @@
    "portsmouth-united-kingdom",
    "london-united-kingdom",
    "southampton-united-kingdom",
-   "reading-united-kingdom",
    "luton-united-kingdom",
    "bournemouth-united-kingdom",
    "oxford-united-kingdom",
    "cambridge-united-kingdom",
    "bath-united-kingdom",
-   "rouen-france",
    "cheltenham-united-kingdom"
   ],
   "next": [
@@ -2221,7 +2214,6 @@
    "oxford-united-kingdom",
    "southampton-united-kingdom",
    "exeter-united-kingdom",
-   "reading-united-kingdom",
    "portsmouth-united-kingdom",
    "birmingham-united-kingdom",
    "coventry-united-kingdom",
@@ -2664,7 +2656,6 @@
    "bournemouth-united-kingdom",
    "southampton-united-kingdom",
    "oxford-united-kingdom",
-   "reading-united-kingdom",
    "portsmouth-united-kingdom",
    "exeter-united-kingdom",
    "birmingham-united-kingdom",
@@ -3364,7 +3355,6 @@
   },
   "videoUrl": null,
   "nearby": [
-   "rouen-france",
    "lille-france",
    "dijon-france",
    "ghent-belgium",
@@ -3634,7 +3624,6 @@
   "nearby": [
    "portsmouth-united-kingdom",
    "bournemouth-united-kingdom",
-   "reading-united-kingdom",
    "bath-united-kingdom",
    "brighton-united-kingdom",
    "oxford-united-kingdom",
@@ -4505,7 +4494,6 @@
   "nearby": [
    "southampton-united-kingdom",
    "bournemouth-united-kingdom",
-   "reading-united-kingdom",
    "brighton-united-kingdom",
    "oxford-united-kingdom",
    "bath-united-kingdom",
@@ -5210,7 +5198,6 @@
    "london-united-kingdom",
    "oxford-united-kingdom",
    "cambridge-united-kingdom",
-   "reading-united-kingdom",
    "coventry-united-kingdom",
    "leicester-united-kingdom",
    "cheltenham-united-kingdom",
@@ -6244,7 +6231,6 @@
    "hull-united-kingdom",
    "coventry-united-kingdom",
    "oxford-united-kingdom",
-   "reading-united-kingdom",
    "bruges-belgium",
    "scheveningen-netherlands"
   ],
@@ -6689,7 +6675,6 @@
    "shrewsbury-united-kingdom",
    "luton-united-kingdom",
    "sheffield-united-kingdom",
-   "reading-united-kingdom",
    "cambridge-united-kingdom",
    "bath-united-kingdom"
   ],
@@ -6949,7 +6934,6 @@
    "portsmouth-united-kingdom",
    "bath-united-kingdom",
    "bristol-united-kingdom",
-   "reading-united-kingdom",
    "exeter-united-kingdom",
    "oxford-united-kingdom",
    "brighton-united-kingdom",
@@ -7040,7 +7024,6 @@
    "birmingham-united-kingdom",
    "coventry-united-kingdom",
    "cardiff-united-kingdom",
-   "reading-united-kingdom",
    "shrewsbury-united-kingdom",
    "leicester-united-kingdom",
    "luton-united-kingdom",
@@ -7839,7 +7822,6 @@
    "southampton-united-kingdom",
    "shrewsbury-united-kingdom",
    "birmingham-united-kingdom",
-   "reading-united-kingdom",
    "coventry-united-kingdom",
    "portsmouth-united-kingdom"
   ],
@@ -8103,7 +8085,6 @@
    "cheltenham-united-kingdom",
    "portsmouth-united-kingdom",
    "oxford-united-kingdom",
-   "reading-united-kingdom",
    "saint-helier-jersey",
    "shrewsbury-united-kingdom",
    "birmingham-united-kingdom"
@@ -11107,7 +11088,6 @@
    "london-united-kingdom",
    "bangkok-thailand",
    "berlin-germany",
-   "rouen-france",
    "lisbon-portugal",
    "new-york-city-ny-united-states",
    "lyon-france"
@@ -11445,13 +11425,11 @@
    "tilburg-netherlands",
    "the-hague-netherlands",
    "scheveningen-netherlands",
-   "eindhoven-netherlands",
-   "rouen-france"
+   "eindhoven-netherlands"
   ],
   "next": [
    "paris-france",
    "london-united-kingdom",
-   "rouen-france",
    "berlin-germany",
    "barcelona-spain",
    "bangkok-thailand",
@@ -12247,7 +12225,6 @@
    "london-united-kingdom",
    "sofia-bulgaria",
    "new-york-city-ny-united-states",
-   "rouen-france",
    "istanbul-turkey",
    "chiang-mai-thailand",
    "lisbon-portugal",
@@ -13802,7 +13779,6 @@
    "rennes-france",
    "saint-helier-jersey",
    "bordeaux-france",
-   "rouen-france",
    "paris-france",
    "bournemouth-united-kingdom",
    "portsmouth-united-kingdom",
@@ -14666,7 +14642,6 @@
   "nearby": [
    "nantes-france",
    "saint-helier-jersey",
-   "rouen-france",
    "bournemouth-united-kingdom",
    "portsmouth-united-kingdom",
    "southampton-united-kingdom",
@@ -14674,7 +14649,6 @@
    "exeter-united-kingdom",
    "brighton-united-kingdom",
    "bath-united-kingdom",
-   "reading-united-kingdom",
    "bordeaux-france"
   ],
   "next": [

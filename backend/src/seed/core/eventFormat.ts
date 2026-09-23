@@ -7,7 +7,21 @@ import { toWarsawIso } from './dates';
 // The seed description format — "Tytuł: HH:MM, Lokalizacja". Single source for BOTH
 // the formatter (buildDescription) and every parser (admin UI, blacklist, VPS
 // postToCandidate, liveness fallback).
-const EVENT_DESCRIPTION_RE = /^(.+?):\s*(\d{2}:\d{2}),\s*(.*)$/;
+//
+// A title may ITSELF contain ": " ("Koncert przy świecach – La Notte Italiana:
+// włoska noc przy świecach: 18:00, …"), so the separator is located from the END:
+// the LAST ": " that is followed by "HH:MM, ". A lazy first-match would swallow
+// the title's own colons into the time field.
+const EVENT_DESCRIPTION_RE = /^([\s\S]+):\s*(\d{2}:\d{2}),\s*([\s\S]*)$/;
+
+/** The LAST ": HH:MM, " in the string — the separator the formatter wrote. */
+function separatorIndex(desc: string): number {
+  const re = /:\s*\d{2}:\d{2},\s/g;
+  let last = -1;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(desc)) !== null) last = m.index;
+  return last;
+}
 
 /** Build the description for a candidate: "Tytuł: HH:MM, Lokalizacja". Location
  *  is the place name + city (no street address). */
@@ -24,8 +38,16 @@ export function buildDescription(c: SeedCandidate): string {
 /** Split a seed description into { title, time, loc } — null when it is not in the
  *  "Tytuł: HH:MM, Lokalizacja" format. */
 export function parseEventDescription(desc: string | undefined | null): { title: string; time: string | null; loc: string } | null {
-  const m = EVENT_DESCRIPTION_RE.exec(desc || '');
+  const s = desc || '';
+  const m = EVENT_DESCRIPTION_RE.exec(s);
   if (!m) return null;
+  // When the title carries its own ": HH:MM, " the regex above may split at the
+  // first one — re-split at the last real separator so the title stays whole.
+  const i = separatorIndex(s);
+  if (i > 0) {
+    const tail = s.slice(i + 1).match(/^\s*(\d{2}:\d{2}),\s*([\s\S]*)$/);
+    if (tail) return { title: s.slice(0, i).trim(), time: tail[1], loc: tail[2].trim() };
+  }
   return { title: (m[1] || '').trim(), time: m[2] || null, loc: (m[3] || '').trim() };
 }
 

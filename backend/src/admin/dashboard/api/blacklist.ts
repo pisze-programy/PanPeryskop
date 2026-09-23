@@ -9,6 +9,7 @@ import {
   blacklistMatch, ruleFromRow, ruleSources, type BlacklistRule,
 } from '../../../seed/core/blacklist';
 import { ProviderId } from '../../../seed/core/types';
+import { parseEventDescription } from '../../../seed/core/eventFormat';
 
 const apiRoutes = new Hono<{ Bindings: Env }>();
 
@@ -25,11 +26,11 @@ interface PostCand {
 // "Tytuł: HH:MM, Lokalizacja" → { title, venue } — the seed description format.
 function candFromPost(r: { description: string | null; partner_id?: string | null; external_id?: string | null }): PostCand {
   const desc = r.description || '';
-  const m = /^(.+?):\s*\d{2}:\d{2},\s*(.*)$/.exec(desc);
+  const parsed = parseEventDescription(desc);
   return {
     id: '',
-    title: m ? m[1].trim() : desc.trim(),
-    venue: m ? (m[2].split(',')[0] || '').trim() : '',
+    title: parsed ? parsed.title : desc.trim(),
+    venue: parsed ? (parsed.loc.split(',')[0] || '').trim() : '',
     partnerId: r.partner_id || null,
     source: ((r.external_id || '').split('-')[0] || '').trim(),
   };

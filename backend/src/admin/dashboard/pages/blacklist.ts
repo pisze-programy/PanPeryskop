@@ -8,6 +8,7 @@ import {
 } from '../../ui';
 import { requireSession } from '../common';
 import { blacklistMatch, ruleFromRow } from '../../../seed/core/blacklist';
+import { parseEventDescription } from '../../../seed/core/eventFormat';
 import { CATEGORY_EVENTS, STATUS_APPROVED, STATUS_PENDING } from '../../../core/models';
 import { renderPage } from './shared';
 
@@ -15,10 +16,10 @@ const pageRoutes = new Hono<{ Bindings: Env }>();
 
 function candFromPost(r: { description: string | null; partner_id?: string | null }) {
   const desc = r.description || '';
-  const m = /^(.+?):\s*\d{2}:\d{2},\s*(.*)$/.exec(desc);
+  const parsed = parseEventDescription(desc);
   return {
-    title: m ? m[1].trim() : desc.trim(),
-    venue: m ? (m[2].split(',')[0] || '').trim() : '',
+    title: parsed ? parsed.title : desc.trim(),
+    venue: parsed ? (parsed.loc.split(',')[0] || '').trim() : '',
     partnerId: r.partner_id || null,
   };
 }

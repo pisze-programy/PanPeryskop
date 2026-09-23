@@ -15,7 +15,8 @@ import { upsertTravelEvents, sanitizeManifest, TravelManifest, TravelEvent } fro
 import { refreshViatorDestinations } from '../travel/viator';
 import { buildDueRoutes, saveRouteDays, routeDaysHorizon } from '../travel/routeDays';
 import { CITY_ENTRIES, saveCities } from '../travel/cities';
-import { blacklistMatch, ruleSources } from '../seed/core/blacklist';
+import { blacklistMatch, findBlacklist, ruleSources, ruleFromRow } from '../seed/core/blacklist';
+import { parseEventDescription } from '../seed/core/eventFormat';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
 
@@ -95,9 +96,9 @@ adminRoutes.post('/seed/blacklist/preview', async (c) => {
   const titles: Record<string, number> = {};
   for (const r of results ?? []) {
     const desc = r.description || '';
-    const m = /^(.+?):\s*\d{2}:\d{2},\s*(.*)$/.exec(desc);
-    const title = m ? m[1].trim() : desc.trim();
-    const venue = m ? (m[2].split(',')[0] || '').trim() : '';
+    const parsed = parseEventDescription(desc);
+    const title = parsed ? parsed.title : desc.trim();
+    const venue = parsed ? (parsed.loc.split(',')[0] || '').trim() : '';
     const source = ((r.external_id || '').split('-')[0] || '').trim();
     if (!blacklistMatch(rule, { title, venue, partnerId: r.partner_id, source })) continue;
     bySource[source || '(brak)'] = (bySource[source || '(brak)'] || 0) + 1;
@@ -133,6 +134,46 @@ adminRoutes.post('/seed/blacklist', async (c) => {
     'INSERT INTO event_blacklist (id, pattern, venue, partner_id, partner_name, sources, match_mode, note, active, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)'
   ).bind(id, pattern, rule.venue || null, partnerId || null, (body.partner_name ?? '').trim() || null, rule.sources || null, matchMode, (body.note ?? '').trim() || null, Date.now(), 'admin').run();
   return c.json({ ok: true, id, rule }, 201);
+});
+
+// The ids of the CURRENT posts that the ACTIVE blacklist rules match. This is the
+// cleanup work-list: blacklist gates ingest only, so a rule never reaches posts
+// that were stored before it existed. Runs the same matcher as ingest, so the
+// result is exactly what the rules would have dropped.
+adminRoutes.get('/seed/blacklist/matches', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const { results: ruleRows } = await c.env.DB
+    .prepare('SELECT id, pattern, venue, partner_id, partner_name, sources, match_mode FROM event_blacklist WHERE active = 1')
+    .all<{ id: string; pattern: string; venue: string | null; partner_id: string | null; partner_name: string | null; sources: string | null; match_mode: string | null }>();
+  const rules = (ruleRows ?? []).map((r) => ({ id: r.id, active: true, ...ruleFromRow(r) }));
+
+  const { results } = await c.env.DB.prepare(
+    "SELECT id, description, partner_id, external_id, event_date FROM posts WHERE category='events' AND status IN ('approved','pending')"
+  ).all<{ id: string; description: string | null; partner_id: string | null; external_id: string | null; event_date: string | null }>();
+
+  const matches: { id: string; title: string; source: string; event_date: string; ruleId: string }[] = [];
+  for (const r of results ?? []) {
+    const desc = r.description || '';
+    const parsed = parseEventDescription(desc);
+    const title = parsed ? parsed.title : desc.trim();
+    const venue = parsed ? (parsed.loc.split(',')[0] || '').trim() : '';
+    const source = ((r.external_id || '').split('-')[0] || '').trim();
+    const bl = findBlacklist(rules, { title, venue, partnerId: r.partner_id, source });
+    if (bl) matches.push({ id: r.id, title, source, event_date: r.event_date ?? '', ruleId: bl.id });
+  }
+
+  const byTitle: Record<string, number> = {};
+  const bySource: Record<string, number> = {};
+  for (const x of matches) {
+    byTitle[x.title] = (byTitle[x.title] || 0) + 1;
+    bySource[x.source] = (bySource[x.source] || 0) + 1;
+  }
+  return c.json({
+    total: matches.length,
+    bySource,
+    titles: Object.fromEntries(Object.entries(byTitle).sort((a, b) => b[1] - a[1])),
+    ids: matches.map((x) => x.id),
+  });
 });
 
 // Seed cadence — the VPS warms and the orchestrator read this to run only on

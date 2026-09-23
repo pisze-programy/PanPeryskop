@@ -136,6 +136,7 @@
 		8F973478B753F9FF65FD2B69 /* MapKitMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58D50A3618B5E47D6D771D48 /* MapKitMapView.swift */; };
 		952D3629C3EBF82F04350ED0 /* CornerGlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED0C050E9C504C7FA978362F /* CornerGlow.swift */; };
 		98AFF403FFBA544A5083AFFF /* PlacesListSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC0AF8D08D495D1D8A812E0B /* PlacesListSheet.swift */; };
+		9919145E97FBE76E3FBB887B /* MapClusterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E012ED21D7AB0E1DD1B4B056 /* MapClusterTests.swift */; };
 		9920ED1276D0819A568362B5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AE2CB33037E6D96F692E131 /* ContentView.swift */; };
 		9A352E45AB5C2811107ACE61 /* CityNearbySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 204A6CD407356E80BE13E709 /* CityNearbySection.swift */; };
 		9A6DA71644F6D4A9FB71CE63 /* APIClient+Travel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BBE6BAD918B485CFE74D1F2 /* APIClient+Travel.swift */; };
@@ -393,6 +394,7 @@
 		DD54C307453E7CDCB0E1A721 /* MapTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapTypes.swift; sourceTree = "<group>"; };
 		DE29E582EABB5B2FB291846E /* PlacesListModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesListModel.swift; sourceTree = "<group>"; };
 		DF71EEE52842B6BA52064030 /* Vocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vocabulary.swift; sourceTree = "<group>"; };
+		E012ED21D7AB0E1DD1B4B056 /* MapClusterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapClusterTests.swift; sourceTree = "<group>"; };
 		E2576064A0730F213CBEAAB8 /* OnboardingGradient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingGradient.swift; sourceTree = "<group>"; };
 		E2CC218C25CE581CC5E20D9E /* CityFactTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityFactTile.swift; sourceTree = "<group>"; };
 		E347A53F6B6F4E0A89EA4C6E /* PlaceRowSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceRowSkeleton.swift; sourceTree = "<group>"; };
@@ -732,6 +734,7 @@
 				E9D9D11B5E74BBB5264B1020 /* FlightPickerRulesTests.swift */,
 				67D934D4FFA1AEA8B9221837 /* HTTPClientTests.swift */,
 				501091228071AF71FCC0106C /* LogicTests.swift */,
+				E012ED21D7AB0E1DD1B4B056 /* MapClusterTests.swift */,
 				9B171B30D45987AE19320EA7 /* StaysTests.swift */,
 			);
 			path = PanPeryskopTests;
@@ -1095,6 +1098,7 @@
 				508DCAD2F905540B03B71C43 /* FlightPickerRulesTests.swift in Sources */,
 				BEEF2E09920E29B7B5715957 /* HTTPClientTests.swift in Sources */,
 				000A937FBD928BDA6EE483F4 /* LogicTests.swift in Sources */,
+				9919145E97FBE76E3FBB887B /* MapClusterTests.swift in Sources */,
 				B725B3D59CA1A854B8FD94BF /* StaysTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1240,7 +1244,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1300,7 +1304,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 79;
+				CURRENT_PROJECT_VERSION = 80;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

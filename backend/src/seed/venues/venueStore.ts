@@ -125,7 +125,7 @@ async function loadVenuePool(db: D1Database, city?: string | null): Promise<Venu
 /** The upsert pool: same-city rows plus city-less rows. A provider that did not
  *  know the city must not hide its venue from one that does — "NIEBO" and
  *  "Klub Niebo" are one club, though only one of the two rows carries a city. */
-async function loadUpsertPool(db: D1Database, city: string | null): Promise<VenueRow[]> {
+async function loadUpsertPool(db: D1Database, city?: string | null): Promise<VenueRow[]> {
   if (!city) return loadVenuePool(db, null);
   const { results } = await db.prepare(
     'SELECT * FROM venues WHERE (city = ? OR city IS NULL) AND lat IS NOT NULL AND lng IS NOT NULL'

@@ -26,6 +26,7 @@ const AREAS: Record<string, number> = {
   Poznan: 666,
   Gdansk: 667,
   Wroclaw: 668,
+  Lodz: 677,
 };
 const TIMEOUT_MS = 20_000;
 const PACE_MS = 700;
@@ -94,10 +95,6 @@ async function paced(): Promise<void> {
   lastCallMs = Date.now();
 }
 
-/** The normalised title for the card. Rules only, never a guess:
- *  the promoter prefix goes when the title repeats it, and "FREE ENTRY" goes
- *  when the night is not ticketed. RA cuts a long title, so "FREE ENTR" is the
- *  same words. */
 /** The title a reader sees. Resident Advisor titles are the promoter's own, and
  *  most carry the lineup a second time. The band already shows the lineup, so
  *  the title keeps only the night's name. A title that is nothing but the lineup

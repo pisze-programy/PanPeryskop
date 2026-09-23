@@ -1,19 +1,8 @@
 import SwiftUI
 
-/// The centre band of a photo story card. It carries the identity of the night
-/// over the photo: the club and the lineup.
-///
-/// The band sits on the brightest part of a club photo — the lasers and the
-/// smoke. A material alone does not hold the text there, so a black layer sits
-/// under it. The mask softens both edges, so the band never looks like a sticker.
-///
-/// The name is neutral on purpose: a restaurant card uses the same band.
 struct PhotoStoryBand: View {
-    /// The small line above the hero. Nil hides it.
     let kicker: String?
-    /// The hero line — the one loud text on the card.
     let hero: String
-    /// The line below the hero. Nil hides it.
     let caption: String?
 
     private static let minHeightFraction: CGFloat = 0.30
@@ -27,13 +16,7 @@ struct PhotoStoryBand: View {
         VStack(spacing: Theme.Spacing.s) {
             kickerLine
             rule
-            Text(hero)
-                .font(.title3.weight(.bold))
-                .tracking(-0.2)
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
-                .minimumScaleFactor(0.75)
+            heroLine
             captionLine
         }
         .padding(.vertical, Theme.Spacing.l)
@@ -60,6 +43,16 @@ struct PhotoStoryBand: View {
             .frame(width: Self.ruleWidth, height: Self.ruleHeight)
     }
 
+    private var heroLine: some View {
+        Text(hero)
+            .font(.title3.weight(.bold))
+            .tracking(-0.2)
+            .foregroundColor(.white)
+            .multilineTextAlignment(.center)
+            .lineLimit(3)
+            .minimumScaleFactor(0.75)
+    }
+
     @ViewBuilder
     private var captionLine: some View {
         if let caption {
@@ -76,17 +69,19 @@ struct PhotoStoryBand: View {
             Rectangle().fill(.black.opacity(Self.tintOpacity))
             Rectangle().fill(.thinMaterial)
         }
-        .mask(
-            LinearGradient(
-                stops: [
-                    .init(color: .clear, location: 0),
-                    .init(color: .black, location: 0.12),
-                    .init(color: .black, location: 0.88),
-                    .init(color: .clear, location: 1),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+        .mask(edgeFade)
+    }
+
+    private var edgeFade: some View {
+        LinearGradient(
+            stops: [
+                .init(color: .clear, location: 0),
+                .init(color: .black, location: 0.12),
+                .init(color: .black, location: 0.88),
+                .init(color: .clear, location: 1),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
         )
     }
 }

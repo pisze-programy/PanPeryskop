@@ -91,47 +91,40 @@ struct StoryContent: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 }
 
-    /// A club night has no photo of its own — the source's flyer is not ours. The
-    /// card composes one: a shared club photo, two black scrims, and the identity
-    /// band in the middle. The bottom box is `StoryInfoCard`, drawn by the parent.
     private var clubNightLayout: some View {
         GeometryReader { geo in
             ZStack {
-                PhotoStoryBackdrop(shiftSeed: post.id)
-                VStack {
-                    LinearGradient(
-                        colors: [.black.opacity(0.55), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: geo.size.height * 0.30)
-                    Spacer(minLength: 0)
-                    LinearGradient(
-                        colors: [.clear, .black.opacity(0.80)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: geo.size.height * 0.45)
-                }
-                bandOverlay
+                PhotoStoryBackdrop(assetPath: "StoryPhotos/club-night", shiftSeed: post.id)
+                clubScrims(height: geo.size.height)
+                clubBand
             }
         }
         .clipped()
     }
 
-    @ViewBuilder
-    private var bandOverlay: some View {
-        if let club = post.clubNight {
-            VStack {
-                Spacer(minLength: 0)
-                PhotoStoryBand(
-                    kicker: nil,
-                    hero: club.lineupText ?? post.eventInfo.title,
-                    caption: club.venue
-                )
-                Spacer(minLength: 0)
-            }
+    private func clubScrims(height: CGFloat) -> some View {
+        VStack {
+            scrim(colors: [.black.opacity(0.55), .clear], height: height * 0.30)
+            Spacer(minLength: 0)
+            scrim(colors: [.clear, .black.opacity(0.80)], height: height * 0.45)
         }
+    }
+
+    private func scrim(colors: [Color], height: CGFloat) -> some View {
+        LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
+            .frame(height: height)
+    }
+
+    private var clubBand: some View {
+        VStack {
+            Spacer(minLength: 0)
+            PhotoStoryBand(kicker: nil, hero: clubHero, caption: post.clubNight?.venue)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var clubHero: String {
+        post.clubNight?.lineupText ?? post.eventInfo.title
     }
 
     /// The exact photo composition used by the story — a 9:16 foreground band,

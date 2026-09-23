@@ -38,10 +38,8 @@ struct Post: Codable, Identifiable, Equatable {
     let distinction: String?
     /// Seed source (external_id prefix: 'kupbilecik', 'going', …). Nil for user posts.
     let source: String?
-    /// Provider extras as a JSON string (a club night: lineup, genres, age, …).
     let meta: String?
 
-    /// Club night fields, when the source sent them. Nil for every other post.
     var clubNight: ClubNightMeta? {
         guard let meta, let data = meta.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(ClubNightMeta.self, from: data)

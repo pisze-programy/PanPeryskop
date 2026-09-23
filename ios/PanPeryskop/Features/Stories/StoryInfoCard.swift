@@ -34,9 +34,6 @@ struct StoryInfoCard: View {
         )
     }
 
-    /// A club night: centred title (like an event), the club and the genres on
-    /// one line, then the grey age and price. The lineup lives in the band over
-    /// the photo, so it is not repeated here.
     private func clubContent(_ club: ClubNightMeta) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             Text(post.eventInfo.title)

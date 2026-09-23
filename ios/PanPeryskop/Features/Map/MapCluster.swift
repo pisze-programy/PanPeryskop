@@ -49,22 +49,39 @@ struct MapCluster: Identifiable {
         posts.filter { !$0.isRestaurant }.map { Double($0.created_at) }.min()
     }
 }
-func clusterItems(_ items: [MapClusterItem], radiusDegrees: Double) -> [MapCluster] {
+
+struct ClusterConfig {
+    let radiusPixels: Double
+    let longitudeScale: Bool
+    let anchor: CLLocationCoordinate2D
+
+    static let continental = ClusterConfig(radiusPixels: 48, longitudeScale: false, anchor: CLLocationCoordinate2D(latitude: 0, longitude: 0))
+    static let local = ClusterConfig(radiusPixels: 64, longitudeScale: true, anchor: CLLocationCoordinate2D(latitude: 52.0, longitude: 21.0))
+}
+
+func clusterItems(_ items: [MapClusterItem], radiusDegrees: Double, config: ClusterConfig = .continental) -> [MapCluster] {
     guard !items.isEmpty, radiusDegrees > 0 else { return [] }
+    let radiusLng = config.longitudeScale
+        ? radiusDegrees / max(cos(config.anchor.latitude * .pi / 180), 0.01)
+        : radiusDegrees
     var buckets: [String: [MapClusterItem]] = [:]
     buckets.reserveCapacity(items.count)
     for item in items {
-        let lat = Int((item.lat / radiusDegrees).rounded(.down))
-        let lng = Int((item.lng / radiusDegrees).rounded(.down))
+        let lat = Int(((item.lat - config.anchor.latitude) / radiusDegrees).rounded(.down))
+        let lng = Int(((item.lng - config.anchor.longitude) / radiusLng).rounded(.down))
         buckets["\(lat):\(lng)", default: []].append(item)
     }
     return buckets.map { key, group in
-        let lat = group.map(\.lat).reduce(0, +) / Double(group.count)
-        let lng = group.map(\.lng).reduce(0, +) / Double(group.count)
-        return MapCluster(
-            id: key,
-            coord: CLLocationCoordinate2D(latitude: lat, longitude: lng),
-            items: group
-        )
+        cluster(group, id: key)
     }
+}
+
+private func cluster(_ group: [MapClusterItem], id: String) -> MapCluster {
+    let lat = group.map(\.lat).reduce(0, +) / Double(group.count)
+    let lng = group.map(\.lng).reduce(0, +) / Double(group.count)
+    return MapCluster(
+        id: id,
+        coord: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+        items: group
+    )
 }

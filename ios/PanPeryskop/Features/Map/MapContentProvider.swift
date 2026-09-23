@@ -84,10 +84,12 @@ protocol MapContentProvider: ObservableObject {
     var initialRegion: MKCoordinateRegion { get }
     var initialDistance: CLLocationDistance? { get }
     var maxZoomOutDistance: CLLocationDistance { get }
+    var clusterConfig: ClusterConfig { get }
     func onRegionChange(swLat: Double, swLng: Double, neLat: Double, neLng: Double)
     func onCameraSettled(_ region: MKCoordinateRegion)
 }
 
 extension MapContentProvider {
     var initialDistance: CLLocationDistance? { nil }
+    var clusterConfig: ClusterConfig { .continental }
 }

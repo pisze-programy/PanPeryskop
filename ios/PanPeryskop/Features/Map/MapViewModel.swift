@@ -181,6 +181,8 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
 
     var maxZoomOutDistance: CLLocationDistance { 100_000 }
 
+    var clusterConfig: ClusterConfig { .local }
+
     var overlays: [MapOverlay] {
         allPosts.map { .pin(MapPin(post: $0)) }
     }

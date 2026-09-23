@@ -7,6 +7,7 @@ struct MapKitMapView: View {
     let initialRegion: MKCoordinateRegion
     let initialDistance: CLLocationDistance?
     let maxZoomOutDistance: CLLocationDistance
+    let clusterConfig: ClusterConfig
     let onRegionChange: (Double, Double, Double, Double) -> Void
     let onCameraSettled: (MKCoordinateRegion) -> Void
     let onTap: (MapOverlay) -> Void
@@ -62,6 +63,7 @@ struct MapKitMapView: View {
         initialRegion: MKCoordinateRegion,
         initialDistance: CLLocationDistance?,
         maxZoomOutDistance: CLLocationDistance,
+        clusterConfig: ClusterConfig,
         onRegionChange: @escaping (Double, Double, Double, Double) -> Void,
         onCameraSettled: @escaping (MKCoordinateRegion) -> Void,
         onTap: @escaping (MapOverlay) -> Void,
@@ -72,6 +74,7 @@ struct MapKitMapView: View {
         self.initialRegion = initialRegion
         self.initialDistance = initialDistance
         self.maxZoomOutDistance = maxZoomOutDistance
+        self.clusterConfig = clusterConfig
         self.onRegionChange = onRegionChange
         self.onCameraSettled = onCameraSettled
         self.onTap = onTap
@@ -89,7 +92,6 @@ struct MapKitMapView: View {
     private static let pitchDegrees: Double = 60
     private static let usesRealisticTerrain = false
     private static let sheetAvoidFraction = CGPoint(x: 0.5, y: 0.40)
-    private static let clusterPixels: Double = 48
     private static let markerMinScale: CGFloat = 0.45
     private static let markerFullScaleSpan: Double = 2
     private static let markerMinScaleSpan: Double = 22
@@ -104,7 +106,7 @@ struct MapKitMapView: View {
     private var clusterRadiusDegrees: Double {
         let screenHeight = UIScreen.main.bounds.height
         let degreesPerPixel = visibleRegion.span.latitudeDelta / Double(screenHeight)
-        return max(degreesPerPixel * Self.clusterPixels, 0.00005)
+        return max(degreesPerPixel * clusterConfig.radiusPixels, 0.00005)
     }
 
     private func reclusterIfRadiusChanged() {
@@ -131,12 +133,12 @@ struct MapKitMapView: View {
         }
         let radius = clusterRadiusDegrees
         clusteredRadius = radius
-        allClusters = clusterItems(items, radiusDegrees: radius)
+        allClusters = clusterItems(items, radiusDegrees: radius, config: clusterConfig)
         refreshVisible()
     }
 
     private func refreshVisible() {
-        let pad = clusterRadiusDegrees
+        let pad = clusterRadiusDegrees * 2
         let lat0 = visibleRegion.center.latitude - visibleRegion.span.latitudeDelta / 2 - pad
         let lat1 = visibleRegion.center.latitude + visibleRegion.span.latitudeDelta / 2 + pad
         let lng0 = visibleRegion.center.longitude - visibleRegion.span.longitudeDelta / 2 - pad

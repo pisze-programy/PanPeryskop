@@ -375,6 +375,8 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     var maxZoomOutDistance: CLLocationDistance { AppConstants.tripsMaxZoomOutDistance }
 
+    var clusterConfig: ClusterConfig { .continental }
+
     func onRegionChange(swLat: Double, swLng: Double, neLat: Double, neLng: Double) {
         // Travel events are fetched per week over the whole window; bbox scoping
         // happens server-side per request. Keep the last requested region.

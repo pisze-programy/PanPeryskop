@@ -28,6 +28,7 @@ struct MapScreen: View {
                 initialRegion: activeProvider.initialRegion,
                 initialDistance: activeProvider.initialDistance,
                 maxZoomOutDistance: activeProvider.maxZoomOutDistance,
+                clusterConfig: activeProvider.clusterConfig,
                 onRegionChange: { swLat, swLng, neLat, neLng in
                     activeProvider.onRegionChange(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
                 },

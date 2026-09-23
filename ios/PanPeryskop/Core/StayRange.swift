@@ -26,7 +26,9 @@ enum StayRange {
         return "\(dayOnly(start))-\(endText)"
     }
 
-    private static func nightsWord(_ count: Int) -> String {
+    /// Polish plural for a night count: 1 noc, 2-4 noce, 5+ nocy, with the
+    /// 12-14 teens taking "nocy" regardless of the last digit.
+    static func nightsWord(_ count: Int) -> String {
         let lastTwo = count % 100
         if lastTwo >= 12 && lastTwo <= 14 { return "nocy" }
         switch count % 10 {

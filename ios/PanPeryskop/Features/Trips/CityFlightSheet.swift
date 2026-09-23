@@ -321,7 +321,7 @@ struct CityFlightSheet: View {
     private var nightsLabel: String? {
         guard let out = outbound?.date, let back = returning?.date,
               let nights = FlightPickerRules.nights(from: out, to: back) else { return nil }
-        return nights == 1 ? "1 noc" : "\(nights) noce"
+        return "\(nights) \(StayRange.nightsWord(nights))"
     }
 
     private var buyBar: some View {

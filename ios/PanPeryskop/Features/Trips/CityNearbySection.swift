@@ -36,9 +36,7 @@ struct CityNearbySection: View {
         } label: {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 photo(city)
-                Text(cityLine(city))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
+                nameLine(city)
                     .lineLimit(1)
                 Text(city.countryName(language: region.languageCode))
                     .font(.caption)
@@ -51,8 +49,13 @@ struct CityNearbySection: View {
         .buttonStyle(.plain)
     }
 
-    private func cityLine(_ city: TravelCity) -> String {
-        "\(city.displayName), \(AirportDirections.distanceKm(from: from, to: coordinate(city))) km"
+    private func nameLine(_ city: TravelCity) -> Text {
+        Text(city.displayName)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(.primary)
+            + Text(" · \(AirportDirections.distanceKm(from: from, to: coordinate(city))) km")
+            .font(.caption2)
+            .foregroundColor(.secondary)
     }
 
     private func coordinate(_ city: TravelCity) -> CLLocationCoordinate2D {

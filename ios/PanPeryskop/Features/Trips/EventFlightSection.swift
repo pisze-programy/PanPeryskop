@@ -95,16 +95,16 @@ struct EventFlightSection: View {
         if let selected = selectedOption {
             VStack(spacing: Theme.Spacing.s) {
                 rail(selected: selected)
-                if options.count > 1 {
-                    PageDots(count: options.count, index: railIndex)
-                        .padding(.horizontal, Theme.Spacing.l)
-                }
                 AirportAccessRow(
                     airportName: selected.destination.city,
                     airport: CLLocationCoordinate2D(latitude: selected.destination.lat, longitude: selected.destination.lng),
                     centre: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
                 )
                 .padding(.horizontal, Theme.Spacing.l)
+                if options.count > 1 {
+                    PageDots(count: options.count, index: railIndex)
+                        .padding(.horizontal, Theme.Spacing.l)
+                }
             }
         }
     }

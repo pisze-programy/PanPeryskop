@@ -169,11 +169,11 @@ struct CityFlightSheet: View {
                     }
                 )
                 .padding(.horizontal, Theme.Spacing.l)
+                airportCaption(selected)
                 if options.count > 1 {
                     PageDots(count: options.count, index: selectedIndex)
                         .padding(.horizontal, Theme.Spacing.l)
                 }
-                airportCaption(selected)
             }
         }
     }

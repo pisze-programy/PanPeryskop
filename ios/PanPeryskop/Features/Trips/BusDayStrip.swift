@@ -55,7 +55,7 @@ struct BusDayStrip: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
-                    .stroke(Theme.Palette.partnerGreen, lineWidth: isEventDay ? 1.5 : 0)
+                    .stroke(Theme.Palette.partnerGreen, lineWidth: isSelected ? 1.5 : 0)
             )
         }
         .buttonStyle(.plain)

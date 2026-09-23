@@ -9,13 +9,20 @@ struct BusDirectionSection: View {
     let eventDay: Date
     let eventIcon: String
     let scrollAnchor: UnitPoint
+    /// Days from the event day the strip opens on. An outbound leaves before the
+    /// event and a return follows it, so neither opens on the event day.
+    let defaultOffset: Int
     let isActive: Bool
 
     @State private var selectedDay: Date?
     @State private var window: BusWindowResponse?
     @State private var failed = false
 
-    private var selected: Date { selectedDay ?? eventDay }
+    private var selected: Date { selectedDay ?? defaultDay }
+
+    private var defaultDay: Date {
+        AppConstants.warsawCalendar.date(byAdding: .day, value: defaultOffset, to: eventDay) ?? eventDay
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {

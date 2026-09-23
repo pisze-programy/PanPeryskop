@@ -152,6 +152,7 @@ struct EventFlightSection: View {
                 eventDay: eventBusDay,
                 eventIcon: busEventIcon,
                 scrollAnchor: .trailing,
+                defaultOffset: -2,
                 isActive: isActive
             )
             BusDirectionSection(
@@ -161,6 +162,7 @@ struct EventFlightSection: View {
                 eventDay: eventBusDay,
                 eventIcon: busEventIcon,
                 scrollAnchor: .leading,
+                defaultOffset: 1,
                 isActive: isActive
             )
         }

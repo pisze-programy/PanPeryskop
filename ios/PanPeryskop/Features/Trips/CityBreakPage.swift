@@ -190,6 +190,7 @@ struct CityBreakPage: View {
             eventDay: viewModel.anchorDate,
             eventIcon: "bus",
             scrollAnchor: .leading,
+            defaultOffset: 0,
             isActive: true
         )
         .padding(.horizontal, Theme.Spacing.l)

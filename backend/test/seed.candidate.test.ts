@@ -21,8 +21,24 @@ test('parseCandidate: accepts a minimal valid candidate and keeps nulls null', (
   assert.equal(r.cand.partnerId, undefined);
 });
 
-test('parseCandidate: only a missing externalId is rejected', () => {
-  const r = parseCandidate({ ...base, externalId: undefined }, ProviderId.GOING, 3);
+test('parseCandidate: the provider meta survives the gate', () => {
+  // A club night carries its lineup and genres here. The gate dropped it once,
+  // and every club post arrived without them.
+  const meta = '{"lineup":["Andy Soul"],"genres":["House"]}';
+  const r = parseCandidate({ ...base, meta }, ProviderId.RESIDENTADVISOR, 0);
+  assert.equal(r.ok, true);
+  if (!r.ok) return;
+  assert.equal(r.cand.meta, meta);
+});
+
+test('parseCandidate: a missing meta becomes null, never undefined', () => {
+  const r = parseCandidate(base, ProviderId.GOING, 0);
+  assert.equal(r.ok, true);
+  if (!r.ok) return;
+  assert.equal(r.cand.meta, null);
+});
+
+test('parseCandidate: only a missing externalId is rejected', () => {  const r = parseCandidate({ ...base, externalId: undefined }, ProviderId.GOING, 3);
   assert.equal(r.ok, false);
   if (!r.ok) assert.match(r.reason, /#3: missing externalId/);
 });

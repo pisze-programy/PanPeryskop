@@ -107,6 +107,7 @@ export function parseCandidate(raw: unknown, source: ProviderId, index: number):
       price: isFiniteNum(c.price) ? c.price : null,
       affiliateLink: isStr(c.affiliateLink) ? c.affiliateLink : undefined,
       venueId: isStr(c.venueId) ? c.venueId : undefined,
+      meta: isStr(c.meta) ? c.meta : null,
       pendingReason,
     },
   };

@@ -87,10 +87,23 @@ export interface GeoVenue {
   lng: number | null;
 }
 
+// A venue name often carries the HALL or STAGE in brackets — "Sinfonia Varsovia
+// (Namiot)", "(Aula)", "(Do!)". Those are rooms of ONE building, listed as one
+// event per room, and the raw comparison sees a different venue for each. Stripping
+// the bracketed part folds them onto the building name so a festival day merges
+// into a single post with showtimes[]. A name that is ONLY a bracket is left alone.
+export function venueBase(name: string): string {
+  const stripped = name
+    .replace(/\s*[([{][^)\]}]*[)\]}]\s*/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return stripped || name.trim();
+}
+
 // Venue must MATCH for a dedupe (ratio>=0.8). When one side has no venue/TBA,
 // geo (<1.5km) is used instead — geo is confirmatory, never minusowy.
 export function venuesMatch(a: GeoVenue, b: GeoVenue): boolean {
-  const va = flatNorm(a.venue).trim(), vb = flatNorm(b.venue).trim();
+  const va = flatNorm(venueBase(a.venue)).trim(), vb = flatNorm(venueBase(b.venue)).trim();
   const aTba = isTba(a.venue), bTba = isTba(b.venue);
   if (!aTba && !bTba && va && vb) return seqRatio(va, vb) >= 0.8;
   if ((aTba || bTba || !va || !vb) && typeof a.lat === 'number' && typeof b.lat === 'number') {
@@ -101,7 +114,7 @@ export function venuesMatch(a: GeoVenue, b: GeoVenue): boolean {
 
 /** Venue closeness for the rescue filter (venue strings only). */
 export function venuesClose(a: string, b: string): boolean {
-  const va = flatNorm(a).trim(), vb = flatNorm(b).trim();
+  const va = flatNorm(venueBase(a)).trim(), vb = flatNorm(venueBase(b)).trim();
   return !!(va && vb) && seqRatio(va, vb) >= 0.8;
 }
 

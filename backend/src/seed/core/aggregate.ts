@@ -3,7 +3,7 @@
 // product. The app wants ONE post per event-day-venue carrying showtimes[] — never
 // duplicate posts for the same event on the same day at the same venue.
 import { SeedCandidate, ShowtimeBooking } from './types';
-import { diacriticFold } from './match';
+import { diacriticFold, venueBase } from './match';
 import { toWarsawIso } from './dates';
 
 function hhmmOf(ms: number): string {
@@ -20,7 +20,7 @@ export function aggregateDayCandidates(cands: SeedCandidate[]): SeedCandidate[] 
   if (cands.length < 2) return cands;
   const groups = new Map<string, SeedCandidate[]>();
   for (const c of cands) {
-    const key = `${diacriticFold(c.title)}\u0000${diacriticFold(c.venue)}\u0000${diacriticFold(c.city)}`;
+    const key = `${diacriticFold(c.title)}\u0000${diacriticFold(venueBase(c.venue))}\u0000${diacriticFold(c.city)}`;
     const arr = groups.get(key);
     if (arr) arr.push(c);
     else groups.set(key, [c]);

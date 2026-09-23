@@ -13,6 +13,7 @@ import { getyourguideProvider } from './getyourguide';
 import { ebiletProvider } from './ebilet';
 import { eventimProvider } from './eventim';
 import { ticketmasterProvider } from './ticketmaster';
+import { residentadvisorProvider } from './residentadvisor';
 
 // All implementations, in run order. Which of them actually run on the Worker
 // edge is decided by the worker executor (registry: enabled + executors.worker) —
@@ -23,6 +24,7 @@ export const SEED_PROVIDERS: SeedProvider[] = [
   ebiletProvider,
   eventimProvider,
   ticketmasterProvider,
+  residentadvisorProvider,
   multikinoProvider,
   cinemacityProvider,
   heliosProvider,

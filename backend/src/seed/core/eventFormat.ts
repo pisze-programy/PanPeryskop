@@ -82,3 +82,8 @@ export function tagsJson(c: SeedCandidate): string | null {
   if (c.tags && c.tags.length > 0) return JSON.stringify(c.tags);
   return null;
 }
+
+// Provider extras as a JSON string, or null when the candidate carries none.
+export function metaJson(c: SeedCandidate): string | null {
+  return c.meta ? c.meta : null;
+}

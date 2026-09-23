@@ -5,7 +5,7 @@
 // already-done row short-circuits to its post without touching media or geo.
 import { nanoid } from 'nanoid';
 import { SeedCandidate, SeedProvider, ShowtimeBooking } from '../../core/types';
-import { buildDescription, showtimesJson, showtimeBookingJson, tagsJson } from '../../core/eventFormat';
+import { buildDescription, showtimesJson, showtimeBookingJson, tagsJson, metaJson } from '../../core/eventFormat';
 import { fallbackSeedGeo, resolveGeo } from '../../core/geo';
 import { detectMediaType, extForMediaType } from '../../../core/mediaFormat';
 import { doSavePost } from '../../../api/posts';
@@ -42,6 +42,7 @@ export interface RawWinnerRow {
   partner_id: string | null;
   partner_name: string | null;
   pending_reason: string | null;
+  meta: string | null;
   status: string;
 }
 
@@ -211,7 +212,8 @@ export async function ingestWinnerRow(
     await doSavePost(env, { id: userId }, postId, POST_TYPE_PHOTO, lat, lng, description,
       mediaKey, thumbKey, createdAt, true, link, row.external_id, Boolean(existing), row.is_sold_out === 1,
       showtimesJson(cand), showtimeBookingJson(cand), tagsJson(cand),
-      status, row.partner_id, row.partner_name, row.price_pln, null, externalMediaUrl, externalThumbUrl);
+      status, row.partner_id, row.partner_name, row.price_pln, null, externalMediaUrl, externalThumbUrl,
+      metaJson(cand));
 
     await env.DB.prepare(`UPDATE seed_raw SET status='done', post_id=?, reason=NULL, updated_at=? WHERE id=?`)
       .bind(postId, now(), row.id)
@@ -244,6 +246,7 @@ function rowToCandidate(row: RawWinnerRow, dayStart: number, lat: number, lng: n
     times: times.length > 0 ? times : undefined,
     showtimeBooking: parseJsonArray<ShowtimeBooking>(row.showtime_booking),
     tags: parseJsonArray<string>(row.tags),
+    meta: row.meta,
     partnerId: row.partner_id === null ? undefined : row.partner_id,
     partnerName: row.partner_name === null ? undefined : row.partner_name,
     price: row.price_pln,

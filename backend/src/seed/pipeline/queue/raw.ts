@@ -73,6 +73,7 @@ export function normHashInput(c: SeedCandidate): string {
     tags: [...tags].sort(),
     partner,
     pending: c.pendingReason === undefined ? null : c.pendingReason,
+    meta: c.meta ?? null,
   });
 }
 
@@ -112,8 +113,8 @@ export async function writeRawRows(db: D1Database, input: RawWriteInput, chunkSi
           (id, day, batch_id, unit_id, provider, external_id, title, title_tokens, raw_venue, city,
            canonical_venue_id, lat, lng, start_min, showtimes, showtime_booking, tags, price_pln, media_url, thumb_url,
            link_url, booking_key, affiliate_link, partner_id, partner_name, is_sold_out, content_hash,
-           pending_reason, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'raw', ?, ?)
+           pending_reason, meta, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'raw', ?, ?)
          ON CONFLICT(day, provider, external_id) DO UPDATE SET
            title=excluded.title, title_tokens=excluded.title_tokens, raw_venue=excluded.raw_venue,
            city=excluded.city, canonical_venue_id=excluded.canonical_venue_id, lat=excluded.lat, lng=excluded.lng,
@@ -122,6 +123,7 @@ export async function writeRawRows(db: D1Database, input: RawWriteInput, chunkSi
            price_pln=excluded.price_pln, media_url=excluded.media_url, thumb_url=excluded.thumb_url,
            link_url=excluded.link_url, booking_key=excluded.booking_key, affiliate_link=excluded.affiliate_link,
            partner_id=excluded.partner_id, partner_name=excluded.partner_name,
+           meta=excluded.meta,
            is_sold_out=excluded.is_sold_out, content_hash=excluded.content_hash,
            pending_reason=excluded.pending_reason,
            status=CASE WHEN seed_raw.content_hash <> excluded.content_hash THEN 'raw' ELSE seed_raw.status END,
@@ -144,6 +146,7 @@ export async function writeRawRows(db: D1Database, input: RawWriteInput, chunkSi
         c.partnerName === undefined ? null : c.partnerName,
         c.isSoldOut ? 1 : 0, hash,
         c.pendingReason === undefined || c.pendingReason === null ? null : c.pendingReason,
+        c.meta ?? null,
         t, t,
       ),
     );

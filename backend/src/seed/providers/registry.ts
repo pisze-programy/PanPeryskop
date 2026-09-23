@@ -93,6 +93,15 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: ProviderId.TICKETMASTER, transport: 'fetch', enabled: true, priority: 8, scopeKind: 'window', media: 'hotlink',
     executors: { worker: true },
   },
+  // Resident Advisor (open ra.co GraphQL). Poland pilot only, the same shape as
+  // Ticketmaster. priority 8: it wins dedupe only when no other source carries
+  // the night, so going/kupbilecik/ebilet/eventim stay canonical for events they
+  // already cover. The flyer is theirs, so the card composes its own background.
+  // WINDOW scope: one query covers the date range for all five city areas.
+  {
+    id: ProviderId.RESIDENTADVISOR, transport: 'fetch', enabled: true, priority: 8, scopeKind: 'window', media: 'hotlink',
+    executors: { worker: true },
+  },
   // maratonypolskie.pl — ready but NOT yet enabled in production (pending the
   // user's go: logo fix + autoapprove decision). Flip `enabled` + deploy when approved.
   {

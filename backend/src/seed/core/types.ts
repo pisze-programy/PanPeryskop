@@ -19,6 +19,7 @@ export const ProviderId = {
   EBILET: 'ebilet',
   EVENTIM: 'eventim',
   TICKETMASTER: 'ticketmaster',
+  RESIDENTADVISOR: 'residentadvisor',
   MTP: 'mtp',
   FACEBOOK: 'facebook',
 } as const;
@@ -67,6 +68,9 @@ export interface SeedCandidate {
   partnerName?: string;
   /** Ticket price in PLN (provider-reported, e.g. ebilet). Null/absent = unknown. */
   price?: number | null;
+  /** Provider-specific extras as a JSON string (the club lineup, the genres,
+   *  the age limit, …). Null/absent = none. */
+  meta?: string | null;
   /** Affiliate click URL (provider-specific, e.g. TradeDoubler). Kept separate from
    *  `link` because the dedupe-facing link must be per-event unique, while the
    *  affiliate tracker is a shared redirect host. Replaces `link` at ingest. */

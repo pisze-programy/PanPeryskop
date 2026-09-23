@@ -16,6 +16,7 @@ test('providers: kupbilecik + ebilet + eventim + ticketmaster on Worker (fetch),
   assert.ok(byId.has('kupbilecik'));
   assert.ok(byId.has('ebilet'));
   assert.ok(byId.has('ticketmaster'));
+  assert.ok(byId.has('residentadvisor'));
   assert.ok(byId.has('multikino'));
   assert.ok(byId.has('cinemacity'));
   assert.ok(byId.has('helios'));
@@ -25,6 +26,7 @@ test('providers: kupbilecik + ebilet + eventim + ticketmaster on Worker (fetch),
   assert.equal(byId.get('kupbilecik')!.transport, 'fetch');
   assert.equal(byId.get('ebilet')!.transport, 'fetch');
   assert.equal(byId.get('ticketmaster')!.transport, 'fetch');
+  assert.equal(byId.get('residentadvisor')!.transport, 'fetch');
   assert.equal(byId.get('multikino')!.transport, 'fetch');
   assert.equal(byId.get('cinemacity')!.transport, 'fetch');
   assert.equal(byId.get('helios')!.transport, 'fetch');
@@ -39,8 +41,8 @@ test('providers: kupbilecik + ebilet + eventim + ticketmaster on Worker (fetch),
   // Worker executor: kupbilecik + ebilet + eventim + ticketmaster (plain fetch,
   // external-warmed R2 caches / open API) run in the CF queue pipeline.
   const workerIds = workerExecutor.providerIds(PROVIDER_CONFIGS);
-  assert.deepEqual(workerIds, ['kupbilecik', 'ebilet', 'eventim', 'ticketmaster'], 'kupbilecik + ebilet + eventim + ticketmaster enabled on worker');
-  assert.equal(enabledProviders().length, 4);
+  assert.deepEqual(workerIds, ['kupbilecik', 'ebilet', 'eventim', 'ticketmaster', 'residentadvisor'], 'the five worker providers');
+  assert.equal(enabledProviders().length, 5);
   assert.deepEqual(
     enabledProviders().map((p) => p.id).sort(),
     workerIds.sort(),

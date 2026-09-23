@@ -247,7 +247,8 @@ export async function doSavePost(
   price: number | null = null,
   sourceUrl: string | null = null,
   externalMediaUrl: string | null = null,
-  externalThumbUrl: string | null = null
+  externalThumbUrl: string | null = null,
+  meta: string | null = null
 ) {
   const db = env.DB;
   const sponsored = isSponsored ? 1 : 0;
@@ -272,19 +273,19 @@ export async function doSavePost(
              event_date = ?, showtimes = CASE WHEN time_locked = 1 THEN showtimes ELSE ? END,
              showtime_booking = CASE WHEN time_locked = 1 THEN showtime_booking ELSE ? END,
              tags = CASE WHEN tags_locked = 1 THEN tags ELSE ? END,
-             partner_id = ?, partner_name = ?, price_pln = ?, source_url = ?
+             partner_id = ?, partner_name = ?, price_pln = ?, source_url = ?, meta = ?
          WHERE id = ?`
       )
-      .bind(type, lat, lng, description, mediaKey, thumbKey, externalMediaUrl, externalThumbUrl, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price, sourceUrl, postId)
+      .bind(type, lat, lng, description, mediaKey, thumbKey, externalMediaUrl, externalThumbUrl, sponsored, category, linkUrl, createdAt, externalId, status, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price, sourceUrl, meta, postId)
       .run();
   } else {
     const cellId = gridCellId(lat, lng);
     await db
       .prepare(
-        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, external_media_url, external_thumb_url, created_at, grid_cell_id, is_sponsored, category, link_url, source_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name, price_pln)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO posts (id, user_id, type, lat, lng, description, status, media_key, thumb_key, external_media_url, external_thumb_url, created_at, grid_cell_id, is_sponsored, category, link_url, source_url, external_id, is_sold_out, event_date, showtimes, showtime_booking, tags, partner_id, partner_name, price_pln, meta)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, externalMediaUrl, externalThumbUrl, createdAt, cellId, sponsored, category, linkUrl, sourceUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price)
+      .bind(postId, user.id, type, lat, lng, description, status, mediaKey, thumbKey, externalMediaUrl, externalThumbUrl, createdAt, cellId, sponsored, category, linkUrl, sourceUrl, externalId, soldOut, eventDate, showtimes, showtimeBooking, tags, partnerId, partnerName, price, meta)
       .run();
     await db
       .prepare(

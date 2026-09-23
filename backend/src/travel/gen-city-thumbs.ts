@@ -41,7 +41,7 @@ async function download(id: string, url: string): Promise<string> {
 }
 
 function encode(source: string, target: string): void {
-  execFileSync('cwebp', ['-quiet', '-q', '82', '-resize', '400', '200', source, '-o', target]);
+  execFileSync('cwebp', ['-quiet', '-q', '60', '-resize', '400', '200', source, '-o', target]);
 }
 
 async function main(): Promise<void> {

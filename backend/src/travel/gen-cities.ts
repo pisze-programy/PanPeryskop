@@ -397,8 +397,8 @@ async function main(): Promise<void> {
   for (const city of matched) {
     const row = facts.get(city.long_slug) as NomadsFacts;
     const cost = row.cost_for_local_usd_per_month || city.cost_of_living_usd;
-    const namePl = names.get(city.name.toLowerCase()) ?? names.get(fold(city.name))
-      ?? NAME_OVERRIDES[city.name];
+    const namePl = NAME_OVERRIDES[city.name]
+      ?? names.get(city.name.toLowerCase()) ?? names.get(fold(city.name));
     if (!namePl) console.log(`no Polish name: ${city.name}`);
     const page = await cityPage(city.short_slug);
     const links = tabs(page.html);

@@ -1,0 +1,60 @@
+-- The recurring attraction and candlelight series, banned by hand (2026-09-23).
+--
+-- These are cycled listings, not one-off events: a Chopin recital, a museum, a
+-- model-railway exhibit that sell a ticket for every day of the month. Each seed
+-- re-creates them, so the ban is an explicit table entry rather than a title
+-- heuristic — a fuzzy pattern would also swallow real one-off concerts.
+--
+-- match_mode = exact, sources = the five providers that carry ticketed events.
+-- The earlier organizer-scoped rules live in 0037_blacklist_seed.sql.
+INSERT OR IGNORE INTO event_blacklist (id, pattern, venue, partner_id, partner_name, sources, match_mode, note, active, created_at, created_by) VALUES
+('bl-x001', 'Koncert Chopinowski w Sali Koncertowej Fryderyk', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x002', 'Koncert Chopinowski', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x003', 'Koncert Chopinowski w Chopin Point Warsaw', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x004', 'Recital Chopinowski Jana Widlarza', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x005', 'Koncerty fortepianowe w Gdańsku', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x006', 'KONCERTY FORTEPIANOWE PRZY ŚWIECACH', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x007', 'Chopin & Friends - koncerty fortepianowe przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x008', 'Chopin & Friends - koncerty fortepianowe we Wrocławiu', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x009', 'CHOPIN & FRIENDS – KONCERTY FORTEPIANOWE', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x010', 'Koncerty przy Świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x011', 'Candle Live Music: Koncerty przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x012', 'Dreamlive Concerts: Koncerty przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x013', 'Koncert Przy Świecach w Sali Koncertowej Fryderyk', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x014', 'KONCERT PRZY ŚWIECACH', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x015', 'I like Chopin - kameralny koncert przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x016', 'I like Queen - piano show przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x017', 'Koncert przy świecach – Bridgertonowie', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x018', 'Koncert przy świecach – ¡Viva España! – hiszpańska noc przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x019', 'Koncert przy świecach – !Viva Espana! – hiszpańska noc przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x020', 'Koncert przy świecach – Tango przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x021', 'Tenorzy przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x022', 'Tenorzy przy świecach - koncert, który porusza serce', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x023', 'Tenorzy przy świecach - od klasyki do hitów Eda Sheerana', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x024', 'Kwartet smyczkowy w repertuarze muzyki z serialu "Bridgertonowie" przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x025', 'Koncert przy świecach – La Notte Italiana: włoska noc przy świecach', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring junk', 1, 1790176800000, 'seed'),
+('bl-x026', 'CHOPIN & FRIENDS CONCERT BY CANDLE GLOW', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x027', 'Chopin & Friends Concert By Candle Glow', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x028', 'Grand Piano Trio Chopin & Friends By Candle Glow', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x029', 'I like CHOPIN', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x030', 'Time For Chopin', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x031', 'Chopin & Friends Concert Candlelight', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x032', 'Koncert Chopin & Friends przeniesie niejednego melomana w magiczny świat muzyki', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x033', 'Queen Classic Concert By Candle Glow', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x034', 'Royal Chopin Hall - Queen Classic Candlelight', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x035', 'I like Queen - Piano Show', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x036', 'Nastrojowy wieczór z muzyką Chopina', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x037', 'Chopin Concerts, Old Town', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x038', 'Candlelight Chopin Concert Old Town Gdańsk', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x039', 'TITANIC - The Artifact Exhibition - Katowice', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x040', 'Kolejkowo - wystawa Jelenia Góra', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x041', 'Kolejkowo - wystawa Wrocław', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x042', 'Kolejkowo - wystawa Gliwice', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x043', 'Kolejkowo - wystawa Warszawa', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x044', 'GENESIS – The Creation Light Show', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x045', 'MUZEUM BANKSY KRAKÓW', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x046', 'Muzeum Banksy', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x047', 'Muzeum Banksy - bilet upoważniający do wejścia w ciągu całego dnia (od godz. 11:00)', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x048', 'Indywidualne zwiedzanie wystawy', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x049', 'Mroczna Strona Miasta', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed'),
+('bl-x050', 'Royal Chopin Hall - Queen Classic Concert By Candle Glow', NULL, NULL, NULL, 'kupbilecik,ebilet,eventim,going,ticketmaster', 'exact', 'recurring attraction', 1, 1790176800000, 'seed');

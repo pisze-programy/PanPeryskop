@@ -7,12 +7,11 @@ struct CityEventsSection: View {
     let onSelect: (TravelEvent) -> Void
 
     @Environment(\.region) private var region
-    @Environment(\.colorScheme) private var colorScheme
     @State private var events: [TravelEvent] = []
 
     private static let radiusKm = 50.0
     private static let cardWidth: CGFloat = 240
-    private static let cardHeight: CGFloat = 104
+    private static let crestSize: CGFloat = 32
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
@@ -49,21 +48,12 @@ struct CityEventsSection: View {
     }
 
     private func cardLabel(_ event: TravelEvent) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            categoryLine(event)
-            Text(event.title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(.primary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Spacer(minLength: 0)
-            Text(whereLabel(event))
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            badge(event)
+            content(event)
+            foot(event)
         }
-        .frame(width: Self.cardWidth, height: Self.cardHeight, alignment: .topLeading)
+        .frame(width: Self.cardWidth, alignment: .topLeading)
         .padding(Theme.Spacing.m)
         .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
         .overlay(
@@ -73,17 +63,94 @@ struct CityEventsSection: View {
         .contentShape(Rectangle())
     }
 
-    private func categoryLine(_ event: TravelEvent) -> some View {
+    private func badge(_ event: TravelEvent) -> some View {
         HStack(spacing: Theme.Spacing.xs) {
+            Image(systemName: categoryIcon(event))
+                .font(.caption2.weight(.bold))
+            Text(categoryLabel(event))
+                .font(.caption2.weight(.bold))
+                .tracking(0.5)
+            Spacer(minLength: 0)
             Text(whenLabel(event))
-                .font(.caption)
+                .font(.caption2)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
-            Spacer(minLength: 0)
-            Image(systemName: event.isRun ? "figure.run" : "sportscourt.fill")
-                .font(.caption.weight(.semibold))
-                .foregroundColor(Theme.Palette.neutral(colorScheme))
         }
+        .foregroundColor(categoryColor(event))
+    }
+
+    @ViewBuilder
+    private func content(_ event: TravelEvent) -> some View {
+        if event.isRun {
+            runContent(event)
+        } else {
+            matchContent(event)
+        }
+    }
+
+    private func matchContent(_ event: TravelEvent) -> some View {
+        HStack(spacing: Theme.Spacing.s) {
+            crest(event.home, code: event.metaData?.homeCode, color: event.metaData?.homeColor)
+            Text(event.title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            crest(event.away, code: event.metaData?.awayCode, color: event.metaData?.awayColor)
+        }
+    }
+
+    private func crest(_ name: String?, code: String?, color: String?) -> some View {
+        TeamCrest(name: name ?? "", code: code, colorHex: color, size: Self.crestSize)
+    }
+
+    private func runContent(_ event: TravelEvent) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            HStack(spacing: Theme.Spacing.s) {
+                Image(systemName: "figure.run")
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(RunPalette.color(for: event))
+                Text(event.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            distanceChips(event)
+        }
+    }
+
+    @ViewBuilder
+    private func distanceChips(_ event: TravelEvent) -> some View {
+        let distances = RunDistances.tags(event.metaData, language: region.languageCode)
+        if !distances.isEmpty {
+            HStack(spacing: Theme.Spacing.xs) {
+                ForEach(distances, id: \.self) { distance in
+                    DistanceTag(label: distance, tint: RunPalette.color(for: event))
+                }
+            }
+        }
+    }
+
+    private func foot(_ event: TravelEvent) -> some View {
+        Text(footLabel(event))
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .lineLimit(1)
+    }
+
+    private func categoryIcon(_ event: TravelEvent) -> String {
+        event.isRun ? "figure.run" : "sportscourt.fill"
+    }
+
+    private func categoryLabel(_ event: TravelEvent) -> String {
+        event.isRun ? "BIEG" : "MECZ"
+    }
+
+    private func categoryColor(_ event: TravelEvent) -> Color {
+        event.isRun ? RunPalette.color(for: event) : .accentColor
     }
 
     private func whenLabel(_ event: TravelEvent) -> String {
@@ -95,15 +162,10 @@ struct CityEventsSection: View {
         return "\(weekday) \(day), \(time)"
     }
 
-    private func detailLabel(_ event: TravelEvent) -> String? {
-        guard event.isRun else { return nil }
-        return RunDistances.range(event.metaData, language: region.languageCode)
-    }
-
-    private func whereLabel(_ event: TravelEvent) -> String {
+    private func footLabel(_ event: TravelEvent) -> String {
         let place = "\(event.city) · \(distanceKm(to: event)) km"
-        guard let detail = detailLabel(event) else { return place }
-        return "\(detail) · \(place)"
+        guard let league = event.metaData?.league, !league.isEmpty else { return place }
+        return "\(league) · \(place)"
     }
 
     private func distanceKm(to event: TravelEvent) -> Int {

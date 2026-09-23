@@ -41,13 +41,13 @@ struct TripsGamestrip: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity)
-                        .padding(.leading, leadingInset)
                         .padding(.horizontal, Theme.Spacing.l)
+                        .padding(.leading, leadingInset)
                 }
                 row
                     .frame(height: Self.rowHeight)
-                    .padding(.leading, leadingInset)
                     .padding(.horizontal, Theme.Spacing.l)
+                    .padding(.leading, leadingInset)
                     .padding(.top, league == nil ? 0 : Self.badgeSpacing)
                     .frame(maxWidth: .infinity)
                 dots
@@ -82,12 +82,18 @@ struct TripsGamestrip: View {
             Text(city.displayName)
                 .font(.subheadline.weight(.bold))
                 .lineLimit(1)
-            Text("Populacja: \(city.population.formatted(.number.notation(.compactName)))")
+            Text(metaLine(city))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func metaLine(_ city: TravelCity) -> String {
+        let country = city.countryName(language: region.languageCode)
+        let population = city.population.formatted(.number.notation(.compactName))
+        return "\(country) · \(population)"
     }
 
     private var soccerRow: some View {

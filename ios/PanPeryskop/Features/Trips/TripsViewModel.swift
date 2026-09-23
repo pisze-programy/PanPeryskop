@@ -228,10 +228,27 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         return airlines
     }
 
+    /// Cities a traveller can reach from this event: one of the city's airports is
+    /// served from the origin, and the city lies within the nearby radius of the
+    /// event. Nearest first, so the sheet reads outward from the venue.
+    func nearbyCities(for event: TravelEvent) -> [TravelCity] {
+        let served = Set(mergedDestinations.map(\.iata))
+        let eventCoord = CLLocation(latitude: event.lat, longitude: event.lng)
+        return visibleCities
+            .filter { city in
+                guard city.airports.contains(where: { served.contains($0) }) else { return false }
+                let coord = CLLocation(latitude: city.lat, longitude: city.lng)
+                return eventCoord.distance(from: coord) <= AppConstants.nearbyAirportRadiusMeters
+            }
+            .sorted { lhs, rhs in
+                eventCoord.distance(from: CLLocation(latitude: lhs.lat, longitude: lhs.lng))
+                    < eventCoord.distance(from: CLLocation(latitude: rhs.lat, longitude: rhs.lng))
+            }
+    }
+
     /// Reachable destinations (from origin) within the nearby radius, nearest first.
     /// THE source for both the map arcs and the card's airport rail — they must agree.
-    func nearbyDestinations(for event: TravelEvent) -> [Destination] {
-        let eventCoord = CLLocation(latitude: event.lat, longitude: event.lng)
+    func nearbyDestinations(for event: TravelEvent) -> [Destination] {        let eventCoord = CLLocation(latitude: event.lat, longitude: event.lng)
         return destinations
             .filter { dest in
                 let d = CLLocation(latitude: dest.lat, longitude: dest.lng)

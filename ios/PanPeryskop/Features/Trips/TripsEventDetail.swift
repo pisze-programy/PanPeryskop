@@ -9,8 +9,6 @@ struct TripsEventDetail: View {
     let onOpenMap: (CLLocationCoordinate2D, String) -> Void
 
     private static let tagSpacing = Theme.Spacing.xs
-    private static let tagHorizontalPadding = Theme.Spacing.s
-    private static let tagVerticalPadding = Theme.Spacing.xs
     private static let separator = ", "
     private static let distanceTitle = "Dystans:"
 
@@ -91,14 +89,7 @@ struct TripsEventDetail: View {
     }
 
     private func chip(_ value: String) -> some View {
-        Text(value)
-            .font(.caption.weight(.semibold))
-            .foregroundColor(.secondary)
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
-            .padding(.horizontal, Self.tagHorizontalPadding)
-            .padding(.vertical, Self.tagVerticalPadding)
-            .background(Theme.Palette.surface, in: Capsule())
+        DistanceTag(label: value)
     }
 
     private var venueName: String? {

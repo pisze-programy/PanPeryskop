@@ -254,6 +254,11 @@ struct ClusterEventPage: View {
                     isActive: isActive
                 )
             }
+        case .nearby:
+            CityNearbySection(cities: viewModel.nearbyCities(for: event)) { other in
+                viewModel.selectGroup(posts: [], cities: [other])
+            }
+            .padding(.top, Theme.Spacing.section)
         case .stays:
             StaysSection(
                 event: event,

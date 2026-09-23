@@ -35,6 +35,7 @@
 		182C1A31786783D4FF5A12D6 /* NotificationNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = C26388CF369194FEBE99969F /* NotificationNames.swift */; };
 		1944A67C9E72462DE6905CAD /* PartnerBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5180F10F5EFC633481668D9A /* PartnerBanner.swift */; };
 		19D5F25597C51D3CB1DEBEB2 /* PlaceRowsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AA5BFFF9D2545CFAF2139E /* PlaceRowsList.swift */; };
+		1BABD5604609471B5F3573EB /* DistanceTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B35F0C647BB676C59BC047C /* DistanceTag.swift */; };
 		1BE065A7EEF27FD5D834156F /* MapFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0313275F54CAE52C1764934 /* MapFilterBar.swift */; };
 		1D2F2834430E9724C2415AEB /* BusSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ABC560FFD3EB5403C95231 /* BusSkeleton.swift */; };
 		1D7A554D4AA09397FD9449FA /* PlaceRowsSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75D70118EE5CB936EC39CFFD /* PlaceRowsSkeleton.swift */; };
@@ -325,6 +326,7 @@
 		766F0918FE219B7F068729EF /* AppTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTabBar.swift; sourceTree = "<group>"; };
 		7794F8A4ABE38ABFD63657A8 /* StorySlideModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorySlideModifier.swift; sourceTree = "<group>"; };
 		796BB29CEB4FAE4F2BC4585D /* Airline+Booking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Airline+Booking.swift"; sourceTree = "<group>"; };
+		7B35F0C647BB676C59BC047C /* DistanceTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DistanceTag.swift; sourceTree = "<group>"; };
 		7BBE6BAD918B485CFE74D1F2 /* APIClient+Travel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "APIClient+Travel.swift"; sourceTree = "<group>"; };
 		7D0C8634B24D5EF1F5BDC590 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		7D2D24DFFEAFBFF5BE1B0A31 /* PermissionGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGateView.swift; sourceTree = "<group>"; };
@@ -466,6 +468,7 @@
 				6ACC720AF26AB168403D40E7 /* Chip.swift */,
 				7468F0DDF6EC36FD82D6286A /* Color+Hex.swift */,
 				ED0C050E9C504C7FA978362F /* CornerGlow.swift */,
+				7B35F0C647BB676C59BC047C /* DistanceTag.swift */,
 				BFECA1BD9D0D289F9D73CDF7 /* EmptyState.swift */,
 				9B9DAF71EA1CA5361B2C0265 /* ErrorState.swift */,
 				18A29AFA7C9AA7901EC14037 /* FilterButton.swift */,
@@ -967,6 +970,7 @@
 				86AFF281A5884F71C0D2E94E /* DescriptionStepView.swift in Sources */,
 				4A3A6010EE56F94F3C925D32 /* DestinationMapPage.swift in Sources */,
 				51739AEF329E613222A6397A /* DestinationMapRail.swift in Sources */,
+				1BABD5604609471B5F3573EB /* DistanceTag.swift in Sources */,
 				0F515E594011D18AB090DD1F /* EmptyState.swift in Sources */,
 				EEDA9866850B8426D1718C30 /* ErrorState.swift in Sources */,
 				57B7EFD344821D4145026D9E /* EventFlightSection.swift in Sources */,

@@ -29,6 +29,11 @@ import { snitchReport } from './alert';
 /** Single-time rows merge only within this many minutes (booking_key overrides). */
 export const RECONCILE_TIME_GUARD_MIN = 30;
 
+/** Two sources rarely agree on the hour: one writes the doors, the other the
+ *  set. A pair from different providers gets the wider guard, so the same gig
+ *  at 19:00 and 20:00 folds into one post. */
+export const RECONCILE_TIME_GUARD_CROSS_MIN = 90;
+
 // A reconcile latch older than this is considered dead (the Worker invocation was
 // killed mid-reconcile) and may be taken over by a later finalize — otherwise a
 // stuck `reconciling=1` blocks that day forever. Kept comfortably above the
@@ -125,7 +130,7 @@ async function loadRawRows(db: D1Database, day: string): Promise<RawRow[]> {
 }
 
 /** Same event? Venue gating first (canonical id, else fuzzy), then title, then time. */
-function sameEvent(a: RawRow, tokensA: Set<string>, b: RawRow, tokensB: Set<string>): boolean {
+export function sameEvent(a: RawRow, tokensA: Set<string>, b: RawRow, tokensB: Set<string>): boolean {
   if (a.canonical_venue_id && b.canonical_venue_id) {
     if (a.canonical_venue_id !== b.canonical_venue_id) return false;
   } else if (!venuesMatch(
@@ -134,10 +139,11 @@ function sameEvent(a: RawRow, tokensA: Set<string>, b: RawRow, tokensB: Set<stri
   )) {
     return false;
   }
-  const minContainment = a.provider === b.provider ? 1.0 : 0.8;
-  if (!containment(tokensA, tokensB, minContainment)) return false;
+  const sameSource = a.provider === b.provider;
+  if (!containment(tokensA, tokensB, sameSource ? 1.0 : 0.8)) return false;
   if (a.booking_key && b.booking_key && a.booking_key === b.booking_key) return true;
-  return Math.abs(a.start_min - b.start_min) <= RECONCILE_TIME_GUARD_MIN;
+  const guard = sameSource ? RECONCILE_TIME_GUARD_MIN : RECONCILE_TIME_GUARD_CROSS_MIN;
+  return Math.abs(a.start_min - b.start_min) <= guard;
 }
 
 /** Same-source pair that passes 0.8 but fails the 1.0 bar: suspicious, merge nothing.

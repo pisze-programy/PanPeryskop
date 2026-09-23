@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reconcileDay, RECONCILE_TIME_GUARD_MIN, sweepStuckRaw, daysReadyToReconcile, MAX_RAW_ATTEMPTS } from '../src/seed/reconcile';
+import { reconcileDay, RECONCILE_TIME_GUARD_MIN, sweepStuckRaw, daysReadyToReconcile, MAX_RAW_ATTEMPTS, sameEvent } from '../src/seed/reconcile';
+import { titleTokens } from '../src/seed/core/match';
 
 interface RawRow {
   id: string; provider: string; external_id: string; title: string;
@@ -319,3 +320,23 @@ test('daysReadyToReconcile: stale reconciling latch stays eligible, fresh latch 
 });
 
 
+test('sameEvent: two sources on one gig fold, though their hours differ', () => {
+  const row = (provider: string, title: string, venue: string, startMin: number) => ({
+    id: `${provider}-1`, provider, external_id: `${provider}-1`, title, raw_venue: venue,
+    city: 'Warszawa', canonical_venue_id: 'voodooclub', start_min: startMin,
+    showtimes: '[]', showtime_booking: '[]', price_pln: null, is_sold_out: 0,
+    link_url: null, booking_key: null, status: 'raw', winner_raw_id: null,
+  }) as unknown as Parameters<typeof sameEvent>[0];
+  const tokens = (row: Parameters<typeof sameEvent>[0]) => new Set(titleTokens(row.title, row.raw_venue));
+
+  const ebilet = row('ebilet', 'BIRDS IN ROW', 'Voodoo Club', 1200);
+  const going = row('going', 'Birds in Row | Warszawa', 'VooDoo Club', 1140);
+  assert.equal(sameEvent(ebilet, tokens(ebilet), going, tokens(going)), true, '60 min apart, one gig');
+
+  const later = row('going', 'Birds in Row | Warszawa', 'VooDoo Club', 1400);
+  assert.equal(sameEvent(ebilet, tokens(ebilet), later, tokens(later)), false, '140 min apart, two gigs');
+
+  const same = row('ebilet', 'BIRDS IN ROW', 'Voodoo Club', 1200);
+  const otherShow = row('ebilet', 'BIRDS IN ROW', 'Voodoo Club', 1260);
+  assert.equal(sameEvent(same, tokens(same), otherShow, tokens(otherShow)), false, 'same source keeps the tight guard');
+});

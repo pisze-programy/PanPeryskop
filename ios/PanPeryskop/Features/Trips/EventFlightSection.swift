@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 struct EventFlightSection: View {
     let event: TravelEvent
@@ -100,6 +101,12 @@ struct EventFlightSection: View {
                     selectedId = option.id
                     onSelectDestination(option.destination)
                 }
+            )
+            .padding(.horizontal, Theme.Spacing.l)
+            AirportAccessRow(
+                airportName: selected.destination.city,
+                airport: CLLocationCoordinate2D(latitude: selected.destination.lat, longitude: selected.destination.lng),
+                centre: CLLocationCoordinate2D(latitude: event.lat, longitude: event.lng)
             )
             .padding(.horizontal, Theme.Spacing.l)
         }

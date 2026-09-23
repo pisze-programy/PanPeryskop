@@ -7,6 +7,7 @@ struct CityEventsSection: View {
     let onSelect: (TravelEvent) -> Void
 
     @Environment(\.region) private var region
+    @Environment(\.colorScheme) private var colorScheme
     @State private var events: [TravelEvent] = []
 
     private static let radiusKm = 50.0
@@ -49,6 +50,7 @@ struct CityEventsSection: View {
 
     private func cardLabel(_ event: TravelEvent) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            categoryLine(event)
             Text(event.title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(.primary)
@@ -56,7 +58,6 @@ struct CityEventsSection: View {
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 0)
-            categoryLine(event)
             Text(whereLabel(event))
                 .font(.caption2)
                 .foregroundColor(.secondary)
@@ -64,29 +65,24 @@ struct CityEventsSection: View {
         }
         .frame(width: Self.cardWidth, height: Self.cardHeight, alignment: .topLeading)
         .padding(Theme.Spacing.m)
-        .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
+        .background(Theme.Palette.surface, in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .stroke(Theme.Palette.hairline, lineWidth: 0.5)
+        )
         .contentShape(Rectangle())
     }
 
     private func categoryLine(_ event: TravelEvent) -> some View {
         HStack(spacing: Theme.Spacing.xs) {
-            Image(systemName: event.isRun ? "figure.run" : "sportscourt.fill")
-                .font(.caption2.weight(.semibold))
-                .foregroundColor(RunPalette.color(for: event))
             Text(whenLabel(event))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 0)
-            if let detail = detailLabel(event) {
-                Text(detail)
-                    .font(.caption2.weight(.semibold))
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Theme.Palette.surfaceRaised, in: Capsule())
-            }
+            Image(systemName: event.isRun ? "figure.run" : "sportscourt.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundColor(Theme.Palette.neutral(colorScheme))
         }
     }
 
@@ -105,7 +101,9 @@ struct CityEventsSection: View {
     }
 
     private func whereLabel(_ event: TravelEvent) -> String {
-        "\(event.city) · \(distanceKm(to: event)) km od centrum"
+        let place = "\(event.city) · \(distanceKm(to: event)) km"
+        guard let detail = detailLabel(event) else { return place }
+        return "\(detail) · \(place)"
     }
 
     private func distanceKm(to event: TravelEvent) -> Int {

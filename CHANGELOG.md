@@ -41,6 +41,8 @@ All notable changes to PanPeryskop. Format based on
   it only fills the gaps.
 - A blacklist rule is scoped by source and can match an exact title. A rule that
   names its providers cannot touch the others.
+- Every city photo comes from Unsplash, with the author and the photo page in the
+  credit. No photo links the Nomads file any more.
 
 ### Changed
 
@@ -64,6 +66,8 @@ All notable changes to PanPeryskop. Format based on
 - Every flight month opens with the skeleton for at least a second, even from
   the cache, so a month change reads the same every time.
 - The week starts on Monday, whatever the device region says.
+- The city thumbnails in the app bundle are lighter: they are always drawn
+  smaller than the file, so the extra quality was dead weight.
 
 ### Fixed
 

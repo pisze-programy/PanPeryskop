@@ -38,6 +38,14 @@ struct Post: Codable, Identifiable, Equatable {
     let distinction: String?
     /// Seed source (external_id prefix: 'kupbilecik', 'going', …). Nil for user posts.
     let source: String?
+    /// Provider extras as a JSON string (a club night: lineup, genres, age, …).
+    let meta: String?
+
+    /// Club night fields, when the source sent them. Nil for every other post.
+    var clubNight: ClubNightMeta? {
+        guard let meta, let data = meta.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(ClubNightMeta.self, from: data)
+    }
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lng)
@@ -181,7 +189,7 @@ struct Post: Codable, Identifiable, Equatable {
             liked: liked ?? self.liked, disliked: disliked ?? self.disliked, watched: watched ?? self.watched,
             author_name: author_name, media_url: media_url, thumb_url: thumb_url,
             author_avatar_url: author_avatar_url,
-            is_sponsored: is_sponsored, category: category, link_url: link_url, is_sold_out: is_sold_out, showtimes: showtimes, showtime_booking: showtime_booking, travelPin: travelPin, tags: tags, distinction: distinction, source: source
+            is_sponsored: is_sponsored, category: category, link_url: link_url, is_sold_out: is_sold_out, showtimes: showtimes, showtime_booking: showtime_booking, travelPin: travelPin, tags: tags, distinction: distinction, source: source, meta: meta
         )
     }
 

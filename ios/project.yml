@@ -34,7 +34,10 @@ targets:
       - path: PanPeryskop
         excludes:
           - "Resources/CityThumbs"
+          - "Resources/ClubNight"
       - path: PanPeryskop/Resources/CityThumbs
+        type: folder
+      - path: PanPeryskop/Resources/ClubNight
         type: folder
     dependencies:
       - package: LazyPager

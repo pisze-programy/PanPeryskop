@@ -729,7 +729,7 @@ extension TravelEvent {
             grid_cell_id: nil, liked: false, disliked: false, watched: false,
             author_name: provider, media_url: nil, thumb_url: nil, author_avatar_url: nil,
             is_sponsored: false, category: nil, link_url: link, is_sold_out: nil,
-            showtimes: nil, showtime_booking: nil, travelPin: pinStyle, tags: [tag], distinction: nil, source: provider
+            showtimes: nil, showtime_booking: nil, travelPin: pinStyle, tags: [tag], distinction: nil, source: provider, meta: nil
         )
     }
 

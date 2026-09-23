@@ -39,6 +39,7 @@
 		1BE065A7EEF27FD5D834156F /* MapFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0313275F54CAE52C1764934 /* MapFilterBar.swift */; };
 		1D2F2834430E9724C2415AEB /* BusSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36ABC560FFD3EB5403C95231 /* BusSkeleton.swift */; };
 		1D7A554D4AA09397FD9449FA /* PlaceRowsSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75D70118EE5CB936EC39CFFD /* PlaceRowsSkeleton.swift */; };
+		1D7B11C5D21EE2A649C6FED4 /* ClubNight in Resources */ = {isa = PBXBuildFile; fileRef = 3354CF24CED3BACBF35E8EE4 /* ClubNight */; };
 		1ECB2877A783FE6052F708F2 /* PlacePreviewLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8CD6BD0A4BED70D4ED47F42 /* PlacePreviewLoader.swift */; };
 		20689B4BF120449E13986136 /* CatalogueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B3C63A3820150B18EE2110C /* CatalogueStore.swift */; };
 		2103FA41F46EB5711A6D39F8 /* TravelEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1DB588A3A33BFAD0FE5A20 /* TravelEvent.swift */; };
@@ -48,6 +49,7 @@
 		2800584D74124C6854F92B91 /* AppFormatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86E0D24B8F1BE6BA90989AFD /* AppFormatters.swift */; };
 		288824434B9765FEC9A39E4A /* CityListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD4E014F459275D98EE0FC41 /* CityListView.swift */; };
 		28DD6087D49DB4718F72C73F /* StaysWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B2A69E63454D375845BF49 /* StaysWidget.swift */; };
+		2999C70F6E0F7450E182E047 /* PhotoStoryBand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A72696D0DFAC55F267FFAD /* PhotoStoryBand.swift */; };
 		29EE1EC490D48D3573C07D33 /* StaysSortSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DB2FE513874BB07E3DB20A3 /* StaysSortSheet.swift */; };
 		2A8563B9966C62951A4E8D67 /* MediaCompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AF85F0B111F42C315E257A2 /* MediaCompressor.swift */; };
 		2B323AAB55B783C8966D0BB9 /* CityThumbs in Resources */ = {isa = PBXBuildFile; fileRef = 64D8FF569D3B7CFFCC657D54 /* CityThumbs */; };
@@ -130,6 +132,7 @@
 		86AFF281A5884F71C0D2E94E /* DescriptionStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC285092C6C1F446940D3AD0 /* DescriptionStepView.swift */; };
 		86BD8A6F871DB769FEFE8CF3 /* ArcBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE51F539CAB5E7E9E94B8224 /* ArcBuilderTests.swift */; };
 		88377DD77998725A36E0803B /* RemoteImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF8B9D14D0D302E06C9CB3A1 /* RemoteImageStore.swift */; };
+		8982411BA4D21E9253F6C7E7 /* ClubNightMeta.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1502859D955ADE6A18B1312 /* ClubNightMeta.swift */; };
 		8A120729ED883B863E2F6E0B /* AppDates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0305307ED2743DD230586C16 /* AppDates.swift */; };
 		8A8151D0C5FD967568632DC4 /* CityEventsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7810FB5E890A5E181388777 /* CityEventsSection.swift */; };
 		8C29DB265E8D9BA5D77235CE /* BusPricesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4673D5D4BF3758D53AD9C4D /* BusPricesService.swift */; };
@@ -148,6 +151,7 @@
 		9FE01392F2FD87DE732F2DF0 /* StoryTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18E48DECD492A8ABD68BC23 /* StoryTopBar.swift */; };
 		9FFE2B7DB91FEBE86E8F997B /* RemoteImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574347DB42A5DBB079908333 /* RemoteImage.swift */; };
 		A1C94E03ECE3506C425C92D8 /* TripsGamestrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C41651AB7F2A0B22B355538B /* TripsGamestrip.swift */; };
+		A401F482E61ABBC55C8E6AF9 /* PhotoStoryBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D56A033EA494DAB3399A01 /* PhotoStoryBackdrop.swift */; };
 		A596AC61343DB653B4D685F5 /* TravelCity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13652BA3EF4E09654E178CDD /* TravelCity.swift */; };
 		A619DB1DBD31C1B1652349DC /* StickyBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAFC4CD2AAD3579569DF3566 /* StickyBar.swift */; };
 		A8E987F838A63C524DD2C662 /* TravelCatalogue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D3681BD611FA943AE20F101 /* TravelCatalogue.swift */; };
@@ -261,7 +265,9 @@
 		2CC6FFCB08FB57A371173FF6 /* MapContentProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapContentProvider.swift; sourceTree = "<group>"; };
 		2F1EB481F59516E748139BF1 /* TagSorting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagSorting.swift; sourceTree = "<group>"; };
 		32AB7CBE146D8583020F8DC3 /* MediaCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCaptureView.swift; sourceTree = "<group>"; };
+		32D56A033EA494DAB3399A01 /* PhotoStoryBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoStoryBackdrop.swift; sourceTree = "<group>"; };
 		32EC4B0B923115EDB9924829 /* MapCluster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapCluster.swift; sourceTree = "<group>"; };
+		3354CF24CED3BACBF35E8EE4 /* ClubNight */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ClubNight; path = PanPeryskop/Resources/ClubNight; sourceTree = SOURCE_ROOT; };
 		346DA0596DA155F6593B75F7 /* AppCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCamera.swift; sourceTree = "<group>"; };
 		36ABC560FFD3EB5403C95231 /* BusSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusSkeleton.swift; sourceTree = "<group>"; };
 		37A73C93318FD5E646D8B2FF /* CountryNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountryNames.swift; sourceTree = "<group>"; };
@@ -273,6 +279,7 @@
 		3E623531CBFA87ECD9BA406B /* CityFlightSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityFlightSheet.swift; sourceTree = "<group>"; };
 		404A0235C2900C411648A574 /* CityHeroSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityHeroSection.swift; sourceTree = "<group>"; };
 		40772C13D951012865BD0096 /* FlightTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightTimeline.swift; sourceTree = "<group>"; };
+		41A72696D0DFAC55F267FFAD /* PhotoStoryBand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoStoryBand.swift; sourceTree = "<group>"; };
 		4243C0678522339A2173990C /* YPImagePicker */ = {isa = PBXFileReference; lastKnownFileType = folder; name = YPImagePicker; path = vendor/YPImagePicker; sourceTree = SOURCE_ROOT; };
 		4272F73CBB4736D74B923499 /* TripsEventPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsEventPlanner.swift; sourceTree = "<group>"; };
 		44E2600CD901D47BDA2BB05D /* DateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateTests.swift; sourceTree = "<group>"; };
@@ -360,6 +367,7 @@
 		9C4BCA969ED4ED921814313C /* SheetOptionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SheetOptionRow.swift; sourceTree = "<group>"; };
 		9D3681BD611FA943AE20F101 /* TravelCatalogue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelCatalogue.swift; sourceTree = "<group>"; };
 		9E24106BABF1C88CC96C2B26 /* RunPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunPalette.swift; sourceTree = "<group>"; };
+		A1502859D955ADE6A18B1312 /* ClubNightMeta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClubNightMeta.swift; sourceTree = "<group>"; };
 		A15B840C3F12E7E21C3B859D /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
 		A15F3F36A0E617633DA2A779 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A2E604C948E764A378B1CC45 /* RunDistances.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunDistances.swift; sourceTree = "<group>"; };
@@ -457,6 +465,7 @@
 			isa = PBXGroup;
 			children = (
 				64D8FF569D3B7CFFCC657D54 /* CityThumbs */,
+				3354CF24CED3BACBF35E8EE4 /* ClubNight */,
 				47474A9108ACCDF7E2C4B210 /* Packages */,
 				E5C7870980264F060A5E9A86 /* PanPeryskop */,
 				62BAA249E65A777D3BFEA247 /* PanPeryskopTests */,
@@ -505,6 +514,8 @@
 			children = (
 				58E29EEF879BABF9A2A1A46D /* FaveLikeButton.swift */,
 				81A1D27EF60659004BFCF63B /* InAppBrowserView.swift */,
+				32D56A033EA494DAB3399A01 /* PhotoStoryBackdrop.swift */,
+				41A72696D0DFAC55F267FFAD /* PhotoStoryBand.swift */,
 				F9026DB768B2FB618F4F51D3 /* StoryActions.swift */,
 				CD924F09FFE0F2030F220C7C /* StoryBadgesView.swift */,
 				D29D6330C75C194FF4322E01 /* StoryBrowserOverlay.swift */,
@@ -708,6 +719,7 @@
 			children = (
 				9824545418E2802C51685DFB /* BusOffer.swift */,
 				FBDD7756E22141DD95593257 /* City.swift */,
+				A1502859D955ADE6A18B1312 /* ClubNightMeta.swift */,
 				823DAF3FECAD28727A4D487F /* MapCategory.swift */,
 				0AFF2D3AC0370D62EABBDC9C /* MyPost.swift */,
 				51183ED5E5EF86B278EE0CEB /* PendingPost.swift */,
@@ -906,6 +918,7 @@
 			files = (
 				0D51FDA1694C2ECA08DA3F5E /* Assets.xcassets in Resources */,
 				2B323AAB55B783C8966D0BB9 /* CityThumbs in Resources */,
+				1D7B11C5D21EE2A649C6FED4 /* ClubNight in Resources */,
 				F45978C7EBDE8E545CBADE21 /* Localizable.strings in Resources */,
 				71CDADC5D9F533CDA1AF553A /* PrivacyInfo.xcprivacy in Resources */,
 				7A32C8AA192F3F1D43D9EA1A /* catalogue.json in Resources */,
@@ -964,6 +977,7 @@
 				055A4335E8E7618BBEEC6605 /* CityPinView.swift in Sources */,
 				0A6E5B2B3DB370A6ADFB2FF0 /* CityThumbStore.swift in Sources */,
 				83396805BC14D994957C701C /* CityWeatherSection.swift in Sources */,
+				8982411BA4D21E9253F6C7E7 /* ClubNightMeta.swift in Sources */,
 				5758403F6B57DEBE0C876190 /* ClusterSheet.swift in Sources */,
 				2CF78395B0580F1D6FB70BFB /* Color+Hex.swift in Sources */,
 				9920ED1276D0819A568362B5 /* ContentView.swift in Sources */,
@@ -1028,6 +1042,8 @@
 				576B4EB45DFED915802A7168 /* PendingPostsStore.swift in Sources */,
 				2C2ACB375D317F5DD46C4415 /* PermissionCardsView.swift in Sources */,
 				F362DED9FE7F41389E90B0E4 /* PermissionGateView.swift in Sources */,
+				A401F482E61ABBC55C8E6AF9 /* PhotoStoryBackdrop.swift in Sources */,
+				2999C70F6E0F7450E182E047 /* PhotoStoryBand.swift in Sources */,
 				E99DAB83962E29BDB27FDE6F /* PlaceCard.swift in Sources */,
 				1ECB2877A783FE6052F708F2 /* PlacePreviewLoader.swift in Sources */,
 				EEBA4E491E59F918C7CD8A33 /* PlaceRowSkeleton.swift in Sources */,

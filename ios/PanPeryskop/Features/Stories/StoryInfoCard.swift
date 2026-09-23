@@ -14,7 +14,9 @@ struct StoryInfoCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-            if post.isRestaurant {
+            if let club = post.clubNight {
+                clubContent(club)
+            } else if post.isRestaurant {
                 restaurantContent
             } else {
                 eventOrLiveContent
@@ -30,6 +32,62 @@ struct StoryInfoCard: View {
             RoundedRectangle(cornerRadius: Theme.Radius.sheet, style: .continuous)
                 .stroke(Color.white.opacity(0.25), lineWidth: 0.5)
         )
+    }
+
+    /// A club night: centred title (like an event), the club and the genres on
+    /// one line, then the grey age and price. The lineup lives in the band over
+    /// the photo, so it is not repeated here.
+    private func clubContent(_ club: ClubNightMeta) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            Text(post.eventInfo.title)
+                .font(.headline)
+                .foregroundColor(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+            HStack(spacing: Theme.Spacing.s) {
+                if let venue = club.venue, !venue.isEmpty {
+                    Label(venue, systemImage: "mappin.and.ellipse")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                if let genres = club.genresText {
+                    Text(genres)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            clubMetaLine(club)
+            clubLink
+        }
+    }
+
+    /// The grey line: the age and the price, each only when it says something.
+    @ViewBuilder
+    private func clubMetaLine(_ club: ClubNightMeta) -> some View {
+        let parts = [club.priceText, club.ageText].compactMap { $0 }
+        if !parts.isEmpty {
+            Text(parts.joined(separator: " · "))
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var clubLink: some View {
+        if let url = post.link_url.flatMap(URL.init) {
+            Button {
+                onOpenBrowser(url, false)
+            } label: {
+                Label("Strona wydarzenia", systemImage: "arrow.up.right")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.blue)
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     /// Curated restaurant: centred name (like events), the distinction and cuisine

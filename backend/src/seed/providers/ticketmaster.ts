@@ -69,6 +69,11 @@ async function paced(): Promise<void> {
 /**
  * Classification → canonical tag. Segment first, genre refines it. Unknown
  * segment → null (no tag), never a guess.
+ *
+ * The API answers in the locale that was asked for, so `locale=pl-pl` returns
+ * the Polish segment names ("Muzyka", "Sztuka i teatr", "Sporty", "Różne").
+ * Both languages are matched; an English-only test tagged every Polish event
+ * as "inne".
  */
 export function tmTag(
   segment: string | null,
@@ -78,11 +83,11 @@ export function tmTag(
   const s = (segment || '').trim().toLowerCase();
   const g = `${genre || ''} ${subGenre || ''}`.trim().toLowerCase();
   if (!s) return null;
-  if (s === 'music') return 'muzyka';
+  if (s === 'music' || s === 'muzyka') return 'muzyka';
   if (s === 'film') return 'filmy';
-  if (s === 'sports') return 'inne';
-  if (s === 'family') return 'inne';
-  if (s.includes('arts') || s.includes('theatre') || s.includes('theater')) {
+  if (s === 'sports' || s === 'sporty') return 'inne';
+  if (s === 'family' || s === 'rodzina') return 'inne';
+  if (s.includes('arts') || s.includes('theatre') || s.includes('theater') || s.includes('teatr')) {
     return /(comedy|humor|kabaret|stand)/.test(g) ? 'komedia' : 'teatr';
   }
   return 'inne';

@@ -96,6 +96,17 @@ test('tmTag: segment first, genre refines arts', () => {
   assert.equal(tmTag(null, null, null), null, 'unknown segment → no tag, never a guess');
 });
 
+test('tmTag: the Polish segment names, which locale=pl-pl returns', () => {
+  // Probed live: the PL locale answers "Muzyka", "Sztuka i teatr", "Sporty",
+  // "Różne". An English-only test tagged every Polish concert as "inne".
+  assert.equal(tmTag('Muzyka', 'Rock', null), 'muzyka');
+  assert.equal(tmTag('Muzyka', 'Klasyczna', null), 'muzyka');
+  assert.equal(tmTag('Sztuka i teatr', 'Teatr', null), 'teatr');
+  assert.equal(tmTag('Sporty', null, null), 'inne');
+  assert.equal(tmTag('Różne', null, null), 'inne');
+  assert.equal(tmTag('Rodzina', null, null), 'inne');
+});
+
 test('tmImage: 16:9 preferred, else the largest, else null', () => {
   assert.equal(tmImage([{ ratio: '3_2', url: 'a', width: 999 }]), 'a');
   assert.equal(tmImage([{ ratio: '3_2', url: 'a', width: 999 }, { ratio: '16_9', url: 'b', width: 10 }]), 'b');

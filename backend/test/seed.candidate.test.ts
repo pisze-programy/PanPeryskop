@@ -38,7 +38,8 @@ test('parseCandidate: a missing meta becomes null, never undefined', () => {
   assert.equal(r.cand.meta, null);
 });
 
-test('parseCandidate: only a missing externalId is rejected', () => {  const r = parseCandidate({ ...base, externalId: undefined }, ProviderId.GOING, 3);
+test('parseCandidate: only a missing externalId is rejected', () => {
+  const r = parseCandidate({ ...base, externalId: undefined }, ProviderId.GOING, 3);
   assert.equal(r.ok, false);
   if (!r.ok) assert.match(r.reason, /#3: missing externalId/);
 });
@@ -55,6 +56,20 @@ test('parseCandidate: missing title/image/link/date → pendingReason (not a rej
     assert.equal(r.ok, true, `${field} must not be rejected`);
     if (r.ok) assert.equal(r.pendingReason, reason);
   }
+});
+
+test('parseCandidate: a source that draws its own background needs no image', () => {
+  // A club night has no flyer of its own — the card composes the backdrop. An
+  // empty mediaUrl must not hold the row as PENDING.
+  const r = parseCandidate({ ...base, mediaUrl: undefined }, ProviderId.RESIDENTADVISOR, 0, false);
+  assert.equal(r.ok, true);
+  if (r.ok) assert.notEqual(r.pendingReason, 'missing image');
+});
+
+test('parseCandidate: needsImage stays the default, so other sources still wait', () => {
+  const r = parseCandidate({ ...base, mediaUrl: undefined }, ProviderId.GOING, 0);
+  assert.equal(r.ok, true);
+  if (r.ok) assert.equal(r.pendingReason, 'missing image');
 });
 
 test('parseCandidate: non-positive date → pendingReason missing date (no epoch)', () => {

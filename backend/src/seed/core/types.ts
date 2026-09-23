@@ -140,4 +140,8 @@ export interface SeedProvider {
   /** Ingest every post from this provider as PENDING (moderation review) even
    *  with valid geo. Flip to false for auto-approve after review. */
   pendingByDefault?: boolean;
+  /** Does a post from this source need an image of its own? Default true.
+   *  False for a source whose event card draws its own background, so an empty
+   *  `mediaUrl` is expected and must not hold the post as PENDING. */
+  needsImage?: boolean;
 }

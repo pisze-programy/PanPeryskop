@@ -61,7 +61,7 @@ async function runUnit(env: Env, unit: ClaimedUnit): Promise<void> {
   let rejected = 0;
   let outOfWindow = 0;
   for (let i = 0; i < candidates.length; i++) {
-    const r = parseCandidate(candidates[i], provider.id, i);
+    const r = parseCandidate(candidates[i], provider.id, i, provider.needsImage !== false);
     if (!r.ok) { rejected += 1; continue; }
     const c = r.cand;
     const d = c.startMs > 0 ? warsawDateOf(c.startMs) : unit.day;

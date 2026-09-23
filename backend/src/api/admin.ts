@@ -8,6 +8,7 @@ import { writeRawRows } from '../seed/pipeline/queue/raw';
 import { warsawDateOf } from '../seed/core/dates';
 import { SeedCandidate } from '../seed/core/types';
 import { parseCandidate, isProviderId } from '../seed/core/candidate';
+import { SEED_PROVIDERS } from '../seed/providers';
 import { ingestWinnersForDay } from '../seed/reconcile';
 import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
 import { ingestRestaurants } from '../seed/manual/restaurants';import { getLastSeedDay, seedDue } from '../seed/cadence';
@@ -392,7 +393,8 @@ adminRoutes.post('/seed/units/:id/raw', async (c) => {
   // carried as a pending reason and the post is created PENDING.
   const source = unit.provider;
   if (!isProviderId(source)) return c.json({ error: `unknown provider ${source}` }, 400);
-  const parsed = body.candidates.map((v, i) => parseCandidate(v, source, i));
+  const needsImage = SEED_PROVIDERS.find((p) => p.id === source)?.needsImage !== false;
+  const parsed = body.candidates.map((v, i) => parseCandidate(v, source, i, needsImage));
   const rejected = parsed.flatMap((r) => (r.ok ? [] : [r.reason]));
 
   // Keep only the unit's window days (window providers return extra days). A

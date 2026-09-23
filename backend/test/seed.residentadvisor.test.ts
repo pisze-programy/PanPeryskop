@@ -23,6 +23,50 @@ test('normalizeTitle: an empty result falls back to the raw title', () => {
   assert.equal(normalizeTitle('FREE ENTRY', false), 'FREE ENTRY');
 });
 
+test('normalizeTitle: the lineup leaves the title, the night name stays', () => {
+  assert.equal(
+    normalizeTitle('SZEPTY: SALVYAN, ANOLUXX, MONYAL', false, ['SALVYAN', 'ANOLUXX', 'MONYAL']),
+    'SZEPTY'
+  );
+  assert.equal(
+    normalizeTitle('Obsession: KØZLØV - Luciid - Vendex', false, ['KØZLØV', 'Luciid', 'Vendex']),
+    'Obsession'
+  );
+  assert.equal(normalizeTitle('ARK: Tiga', false, ['Tiga']), 'ARK');
+});
+
+test('normalizeTitle: a title that is only the lineup is left alone', () => {
+  // Nothing would remain, and a nameless night is worse than a repeated one.
+  const lineup = ['larissa', 'Glassz', 'monka'];
+  assert.equal(normalizeTitle('larissa, Glassz, monka', false, lineup), 'larissa, Glassz, monka');
+  assert.equal(normalizeTitle('Super Flu', true, ['Super Flu']), 'Super Flu');
+});
+
+test('normalizeTitle: a custom title without the lineup is untouched', () => {
+  assert.equal(normalizeTitle('GO GIRLS', false, ['Someone Else']), 'GO GIRLS');
+  assert.equal(normalizeTitle('HAPPY RAVE', false, ['DJ X', 'DJ Y']), 'HAPPY RAVE');
+});
+
+test('normalizeTitle: a title that opens with the club keeps the night name', () => {
+  assert.equal(normalizeTitle('Smolna: Sam Paganini', true, ['Sam Paganini'], 'Smolna'), 'Smolna: Sam Paganini');
+  assert.equal(normalizeTitle('Smolna: EARGASM GOD Invites', true, [], 'Smolna'), 'Smolna: EARGASM GOD Invites');
+  assert.equal(normalizeTitle('Ark: Tiga', true, ['Tiga'], 'ARK'), 'Ark: Tiga');
+});
+
+test('normalizeTitle: "FREE ENTRY TILL 23:00" goes too', () => {
+  assert.equal(
+    normalizeTitle('WE ARE NASTY - 2 STAGES - FREE ENTRY TILL 23:00', false, []),
+    'WE ARE NASTY - 2 STAGES'
+  );
+});
+
+test('normalizeTitle: the date leaves the title', () => {
+  assert.equal(
+    normalizeTitle('RAVE GIRLS POLAND PRES. MILKY RAVE II - 03.10 Ciało', false, []),
+    'RAVE GIRLS POLAND PRES. MILKY RAVE II'
+  );
+});
+
 test('parseCost: a positive number is a price', () => {
   assert.equal(parseCost('10'), 10);
   assert.equal(parseCost('30'), 30);

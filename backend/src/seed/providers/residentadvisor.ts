@@ -98,12 +98,60 @@ async function paced(): Promise<void> {
  *  the promoter prefix goes when the title repeats it, and "FREE ENTRY" goes
  *  when the night is not ticketed. RA cuts a long title, so "FREE ENTR" is the
  *  same words. */
-export function normalizeTitle(raw: string, isTicketed: boolean): string {
+/** The title a reader sees. Resident Advisor titles are the promoter's own, and
+ *  most carry the lineup a second time. The band already shows the lineup, so
+ *  the title keeps only the night's name. A title that is nothing but the lineup
+ *  is left alone — a nameless night reads worse than a repeated one. */
+export function normalizeTitle(
+  raw: string,
+  isTicketed: boolean,
+  lineup: string[] = [],
+  venue = ''
+): string {
   let title = (raw || '').replace(/\s+/g, ' ').trim();
   if (!isTicketed) {
-    title = title.replace(/\s*[-–—|]?\s*free\s*entr(y|y\b)?\s*$/i, '').trim();
+    title = title.replace(/\s*[-–—|]?\s*free\s*entr(y|y\b)?(\s*(till|until)\s*\d{1,2}([:.]\d{2})?)?\s*$/i, '').trim();
   }
-  return title.replace(/\s*[-–—|]\s*$/, '').trim() || (raw || '').trim();
+  const withoutDate = title.replace(/\s*[-–—|]\s*\d{1,2}[.\-/]\d{1,2}([.\-/]\d{2,4})?.*$/, '').trim();
+  if (withoutDate) title = withoutDate;
+  const withoutLineup = dropLineup(title, lineup, venue);
+  return withoutLineup.replace(/\s*[-–—|,]\s*$/, '').trim() || (raw || '').trim();
+}
+
+/** Cut the title at the first artist name, and keep what stands before it. Two
+ *  titles stay whole: one that opens with an artist (the title is the lineup
+ *  alone) and one that opens with the club (the rest is the night's name, not a
+ *  lineup, even when an artist stands in it). */
+function dropLineup(title: string, lineup: string[], venue: string): string {
+  const lower = title.toLowerCase();
+  let cut = title.length;
+  for (const name of lineup) {
+    const needle = (name || '').trim().toLowerCase();
+    if (needle.length < 3) continue;
+    const at = lower.indexOf(needle);
+    if (at > 0 && at < cut) cut = at;
+  }
+  if (cut === title.length) return title;
+  const head = title.slice(0, cut).replace(/\s*[-–—|,:]\s*$/, '').trim();
+  if (!head) return title;
+  if (opensWithArtist(lower, lineup) || opensWithVenue(lower, venue)) return title;
+  return head;
+}
+
+function opensWithArtist(lower: string, lineup: string[]): boolean {
+  return lineup.some((n) => {
+    const needle = (n || '').trim().toLowerCase();
+    return needle.length >= 3 && lower.startsWith(needle);
+  });
+}
+
+function opensWithVenue(lower: string, venue: string): boolean {
+  const needle = (venue || '').trim().toLowerCase();
+  if (needle.length < 3) return false;
+  const sep = lower.indexOf(needle);
+  if (sep !== 0) return false;
+  const rest = lower.slice(needle.length).trimStart();
+  return rest.startsWith(':') || rest.startsWith('-') || rest.startsWith('–') || rest.startsWith('—');
 }
 
 /** The price in whole zloty, or null. `cost` is free text: "0", "10", "Free",
@@ -180,7 +228,7 @@ export function parseRaEvent(e: RaEvent): SeedCandidate[] {
   return [{
     source: ProviderId.RESIDENTADVISOR,
     externalId: `ra-${id}`,
-    title: normalizeTitle(rawTitle, isTicketed),
+    title: normalizeTitle(rawTitle, isTicketed, lineup, (venue?.name || '').trim()),
     startMs,
     lat,
     lng,
@@ -246,4 +294,5 @@ export const residentadvisorProvider: SeedProvider = {
   scopes: ['pl'],
   fetchScope: (ctx) => fetchResidentadvisorWindow(ctx),
   resolveLink: (_ctx, cand) => Promise.resolve(cand.link),
+  needsImage: false,
 };

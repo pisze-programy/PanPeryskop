@@ -53,8 +53,15 @@ function optBookings(v: unknown): ShowtimeBooking[] | undefined | null {
 }
 
 /** Validate + build a SeedCandidate. Returns a reason only when the row is
- *  unusable (not an object, no externalId) or has malformed optional arrays. */
-export function parseCandidate(raw: unknown, source: ProviderId, index: number): ParseOutcome {
+ *  unusable (not an object, no externalId) or has malformed optional arrays.
+ *  `needsImage` false means the card draws its own background, so an empty
+ *  `mediaUrl` is expected and does not hold the row as PENDING. */
+export function parseCandidate(
+  raw: unknown,
+  source: ProviderId,
+  index: number,
+  needsImage = true
+): ParseOutcome {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
     return { ok: false, reason: `#${index}: not an object` };
   }
@@ -76,7 +83,7 @@ export function parseCandidate(raw: unknown, source: ProviderId, index: number):
   const hasDate = isFiniteNum(c.startMs) && c.startMs > 0;
   let pendingReason: string | null = null;
   if (title === '') pendingReason = 'missing title';
-  else if (mediaUrl === '') pendingReason = 'missing image';
+  else if (needsImage && mediaUrl === '') pendingReason = 'missing image';
   else if (link === '') pendingReason = 'missing link';
   else if (!hasDate) pendingReason = 'missing date';
 

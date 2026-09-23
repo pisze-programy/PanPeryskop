@@ -10,11 +10,12 @@ import { goingTags } from '../src/seed/providers/going';
 import { PROVIDER_CONFIGS, enabledForExecutor, configOf, priorityOf, EXECUTOR } from '../src/seed/providers/registry';
 import { workerExecutor } from '../src/seed/executors/worker';
 
-test('providers: kupbilecik + ebilet on Worker (fetch), going/helios + cinemas on VPS', () => {
+test('providers: kupbilecik + ebilet + eventim + ticketmaster on Worker (fetch), going/helios + cinemas on VPS', () => {
   const byId = new Map(SEED_PROVIDERS.map((p) => [p.id, p]));
   assert.ok(byId.has('going'));
   assert.ok(byId.has('kupbilecik'));
   assert.ok(byId.has('ebilet'));
+  assert.ok(byId.has('ticketmaster'));
   assert.ok(byId.has('multikino'));
   assert.ok(byId.has('cinemacity'));
   assert.ok(byId.has('helios'));
@@ -23,6 +24,7 @@ test('providers: kupbilecik + ebilet on Worker (fetch), going/helios + cinemas o
   assert.equal(byId.get('going')!.transport, 'fetch');
   assert.equal(byId.get('kupbilecik')!.transport, 'fetch');
   assert.equal(byId.get('ebilet')!.transport, 'fetch');
+  assert.equal(byId.get('ticketmaster')!.transport, 'fetch');
   assert.equal(byId.get('multikino')!.transport, 'fetch');
   assert.equal(byId.get('cinemacity')!.transport, 'fetch');
   assert.equal(byId.get('helios')!.transport, 'fetch');
@@ -34,11 +36,11 @@ test('providers: kupbilecik + ebilet on Worker (fetch), going/helios + cinemas o
   // no longer carry an `enabled` flag.
   for (const p of SEED_PROVIDERS) assert.ok(!('enabled' in p), `${p.id} must not define enabled`);
 
-  // Worker executor: kupbilecik + ebilet + eventim (plain fetch, external-warmed R2
-  // caches) run in the CF queue pipeline.
+  // Worker executor: kupbilecik + ebilet + eventim + ticketmaster (plain fetch,
+  // external-warmed R2 caches / open API) run in the CF queue pipeline.
   const workerIds = workerExecutor.providerIds(PROVIDER_CONFIGS);
-  assert.deepEqual(workerIds, ['kupbilecik', 'ebilet', 'eventim'], 'kupbilecik + ebilet + eventim enabled on worker');
-  assert.equal(enabledProviders().length, 3);
+  assert.deepEqual(workerIds, ['kupbilecik', 'ebilet', 'eventim', 'ticketmaster'], 'kupbilecik + ebilet + eventim + ticketmaster enabled on worker');
+  assert.equal(enabledProviders().length, 4);
   assert.deepEqual(
     enabledProviders().map((p) => p.id).sort(),
     workerIds.sort(),

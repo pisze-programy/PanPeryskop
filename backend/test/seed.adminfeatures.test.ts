@@ -88,7 +88,7 @@ test('tagCatalog: no tag_order → default order (canonical then custom by label
   assert.deepEqual(catalog.slice(7).map((t) => t.id), ['sztuka', 'wystawa'], 'admin tags ordered by label');
 });
 
-test('registry: kupbilecik + ebilet + eventim are the worker providers', async () => {
+test('registry: kupbilecik + ebilet + eventim + ticketmaster are the worker providers', async () => {
   const { enabledProviders } = await import('../src/seed/providers');
   const ids = enabledProviders().map((p) => p.id);
   assert.ok(!ids.includes('going'), 'going moved to the VPS executor');
@@ -96,7 +96,8 @@ test('registry: kupbilecik + ebilet + eventim are the worker providers', async (
   assert.ok(ids.includes('kupbilecik'), 'kupbilecik still runs on the worker');
   assert.ok(ids.includes('ebilet'), 'ebilet runs on the worker');
   assert.ok(ids.includes('eventim'), 'eventim runs on the worker');
-  assert.deepEqual(ids, ['kupbilecik', 'ebilet', 'eventim']);
+  assert.ok(ids.includes('ticketmaster'), 'ticketmaster runs on the worker');
+  assert.deepEqual(ids, ['kupbilecik', 'ebilet', 'eventim', 'ticketmaster']);
 });
 
 // ---- geo propagation (by NAME + CITY, never by geo) ------------------------

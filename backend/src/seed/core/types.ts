@@ -18,6 +18,7 @@ export const ProviderId = {
   GETYOURGUIDE: 'getyourguide',
   EBILET: 'ebilet',
   EVENTIM: 'eventim',
+  TICKETMASTER: 'ticketmaster',
   MTP: 'mtp',
   FACEBOOK: 'facebook',
 } as const;

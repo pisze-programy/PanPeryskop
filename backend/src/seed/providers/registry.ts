@@ -81,6 +81,18 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: ProviderId.EVENTIM, transport: 'fetch', enabled: true, priority: 7, scopeKind: 'day', media: 'hotlink',
     executors: { worker: true },
   },
+  // Ticketmaster Discovery API (open, key-only, no affiliate). Poland pilot only.
+  // priority 8: the lowest — Ticketmaster wins dedupe ONLY when no other source
+  // carries the event, so it can never displace going/kupbilecik/ebilet/eventim.
+  // No affiliate agreement yet, so the same rank as getyourguide. Unlike ebilet
+  // the API carries venue coordinates, so geo is NOT deferred.
+  // WINDOW scope: the API returns the whole date range in one query, so a day
+  // unit would fire one request per day at once — a burst the 2 req/s limit
+  // forbids. One window unit fetches everything in one paced sequence.
+  {
+    id: ProviderId.TICKETMASTER, transport: 'fetch', enabled: true, priority: 8, scopeKind: 'window', media: 'hotlink',
+    executors: { worker: true },
+  },
   // maratonypolskie.pl — ready but NOT yet enabled in production (pending the
   // user's go: logo fix + autoapprove decision). Flip `enabled` + deploy when approved.
   {

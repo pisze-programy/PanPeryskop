@@ -24,6 +24,9 @@ interface Env {
   EBILET_TD_TOKEN?: string;
   // kupbilecik official partner API token (api/?token=...).
   KUPBILECIK_API_TOKEN?: string;
+  // Ticketmaster Discovery API key (the `apikey` query param). The consumer
+  // SECRET is NOT used — the Discovery API is key-only.
+  TICKETMASTER_CONSUMER_KEY?: string;
   // Stay22 affiliate id (aid) — hotel map widget + Allez deeplinks. Public value
   // (it appears in the map URL); the map needs nothing else.
   STAY22_AID?: string;

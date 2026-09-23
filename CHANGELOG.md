@@ -39,6 +39,14 @@ All notable changes to PanPeryskop. Format based on
 - A Ticketmaster seed source for Poland, on the open Discovery API. It runs as
   one window unit, paced at 600 ms a page, and ranks below every other source so
   it only fills the gaps.
+- A Resident Advisor seed source for the Polish clubs: Warsaw, Krakow, Wroclaw,
+  Gdansk and Poznan. It ranks below every other source and carries its own
+  lineup, genres, club, age and price.
+- A club night card, composed from a shared photo layer: a dark backdrop, a
+  band with the club and the lineup, and the same info box as the restaurant
+  card. The source sends no flyer.
+- A source can declare that its card draws its own background, so an empty image
+  does not hold its posts back.
 - A blacklist rule is scoped by source and can match an exact title. A rule that
   names its providers cannot touch the others.
 - Every city photo comes from Unsplash, with the author and the photo page in the
@@ -86,6 +94,11 @@ All notable changes to PanPeryskop. Format based on
 - A provider link with a doubled scheme ("http://Http://…") is repaired on the
   way in and on the way out, and the books of the run guide open again.
 - The Polish night count inflects: 1 noc, 2 noce, 5 nocy.
+- A Ticketmaster or Resident Advisor link opens in the app, not in Safari. Both
+  hosts were missing from the in-app browser list.
+- A club title stops repeating the lineup. The band already shows it, so the
+  title keeps the night's name: "SZEPTY: SALVYAN, ANOLUXX, MONYAL" reads
+  "SZEPTY", while a title that opens with the club keeps whole.
 
 
 ### Removed

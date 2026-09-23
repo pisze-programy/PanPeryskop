@@ -11,7 +11,9 @@
   geo-anchored stories (photo, video) and events
   </br>
   </br>
-  - <a href="[mailto:EMAIL](https://panperyskop.app)">Website</a> 
+  <a href="https://apps.apple.com/pl/app/pan-peryskop/id6803138750">
+    <img src="app-store-badge.svg" alt="Download on the App Store" height="54" />
+  </a>
 </p>
 
 ---

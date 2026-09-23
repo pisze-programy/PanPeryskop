@@ -21,7 +21,7 @@ test('admin session: valid cookie, expired cookie, tampered cookie', async () =>
   const session = await readSession(env, cookie);
   assert.ok(session);
   assert.equal(session!.sub, 'admin');
-  assert.ok(session!.exp > Date.now());
+  assert.equal('exp' in session!, false);
 
   // tampered payload -> rejected
   assert.equal(await readSession(env, cookie + 'x'), null);

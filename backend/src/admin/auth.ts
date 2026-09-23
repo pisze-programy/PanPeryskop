@@ -1,12 +1,10 @@
-import { CONFIG } from '../config/index';
 // Admin dashboard auth: password login (PBKDF2-SHA256 via WebCrypto) → HMAC-signed
-// HttpOnly cookie, TTL 4h, per-IP rate limiting (D1 admin_login_attempts).
+// HttpOnly cookie, no expiry, per-IP rate limiting (D1 admin_login_attempts).
 // Secrets come ONLY from wrangler secrets (ADMIN_PASSWORD_HASH, ADMIN_COOKIE_SECRET)
 // and the legacy bearer ADMIN_SECRET for CLI/seed. No hardcoded defaults.
 import { nanoid } from 'nanoid';
 
 export const COOKIE_NAME = 'pp_admin';
-export const SESSION_TTL_MS = 72 * CONFIG.time.hourMs; // 72h admin session
 const MAX_ATTEMPTS = 5;
 const RATE_LIMIT_MS = 15 * 60_000;
 
@@ -76,27 +74,22 @@ async function recordAttempt(env: Env, ip: string, success: boolean): Promise<vo
 
 export interface AdminSession {
   sub: string;      // admin id (constant 'admin')
-  exp: number;      // expiry ms
   iat: number;
 }
 
-// Issue a 4h session cookie value.
 export async function createSession(env: Env): Promise<string> {
-  const now = Date.now();
-  const payload = JSON.stringify({ sub: 'admin', iat: now, exp: now + SESSION_TTL_MS });
+  const payload = JSON.stringify({ sub: 'admin', iat: Date.now() });
   return signPayload(payload, env.ADMIN_COOKIE_SECRET!);
 }
 
-// Validate cookie; returns session or null (expired/invalid/missing secret).
+// Validate cookie; returns session or null (invalid/missing secret).
 export async function readSession(env: Env, cookie: string | undefined): Promise<AdminSession | null> {
   if (!cookie || !env.ADMIN_COOKIE_SECRET) return null;
   const payload = await verifySigned(cookie, env.ADMIN_COOKIE_SECRET!);
   if (!payload) return null;
   try {
     // The payload is the raw signed JSON (signPayload signs the plain text).
-    const s = JSON.parse(payload) as AdminSession;
-    if (typeof s.exp !== 'number' || s.exp < Date.now()) return null;
-    return s;
+    return JSON.parse(payload) as AdminSession;
   } catch {
     return null;
   }

@@ -2,9 +2,11 @@
 // handling, cookie-based auth, and the JSON response wrapper.
 import { readSession, COOKIE_NAME } from '../auth';
 
-export function setSessionCookie(res: Response, value: string, maxAgeSec: number): Response {
+const SESSION_MAX_AGE_SEC = 400 * 24 * 60 * 60; // browsers cap cookie lifetime at 400 days
+
+export function setSessionCookie(res: Response, value: string): Response {
   const headers = new Headers(res.headers);
-  headers.set('Set-Cookie', `${COOKIE_NAME}=${value}; Path=/admin; HttpOnly; SameSite=Strict; Secure; Max-Age=${maxAgeSec}`);
+  headers.set('Set-Cookie', `${COOKIE_NAME}=${value}; Path=/admin; HttpOnly; SameSite=Strict; Secure; Max-Age=${SESSION_MAX_AGE_SEC}`);
   return new Response(res.body, { status: res.status, headers });
 }
 

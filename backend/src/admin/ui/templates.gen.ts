@@ -54,7 +54,7 @@ export const TEMPLATES: Record<string, string> = {
   "login": `<div class="container-tight py-5">
   <div class="card card-md"><div class="card-body p-4">
     <h2 class="card-title mb-1">PanPeryskop · Admin</h2>
-    <p class="text-secondary mb-3">Zaloguj się (sesja 72h)</p>
+    <p class="text-secondary mb-3">Zaloguj się (sesja bezterminowa)</p>
     <form method="post" action="/admin/login">
       <div class="mb-3"><input type="password" name="password" class="form-control" placeholder="Hasło" required autofocus /></div>
       <button class="btn btn-primary w-100" type="submit">Zaloguj</button>

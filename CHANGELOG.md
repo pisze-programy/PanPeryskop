@@ -25,9 +25,22 @@ All notable changes to PanPeryskop. Format based on
   one map per language with a fallback to the original.
 - The city events row: running events and matches within 50 km, from today for
   90 days, with the category, the day, the hour when the source has one and the
-  distance from the city.
+  distance from the city. A match card carries the two club crests in their own
+  colours, a run card carries the run colour and its distance tags.
+- The city events row groups by kind: a football card and a running card end on
+  the same line, and a run shows two distances with the rest behind "+N".
+- The event sheet has the same airport row as the city sheet: the airport name,
+  its distance from the centre and a "Jak dojechać?" button that opens Google
+  Maps in transit mode.
+- The event sheet lists the cities near the venue, between the flights and the
+  stays, with the distance to each.
 - A frames-per-second readout for the test builds, and a release flag that turns
   it off.
+- A Ticketmaster seed source for Poland, on the open Discovery API. It runs as
+  one window unit, paced at 600 ms a page, and ranks below every other source so
+  it only fills the gaps.
+- A blacklist rule is scoped by source and can match an exact title. A rule that
+  names its providers cannot touch the others.
 
 ### Changed
 
@@ -35,6 +48,9 @@ All notable changes to PanPeryskop. Format based on
   radius, one look and one tap, so one filter set gives one cluster of
   everything on the map. The zoom span decides the radius: a country shows
   single pins, a continent shows clusters.
+- The cluster behaviour is a parameter of the map: the continent keeps its old
+  values and the local map gets its own cell size, longitude correction and
+  anchor, because one rule cannot serve both a continent and a city street.
 - The map no longer draws 3D terrain. The realistic elevation was the largest
   single cost of a camera move at the 60 degree pitch.
 - The city tiles read as a label and a value. Air quality reads in words only.
@@ -42,6 +58,12 @@ All notable changes to PanPeryskop. Format based on
 - The flight picker keeps its two calendars and stops choosing for the user: no
   dates are written until a day is tapped, the two months are independent, and
   the buy bar enables on an outbound alone so a one-way ticket works.
+- The calendar header reads in two lines: the month in a small bold face with
+  its arrows centred, the leg below in grey as "Wylot: POZ → BGY". The night
+  count sits on the buy button, next to the price.
+- Every flight month opens with the skeleton for at least a second, even from
+  the cache, so a month change reads the same every time.
+- The week starts on Monday, whatever the device region says.
 
 ### Fixed
 
@@ -52,6 +74,15 @@ All notable changes to PanPeryskop. Format based on
   span drift a tilted camera produces while panning.
 - The flight requests are paced. One provider call at a time, 600 ms apart, and
   two callers for the same month share one request.
+- A venue name with its hall in brackets no longer splits one event into several
+  posts: "Sinfonia Varsovia (Namiot)" and "(Aula)" fold onto the building.
+- A seed description keeps a title that holds the separator whole, so
+  "Koncert przy świecach – La Notte Italiana: włoska noc przy świecach" matches
+  its blacklist rule.
+- A provider link with a doubled scheme ("http://Http://…") is repaired on the
+  way in and on the way out, and the books of the run guide open again.
+- The Polish night count inflects: 1 noc, 2 noce, 5 nocy.
+
 
 ### Removed
 

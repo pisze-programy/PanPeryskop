@@ -13,6 +13,13 @@ export function originFromRequest(c: { req: { url: string } }): string {
   return `${u.protocol}//${u.host}`;
 }
 
+/** A stored external URL is present only when it is a non-empty string. Legacy
+ *  rows can hold '' for "no image" — that must read as absent, not as a URL. */
+export function presentUrl(url: string | null | undefined): string | null {
+  if (url === undefined || url === null || url === '') return null;
+  return url;
+}
+
 /** Resolve a post's public media/thumb URLs. Hotlink providers store the source
  *  CDN URL in external_media_url; UGC (and any R2 post) falls back to the R2 key.
  *  Thumb falls back to the full media URL so a hotlink post without a thumbnail
@@ -26,8 +33,13 @@ export function resolvePostMedia(
     thumb_key: string | null;
   },
 ): { media_url: string | null; thumb_url: string | null } {
+  const externalMedia = presentUrl(row.external_media_url);
+  const externalThumb = presentUrl(row.external_thumb_url);
   const keyMedia = mediaUrl(origin, row.media_key);
-  const media = row.external_media_url || keyMedia;
-  const thumb = row.external_thumb_url || mediaUrl(origin, row.thumb_key) || media;
+  const keyThumb = mediaUrl(origin, row.thumb_key);
+  const media = externalMedia === null ? keyMedia : externalMedia;
+  let thumb = externalThumb;
+  if (thumb === null) thumb = keyThumb;
+  if (thumb === null) thumb = media;
   return { media_url: media, thumb_url: thumb };
 }

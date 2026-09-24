@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Bottom info card of the story (events + live share the layout): title (events),
 /// date + flip-clock / showtime pager, venue+link or author, and the badges row.
@@ -18,6 +19,8 @@ struct StoryInfoCard: View {
                 clubContent(club)
             } else if post.isRestaurant {
                 restaurantContent
+            } else if post.isRun {
+                runContent
             } else {
                 eventOrLiveContent
             }
@@ -34,14 +37,10 @@ struct StoryInfoCard: View {
         )
     }
 
+    /// The band carries the event name and the lineup, so the box keeps the club,
+    /// the genres, the age/price and the link.
     private func clubContent(_ club: ClubNightMeta) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            Text(post.eventInfo.title)
-                .font(.headline)
-                .foregroundColor(.primary)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
             HStack(spacing: Theme.Spacing.s) {
                 if let venue = club.venue, !venue.isEmpty {
                     Label(venue, systemImage: "mappin.and.ellipse")
@@ -58,6 +57,35 @@ struct StoryInfoCard: View {
             }
             clubMetaLine(club)
             clubLink
+        }
+    }
+
+    /// A running event: the mask carries the name, the city and the distance, so
+    /// the box keeps the day and the link. No clock — the source has no hour.
+    private var runContent: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            Label(DayLabels.title(for: Date(timeIntervalSince1970: TimeInterval(post.created_at) / 1000)), systemImage: "calendar")
+                .font(.headline)
+                .foregroundColor(.primary)
+            if let url = post.link_url.flatMap(URL.init) {
+                Button {
+                    openRunLink(url)
+                } label: {
+                    Label("Strona wydarzenia", systemImage: "arrow.up.right")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.blue)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func openRunLink(_ url: URL) {
+        if url.host?.contains("google.") == true {
+            UIApplication.shared.open(url)
+        } else {
+            onOpenBrowser(url, true)
         }
     }
 
@@ -87,35 +115,16 @@ struct StoryInfoCard: View {
         }
     }
 
-    /// Curated restaurant: centred name (like events), the distinction and cuisine
-    /// on one line, then the street address and the website link.
+    /// Curated restaurant: the mask carries the identity (name, distinction,
+    /// cuisine), so the box keeps only the practical line — the street address
+    /// and the website link.
     private var restaurantContent: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            Text(post.restaurantInfo.name)
-                .font(.headline)
-                .foregroundColor(.primary)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-            HStack(spacing: Theme.Spacing.s) {
-                if let award = post.restaurantAwardLabel {
-                    Label(award, systemImage: post.restaurantStars > 0 ? "star.fill" : "fork.knife")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
-                }
-                if !post.restaurantInfo.cuisine.isEmpty {
-                    Text(post.restaurantInfo.cuisine)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-            }
             if !post.restaurantInfo.address.isEmpty {
-                Text(post.restaurantInfo.address)
+                Label(post.restaurantInfo.address, systemImage: "mappin.and.ellipse")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let url = post.link_url.flatMap(URL.init) {
                 Button {

@@ -57,6 +57,26 @@ struct Post: Codable, Identifiable, Equatable {
     /// curated restaurants are editorial, so the report menu never applies.
     var isLive: Bool { (category ?? AppConstants.categoryLive) == AppConstants.categoryLive }
 
+    /// A running event from maratonypolskie — it gets the run mask.
+    var isRun: Bool { source == "maratonypolskie" }
+
+    /// The story draws its own dark photo mask (club night, run, restaurant).
+    var usesPhotoMask: Bool { clubNight != nil || isRun || isRestaurant }
+
+    /// The run city, parsed from the venue ("Gdańsk (5 km)" → "Gdańsk").
+    var runCity: String {
+        guard let venue = eventInfo.venue else { return "" }
+        guard let open = venue.lastIndex(of: "(") else { return venue.trimmingCharacters(in: .whitespaces) }
+        return String(venue[venue.startIndex..<open]).trimmingCharacters(in: .whitespaces)
+    }
+
+    /// The run distance, parsed from the venue ("Gdańsk (5 km)" → "5 km").
+    var runDistance: String? {
+        guard let venue = eventInfo.venue, let open = venue.lastIndex(of: "("),
+              let close = venue.lastIndex(of: ")"), open < close else { return nil }
+        return String(venue[venue.index(after: open)..<close]).trimmingCharacters(in: .whitespaces)
+    }
+
     /// Seed events encode `Tytuł: HH:MM, Lokalizacja` in the description — parse it
     /// for the calendar/timer panel. `00:00` means the start time is unknown.
     var eventInfo: EventInfo {

@@ -44,7 +44,7 @@ class MockReconDB {
           },
           async all<T>(): Promise<{ results: T[] }> {
             if (sql.includes('FROM seed_raw WHERE day=')) {
-              return { results: [...db.raw.values()].filter((r) => r.status === 'raw') as T[] };
+              return { results: [...db.raw.values()].filter((r) => r.status === 'raw' || r.status === 'done') as T[] };
             }
             if (sql.includes('FROM posts') && sql.includes('external_id IN (')) {
               const ids = new Set(args.map(String));
@@ -237,6 +237,66 @@ test('reconcile: locked existing post is never auto-demoted', async () => {
   assert.equal(db.posts.get('ebilet-9-20260908')!.status, 'approved');
   assert.equal(db.raw.get('re')!.status, 'failure');
   assert.equal(db.raw.get('rk')!.status, 'winner');
+});
+
+test('reconcile: a done winner absorbs a late raw duplicate (one concert, one post)', async () => {
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
+  // going already produced its post (done); ebilet lands later (raw). This is the
+  // live City of the Sun / Future Palace shape.
+  db.seedRaw(row({
+    id: 'rg', provider: 'going', external_id: 'going-2415063',
+    title: 'CITY OF THE SUN', raw_venue: 'VooDoo Club', canonical_venue_id: 'voodooclub',
+    start_min: 1140, status: 'done',
+  }));
+  db.seedRaw(row({
+    id: 're', provider: 'ebilet', external_id: 'ebilet-210286-20260929',
+    title: 'CITY OF THE SUN', raw_venue: 'Voodoo Club', canonical_venue_id: 'voodooclub',
+    start_min: 1200,
+  }));
+  db.posts.set('going-2415063', { id: 'pg', external_id: 'going-2415063', status: 'approved', locked: false });
+  db.posts.set('ebilet-210286-20260929', { id: 'pe', external_id: 'ebilet-210286-20260929', status: 'approved', locked: false });
+
+  const s = await reconcileDay(db, DAY, 'b1');
+  assert.equal(s.winners, 0, 'a done winner is never re-opened');
+  assert.equal(s.duplicates, 1);
+  assert.equal(s.rejectedPosts, 1);
+  assert.equal(db.raw.get('rg')!.status, 'done', 'going stays done');
+  assert.equal(db.raw.get('re')!.status, 'duplicate');
+  assert.equal(db.raw.get('re')!.winner_raw_id, 'rg');
+  assert.equal(db.posts.get('ebilet-210286-20260929')!.status, 'rejected');
+  assert.equal(db.posts.get('going-2415063')!.status, 'approved', 'winner post untouched');
+});
+
+test('reconcile: a stub canonical id mismatch does not block a real merge', async () => {
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
+  // "Klub Hydrozagadka" and "Hydrozagadka" got different non-fuzzy stub ids; the
+  // raw names match, so the two sources still fold (the live Future Palace case).
+  db.seedRaw(row({
+    id: 'rg', provider: 'going', external_id: 'going-2410855',
+    title: 'FUTURE PALACE DEEP BLUE TOUR 2026 | Warszawa', raw_venue: 'Klub Hydrozagadka',
+    canonical_venue_id: 'klubhydrozagadka', start_min: 1140, status: 'done',
+  }));
+  db.seedRaw(row({
+    id: 'rv', provider: 'eventim', external_id: 'eventim-44973512876',
+    title: 'FUTURE PALACE', raw_venue: 'Hydrozagadka', canonical_venue_id: 'hydrozagadka', start_min: 1200,
+  }));
+  db.posts.set('going-2410855', { id: 'pg', external_id: 'going-2410855', status: 'approved', locked: false });
+  db.posts.set('eventim-44973512876', { id: 'pv', external_id: 'eventim-44973512876', status: 'approved', locked: false });
+
+  const s = await reconcileDay(db, DAY, 'b1');
+  assert.equal(s.duplicates, 1);
+  assert.equal(s.rejectedPosts, 1);
+  assert.equal(db.raw.get('rv')!.status, 'duplicate');
+  assert.equal(db.posts.get('eventim-44973512876')!.status, 'rejected');
+  assert.equal(db.posts.get('going-2410855')!.status, 'approved');
+});
+
+test('reconcile: a done solo row is left done, never re-opened', async () => {
+  const db = new MockReconDB() as unknown as D1Database & MockReconDB;
+  db.seedRaw(row({ id: 'd1', provider: 'kupbilecik', external_id: 'kup-d1', title: 'Solo', raw_venue: 'Klub X', canonical_venue_id: 'klubx', start_min: 1200, status: 'done' }));
+  const s = await reconcileDay(db, DAY, 'b1');
+  assert.equal(s.winners, 0);
+  assert.equal(db.raw.get('d1')!.status, 'done');
 });
 
 test('reconcile: idempotent re-run finds nothing left to do', async () => {

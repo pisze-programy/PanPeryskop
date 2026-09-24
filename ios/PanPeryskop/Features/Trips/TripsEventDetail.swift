@@ -103,7 +103,7 @@ struct TripsEventDetail: View {
     }
 
     private var placeLabel: String {
-        "\(event.city)\(Self.separator)\(event.country)"
+        event.placeName(language: region.languageCode)
     }
 
     private var mapIcon: String {

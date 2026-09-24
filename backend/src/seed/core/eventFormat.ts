@@ -85,5 +85,6 @@ export function tagsJson(c: SeedCandidate): string | null {
 
 // Provider extras as a JSON string, or null when the candidate carries none.
 export function metaJson(c: SeedCandidate): string | null {
-  return c.meta ? c.meta : null;
+  if (c.meta === undefined || c.meta === '') return null;
+  return c.meta;
 }

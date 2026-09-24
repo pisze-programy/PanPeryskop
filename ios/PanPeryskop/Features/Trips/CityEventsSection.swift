@@ -196,11 +196,7 @@ struct CityEventsSection: View {
     }
 
     private func placeName(_ event: TravelEvent) -> String {
-        guard let code = event.metaData?.countryCode,
-              let country = CountryNames.name(code, language: region.languageCode) else {
-            return event.city
-        }
-        return "\(event.city), \(country)"
+        event.placeName(language: region.languageCode)
     }
 
     private func distanceKm(to event: TravelEvent) -> Int {

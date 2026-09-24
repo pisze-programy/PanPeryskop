@@ -32,12 +32,14 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     private var extraPosts: [String: Post] = [:]
     private var knownPostIds: Set<String> = []
     private var pollingTask: Task<Void, Never>?
-    private var isFetchingStories = false
+    private var inFlightSquares: Set<String> = []
     private var isRegionFetchPending = false
     private var isCityTransitionPending = false
     private var cityTransitionTask: Task<Void, Never>?
     private static let squareSize = 0.45
-    private static let maxSquares = 5
+    /// A full zoom-out covers many squares; the cap must fit them, and a visible
+    /// square is never evicted (see `pruneSquares`).
+    private static let maxSquares = 64
 
     private enum MapPrefs {
         static let cityId = "map.last_city_id"
@@ -273,20 +275,23 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     /// already have (the poll); otherwise only the missing ones are fetched.
     @discardableResult
     private func fetchVisibleSquares(refresh: Bool, trackLoad: Bool) async -> [Post] {
-        guard let viewport, !isFetchingStories else { return [] }
-        isFetchingStories = true
-        defer { isFetchingStories = false }
-
+        guard let viewport else { return [] }
         let ids = Self.squareIds(in: viewport)
-        ids.forEach { markSquareRecent($0) }
-        let targets = refresh ? ids : ids.filter { squares[$0] == nil }
-        guard !targets.isEmpty else { return [] }
+        let visible = Set(ids)
+        let targets = ids.filter { !inFlightSquares.contains($0) && (refresh || squares[$0] == nil) }
+        guard !targets.isEmpty else {
+            pruneSquares(keeping: visible)
+            return []
+        }
+        inFlightSquares.formUnion(targets)
+        defer { inFlightSquares.subtract(targets) }
         if trackLoad { startUserLoad() }
         let token = feedToken
         var fetched: [Post] = []
         for id in targets {
             fetched.append(contentsOf: await fetchSquare(id, token: token))
         }
+        pruneSquares(keeping: visible)
         if trackLoad { knownPostIds.formUnion(fetched.map(\.id)) }
         if trackLoad { await finishUserLoad() }
         return fetched
@@ -319,7 +324,6 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
             var dict: [String: Post] = [:]
             for post in resp.stories { dict[post.id] = post }
             squares[id] = dict
-            markSquareRecent(id)
             posts = allPosts
             return resp.stories
         } catch {
@@ -328,12 +332,15 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         }
     }
 
-    private func markSquareRecent(_ id: String) {
-        squaresOrder.removeAll { $0 == id }
-        squaresOrder.insert(id, at: 0)
-        while squaresOrder.count > Self.maxSquares {
-            let evicted = squaresOrder.removeLast()
-            squares.removeValue(forKey: evicted)
+    /// Keep every visible square and drop only the oldest OFF-SCREEN ones beyond
+    /// the cap. A visible square is never evicted, so a zoom-out can never blank
+    /// the pins that are already on screen.
+    private func pruneSquares(keeping visible: Set<String>) {
+        squaresOrder.removeAll { visible.contains($0) }
+        squaresOrder.insert(contentsOf: visible, at: 0)
+        while squaresOrder.count > Self.maxSquares, let last = squaresOrder.last, !visible.contains(last) {
+            squaresOrder.removeLast()
+            squares.removeValue(forKey: last)
         }
     }
 

@@ -34,8 +34,8 @@ const PACE_MS = 700;
 const PAGE_SIZE = 100;
 /** A safety stop. The 90-day window is about two pages. */
 const MAX_PAGES = 6;
-const DEFAULT_MEDIA = 'https://api.panperyskop.app/media/posts/defaults/club-night.jpg';
-const DEFAULT_THUMB = 'https://api.panperyskop.app/media/posts/defaults/club-night-thumb.jpg';
+const DEFAULT_MEDIA = 'https://api.panperyskop.app/media/posts/defaults/techno-party-club.jpg';
+const DEFAULT_THUMB = 'https://api.panperyskop.app/media/posts/defaults/techno-party-club-thumb.jpg';
 
 const QUERY = `query Events($areas: [Int!], $from: DateTime!, $to: DateTime!, $page: Int!) {
   eventListings(
@@ -89,6 +89,11 @@ interface RaEvent {
   genres?: RaGenre[];
 }
 
+/** A missing provider string reads as empty, never as a fallback value. */
+function text(s: string | null | undefined): string {
+  return s === undefined || s === null ? '' : s;
+}
+
 let lastCallMs = 0;
 
 async function paced(): Promise<void> {
@@ -107,14 +112,15 @@ export function normalizeTitle(
   lineup: string[] = [],
   venue = ''
 ): string {
-  let title = (raw || '').replace(/\s+/g, ' ').trim();
+  let title = text(raw).replace(/\s+/g, ' ').trim();
   if (!isTicketed) {
     title = title.replace(/\s*[-–—|]?\s*free\s*entr(y|y\b)?(\s*(till|until)\s*\d{1,2}([:.]\d{2})?)?\s*$/i, '').trim();
   }
   const withoutDate = title.replace(/\s*[-–—|]\s*\d{1,2}[.\-/]\d{1,2}([.\-/]\d{2,4})?.*$/, '').trim();
   if (withoutDate) title = withoutDate;
   const withoutLineup = dropLineup(title, lineup, venue);
-  return withoutLineup.replace(/\s*[-–—|,]\s*$/, '').trim() || (raw || '').trim();
+  const cleaned = withoutLineup.replace(/\s*[-–—|,]\s*$/, '').trim();
+  return cleaned === '' ? text(raw).trim() : cleaned;
 }
 
 /** Cut the title at the first artist name, and keep what stands before it. Two
@@ -125,7 +131,7 @@ function dropLineup(title: string, lineup: string[], venue: string): string {
   const lower = title.toLowerCase();
   let cut = title.length;
   for (const name of lineup) {
-    const needle = (name || '').trim().toLowerCase();
+    const needle = text(name).trim().toLowerCase();
     if (needle.length < 3) continue;
     const at = lower.indexOf(needle);
     if (at > 0 && at < cut) cut = at;
@@ -139,13 +145,13 @@ function dropLineup(title: string, lineup: string[], venue: string): string {
 
 function opensWithArtist(lower: string, lineup: string[]): boolean {
   return lineup.some((n) => {
-    const needle = (n || '').trim().toLowerCase();
+    const needle = text(n).trim().toLowerCase();
     return needle.length >= 3 && lower.startsWith(needle);
   });
 }
 
 function opensWithVenue(lower: string, venue: string): boolean {
-  const needle = (venue || '').trim().toLowerCase();
+  const needle = text(venue).trim().toLowerCase();
   if (needle.length < 3) return false;
   const sep = lower.indexOf(needle);
   if (sep !== 0) return false;
@@ -153,15 +159,17 @@ function opensWithVenue(lower: string, venue: string): boolean {
   return rest.startsWith(':') || rest.startsWith('-') || rest.startsWith('–') || rest.startsWith('—');
 }
 
-/** The price in whole zloty, or null. `cost` is free text: "0", "10", "Free",
- *  "10-20". A value of zero or a text that does not read as a number gives
- *  null, and the card shows no price at all. */
+/** The price in whole zloty, or null. `cost` is free text and may list several
+ *  tiers: "0", "10", "Free", "10-20", "30,40,50". Take the FIRST number, never
+ *  concatenate the digits ("30,40,50" must read 30, not 304050). A value of zero
+ *  or a text without a number gives null, and the card shows no price. */
 export function parseCost(cost: string | undefined | null): number | null {
-  const raw = (cost || '').trim();
+  const raw = text(cost).trim();
   if (!raw) return null;
-  const first = raw.split('-')[0].replace(/[^0-9.]/g, '');
-  if (!first) return null;
-  const value = Number(first);
+  // A dot is a decimal ("12.50"); a comma separates price tiers ("30,40,50").
+  const match = raw.match(/\d+(?:\.\d+)?/);
+  if (!match) return null;
+  const value = Number(match[0]);
   if (!Number.isFinite(value) || value <= 0) return null;
   return Math.round(value);
 }
@@ -171,7 +179,7 @@ export function lineupOf(artists: RaArtist[] | undefined): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const artist of artists ?? []) {
-    const name = (artist?.name || '').trim();
+    const name = text(artist?.name).trim();
     if (!name || seen.has(name)) continue;
     seen.add(name);
     out.push(name);
@@ -184,7 +192,7 @@ export function genresOf(genres: RaGenre[] | undefined): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const genre of genres ?? []) {
-    const name = (genre?.name || '').trim();
+    const name = text(genre?.name).trim();
     if (!name || seen.has(name)) continue;
     seen.add(name);
     out.push(name);
@@ -196,8 +204,8 @@ export function genresOf(genres: RaGenre[] | undefined): string[] {
 /** Build the candidate for one night. Returns [] when the row cannot form a
  *  post: no id, no title, no start, or no position. */
 export function parseRaEvent(e: RaEvent): SeedCandidate[] {
-  const id = (e.id || '').trim();
-  const rawTitle = (e.title || '').trim();
+  const id = text(e.id).trim();
+  const rawTitle = text(e.title).trim();
   if (!id || !rawTitle) return [];
   const startMs = e.startTime ? Date.parse(e.startTime) : NaN;
   if (!Number.isFinite(startMs)) return [];
@@ -212,13 +220,16 @@ export function parseRaEvent(e: RaEvent): SeedCandidate[] {
   const genres = genresOf(e.genres);
   const price = parseCost(e.cost);
   const age = Number(e.minimumAge);
+  const capacity = Number(venue?.capacity);
+  const venueName = text(venue?.name).trim();
+  const clubCity = text(venue?.area?.name).trim();
   const meta = {
-    date: e.date?.slice(0, 10) ?? null,
+    date: e.date === undefined ? null : e.date.slice(0, 10),
     lineup,
     genres,
-    venue: (venue?.name || '').trim(),
-    clubCity: (venue?.area?.name || '').trim(),
-    capacity: Number(venue?.capacity) || null,
+    venue: venueName,
+    clubCity,
+    capacity: Number.isFinite(capacity) && capacity > 0 ? capacity : null,
     price,
     minimumAge: Number.isFinite(age) && age > 0 ? age : null,
     isTicketed,
@@ -227,12 +238,12 @@ export function parseRaEvent(e: RaEvent): SeedCandidate[] {
   return [{
     source: ProviderId.RESIDENTADVISOR,
     externalId: `ra-${id}`,
-    title: normalizeTitle(rawTitle, isTicketed, lineup, (venue?.name || '').trim()),
+    title: normalizeTitle(rawTitle, isTicketed, lineup, venueName),
     startMs,
     lat,
     lng,
-    city: (venue?.area?.name || '').trim(),
-    venue: (venue?.name || '').trim(),
+    city: clubCity,
+    venue: venueName,
     link: e.contentUrl ? `https://ra.co${e.contentUrl}` : `https://ra.co/events/${id}`,
     mediaUrl: DEFAULT_MEDIA,
     thumbUrl: DEFAULT_THUMB,
@@ -277,8 +288,8 @@ async function fetchAreas(from: string, to: string): Promise<RaEvent[]> {
 /** Candidates for the whole seed window. */
 export async function fetchResidentadvisorWindow(ctx: SeedContext): Promise<SeedCandidate[]> {
   const windowDays = CONFIG.seed.window.refillAhead + 1;
-  const from = `${ctx.day}T00:00:00.000Z`;
-  const to = `${addDaysWarsaw(ctx.day, windowDays)}T00:00:00.000Z`;
+  const from = new Date(warsawMidnightMs(ctx.day)).toISOString();
+  const to = new Date(warsawMidnightMs(addDaysWarsaw(ctx.day, windowDays))).toISOString();
   const events = await fetchAreas(from, to);
   const out: SeedCandidate[] = [];
   for (const e of events) out.push(...parseRaEvent(e));

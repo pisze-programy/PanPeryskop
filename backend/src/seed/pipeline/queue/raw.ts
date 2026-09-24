@@ -10,6 +10,7 @@ import { nanoid } from 'nanoid';
 import { SeedCandidate } from '../../core/types';
 import { linkKey, titleTokens } from '../../core/match';
 import { showtimesJson, showtimeBookingJson, tagsJson } from '../../core/eventFormat';
+import { presentUrl } from '../../../core/media';
 import { toWarsawIso } from '../../core/dates';
 import { ensureCanonicalVenue, upsertVenue, venueKey } from '../../venues/venueStore';
 import { now } from './state';
@@ -73,7 +74,7 @@ export function normHashInput(c: SeedCandidate): string {
     tags: [...tags].sort(),
     partner,
     pending: c.pendingReason === undefined ? null : c.pendingReason,
-    meta: c.meta ?? null,
+    meta: c.meta === undefined ? null : c.meta,
   });
 }
 
@@ -138,15 +139,15 @@ export async function writeRawRows(db: D1Database, input: RawWriteInput, chunkSi
         startMin(c.startMs),
         showtimesJson(c), showtimeBookingJson(c), tagsJson(c),
         c.price === undefined ? null : c.price,
-        c.mediaUrl,
-        c.thumbUrl === undefined ? null : c.thumbUrl,
+        presentUrl(c.mediaUrl),
+        presentUrl(c.thumbUrl),
         c.link, linkKey(c.link),
         c.affiliateLink === undefined ? null : c.affiliateLink,
         c.partnerId === undefined ? null : c.partnerId,
         c.partnerName === undefined ? null : c.partnerName,
         c.isSoldOut ? 1 : 0, hash,
         c.pendingReason === undefined || c.pendingReason === null ? null : c.pendingReason,
-        c.meta ?? null,
+        c.meta === undefined ? null : c.meta,
         t, t,
       ),
     );

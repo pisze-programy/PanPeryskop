@@ -9,6 +9,7 @@ import { parseCcScope } from '../src/seed/providers/cinemacity';
 import { goingTags } from '../src/seed/providers/going';
 import { PROVIDER_CONFIGS, enabledForExecutor, configOf, priorityOf, EXECUTOR } from '../src/seed/providers/registry';
 import { workerExecutor } from '../src/seed/executors/worker';
+import { planSeedUnits } from '../src/seed/pipeline/queue/units';
 
 test('providers: kupbilecik + ebilet + eventim + ticketmaster on Worker (fetch), going/helios + cinemas on VPS', () => {
   const byId = new Map(SEED_PROVIDERS.map((p) => [p.id, p]));
@@ -57,6 +58,22 @@ test('providers: kupbilecik + ebilet + eventim + ticketmaster on Worker (fetch),
     assert.ok(!workerIds.includes(id), `${id} not on worker`);
     assert.ok(configOf(id)!.executors.vps, `${id} has a vps executor spec`);
   }
+});
+
+test('no-proxy: RA and maratonypolskie are Worker-only and planned into the window', () => {
+  for (const id of [ProviderId.RESIDENTADVISOR, ProviderId.MARATONYPOLSKIE]) {
+    const c = configOf(id)!;
+    assert.equal(c.executors.worker, true, `${id} runs on the worker`);
+    assert.equal(c.executors.vps, undefined, `${id} has no proxy path`);
+  }
+  const days = ['2026-09-25', '2026-09-26', '2026-09-27'];
+  const units = planSeedUnits({ windowStart: days[0], days, batchId: 'b1', generation: 1 });
+  const mp = units.filter((u) => u.provider === 'maratonypolskie');
+  assert.equal(mp.length, days.length, 'one maratony day unit per window day');
+  assert.ok(mp.every((u) => u.executor === 'worker'), 'maratony units are worker-only');
+  const ra = units.filter((u) => u.provider === 'residentadvisor');
+  assert.equal(ra.length, 1, 'one RA window unit');
+  assert.equal(ra[0].executor, 'worker');
 });
 
 test('registry: executors, priority and vps specs are consistent', () => {

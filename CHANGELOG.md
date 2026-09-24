@@ -8,6 +8,21 @@ All notable changes to PanPeryskop. Format based on
 
 ### Added
 
+- The running events source (maratonypolskie) runs on the Worker, so it costs no
+  proxy data. Every running post carries one shared poster, and the run story
+  draws its own mask over it: the event name, the city and the distance.
+- A club night draws its own story mask over the shared club photo: the event
+  name, the lineup and the club.
+- A restaurant draws its own story mask: the distinction in gold, the name in a
+  serif face and the cuisine, anchored at the top over the shared photo. The
+  story card of a restaurant, a club night and a run is always dark, so the text
+  never sits on a pale band.
+- A city photo loads in the scaling flow: the bundled thumb first (instant,
+  offline), then the served thumb, then the served large. The pin, the "W
+  okolicy" cards and the city hero all use it.
+- The flight calendar opens on the current month (a departure inside the last
+  three days of a month moves to the next one), and the return calendar follows
+  the departure month. A city break can last up to two months, not a week.
 - City breaks. The Europa map shows European cities with a photo, beside the
   running events and the football matches. A city opens a sheet with the
   airports that serve it, the flights, the stays, what to see, the cities near
@@ -102,6 +117,47 @@ All notable changes to PanPeryskop. Format based on
 - The club card shows its photo. The photo sat in a bundle folder, and the old
   load looked for it at the bundle root, so the card drew a black frame. It now
   loads by its path, and the pin and the card read one shared club photo.
+- Resident Advisor posts carry their club data to the app, so the club card
+  renders instead of an empty frame, and the map pin has a photo.
+- Two sources of one concert fold into one post, even when one source already
+  produced the post in an earlier run. The club is matched by its name, not only
+  by its internal id, so "Hydrozagadka" and "Klub Hydrozagadka" are one club.
+- An event image that is absent is stored as absent, so a missing photo never
+  becomes a broken URL.
+- The bundled city thumbnails are rebuilt from the served photos, so a city
+  whose photo changed (Oslo) no longer shows the old shot. The thumb cache now
+  remembers its source URL, so a later change re-downloads it.
+- The country on a run or a match card is shown in the reader's language,
+  through the same helper the city card uses.
+- The story mask no longer drifts to the right: the backdrop is pinned to the
+  screen, so the club, run and restaurant bands stay centred. The restaurant mask
+  sits below the top bar.
+- The story mask is truly centred now: the backdrop is an overlay on a flexible
+  base, so its `.fill` overflow can no longer widen the layout and push the band
+  to the right. The restaurant band pads inside its frame.
+- A story shows the cached photo on the first render, so switching between club
+  nights (one shared photo) is instant — no black frame, no flicker. The mask
+  band no longer animates in.
+- A club price with several tiers shows the first price: "30,40,50" reads 30 zł,
+  not 30405030 zł.
+- A race link opens in the in-app browser, not Safari — a race site has any host.
+- The story card never shows the data source. The SPONSOROWANE badge opens the
+  price and external-link disclosure. A run story shows its distance instead of
+  the city, and the day reads "27 września, Niedziela" like the day picker.
+- The Lokalne map keeps its pins on a full zoom-out. The square cache never
+  evicts a square that is on screen, and a region change is never dropped while
+  a fetch is in flight.
+- A story image loads in order: the thumb first, then the large — never both at
+  once. A post without a thumbnail fetches its one image once. The next and
+  previous story thumbs are prefetched, so a swipe is instant.
+- The story and the map pins load again. A failed image was blocked for a minute
+  and never retried; the block is gone, so a retry always follows a miss. A story
+  also reads the cache on the first frame, so a cached photo shows at once.
+- The city hero keeps its frame on every screen. The photo no longer widens the
+  layout, so the name and the country are never cut on a narrower phone.
+- A race link is the organiser's own site, read with a session cookie, or a web
+  search when there is none. A real link opens in the in-app browser; a search
+  opens in Safari. A race shows its real distance; a race without one shows none.
 
 
 ### Removed

@@ -36,6 +36,7 @@ final class StoryViewModel {
 
     private var photoTimer: Task<Void, Never>?
     private var flipTask: Task<Void, Never>?
+    private var prefetchTask: Task<Void, Never>?
 
     init(posts: [Post], startIndex: Int, actions: StoryActions) {
         self.posts = posts
@@ -55,8 +56,39 @@ final class StoryViewModel {
 
     // MARK: - Lifecycle
 
-    func onAppear() { photoTimer = startPhotoTimer() }
-    func onDisappear() { photoTimer?.cancel() }
+    func onAppear() {
+        photoTimer = startPhotoTimer()
+        prefetchNeighbors()
+    }
+
+    func onDisappear() {
+        photoTimer?.cancel()
+        prefetchTask?.cancel()
+    }
+
+    func prefetchNeighbors() {
+        prefetchTask?.cancel()
+        let urls = neighborThumbURLs()
+        guard !urls.isEmpty else { return }
+        prefetchTask = Task {
+            for url in urls {
+                if Task.isCancelled { return }
+                _ = await RemoteImageStore.shared.load(url)
+            }
+        }
+    }
+
+    private func neighborThumbURLs() -> [URL] {
+        var urls: [URL] = []
+        for offset in [1, -1] {
+            let index = displayIndex + offset
+            guard posts.indices.contains(index) else { continue }
+            let post = posts[index]
+            guard post.type != .video, let url = post.resolvedThumbURL, url != post.resolvedMediaURL else { continue }
+            urls.append(url)
+        }
+        return urls
+    }
 
     func pause() {
         paused = true
@@ -136,6 +168,7 @@ final class StoryViewModel {
                 // if the outgoing content fed onProgress during the slide-out.
                 progressFraction = 0
                 if currentPost.type == .photo { photoTimer = startPhotoTimer() }
+                prefetchNeighbors()
                 withAnimation(.easeInOut(duration: Self.flipDuration)) { slideOffset = 0 }
             }
         }

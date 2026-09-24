@@ -165,6 +165,8 @@ export interface StoryJson {
   distinction: string | null;
   /** Seed source — the external_id prefix (e.g. 'kupbilecik', 'going'). Null for user posts. */
   source: string | null;
+  /** Typed source payload (club lineup/genres, run distance, …). Null otherwise. */
+  meta: string | null;
   liked: boolean;
   disliked: boolean;
   watched: boolean;
@@ -176,7 +178,7 @@ export interface StoryJson {
 
 // Map a D1 row to the public story shape. No `as any` — the row type carries the
 // raw 0/1 integers and we coerce explicitly.
-function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): StoryJson {
+export function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): StoryJson {
   const origin = originFromRequest(c);
   const media = resolvePostMedia(origin, r);
   return {
@@ -204,12 +206,13 @@ function storyJson(r: StoryRow, c: { env: Env; req: { url: string } }): StoryJso
     showtimes: r.showtimes ? (JSON.parse(r.showtimes) as string[]) : null,
     showtime_booking: r.showtime_booking ? JSON.parse(r.showtime_booking) : null,
     tags: r.tags ? JSON.parse(r.tags) : null,
-    distinction: r.distinction ?? null,
-    source: r.external_id ? r.external_id.split('-')[0] || null : null,
+    distinction: r.distinction === undefined ? null : r.distinction,
+    source: r.external_id === null || r.external_id === '' ? null : r.external_id.split('-')[0],
+    meta: r.meta,
     liked: false,
-    disliked: (r.disliked ?? 0) === 1,
-    watched: (r.watched ?? 0) === 1,
-    author_name: r.author_name || 'unknown',
+    disliked: r.disliked === 1,
+    watched: r.watched === 1,
+    author_name: r.author_name === '' ? 'unknown' : r.author_name,
     author_avatar_url: mediaUrl(origin, r.author_avatar_key),
     media_url: media.media_url,
     thumb_url: media.thumb_url,
@@ -320,7 +323,8 @@ const live = results.filter(applyEventLiveness);
   const { results } = await db
     .prepare(
       `SELECT p.*, COALESCE(NULLIF(u.username, ''), u.device_id) as author_name,
-              u.avatar_key as author_avatar_key
+              u.avatar_key as author_avatar_key,
+              0 as watched, 0 as disliked
        FROM posts p
        JOIN users u ON p.user_id = u.id
        WHERE p.lat BETWEEN ? AND ?

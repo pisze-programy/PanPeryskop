@@ -65,6 +65,8 @@ export interface PostRow {
   price_pln: number | null;
   /** Curated restaurant distinction: '1*' | '2*' | '3*' | 'bib'. Null otherwise. */
   distinction?: string | null;
+  /** Typed source payload (club lineup/genres, run distance, …). Null otherwise. */
+  meta: string | null;
 }
 
 // A post row joined with author info (and optional watched flag) for /stories.

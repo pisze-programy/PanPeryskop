@@ -31,10 +31,7 @@ struct CityFlightSheet: View {
         self.city = city
         self._outbound = outbound
         self._returning = returning
-        let start = FlightPickerRules.openingMonth(
-            now: viewModel.anchorDate,
-            maxNights: AppConstants.cityBreakMaxNights
-        )
+        let start = FlightPickerRules.openingMonth(now: Date())
         self._outboundMonth = State(initialValue: start)
         self._returningMonth = State(initialValue: start)
     }
@@ -374,12 +371,13 @@ struct CityFlightSheet: View {
         returning = nil
     }
 
+    /// The return calendar follows the departure: its own month, or the next one
+    /// when the departure is near the month end. It only moves when no return is
+    /// picked yet, so a chosen return keeps its month.
     private func moveReturningMonthIfNeeded() {
-        guard let outbound = outbound,
-              let date = AppConstants.isoDayFormatter.date(from: outbound.date) else { return }
-        let month = FlightPickerRules.monthStart(date)
-        guard month > returningMonth else { return }
-        returningMonth = min(month, maxMonth)
+        guard returning == nil, let outbound = outbound,
+              let target = FlightPickerRules.returnMonth(after: outbound.date) else { return }
+        returningMonth = min(target, maxMonth)
     }
 
     private func openBooking() {

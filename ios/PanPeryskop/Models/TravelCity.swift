@@ -47,6 +47,9 @@ struct CityFacts: Codable, Equatable {
 
 extension TravelCity {
     var displayName: String { namePl.isEmpty ? name : namePl }
+    /// The served thumb (the scaling flow's second step).
+    var thumbURL: URL? { URL(string: imageUrl) }
+    /// The served large image (the scaling flow's last step).
     var heroURL: URL? { URL(string: imageLargeUrl) }
 
     func countryName(language: String) -> String {

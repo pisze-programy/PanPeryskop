@@ -5,24 +5,22 @@ struct PhotoStoryBand: View {
     let hero: String
     let caption: String?
 
-    private static let minHeightFraction: CGFloat = 0.30
-    private static let tintOpacity: Double = 0.30
-    private static let kickerOpacity: Double = 0.72
-    private static let captionOpacity: Double = 0.70
-    private static let ruleWidth: CGFloat = 24
+    private static let kickerOpacity: Double = 0.80
+    private static let captionOpacity: Double = 0.75
+    private static let ruleWidth: CGFloat = 28
     private static let ruleHeight: CGFloat = 2
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.s) {
+        VStack(spacing: Theme.Spacing.m) {
             kickerLine
             rule
             heroLine
             captionLine
         }
-        .padding(.vertical, Theme.Spacing.l)
+        .padding(.vertical, Theme.Spacing.xl)
         .padding(.horizontal, Theme.Spacing.section)
         .frame(maxWidth: .infinity)
-        .background(band)
+        .background(PhotoStoryBandBackground())
         .compositingGroup()
     }
 
@@ -31,9 +29,10 @@ struct PhotoStoryBand: View {
         if let kicker {
             Text(kicker.uppercased())
                 .font(.caption2.weight(.semibold))
-                .tracking(1.6)
+                .tracking(2)
                 .foregroundColor(.white.opacity(Self.kickerOpacity))
                 .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
     }
 
@@ -49,39 +48,21 @@ struct PhotoStoryBand: View {
             .tracking(-0.2)
             .foregroundColor(.white)
             .multilineTextAlignment(.center)
-            .lineLimit(3)
-            .minimumScaleFactor(0.75)
+            .lineLimit(2)
+            .minimumScaleFactor(0.7)
+            .shadow(color: .black.opacity(0.4), radius: 10, y: 2)
     }
 
     @ViewBuilder
     private var captionLine: some View {
         if let caption {
             Text(caption)
-                .font(.footnote)
+                .font(.footnote.weight(.medium))
                 .foregroundColor(.white.opacity(Self.captionOpacity))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
+                .shadow(color: .black.opacity(0.35), radius: 8, y: 1)
         }
     }
 
-    private var band: some View {
-        ZStack {
-            Rectangle().fill(.black.opacity(Self.tintOpacity))
-            Rectangle().fill(.thinMaterial)
-        }
-        .mask(edgeFade)
-    }
-
-    private var edgeFade: some View {
-        LinearGradient(
-            stops: [
-                .init(color: .clear, location: 0),
-                .init(color: .black, location: 0.12),
-                .init(color: .black, location: 0.88),
-                .init(color: .clear, location: 1),
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
 }

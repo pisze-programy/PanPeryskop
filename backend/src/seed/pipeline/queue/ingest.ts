@@ -8,6 +8,7 @@ import { SeedCandidate, SeedProvider, ShowtimeBooking } from '../../core/types';
 import { buildDescription, showtimesJson, showtimeBookingJson, tagsJson, metaJson } from '../../core/eventFormat';
 import { fallbackSeedGeo, resolveGeo } from '../../core/geo';
 import { detectMediaType, extForMediaType } from '../../../core/mediaFormat';
+import { presentUrl } from '../../../core/media';
 import { doSavePost } from '../../../api/posts';
 import { STATUS_APPROVED, STATUS_PENDING, POST_TYPE_PHOTO } from '../../../core/models';
 import { findBlacklist, loadBlacklistRules, blacklistReason } from '../../core/blacklist';
@@ -176,11 +177,10 @@ export async function ingestWinnerRow(
     let externalMediaUrl: string | null = null;
     let externalThumbUrl: string | null = null;
     if (mediaMode === 'hotlink') {
-      // Store the source CDN URLs verbatim. A missing thumb stays NULL (the app
-      // falls back to the full image at render time — that is display, not data);
-      // a missing image is fine here — pending_reason already forces PENDING.
-      externalMediaUrl = row.media_url;
-      externalThumbUrl = row.thumb_url;
+      // Store the source CDN URLs verbatim. An absent image/thumb is stored as
+      // NULL, never '' (the app treats '' as a URL and would request a broken one).
+      externalMediaUrl = presentUrl(row.media_url);
+      externalThumbUrl = presentUrl(row.thumb_url);
     } else {
       if (mediaKey === null && row.media_url !== null && row.media_url !== '') {
         const mediaBytes = await provider.fetchBytes(ctx, row.media_url);

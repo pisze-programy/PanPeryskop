@@ -30,13 +30,18 @@ export function thumbUrl(imageUrl: string): string {
 async function download(id: string, url: string): Promise<string> {
   mkdirSync(CACHE, { recursive: true });
   const file = join(CACHE, `${id}.webp`);
-  const source = existsSync(file) ? readFileSync(file) : null;
-  if (source) return file;
+  // The source URL is cached next to the image: when the city list changes the
+  // photo (e.g. a better Oslo shot), the stale file must not win. Without this
+  // the bundle thumb drifts away from the served image.
+  const srcFile = join(CACHE, `${id}.src`);
+  const cachedUrl = existsSync(srcFile) ? readFileSync(srcFile, 'utf8').trim() : '';
+  if (existsSync(file) && cachedUrl === url) return file;
   const res = await fetch(url, { headers: { 'User-Agent': AGENT } });
   if (!res.ok) throw new Error(`${url} -> ${res.status}`);
   const buffer = Buffer.from(await res.arrayBuffer());
   const { writeFileSync } = await import('node:fs');
   writeFileSync(file, buffer);
+  writeFileSync(srcFile, url);
   return file;
 }
 
@@ -47,27 +52,24 @@ function encode(source: string, target: string): void {
 async function main(): Promise<void> {
   mkdirSync(OUT, { recursive: true });
   const cities = JSON.parse(readFileSync(CITIES, 'utf8')) as CityEntry[];
-  const force = process.argv.includes('--force');
   let raw = 0;
   let encoded = 0;
   let failed = 0;
   let made = 0;
   for (const city of cities) {
     const target = join(OUT, `${city.id}.webp`);
-    if (force || !existsSync(target)) {
-      try {
-        const source = await download(city.id, thumbUrl(city.imageUrl));
-        raw += statSync(source).size;
-        encode(source, target);
-        made += 1;
-        await new Promise((resolve) => setTimeout(resolve, 40));
-      } catch (error) {
-        failed += 1;
-        console.log(`${city.id}: ${(error as Error).message}`);
-        continue;
-      }
+    try {
+      const source = await download(city.id, thumbUrl(city.imageUrl));
+      raw += statSync(source).size;
+      encode(source, target);
+      made += 1;
+      encoded += statSync(target).size;
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    } catch (error) {
+      failed += 1;
+      console.log(`${city.id}: ${(error as Error).message}`);
+      if (existsSync(target)) encoded += statSync(target).size;
     }
-    encoded += statSync(target).size;
   }
   console.log(`thumbs: ${cities.length} cities, ${made} written, ${failed} failed`);
   console.log(`downloaded: ${(raw / 1024 / 1024).toFixed(2)} MB`);

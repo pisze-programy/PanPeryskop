@@ -117,6 +117,21 @@ struct EventGroup: Identifiable {
     }
 }
 
+extension TravelEvent {
+    /// "City, Country" with the country in the reader's language. The one source
+    /// for every event card (a run or a match), so the country is never shown in
+    /// the provider's own language.
+    func placeName(language: String) -> String {
+        var countryName = country
+        if let code = metaData?.countryCode, let translated = CountryNames.name(code, language: language) {
+            countryName = translated
+        }
+        if city.isEmpty { return countryName }
+        if countryName.isEmpty { return city }
+        return "\(city), \(countryName)"
+    }
+}
+
 struct FlightWindowResponse: Codable {
     let outbound: [FlightWindowCell]
     let returning: [FlightWindowCell]

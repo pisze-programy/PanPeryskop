@@ -15,7 +15,10 @@ enum DayLabels {
 
     static func title(offset: Int) -> String {
         if let relative = relative(offset: offset) { return relative }
-        let date = date(offset: offset)
+        return title(for: date(offset: offset))
+    }
+
+    static func title(for date: Date) -> String {
         let day = AppConstants.dayMonthFormatter.string(from: date)
         let weekday = AppConstants.weekdayFullFormatter.string(from: date).capitalized
         return "\(day), \(weekday)"

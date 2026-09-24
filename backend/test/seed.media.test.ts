@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { detectMediaType, extForMediaType } from '../src/core/mediaFormat';
+import { resolvePostMedia } from '../src/core/media';
 
 function byteSeq(...bytes: number[]): Uint8Array {
   return new Uint8Array(bytes);
@@ -31,4 +32,27 @@ test('extForMediaType: webp -> .webp, jpeg -> .jpg', () => {
   assert.equal(extForMediaType('image/webp'), 'webp');
   assert.equal(extForMediaType('image/jpeg'), 'jpg');
   assert.equal(extForMediaType('image/png'), 'png');
+});
+
+const ORIGIN = 'https://api.panperyskop.app';
+
+test('resolvePostMedia: an empty external URL falls back to the R2 key', () => {
+  assert.deepEqual(
+    resolvePostMedia(ORIGIN, { external_media_url: '', external_thumb_url: null, media_key: 'posts/x/media.jpg', thumb_key: 'posts/x/thumb.jpg' }),
+    { media_url: `${ORIGIN}/media/posts/x/media.jpg`, thumb_url: `${ORIGIN}/media/posts/x/thumb.jpg` },
+  );
+});
+
+test('resolvePostMedia: an external URL wins; a missing thumb falls back to media', () => {
+  assert.deepEqual(
+    resolvePostMedia(ORIGIN, { external_media_url: 'https://cdn/x.jpg', external_thumb_url: null, media_key: null, thumb_key: null }),
+    { media_url: 'https://cdn/x.jpg', thumb_url: 'https://cdn/x.jpg' },
+  );
+});
+
+test('resolvePostMedia: everything absent is null, never a broken URL', () => {
+  assert.deepEqual(
+    resolvePostMedia(ORIGIN, { external_media_url: null, external_thumb_url: null, media_key: null, thumb_key: null }),
+    { media_url: null, thumb_url: null },
+  );
 });

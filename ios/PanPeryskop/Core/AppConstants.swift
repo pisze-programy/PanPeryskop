@@ -54,8 +54,9 @@ enum AppConstants {
     static let saturdayWeekday = 7
     static let secondsPerDay: TimeInterval = 24 * secondsPerHour
 
-    /// Longest city-break trip the flight picker will suggest.
-    static let cityBreakMaxNights = 7
+    /// Longest city-break trip the flight picker will suggest. A long stay is
+    /// allowed — the user browses the prices and decides.
+    static let cityBreakMaxNights = 60
 
     /// The trip-events request may take a slow first pass on a new origin; a
     /// longer wait than this shows nothing useful, so the loader stops instead.

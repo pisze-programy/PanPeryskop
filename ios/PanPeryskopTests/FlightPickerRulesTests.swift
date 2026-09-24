@@ -11,7 +11,8 @@ final class FlightPickerRulesTests: XCTestCase {
     }()
 
     private func date(_ day: String) -> Date { fmt.date(from: day)! }
-    private var maxNights: Int { AppConstants.cityBreakMaxNights }
+    /// The rule is tested with a fixed limit, independent of the shipped value.
+    private let maxNights = 7
 
     func testNightsAcrossAMonthChange() {
         XCTAssertEqual(FlightPickerRules.nights(from: "2026-03-30", to: "2026-04-02"), 3)
@@ -54,18 +55,51 @@ final class FlightPickerRulesTests: XCTestCase {
     }
 
     func testOpeningMonthEarlyInTheMonthIsTheSameMonth() {
-        let opened = FlightPickerRules.openingMonth(now: date("2026-03-05"), maxNights: maxNights)
-        XCTAssertEqual(opened, FlightPickerRules.monthStart(date("2026-03-01")))
+        XCTAssertEqual(
+            FlightPickerRules.openingMonth(now: date("2026-03-05")),
+            FlightPickerRules.monthStart(date("2026-03-01"))
+        )
     }
 
     func testOpeningMonthWithTooFewDaysLeftIsTheNextMonth() {
-        let opened = FlightPickerRules.openingMonth(now: date("2026-03-28"), maxNights: maxNights)
-        XCTAssertEqual(opened, FlightPickerRules.monthStart(date("2026-04-01")))
+        XCTAssertEqual(
+            FlightPickerRules.openingMonth(now: date("2026-03-29")),
+            FlightPickerRules.monthStart(date("2026-04-01"))
+        )
     }
 
     func testOpeningMonthAtTheEndOfDecemberIsJanuary() {
-        let opened = FlightPickerRules.openingMonth(now: date("2026-12-30"), maxNights: maxNights)
-        XCTAssertEqual(opened, FlightPickerRules.monthStart(date("2027-01-01")))
+        XCTAssertEqual(
+            FlightPickerRules.openingMonth(now: date("2026-12-30")),
+            FlightPickerRules.monthStart(date("2027-01-01"))
+        )
+    }
+
+    func testOpeningMonthAtTheExactBoundaryStays() {
+        let days = AppConstants.warsawCalendar.range(of: .day, in: .month, for: date("2026-03-01"))!.count
+        let boundary = date("2026-03-\(days - FlightPickerRules.leadDays)")
+        XCTAssertEqual(
+            FlightPickerRules.openingMonth(now: boundary),
+            FlightPickerRules.monthStart(date("2026-03-01"))
+        )
+    }
+
+    func testReturnMonthFollowsTheDepartureMonth() {
+        XCTAssertEqual(
+            FlightPickerRules.returnMonth(after: "2026-10-01"),
+            FlightPickerRules.monthStart(date("2026-10-01"))
+        )
+    }
+
+    func testReturnMonthNearTheMonthEndIsTheNextMonth() {
+        XCTAssertEqual(
+            FlightPickerRules.returnMonth(after: "2026-10-29"),
+            FlightPickerRules.monthStart(date("2026-11-01"))
+        )
+    }
+
+    func testReturnMonthFromAnUnparsableDayIsNil() {
+        XCTAssertNil(FlightPickerRules.returnMonth(after: "nonsense"))
     }
 
     func testAValidPairIsKept() {
@@ -96,13 +130,5 @@ final class FlightPickerRulesTests: XCTestCase {
         XCTAssertFalse(FlightPickerRules.shouldClearReturn(
             outbound: "2026-03-10", returning: nil, maxNights: maxNights
         ))
-    }
-
-    func testOpeningMonthAtTheExactBoundaryStays() {        let days = AppConstants.warsawCalendar.range(of: .day, in: .month, for: date("2026-03-01"))!.count
-        let boundary = date("2026-03-\(days - maxNights)")
-        XCTAssertEqual(
-            FlightPickerRules.openingMonth(now: boundary, maxNights: maxNights),
-            FlightPickerRules.monthStart(date("2026-03-01"))
-        )
     }
 }

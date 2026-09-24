@@ -74,6 +74,12 @@ test('parseCost: a positive number is a price', () => {
   assert.equal(parseCost('12.50'), 13);
 });
 
+test('parseCost: several tiers keep the first price, never concatenate', () => {
+  assert.equal(parseCost('30,40,50'), 30);
+  assert.equal(parseCost('30, 40, 50, 30'), 30);
+  assert.equal(parseCost('60,80,100'), 60);
+});
+
 test('parseCost: zero, free text and empty all give null', () => {
   assert.equal(parseCost('0'), null, 'a free night shows no price');
   assert.equal(parseCost('Free'), null);
@@ -129,8 +135,8 @@ test('parseRaEvent: the full mapping the card needs', () => {
   assert.equal(c.link, 'https://ra.co/events/2530327');
   assert.deepEqual(c.tags, ['muzyka']);
   assert.deepEqual(c.times, ['21:00']);
-  assert.equal(c.mediaUrl, 'https://api.panperyskop.app/media/posts/defaults/club-night.jpg');
-  assert.equal(c.thumbUrl, 'https://api.panperyskop.app/media/posts/defaults/club-night-thumb.jpg');
+  assert.equal(c.mediaUrl, 'https://api.panperyskop.app/media/posts/defaults/techno-party-club.jpg');
+  assert.equal(c.thumbUrl, 'https://api.panperyskop.app/media/posts/defaults/techno-party-club-thumb.jpg');
 
   const meta = JSON.parse(c.meta ?? '{}');
   assert.deepEqual(meta.lineup, ['Andy Soul', 'margas']);

@@ -3,6 +3,7 @@ import SwiftUI
 struct StoryFullScreenView: View {
     @Binding var isPresented: Bool
     let actions: StoryActions
+    @Environment(\.colorScheme) private var systemScheme
     @State private var vm: StoryViewModel
 
     /// UI-only state (presentation surfaces), kept out of the view model.
@@ -31,6 +32,7 @@ struct StoryFullScreenView: View {
                     StoryContent(
                         post: vm.displayedPost,
                         isActive: vm.slideOffset == 0,
+                        topInset: topSafeAreaInset,
                         paused: $vm.paused,
                         onLoaded: { vm.loadedIDs.insert($0.id) },
                         onFinished: { vm.handleStoryFinished(vm.displayedPost) },
@@ -39,6 +41,7 @@ struct StoryFullScreenView: View {
                     .id(vm.displayedPost.id)
                     .transition(.identity)
                     .modifier(StorySlideModifier(offset: vm.slideOffset))
+                    .environment(\.colorScheme, cardScheme)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
@@ -76,6 +79,7 @@ struct StoryFullScreenView: View {
                     onPagerInteracting: { vm.pagerInteracting($0) },
                     onOpenBrowser: openBrowser
                 )
+                .environment(\.colorScheme, cardScheme)
             }
             .padding(.horizontal, Theme.Spacing.l)
             .padding(.bottom, Theme.Spacing.l + bottomSafeAreaInset)
@@ -113,6 +117,12 @@ struct StoryFullScreenView: View {
         } message: {
             Text("Treść trafi do weryfikacji moderatora.")
         }
+    }
+
+    /// The photo mask card (club night, run) is always dark; every other story
+    /// follows the system scheme.
+    private var cardScheme: ColorScheme {
+        vm.currentPost.usesPhotoMask ? .dark : systemScheme
     }
 
     // MARK: - Insets

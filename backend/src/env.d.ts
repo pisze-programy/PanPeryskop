@@ -22,6 +22,10 @@ interface Env {
   GETYOURGUIDE_TOKEN?: string;
   // ebilet TradeDoubler feed token (productsUnlimited.json?token=...).
   EBILET_TD_TOKEN?: string;
+  // maratonypolskie.pl session cookie ("MaratonyPolskie=<hex>"). The detail page
+  // hides the distance and the official link behind a login; this cookie unlocks
+  // them. It expires — the seed alerts when it does.
+  MARATONYPOLSKIE_COOKIE?: string;
   // kupbilecik official partner API token (api/?token=...).
   KUPBILECIK_API_TOKEN?: string;
   // Ticketmaster Discovery API key (the `apikey` query param). The consumer

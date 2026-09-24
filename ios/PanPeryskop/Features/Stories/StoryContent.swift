@@ -3,14 +3,12 @@ import SwiftUI
 struct StoryContent: View {
     let post: Post
     let isActive: Bool
+    let topInset: CGFloat
     @Binding var paused: Bool
     let onLoaded: (Post) -> Void
     let onFinished: () -> Void
     let onProgress: (Double) -> Void
     @State private var showThumb = true
-    /// Full-res image fade-in over the pixelated thumb preview (photo stories).
-    @State private var fullLoaded = false
-    @State private var fullFailed = false
 
     var body: some View {
         Group {
@@ -42,48 +40,14 @@ struct StoryContent: View {
                     .allowsHitTesting(false)
                 }
             }
-        } else if let url = post.resolvedMediaURL {
-                // Thumb preview renders immediately with the SAME composition as the
-                // full image (band + blurred cover background) so nothing pops in size
-                // when the full-res fades in — only sharpness changes.
-                ZStack(alignment: .center) {
-                    if post.hasThumb, let thumbURL = post.resolvedThumbURL {
-                        AsyncImage(url: thumbURL) { tp in
-                            switch tp {
-                            case .success(let thumb):
-                                photoLayout(thumb, withBg: true)
-                                    .blur(radius: 3)
-                            default:
-                                Color.clear
-                            }
-                        }
-                    } else {
-                        Color.clear
-                    }
-
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            photoLayout(image, withBg: true)
-                                .opacity(fullLoaded ? 1 : 0)
-                                .onAppear {
-                                    onLoaded(post)
-                                    withAnimation(.easeOut(duration: 0.3)) { fullLoaded = true }
-                                }
-                        case .failure:
-                            placeholderView
-                                .opacity(fullFailed ? 1 : 0)
-                                .onAppear { withAnimation(.easeIn(duration: 0.2)) { fullFailed = true } }
-                        case .empty:
-                            Color.clear
-                        @unknown default:
-                            Color.clear
-                        }
-                    }
-                }
-                .clipped()
         } else if post.clubNight != nil {
             clubNightLayout
+        } else if post.isRun {
+            runLayout
+        } else if post.isRestaurant {
+            restaurantLayout
+        } else if let url = post.resolvedMediaURL {
+            StoryPhoto(thumbURL: post.resolvedThumbURL, largeURL: url) { onLoaded(post) }
         } else {
             placeholderView
         }
@@ -94,15 +58,56 @@ struct StoryContent: View {
     private var clubNightLayout: some View {
         GeometryReader { geo in
             ZStack {
-                PhotoStoryBackdrop(assetPath: "StoryPhotos/club-night", shiftSeed: post.id)
-                clubScrims(height: geo.size.height)
+                backdrop
+                photoScrims(height: geo.size.height)
                 clubBand
             }
         }
         .clipped()
     }
 
-    private func clubScrims(height: CGFloat) -> some View {
+    private var runLayout: some View {
+        GeometryReader { geo in
+            ZStack {
+                backdrop
+                photoScrims(height: geo.size.height)
+                VStack {
+                    Spacer(minLength: 0)
+                    RunStoryBand(title: post.eventInfo.title, distance: post.runDistance)
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .clipped()
+    }
+
+    private var restaurantLayout: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .top) {
+                backdrop
+                RestaurantStoryBand(
+                    name: post.restaurantInfo.name,
+                    award: post.restaurantAwardLabel,
+                    stars: post.restaurantStars,
+                    cuisine: post.restaurantInfo.cuisine,
+                    topPadding: topInset + 88
+                )
+            }
+        }
+        .clipped()
+    }
+
+    private var backdrop: some View {
+        PhotoStoryBackdrop(
+            url: post.resolvedMediaURL,
+            thumbURL: post.resolvedThumbURL,
+            shiftSeed: post.id
+        ) {
+            onLoaded(post)
+        }
+    }
+
+    private func photoScrims(height: CGFloat) -> some View {
         VStack {
             scrim(colors: [.black.opacity(0.55), .clear], height: height * 0.30)
             Spacer(minLength: 0)
@@ -118,43 +123,28 @@ struct StoryContent: View {
     private var clubBand: some View {
         VStack {
             Spacer(minLength: 0)
-            PhotoStoryBand(kicker: nil, hero: clubHero, caption: post.clubNight?.venue)
+            PhotoStoryBand(kicker: post.eventInfo.title, hero: clubHero, caption: clubCaption)
             Spacer(minLength: 0)
         }
     }
 
+    /// The lineup is the hero. A night without a lineup falls back to the club.
     private var clubHero: String {
-        post.clubNight?.lineupText ?? post.eventInfo.title
+        if let lineup = post.clubNight?.lineup, !lineup.isEmpty { return cappedLineup(lineup) }
+        if let venue = post.clubNight?.venue, !venue.isEmpty { return venue }
+        return post.eventInfo.title
     }
 
-    /// The exact photo composition used by the story — a 9:16 foreground band,
-    /// plus the blurred cover background only when `withBg` (the thumb preview is
-    /// band-only; the background fades in together with the full-res image).
-    private func photoLayout(_ image: Image, withBg: Bool) -> some View {
-        let frameHeight = UIScreen.main.bounds.height * 0.7
-        let frameWidth = frameHeight * 9 / 16
+    /// Keep the hero to three names, then a count — a long bill must never
+    /// overflow the band.
+    private func cappedLineup(_ lineup: [String]) -> String {
+        guard lineup.count > 3 else { return lineup.joined(separator: " · ") }
+        return "\(lineup.prefix(3).joined(separator: " · "))  +\(lineup.count - 3)"
+    }
 
-        return ZStack(alignment: .center) {
-            if withBg {
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
-                    .clipped()
-                    .blur(radius: 12)
-                    .opacity(0.8)
-                    .scaleEffect(1.05)
-            }
-
-            image
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .padding(.vertical, 90)
-                .frame(width: frameWidth, height: frameHeight)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .clipped()
-        }
-        .clipped()
+    private var clubCaption: String? {
+        guard let lineup = post.clubNight?.lineup, !lineup.isEmpty else { return nil }
+        return post.clubNight?.venue
     }
 
     private var placeholderView: some View {

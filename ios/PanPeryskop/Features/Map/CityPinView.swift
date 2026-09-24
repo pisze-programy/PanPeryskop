@@ -21,13 +21,8 @@ struct CityPinView: View, Equatable {
     private var photo: some View {
         ZStack {
             Circle().fill(accent)
-            if let image = CityThumbStore.image(for: city.id) {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                glyph
-            }
+            glyph
+            CityPhoto(city: city, showsPlaceholder: false)
         }
         .frame(width: Self.iconDiameter, height: Self.iconDiameter)
         .clipShape(Circle())

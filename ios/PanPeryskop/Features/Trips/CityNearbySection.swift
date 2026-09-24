@@ -67,15 +67,7 @@ struct CityNearbySection: View {
     }
 
     private func photo(_ city: TravelCity) -> some View {
-        Rectangle()
-            .fill(CityPalette.gradient(countryCode: city.countryCode, bandRank: city.bandRank).first ?? .gray)
-            .overlay {
-                if let image = CityThumbStore.image(for: city.id) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                }
-            }
+        CityPhoto(city: city)
             .frame(width: Self.cardWidth, height: Self.photoHeight)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
     }

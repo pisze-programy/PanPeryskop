@@ -9,8 +9,7 @@ struct CityHeroSection: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            thumbnail
-            RemoteImage(url: city.heroURL)
+            CityPhoto(city: city, wantsLarge: true)
             scrim
             labels
         }
@@ -38,19 +37,6 @@ struct CityHeroSection: View {
             }
             .buttonStyle(.plain)
         }
-    }
-
-    private var thumbnail: some View {
-        Rectangle()
-            .fill(CityPalette.gradient(countryCode: city.countryCode, bandRank: city.bandRank).first ?? .gray)
-            .overlay {
-                if let image = CityThumbStore.image(for: city.id) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                }
-            }
-            .clipped()
     }
 
     private var scrim: some View {

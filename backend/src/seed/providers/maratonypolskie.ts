@@ -10,6 +10,7 @@ import { CONFIG } from '../../config/index';
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { resolveGeo } from '../core/geo';
 import { UA_HEADERS } from './http';
+import { snitchReport } from '../alert';
 
 const MP_GRP = '13';
 const MP_MONTHS = ['styczen', 'luty', 'marzec', 'kwiecien', 'maj', 'czerwiec', 'lipiec',
@@ -92,7 +93,7 @@ function parseMiejsce(raw: string): { city: string; distance: string | null } {
     distances.unshift(`${m[1].replace(',', '.')} km`);
     city = city.slice(0, m.index).replace(/,\s*$/, '').replace(/\.$/, '').trim();
   }
-  return { city, distance: distances[0] || null };
+  return { city, distance: distances.length > 0 ? distances[0] : null };
 }
 
 interface MpEvent {
@@ -124,21 +125,37 @@ export function parseList(html: string): MpEvent[] {
 const POSTER = 'https://api.panperyskop.app/media/posts/defaults/maratony-poster.jpg';
 const POSTER_THUMB = 'https://api.panperyskop.app/media/posts/defaults/maratony-poster-thumb.jpg';
 
-interface MpDetail {
-  officialLink: string | null;
+export function searchLink(name: string, city: string, year: string): string {
+  const query = [name, city, year].filter(Boolean).join(' ');
+  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 }
 
-export function fetchDetail(code: string): Promise<MpDetail> {
+export interface MpDetail {
+  distance: string | null;
+  officialLink: string | null;
+  loggedIn: boolean;
+}
+
+const EMPTY_DETAIL: MpDetail = { distance: null, officialLink: null, loggedIn: false };
+
+export function parseDetail(html: string): MpDetail {
+  const distanceMatch = html.match(/pikto\/dyst2\.png[\s\S]*?<FONT SIZE=5>([^<]+)/i);
+  const linkMatch = html.match(/pikto\/inter2\.png[\s\S]*?<a[^>]+href=["']?([^"'\s>]+)/i);
+  return {
+    distance: distanceMatch ? distanceMatch[1].trim() : null,
+    officialLink: linkMatch ? linkMatch[1].trim() : null,
+    loggedIn: /WYLOGUJ/i.test(html),
+  };
+}
+
+export function fetchDetail(code: string, cookie: string | undefined): Promise<MpDetail> {
   const url = `${CONFIG.providers.maratonypolskie.list}?dzial=3&action=5&code=${code}&bieganie`;
-  return fetch(url, { headers: UA_HEADERS, signal: AbortSignal.timeout(MP_TIMEOUT_MS) })
+  const headers: Record<string, string> = { ...UA_HEADERS };
+  if (cookie) headers.Cookie = cookie;
+  return fetch(url, { headers, signal: AbortSignal.timeout(MP_TIMEOUT_MS) })
     .then((res) => (res.ok ? res.arrayBuffer() : null))
-    .then((buf) => {
-      if (!buf) return { officialLink: null };
-      const html = latin2Decode(new Uint8Array(buf));
-      const links = [...html.matchAll(/<a[^>]+href=["'](https?:\/\/[^"']+?)["'][^>]*>/gi)].map((m) => m[1]);
-      return { officialLink: links.find((l) => !l.includes('maratonypolskie.pl')) || null };
-    })
-    .catch(() => ({ officialLink: null }));
+    .then((buf) => (buf ? parseDetail(latin2Decode(new Uint8Array(buf))) : EMPTY_DETAIL))
+    .catch(() => EMPTY_DETAIL);
 }
 
 export function fetchList(day: string): Promise<MpEvent[]> {
@@ -169,12 +186,17 @@ export function fetchList(day: string): Promise<MpEvent[]> {
 }
 
 export async function fetchMp(ctx: SeedContext): Promise<SeedCandidate[]> {
-  const day = ctx.day; // YYYY-MM-DD (the far edge of the seed window)
+  const day = ctx.day;
+  const cookie = ctx.env.MARATONYPOLSKIE_COOKIE;
+  const year = day.slice(0, 4);
   const events = await fetchList(day);
   const out: SeedCandidate[] = [];
+  let cookieExpired = false;
   for (const ev of events) {
     if (!ev.dates.includes(day)) continue;
-    const detail = await fetchDetail(ev.code);
+    const detail = await fetchDetail(ev.code, cookie);
+    if (cookie && !detail.loggedIn) cookieExpired = true;
+    const distance = detail.distance === null ? ev.distance : detail.distance;
     let lat: number | null = null;
     let lng: number | null = null;
     if (ev.city) {
@@ -186,8 +208,6 @@ export async function fetchMp(ctx: SeedContext): Promise<SeedCandidate[]> {
     }
     out.push({
       source: ProviderId.MARATONYPOLSKIE,
-      // Multi-day events must key per day — posts.external_id is unique and one
-      // day's post would otherwise overwrite the next day's.
       externalId: ev.dates.length > 1
         ? `maratonypolskie-${ev.code}-${day}`
         : `maratonypolskie-${ev.code}`,
@@ -195,12 +215,18 @@ export async function fetchMp(ctx: SeedContext): Promise<SeedCandidate[]> {
       startMs: ctx.dayStart,
       lat, lng,
       city: ev.city,
-      venue: ev.distance ? `${ev.city} (${ev.distance})` : ev.city,
+      venue: distance === null ? ev.city : `${ev.city} (${distance})`,
       address: '',
-      link: detail.officialLink || `${CONFIG.providers.maratonypolskie.list}?dzial=3&action=5&code=${ev.code}&bieganie`,
+      link: detail.officialLink === null ? searchLink(ev.name, ev.city, year) : detail.officialLink,
       mediaUrl: POSTER,
       thumbUrl: POSTER_THUMB,
       tags: ['inne'],
+    });
+  }
+  if (cookieExpired) {
+    await snitchReport(ctx.env, 'panperyskop/seed/maratony-cookie', 'failed', {
+      message: 'maratonypolskie session cookie expired',
+      notify: 'on-error',
     });
   }
   return out;

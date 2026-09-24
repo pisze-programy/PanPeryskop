@@ -1,12 +1,11 @@
 import SwiftUI
 
-/// Badge strip for the story card: SPONSOROWANE / WYPRZEDANE / tags / source.
-/// Self-contained — driven only by the post and the live tag catalog.
 struct StoryBadgesView: View {
     let post: Post
     let tags: [TagPill]
 
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showPriceInfo = false
 
     var body: some View {
         let row = badgesHStack
@@ -17,6 +16,9 @@ struct StoryBadgesView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .sheet(isPresented: $showPriceInfo) {
+            PriceInfoSheet()
+        }
     }
 
     private struct EventBadge: Identifiable {
@@ -39,16 +41,9 @@ struct StoryBadgesView: View {
                 items.append(EventBadge(id: "tag-\(tagId)", text: label.uppercased(), icon: "tag.fill", color: badgeGray))
             }
         }
-        // Restaurants carry the tag "Restauracje"; their external_id prefix is also
-        // "restaurant", which would show a second, meaningless badge.
-        if let source = post.source, !source.isEmpty, !post.isRestaurant {
-            items.append(EventBadge(id: "source-\(source)", text: source.uppercased(), icon: "network", color: badgeGray))
-        }
         return items
     }
 
-    /// Dark gray for neutral badges. Adapts to the color scheme so it stays readable
-    /// on the `.ultraThinMaterial` info card next to the `.primary` title.
     private var badgeGray: Color {
         colorScheme == .dark
             ? Color(red: 0.75, green: 0.76, blue: 0.78)
@@ -63,15 +58,28 @@ struct StoryBadgesView: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                Label(badge.text, systemImage: badge.icon)
-                    .font(.caption2)
-                    .foregroundColor(badge.color)
+                if badge.id == "sponsored" {
+                    Button {
+                        Haptics.selection()
+                        showPriceInfo = true
+                    } label: {
+                        badgeLabel(badge)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    badgeLabel(badge)
+                }
             }
         }
         .fixedSize(horizontal: true, vertical: false)
     }
 
-    /// Tag label from the live /stories/tags catalog (unknown → hidden).
+    private func badgeLabel(_ badge: EventBadge) -> some View {
+        Label(badge.text, systemImage: badge.icon)
+            .font(.caption2)
+            .foregroundColor(badge.color)
+    }
+
     private func tagBadgeLabel(_ id: String) -> String? {
         tags.first(where: { $0.id == id })?.label
     }

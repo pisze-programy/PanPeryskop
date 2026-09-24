@@ -77,6 +77,9 @@ export interface RawRow {
   is_sold_out: number;
   link_url: string | null;
   booking_key: string | null;
+  /** 'raw' (not yet ingested) or 'done' (already a post). A done row only ever
+   *  loses a group; it is never re-opened, so a live post is not re-ingested. */
+  status: string;
 }
 
 export interface ReconcileSummary {
@@ -101,15 +104,15 @@ async function loadRawRows(db: D1Database, day: string): Promise<RawRow[]> {
   const { results } = await db
     .prepare(
       `SELECT id, provider, external_id, title, raw_venue, city, canonical_venue_id,
-              start_min, showtimes, showtime_booking, price_pln, is_sold_out, link_url, booking_key
-         FROM seed_raw WHERE day=? AND status='raw'`,
+              start_min, showtimes, showtime_booking, price_pln, is_sold_out, link_url, booking_key, status
+         FROM seed_raw WHERE day=? AND status IN ('raw','done')`,
     )
     .bind(day)
     .all<{
       id: string; provider: string; external_id: string; title: string; raw_venue: string;
       city: string | null; canonical_venue_id: string | null; start_min: number;
       showtimes: string | null; showtime_booking: string | null; price_pln: number | null;
-      is_sold_out: number; link_url: string | null; booking_key: string | null;
+      is_sold_out: number; link_url: string | null; booking_key: string | null; status: string;
     }>();
   return (results || []).map((r) => ({
     id: r.id,
@@ -126,19 +129,24 @@ async function loadRawRows(db: D1Database, day: string): Promise<RawRow[]> {
     is_sold_out: r.is_sold_out ? 1 : 0,
     link_url: r.link_url,
     booking_key: r.booking_key,
+    status: r.status,
   }));
+}
+
+/** Do two rows name the same venue? An equal canonical id is decisive; a
+ *  different id is NOT (the non-fuzzy stub keeps "Hydrozagadka" and "Klub
+ *  Hydrozagadka" apart), so the raw names are matched. */
+function venuesAgree(a: RawRow, b: RawRow): boolean {
+  if (a.canonical_venue_id && b.canonical_venue_id && a.canonical_venue_id === b.canonical_venue_id) return true;
+  return venuesMatch(
+    { venue: a.raw_venue, lat: null, lng: null },
+    { venue: b.raw_venue, lat: null, lng: null },
+  );
 }
 
 /** Same event? Venue gating first (canonical id, else fuzzy), then title, then time. */
 export function sameEvent(a: RawRow, tokensA: Set<string>, b: RawRow, tokensB: Set<string>): boolean {
-  if (a.canonical_venue_id && b.canonical_venue_id) {
-    if (a.canonical_venue_id !== b.canonical_venue_id) return false;
-  } else if (!venuesMatch(
-    { venue: a.raw_venue, lat: null, lng: null },
-    { venue: b.raw_venue, lat: null, lng: null },
-  )) {
-    return false;
-  }
+  if (!venuesAgree(a, b)) return false;
   const sameSource = a.provider === b.provider;
   if (!containment(tokensA, tokensB, sameSource ? 1.0 : 0.8)) return false;
   if (a.booking_key && b.booking_key && a.booking_key === b.booking_key) return true;
@@ -151,11 +159,9 @@ export function sameEvent(a: RawRow, tokensA: Set<string>, b: RawRow, tokensB: S
  *  two separate showings (the time guard already kept them apart). */
 function ambiguousPair(a: RawRow, tokensA: Set<string>, b: RawRow, tokensB: Set<string>): boolean {
   if (a.provider !== b.provider) return false;
+  if (a.status !== 'raw' || b.status !== 'raw') return false; // never strand a live post
   if (isCinemaSource(a.provider as ProviderId)) return false;
-  const venueOk = a.canonical_venue_id && b.canonical_venue_id
-    ? a.canonical_venue_id === b.canonical_venue_id
-    : venuesMatch({ venue: a.raw_venue, lat: null, lng: null }, { venue: b.raw_venue, lat: null, lng: null });
-  if (!venueOk) return false;
+  if (!venuesAgree(a, b)) return false;
   if (sameEvent(a, tokensA, b, tokensB)) return false; // merges cleanly, not ambiguous
   if (tokensA.size === tokensB.size && containment(tokensA, tokensB, 1.0)) return false; // identical sets
   return containment(tokensA, tokensB, 0.8);
@@ -214,6 +220,15 @@ async function recordFailure(
     .run();
 }
 
+/** Reject the post a losing row points at, unless it is locked or manually
+ *  curated. Returns true when the post was rejected. */
+async function demotePost(db: D1Database, post: PostLock | undefined, reason: string): Promise<boolean> {
+  if (!post) return false;
+  if (post.locked) return false;
+  await db.prepare(`UPDATE posts SET status='rejected', rejection_reason=? WHERE id=?`).bind(reason, post.id).run();
+  return true;
+}
+
 function minToHhmm(startMin: number): string {
   const h = Math.floor(startMin / 60);
   const m = startMin % 60;
@@ -221,7 +236,8 @@ function minToHhmm(startMin: number): string {
 }
 
 /** Reconcile one day: group raw rows, absorb losers into winners, displace
- *  superseded posts. Idempotent: only 'raw' rows are grouped; re-running after
+ *  superseded posts. Idempotent: 'raw' and 'done' rows are grouped; a done row
+ *  only ever loses (its live post is rejected), never re-opens. Re-running after
  *  a crash picks up the remaining ones. Returns a summary for the digest. */
 export async function reconcileDay(db: D1Database, day: string, batchId: string): Promise<ReconcileSummary> {
   const t = now();
@@ -229,11 +245,15 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
   const summary: ReconcileSummary = { day, winners: 0, duplicates: 0, failures: 0, rejectedPosts: 0 };
   if (allRows.length === 0) return summary;
 
+  // Existing posts for every candidate that could lose, one batched lookup.
+  const posts = await existingPosts(db, allRows.map((r) => r.external_id));
+
   // Cancelled titles never form or win a group (same gate as intra-batch dedupe).
   for (const r of allRows) {
     if (isCancelled(r.title)) {
       await db.prepare(`UPDATE seed_raw SET status='duplicate', reason='title: cancelled', updated_at=? WHERE id=?`).bind(t, r.id).run();
       summary.duplicates += 1;
+      if (await demotePost(db, posts.get(r.external_id), `cancelled: ${r.title}`)) summary.rejectedPosts += 1;
     }
   }
   const rows = allRows.filter((r) => !isCancelled(r.title));
@@ -318,10 +338,6 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
     summary.failures += 1;
   }
 
-  // Existing posts for every candidate that could lose, one batched lookup.
-  const extIds = rows.map((r) => r.external_id);
-  const posts = await existingPosts(db, extIds);
-
   for (const members of groups.values()) {
     // Ambiguous members were already recorded as failures above — the rest of
     // the group still merges normally, so no row is ever left behind in 'raw'.
@@ -329,6 +345,7 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
     if (clean.length === 0) continue;
     if (clean.length === 1) {
       const solo = clean[0];
+      if (solo.status === 'done') continue; // already a post — never re-open
       await db.prepare(`UPDATE seed_raw SET status='winner', updated_at=? WHERE id=?`).bind(t, solo.id).run();
       summary.winners += 1;
       continue;
@@ -341,26 +358,30 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
     );
     const winner = sorted[0];
     if (ambiguousIds.has(winner.id)) continue; // winner itself ambiguous: handled above, skip group
-    // Absorb: union of times + per-time bookings, cheapest price, all-sold-out flag, earliest start.
-    const times = new Set<string>();
-    const bookings = new Map<string, ShowtimeBooking>();
-    let price: number | null = null;
-    let soldOut = true;
-    let startMin = winner.start_min;
-    for (const m of sorted) {
-      for (const s of m.showtimes.length > 0 ? m.showtimes : [minToHhmm(m.start_min)]) times.add(s);
-      for (const b of m.showtime_booking) if (!bookings.has(b.time)) bookings.set(b.time, b);
-      if (typeof m.price_pln === 'number' && (price === null || m.price_pln < price)) price = m.price_pln;
-      if (!m.is_sold_out) soldOut = false;
-      if (m.start_min < startMin) startMin = m.start_min;
+    // A done winner already has a live post: never re-open it. Only its raw
+    // losers are demoted, so a late duplicate is absorbed without re-ingest.
+    if (winner.status !== 'done') {
+      // Absorb: union of times + per-time bookings, cheapest price, all-sold-out flag, earliest start.
+      const times = new Set<string>();
+      const bookings = new Map<string, ShowtimeBooking>();
+      let price: number | null = null;
+      let soldOut = true;
+      let startMin = winner.start_min;
+      for (const m of sorted) {
+        for (const s of m.showtimes.length > 0 ? m.showtimes : [minToHhmm(m.start_min)]) times.add(s);
+        for (const b of m.showtime_booking) if (!bookings.has(b.time)) bookings.set(b.time, b);
+        if (typeof m.price_pln === 'number' && (price === null || m.price_pln < price)) price = m.price_pln;
+        if (!m.is_sold_out) soldOut = false;
+        if (m.start_min < startMin) startMin = m.start_min;
+      }
+      await db
+        .prepare(
+          `UPDATE seed_raw SET status='winner', showtimes=?, showtime_booking=?, price_pln=?, is_sold_out=?, start_min=?, updated_at=? WHERE id=?`,
+        )
+        .bind(JSON.stringify([...times].sort()), JSON.stringify([...bookings.values()]), price, soldOut ? 1 : 0, startMin, t, winner.id)
+        .run();
+      summary.winners += 1;
     }
-    await db
-      .prepare(
-        `UPDATE seed_raw SET status='winner', showtimes=?, showtime_booking=?, price_pln=?, is_sold_out=?, start_min=?, updated_at=? WHERE id=?`,
-      )
-      .bind(JSON.stringify([...times].sort()), JSON.stringify([...bookings.values()]), price, soldOut ? 1 : 0, startMin, t, winner.id)
-      .run();
-    summary.winners += 1;
 
     for (const loser of sorted.slice(1)) {
       if (ambiguousIds.has(loser.id)) continue;

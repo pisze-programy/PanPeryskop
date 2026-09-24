@@ -23,7 +23,7 @@ struct SettingsView: View {
             }
             Button("Anuluj", role: .cancel) {}
         } message: {
-            Text("To usunie na zawsze Twoje konto i całą zawartość — posty, zdjęcia i filmy. Tej operacji nie można cofnąć.")
+            Text("To usunie na zawsze Twoje konto i wszystkie dane. Tej operacji nie można cofnąć.")
         }
     }
 
@@ -80,7 +80,7 @@ struct SettingsView: View {
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundColor(.red)
-                        Text("Na zawsze usuwa konto i wszystkie Twoje treści.")
+                        Text("Na zawsze usuwa konto i wszystkie dane.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -93,7 +93,7 @@ struct SettingsView: View {
             .buttonStyle(.plain)
             .disabled(isDeleting)
 
-            Text("Uwaga: usunięcie konta usuwa również całą Twoją zawartość z mapy — posty, zdjęcia i filmy. Nie będzie można ich przywrócić.")
+            Text("Uwaga: usunięcie konta usuwa również Twoją zawartość z mapy. Nie będzie można jej przywrócić.")
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 4)

@@ -99,6 +99,9 @@ All notable changes to PanPeryskop. Format based on
 - A club title stops repeating the lineup. The band already shows it, so the
   title keeps the night's name: "SZEPTY: SALVYAN, ANOLUXX, MONYAL" reads
   "SZEPTY", while a title that opens with the club keeps whole.
+- The club card shows its photo. The photo sat in a bundle folder, and the old
+  load looked for it at the bundle root, so the card drew a black frame. It now
+  loads by its path, and the pin and the card read one shared club photo.
 
 
 ### Removed

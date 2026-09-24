@@ -6,12 +6,7 @@ import { CONFIG } from '../../config/index';
 // The list page (POST mp_index.php with a month/year) renders a table with one row
 // per event: DYSC icon / DATE / PLACE (city [+distance]) / NAME + per-event `code`.
 // There is no start hour and no geo on the site: startMs = 00:00 (showtimes null)
-// and coordinates come from Nominatim via the city. The poster (/logo/<year>/…)
-// lives on the per-event detail page (action=5&code=…).
-//
-// Staging: every post ingests as PENDING (pendingByDefault) until reviewed — flip
-// the flag below to auto-approve. Events without a poster are skipped (no broken
-// posts); in practice ~100% of events have a current-year /logo/ poster.
+// and coordinates come from Nominatim via the city.
 import { SeedProvider, SeedContext, SeedCandidate, ProviderId } from '../core/types';
 import { resolveGeo } from '../core/geo';
 import { UA_HEADERS } from './http';
@@ -124,20 +119,12 @@ export function parseList(html: string): MpEvent[] {
   return out;
 }
 
-// Fallback poster for events whose detail page has no /logo/ image at all:
-// hosted in R2 (posts/defaults/sport-poster.jpg), served by the public /media route.
-const DEFAULT_SPORT_POSTER = 'https://api.panperyskop.app/media/posts/defaults/sport-poster.jpg';
-
-/** The event logo: the FIRST /logo/<year>/ image on the detail page (the 960px
- *  header banner — every page has one). Falls back to the default poster when
- *  no /logo/ image exists. */
-function extractPoster(html: string): string | null {
-  const m = html.match(/src=["'](\/logo\/20\d{2}\/[^"']+\.(?:jpg|jpeg|png|gif))["']/i);
-  return m ? m[1] : null;
-}
+// Our shared poster, hosted in R2 (posts/defaults/) and served by the public
+// /media route. The event's own logo is not ours to use, so it is never read.
+const POSTER = 'https://api.panperyskop.app/media/posts/defaults/maratony-poster.jpg';
+const POSTER_THUMB = 'https://api.panperyskop.app/media/posts/defaults/maratony-poster-thumb.jpg';
 
 interface MpDetail {
-  logo: string | null;
   officialLink: string | null;
 }
 
@@ -146,14 +133,12 @@ export function fetchDetail(code: string): Promise<MpDetail> {
   return fetch(url, { headers: UA_HEADERS, signal: AbortSignal.timeout(MP_TIMEOUT_MS) })
     .then((res) => (res.ok ? res.arrayBuffer() : null))
     .then((buf) => {
-      if (!buf) return { logo: null, officialLink: null };
+      if (!buf) return { officialLink: null };
       const html = latin2Decode(new Uint8Array(buf));
-      const poster = extractPoster(html);
       const links = [...html.matchAll(/<a[^>]+href=["'](https?:\/\/[^"']+?)["'][^>]*>/gi)].map((m) => m[1]);
-      const officialLink = links.find((l) => !l.includes('maratonypolskie.pl')) || null;
-      return { logo: poster ? `${CONFIG.providers.maratonypolskie.base}${poster}` : null, officialLink };
+      return { officialLink: links.find((l) => !l.includes('maratonypolskie.pl')) || null };
     })
-    .catch(() => ({ logo: null, officialLink: null }));
+    .catch(() => ({ officialLink: null }));
 }
 
 export function fetchList(day: string): Promise<MpEvent[]> {
@@ -213,9 +198,9 @@ export async function fetchMp(ctx: SeedContext): Promise<SeedCandidate[]> {
       venue: ev.distance ? `${ev.city} (${ev.distance})` : ev.city,
       address: '',
       link: detail.officialLink || `${CONFIG.providers.maratonypolskie.list}?dzial=3&action=5&code=${ev.code}&bieganie`,
-      mediaUrl: detail.logo || DEFAULT_SPORT_POSTER,
-      thumbUrl: null,
-      tags: ['sport'],
+      mediaUrl: POSTER,
+      thumbUrl: POSTER_THUMB,
+      tags: ['inne'],
     });
   }
   return out;
@@ -228,5 +213,4 @@ export const maratonypolskieProvider: SeedProvider = {
   fetchBytes: (ctx, url) => import('./http').then((m) => m.getBytes(url)),
   scopes: ['all'],
   fetchScope: (ctx, _scope) => fetchMp(ctx),
-  pendingByDefault: true,
 };

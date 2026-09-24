@@ -41,8 +41,8 @@ test('providers: kupbilecik + ebilet + eventim + ticketmaster on Worker (fetch),
   // Worker executor: kupbilecik + ebilet + eventim + ticketmaster (plain fetch,
   // external-warmed R2 caches / open API) run in the CF queue pipeline.
   const workerIds = workerExecutor.providerIds(PROVIDER_CONFIGS);
-  assert.deepEqual(workerIds, ['kupbilecik', 'ebilet', 'eventim', 'ticketmaster', 'residentadvisor'], 'the five worker providers');
-  assert.equal(enabledProviders().length, 5);
+  assert.deepEqual(workerIds, ['kupbilecik', 'ebilet', 'eventim', 'ticketmaster', 'residentadvisor', 'maratonypolskie'], 'the six worker providers');
+  assert.equal(enabledProviders().length, 6);
   assert.deepEqual(
     enabledProviders().map((p) => p.id).sort(),
     workerIds.sort(),

@@ -98,7 +98,8 @@ test('registry: kupbilecik + ebilet + eventim + ticketmaster are the worker prov
   assert.ok(ids.includes('eventim'), 'eventim runs on the worker');
   assert.ok(ids.includes('ticketmaster'), 'ticketmaster runs on the worker');
   assert.ok(ids.includes('residentadvisor'), 'residentadvisor runs on the worker');
-  assert.deepEqual(ids, ['kupbilecik', 'ebilet', 'eventim', 'ticketmaster', 'residentadvisor']);
+  assert.ok(ids.includes('maratonypolskie'), 'maratonypolskie runs on the worker');
+  assert.deepEqual(ids, ['kupbilecik', 'ebilet', 'eventim', 'ticketmaster', 'residentadvisor', 'maratonypolskie']);
 });
 
 // ---- geo propagation (by NAME + CITY, never by geo) ------------------------

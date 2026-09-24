@@ -102,10 +102,9 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: ProviderId.RESIDENTADVISOR, transport: 'fetch', enabled: true, priority: 8, scopeKind: 'window', media: 'hotlink',
     executors: { worker: true },
   },
-  // maratonypolskie.pl — ready but NOT yet enabled in production (pending the
-  // user's go: logo fix + autoapprove decision). Flip `enabled` + deploy when approved.
+  // maratonypolskie.pl — Polish running events, Worker executor (no proxy).
   {
-    id: ProviderId.MARATONYPOLSKIE, transport: 'fetch', enabled: false, priority: 7, scopeKind: 'day', media: 'hotlink',
+    id: ProviderId.MARATONYPOLSKIE, transport: 'fetch', enabled: true, priority: 7, scopeKind: 'day', media: 'hotlink',
     executors: { worker: true },
   },
   // getyourguide.com — PARKED (disabled). Affiliate application token does NOT

@@ -95,7 +95,7 @@ test('produceSeedWindow: bumps generation, marks every window day, resets old un
   assert.ok([...db.days.values()].every((g) => g === 4), 'all days on the new generation');
   assert.equal(db.resets, 1, 'older-generation units reset once');
   assert.ok(db.inserts > 0, 'units written');
-  // Worker units: kupbilecik/ebilet/eventim are day kind = 3 x 8 days, and
-  // ticketmaster and residentadvisor are one window unit each = 2.
-  assert.equal(sent, 26, 'one wake-up per worker unit');
+  // Worker units: kupbilecik/ebilet/eventim/maratonypolskie are day kind =
+  // 4 x 8 days, and ticketmaster and residentadvisor are one window unit each = 2.
+  assert.equal(sent, 34, 'one wake-up per worker unit');
 });

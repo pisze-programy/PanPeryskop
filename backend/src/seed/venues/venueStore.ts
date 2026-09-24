@@ -32,6 +32,21 @@ export function venueKey(name: string): string {
   return flat(name);
 }
 
+/** Write a venue by its explicit id, ignoring the fuzzy pool. A pinned venue
+ *  must keep its fixed position, never matched or overwritten by another row. */
+export async function pinVenue(
+  db: D1Database,
+  v: { id: string; name: string; lat: number; lng: number; city: string | null },
+): Promise<void> {
+  const now = Date.now();
+  await db.prepare(
+    `INSERT INTO venues (id, name, aliases, lat, lng, city, sources, hit_count, first_seen, last_seen, created_at)
+     VALUES (?, ?, '[]', ?, ?, ?, '{}', 1, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET name=excluded.name, lat=excluded.lat, lng=excluded.lng,
+       city=excluded.city, last_seen=excluded.last_seen, hit_count=hit_count+1`,
+  ).bind(v.id, v.name, v.lat, v.lng, venueKey(v.city || '') || null, now, now, now).run();
+}
+
 // Upsert a venue by fuzzy-matching against existing rows. Returns the venue id
 // (existing match or newly created). Adds provider alias/ref + refreshes geo.
 export async function upsertVenue(db: D1Database, v: VenueInput): Promise<string | null> {

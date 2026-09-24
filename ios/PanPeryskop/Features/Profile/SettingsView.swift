@@ -27,7 +27,7 @@ struct SettingsView: View {
         }
     }
 
-    /// Second-to-last Settings item: app data policy / sources (OSM attribution).
+    /// App data policy (OSM / Wikimedia / Unsplash attribution).
     private var policySection: some View {
         NavigationLink {
             AppPolicyView()

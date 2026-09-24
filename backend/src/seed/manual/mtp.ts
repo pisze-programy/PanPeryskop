@@ -13,7 +13,7 @@ import { getOrCreateSeedUser } from '../pipeline/queue/state';
 import { writeSeedRun } from '../core/log';
 import { loadDayEvents, findWinner, matchesExisting, rejectPosts } from './facebook';
 
-export const MTP_GEO = { lat: 52.40348664284927, lng: 16.91105358308765 };
+export const MTP_GEO = { lat: 52.40268998001128, lng: 16.909210992543912 };
 
 /** One day of one fair (externalId = mtp-<slug>-<day>). */
 export interface MtpEventInput {

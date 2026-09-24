@@ -122,10 +122,8 @@ extension TravelEvent {
     /// for every event card (a run or a match), so the country is never shown in
     /// the provider's own language.
     func placeName(language: String) -> String {
-        var countryName = country
-        if let code = metaData?.countryCode, let translated = CountryNames.name(code, language: language) {
-            countryName = translated
-        }
+        let byCode = metaData?.countryCode.flatMap { CountryNames.name($0, language: language) }
+        let countryName = byCode ?? CountryNames.name(forCountry: country, language: language) ?? country
         if city.isEmpty { return countryName }
         if countryName.isEmpty { return city }
         return "\(city), \(countryName)"

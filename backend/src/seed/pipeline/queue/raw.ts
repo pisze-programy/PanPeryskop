@@ -12,7 +12,8 @@ import { linkKey, titleTokens } from '../../core/match';
 import { showtimesJson, showtimeBookingJson, tagsJson } from '../../core/eventFormat';
 import { presentUrl } from '../../../core/media';
 import { toWarsawIso } from '../../core/dates';
-import { ensureCanonicalVenue, upsertVenue, venueKey } from '../../venues/venueStore';
+import { ensureCanonicalVenue, pinVenue, upsertVenue, venueKey } from '../../venues/venueStore';
+import { pinnedVenue } from '../../venues/pinned';
 import { now } from './state';
 
 export interface RawWriteInput {
@@ -87,9 +88,12 @@ export async function writeRawRows(db: D1Database, input: RawWriteInput, chunkSi
   // so this turns N lookups into 1).
   const venueCache = new Map<string, string | null>();
   const resolveVenue = async (c: SeedCandidate): Promise<string | null> => {
-    // Fixed venues (cinemas) carry a deterministic id — NO venue cache, NO fuzzy
-    // match, NO Nominatim. The id is just used as the canonical key.
     if (c.venueId !== undefined && c.venueId !== '') return c.venueId;
+    const pinned = pinnedVenue(c.venue, c.city);
+    if (pinned) {
+      await pinVenue(db, pinned);
+      return pinned.id;
+    }
     const key = `${venueKey(c.venue)}|${venueKey(c.city)}`;
     if (venueCache.has(key)) return venueCache.get(key)!;
     const lat = typeof c.lat === 'number' ? c.lat : null;

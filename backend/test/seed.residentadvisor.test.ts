@@ -129,6 +129,8 @@ test('parseRaEvent: the full mapping the card needs', () => {
   assert.equal(c.link, 'https://ra.co/events/2530327');
   assert.deepEqual(c.tags, ['muzyka']);
   assert.deepEqual(c.times, ['21:00']);
+  assert.equal(c.mediaUrl, 'https://api.panperyskop.app/media/posts/defaults/club-night.jpg');
+  assert.equal(c.thumbUrl, 'https://api.panperyskop.app/media/posts/defaults/club-night-thumb.jpg');
 
   const meta = JSON.parse(c.meta ?? '{}');
   assert.deepEqual(meta.lineup, ['Andy Soul', 'margas']);

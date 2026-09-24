@@ -34,6 +34,8 @@ const PACE_MS = 700;
 const PAGE_SIZE = 100;
 /** A safety stop. The 90-day window is about two pages. */
 const MAX_PAGES = 6;
+const DEFAULT_MEDIA = 'https://api.panperyskop.app/media/posts/defaults/club-night.jpg';
+const DEFAULT_THUMB = 'https://api.panperyskop.app/media/posts/defaults/club-night-thumb.jpg';
 
 const QUERY = `query Events($areas: [Int!], $from: DateTime!, $to: DateTime!, $page: Int!) {
   eventListings(
@@ -232,8 +234,8 @@ export function parseRaEvent(e: RaEvent): SeedCandidate[] {
     city: (venue?.area?.name || '').trim(),
     venue: (venue?.name || '').trim(),
     link: e.contentUrl ? `https://ra.co${e.contentUrl}` : `https://ra.co/events/${id}`,
-    mediaUrl: '',
-    thumbUrl: null,
+    mediaUrl: DEFAULT_MEDIA,
+    thumbUrl: DEFAULT_THUMB,
     price,
     times: e.startTime ? [e.startTime.slice(11, 16)] : [],
     tags: ['muzyka'],
@@ -291,5 +293,4 @@ export const residentadvisorProvider: SeedProvider = {
   scopes: ['pl'],
   fetchScope: (ctx) => fetchResidentadvisorWindow(ctx),
   resolveLink: (_ctx, cand) => Promise.resolve(cand.link),
-  needsImage: false,
 };

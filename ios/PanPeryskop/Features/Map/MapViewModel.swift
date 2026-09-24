@@ -110,7 +110,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     func loadTagCounts() {
         Task {
             struct TagCount: Decodable { let tag: String; let count: Int }
-            struct TagCountsResponse: Decodable { let total: Int; let counts: [TagCount]; let live: Int? }
+            struct TagCountsResponse: Decodable { let total: Int; let counts: [TagCount] }
             guard let resp: TagCountsResponse = try? await APIClient.get(
                 "/stories/tag-counts",
                 params: ["city": selectedCity.id, "day": dayString(offset: selectedDayOffset)]

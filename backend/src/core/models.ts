@@ -79,18 +79,16 @@ export interface StoryRow extends PostRow {
 }
 
 // Content category enum — NOT driven by is_sponsored (which is visual only).
-export const CATEGORY_LIVE = 'live';
 export const CATEGORY_EVENTS = 'events';
 /** Evergreen places (curated restaurants). No event_date — visible every day. */
 export const CATEGORY_FOOD = 'food';
-export const POST_CATEGORIES = [CATEGORY_LIVE, CATEGORY_EVENTS, CATEGORY_FOOD] as const;
+export const POST_CATEGORIES = [CATEGORY_EVENTS, CATEGORY_FOOD] as const;
 export type PostCategory = (typeof POST_CATEGORIES)[number];
 export const POST_CATEGORY_SET: ReadonlySet<string> = new Set<string>(POST_CATEGORIES);
 
 // Media types and moderation statuses — single source of truth.
 export const POST_TYPE_PHOTO = 'photo';
-export const POST_TYPE_VIDEO = 'video';
-export const POST_TYPES = [POST_TYPE_PHOTO, POST_TYPE_VIDEO] as const;
+export const POST_TYPES = [POST_TYPE_PHOTO] as const;
 export type PostType = (typeof POST_TYPES)[number];
 export const POST_TYPE_SET: ReadonlySet<string> = new Set<string>(POST_TYPES);
 

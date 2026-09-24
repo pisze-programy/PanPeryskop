@@ -2,8 +2,6 @@ import Foundation
 
 extension Notification.Name {
     static let scrollToPost = Notification.Name("scrollToPost")
-    static let didCaptureMedia = Notification.Name("didCaptureMedia")
-    /// Center the map on a coordinate (keeps the current zoom) — e.g. after a new post uploads.
     static let centerMapOnCoordinate = Notification.Name("centerMapOnCoordinate")
 }
 

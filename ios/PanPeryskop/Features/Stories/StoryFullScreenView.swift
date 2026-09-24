@@ -8,7 +8,6 @@ struct StoryFullScreenView: View {
 
     /// UI-only state (presentation surfaces), kept out of the view model.
     @State private var shareItem: ShareItem?
-    @State private var showReportDialog = false
     /// Random gradient generated once per preview open — stable while viewing.
     @State private var backgroundSeed = StoryGradientSeed.random()
     @State private var browserURL: URL?
@@ -31,12 +30,8 @@ struct StoryFullScreenView: View {
                 ZStack {
                     StoryContent(
                         post: vm.displayedPost,
-                        isActive: vm.slideOffset == 0,
                         topInset: topSafeAreaInset,
-                        paused: $vm.paused,
-                        onLoaded: { vm.loadedIDs.insert($0.id) },
-                        onFinished: { vm.handleStoryFinished(vm.displayedPost) },
-                        onProgress: { vm.progressFraction = $0 }
+                        onLoaded: { vm.loadedIDs.insert($0.id) }
                     )
                     .id(vm.displayedPost.id)
                     .transition(.identity)
@@ -54,19 +49,10 @@ struct StoryFullScreenView: View {
                 posts: vm.posts,
                 currentIndex: vm.currentIndex,
                 progressFraction: vm.progressFraction,
-                showsMenu: vm.currentPost.isLive,
                 topInset: topSafeAreaInset,
                 onClose: {
                     Haptics.selection()
                     vm.exit()
-                },
-                onReport: {
-                    vm.pause()
-                    // Defer until the menu has fully dismissed — presenting an alert
-                    // straight from a Menu item is flaky on iOS.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showReportDialog = true
-                    }
                 }
             )
 
@@ -110,12 +96,6 @@ struct StoryFullScreenView: View {
         .sheet(item: $shareItem) { item in
             ActivityViewController(items: [item.text])
                 .onDisappear { vm.resume() }
-        }
-        .alert("Zgłosić treść?", isPresented: $showReportDialog) {
-            Button("Zgłaszam", role: .destructive) { vm.reportPost(reason: "inne") }
-            Button("Anuluj", role: .cancel) { vm.resume() }
-        } message: {
-            Text("Treść trafi do weryfikacji moderatora.")
         }
     }
 

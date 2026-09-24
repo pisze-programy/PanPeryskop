@@ -62,7 +62,7 @@ test('doSavePost: persists is_sold_out flag on insert and update', async () => {
   assert.ok(/source_url/.test(upd!.sql), 'UPDATE includes source_url column');
 });
 
-test('doSavePost: live posts (no external_id) get event_date NULL', async () => {
+test('doSavePost: a post is an event with the day key', async () => {
   const calls: { sql: string; binds: unknown[] }[] = [];
   const db = {
     prepare: (sql: string) => ({
@@ -73,10 +73,10 @@ test('doSavePost: live posts (no external_id) get event_date NULL', async () => 
   const user = { id: 'u1' };
   const now = Date.parse('2026-08-17T04:00:00Z');
 
-  await doSavePost(env, user, 'p2', 'photo', 52.4, 16.9, 'Live!', 'm2', 't2', now, false, null, null, false, false);
+  await doSavePost(env, user, 'p2', 'photo', 52.4, 16.9, 'Koncert: 20:00', 'm2', 't2', now, false, null, 'ext-2', false, false);
   const ins = calls.find((c) => /INSERT INTO posts/i.test(c.sql));
   assert.ok(ins, 'INSERT executed');
-  assert.equal(ins!.binds[ins!.binds.length - 8], null, 'live post event_date is NULL');
+  assert.equal(ins!.binds[ins!.binds.length - 8], '2026-08-17', 'event_date is the event day');
 });
 
 test('doSavePost: update promotes pending→approved (status bound) but preserves admin rejections', async () => {

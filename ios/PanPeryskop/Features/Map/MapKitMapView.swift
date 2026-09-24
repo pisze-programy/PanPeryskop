@@ -201,8 +201,6 @@ struct MapKitMapView: View {
                 bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: maxZoomOutDistance),
                 interactionModes: [.pan, .zoom]
             ) {
-                UserAnnotation()
-
                 ForEach(arcs) { arc in
                     MapPolyline(arc.polyline)
                         .stroke(arc.color, lineWidth: 2.5)

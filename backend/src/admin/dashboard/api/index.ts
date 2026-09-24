@@ -2,7 +2,6 @@
 import { Hono } from 'hono';
 import { registerApiOverview } from './overview';
 import { registerApiEvents } from './events';
-import { registerApiPosts } from './posts';
 import { registerApiSeed } from './seed';
 import { registerApiStats } from './stats';
 import { registerApiBlacklist } from './blacklist';
@@ -10,7 +9,6 @@ import { registerApiBlacklist } from './blacklist';
 export const apiRoutes = new Hono<{ Bindings: Env }>();
 registerApiOverview(apiRoutes);
 registerApiEvents(apiRoutes);
-registerApiPosts(apiRoutes);
 registerApiSeed(apiRoutes);
 registerApiStats(apiRoutes);
 registerApiBlacklist(apiRoutes);

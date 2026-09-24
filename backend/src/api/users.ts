@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { authenticate } from './auth';
 import { fileField, ParsedForm } from '../core/form';
-import { PostRow, TTL_MS, normalizeUsername, User } from '../core/models';
+import { normalizeUsername, User } from '../core/models';
 import { mediaUrl, originFromRequest } from '../core/media';
 
 export const usersRoutes = new Hono<{ Bindings: Env }>();
@@ -39,45 +39,6 @@ usersRoutes.patch('/me', async (c) => {
   await c.env.DB.prepare('UPDATE users SET username = ? WHERE id = ?').bind(username, user.id).run();
 
   return c.json({ username });
-});
-
-usersRoutes.get('/me/posts', async (c) => {
-  const user = await authenticate(c);
-  if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-  const now = Date.now();
-  const { results } = await c.env.DB
-    .prepare(
-      `SELECT id, type, description, status, created_at, likes_count, views_count, shares_count,
-              media_key, thumb_key, rejection_reason
-       FROM posts
-       WHERE user_id = ?
-       ORDER BY created_at DESC
-       LIMIT 200`
-    )
-    .bind(user.id)
-    .all<PostRow>();
-
-  return c.json(
-    results.map((p) => {
-      const origin = originFromRequest(c);
-      return {
-        id: p.id,
-        type: p.type,
-        description: p.description,
-        status: p.status,
-        created_at: p.created_at,
-        likes_count: p.likes_count,
-        views_count: p.views_count,
-        shares_count: p.shares_count,
-        media_url: mediaUrl(origin, p.media_key),
-        thumb_url: mediaUrl(origin, p.thumb_key) ?? mediaUrl(origin, p.media_key),
-        rejection_reason: p.rejection_reason,
-        is_expired: p.created_at < now - TTL_MS,
-        is_future: p.created_at > now,
-      };
-    })
-  );
 });
 
 // Hard account deletion (Apple 5.1.1(v)): removes the account and ALL of its data —

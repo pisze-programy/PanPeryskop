@@ -6,6 +6,14 @@ All notable changes to PanPeryskop. Format based on
 
 ## [Unreleased]
 
+### Removed
+
+- The Live/UGC feature: camera capture, photo/video posting, the pending-post
+  uploader, the moderation report flow and the "Moje treści" screen. The map now
+  shows aggregated events only. The camera, microphone, photo-library and
+  location usage keys are gone, and the unused YPImagePicker and
+  FYVideoCompressor packages are dropped.
+
 ### Added
 
 - The running events source (maratonypolskie) runs on the Worker, so it costs no

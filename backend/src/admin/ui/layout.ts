@@ -20,7 +20,6 @@ export const NAV = [
   { href: '/admin/blacklist', label: 'Blacklista', icon: 'ban' },
   { href: '/admin/tags', label: 'Tagi', icon: 'tags' },
   { href: '/admin/users', label: 'Użytkownicy', icon: 'users' },
-  { href: '/admin/posts', label: 'Posty', icon: 'photo' },
   { href: '/admin/seed', label: 'Seed', icon: 'refresh' },
   { href: '/admin/stats', label: 'Statystyki', icon: 'chart-line' },
   { href: '/admin/usage', label: 'Użycie', icon: 'cursor-text' },

@@ -12,7 +12,7 @@ enum AppConstants {
     /// day/place fetch — so a fast response never flashes the spinner.
     static let minLoadingIndicatorMs: Int = 250
 
-    /// Post (event/live) visibility window — mirrors backend `TTL_HOURS` (24h).
+    /// Post visibility window — mirrors backend `TTL_HOURS` (24h).
     static let postTTLHours: TimeInterval = 24
     static let postTTLMs: Int64 = 24 * hourMs
 
@@ -28,12 +28,8 @@ enum AppConstants {
     static let unknownTime = "00:00"
 
     /// Content categories — mirror backend `POST_CATEGORIES`.
-    static let categoryLive = "live"
     static let categoryEvents = "events"
     static let categoryFood = "food"
-
-    /// Pending post staleness — uploads older than this are discarded.
-    static let pendingStaleAfter: TimeInterval = 12 * 3600
 
     /// Flight availability cache TTL (seconds) — mirrors backend 30-min cache.
     static let flightCacheTTL: TimeInterval = 30 * 60

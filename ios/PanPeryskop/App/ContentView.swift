@@ -42,9 +42,6 @@ struct ContentView: View {
         }
         .ignoresSafeArea(.keyboard)
         .task {
-            // UGC adding is temporarily disabled — the "+" entry point is gone, so the
-            // uploader stays off. Re-enable together with AddContentView.
-            // PostUploader.shared.start()
             await catalogueStore.refresh()
             await authManager.refreshMe()
             if let storyId = pendingStoryId {

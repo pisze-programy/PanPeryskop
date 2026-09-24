@@ -2,7 +2,7 @@ import SwiftUI
 import Observation
 
 /// Playback + navigation + engagement state for the story viewer. Owns the timer,
-/// the slide/flip transition, like/dislike and reporting; the view stays a thin
+/// the slide/flip transition and like/dislike; the view stays a thin
 /// renderer over this.
 @Observable
 @MainActor
@@ -84,7 +84,7 @@ final class StoryViewModel {
             let index = displayIndex + offset
             guard posts.indices.contains(index) else { continue }
             let post = posts[index]
-            guard post.type != .video, let url = post.resolvedThumbURL, url != post.resolvedMediaURL else { continue }
+            guard let url = post.resolvedThumbURL, url != post.resolvedMediaURL else { continue }
             urls.append(url)
         }
         return urls
@@ -97,7 +97,7 @@ final class StoryViewModel {
 
     func resume() {
         paused = false
-        if currentPost.type != .video { photoTimer = startPhotoTimer() }
+        photoTimer = startPhotoTimer()
     }
 
     /// The showtime pager is being used → hold/resume the story timer.
@@ -120,7 +120,7 @@ final class StoryViewModel {
     // MARK: - Timer
 
     private func startPhotoTimer() -> Task<Void, Never>? {
-        if posts.isEmpty || currentPost.type == .video { return nil }
+        if posts.isEmpty { return nil }
         let post = currentPost
         let start = min(Int((progressFraction * Double(Self.photoSteps)).rounded(.down)), Self.photoSteps - 1)
         guard start < Self.photoSteps else { return nil }
@@ -167,7 +167,7 @@ final class StoryViewModel {
                 // Fresh timer: reset progress so the new story starts from zero even
                 // if the outgoing content fed onProgress during the slide-out.
                 progressFraction = 0
-                if currentPost.type == .photo { photoTimer = startPhotoTimer() }
+                photoTimer = startPhotoTimer()
                 prefetchNeighbors()
                 withAnimation(.easeInOut(duration: Self.flipDuration)) { slideOffset = 0 }
             }
@@ -253,20 +253,4 @@ final class StoryViewModel {
         }
     }
 
-    /// Sends a content report to the admin moderation queue. Reports never
-    /// auto-block the content or the user — an admin decides.
-    func reportPost(reason: String) {
-        let postId = currentPost.id
-        Task {
-            defer { resume() }
-            do {
-                struct ReportBody: Encodable { let reason: String }
-                struct ReportResponse: Decodable { let ok: Bool }
-                let _: ReportResponse = try await APIClient.post("/reports/posts/\(postId)/report", body: ReportBody(reason: reason))
-                ToastManager.shared.show("Dziękujemy za zgłoszenie")
-            } catch {
-                ToastManager.shared.show("Nie udało się wysłać zgłoszenia. Spróbuj ponownie.")
-            }
-        }
-    }
 }

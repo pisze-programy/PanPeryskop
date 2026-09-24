@@ -1,6 +1,5 @@
 import SwiftUI
 import PhotosUI
-import AVFoundation
 
 @MainActor
 struct ProfileView: View {
@@ -99,18 +98,6 @@ struct ProfileView: View {
 
     private var menuList: some View {
         VStack(spacing: 10) {
-            NavigationLink {
-                MyContentView()
-            } label: {
-                ProfileMenuRow(
-                    icon: "photo.stack",
-                    title: "Moje treści",
-                    subtitle: "Twoje posty, statusy i statystyki"
-                )
-            }
-
-            Spacer().frame(height: 12)
-
             NavigationLink {
                 SettingsView()
             } label: {

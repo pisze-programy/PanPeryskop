@@ -2,58 +2,25 @@ import SwiftUI
 
 struct StoryContent: View {
     let post: Post
-    let isActive: Bool
     let topInset: CGFloat
-    @Binding var paused: Bool
     let onLoaded: (Post) -> Void
-    let onFinished: () -> Void
-    let onProgress: (Double) -> Void
-    @State private var showThumb = true
 
     var body: some View {
         Group {
-        if post.type == .video, let url = post.resolvedMediaURL {
-            ZStack {
-                StoryVideoPlayer(
-                    url: url,
-                    isActive: isActive,
-                    paused: $paused,
-                    onFinished: onFinished,
-                    onStarted: { showThumb = false },
-                    onReady: { onLoaded(post) },
-                    onProgress: onProgress
-                )
-                if showThumb, post.hasThumb, let thumbURL = post.resolvedThumbURL {
-                    AsyncImage(url: thumbURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fit)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        case .failure:
-                            Color.clear
-                        case .empty:
-                            Color.black
-                        @unknown default:
-                            Color.clear
-                        }
-                    }
-                    .allowsHitTesting(false)
-                }
+            if post.clubNight != nil {
+                clubNightLayout
+            } else if post.isRun {
+                runLayout
+            } else if post.isRestaurant {
+                restaurantLayout
+            } else if let url = post.resolvedMediaURL {
+                StoryPhoto(thumbURL: post.resolvedThumbURL, largeURL: url) { onLoaded(post) }
+            } else {
+                placeholderView
             }
-        } else if post.clubNight != nil {
-            clubNightLayout
-        } else if post.isRun {
-            runLayout
-        } else if post.isRestaurant {
-            restaurantLayout
-        } else if let url = post.resolvedMediaURL {
-            StoryPhoto(thumbURL: post.resolvedThumbURL, largeURL: url) { onLoaded(post) }
-        } else {
-            placeholderView
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-}
 
     private var clubNightLayout: some View {
         GeometryReader { geo in
@@ -149,7 +116,7 @@ struct StoryContent: View {
 
     private var placeholderView: some View {
         VStack(spacing: 12) {
-            Image(systemName: post.type == .video ? "video.slash" : "photo.badge.exclamationmark")
+            Image(systemName: "photo.badge.exclamationmark")
                 .font(.system(size: 48)).foregroundColor(.white.opacity(0.5))
             Text("Nie można załadować")
                 .font(.caption).foregroundColor(.white.opacity(0.5))

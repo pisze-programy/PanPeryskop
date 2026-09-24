@@ -157,7 +157,7 @@ struct SinglePostPin: View {
                     .foregroundColor(.white)
             } else {
                 Circle().fill(Color.white.opacity(0.9))
-                Image(systemName: iconForType(post.type))
+                Image(systemName: "photo.badge.exclamationmark")
                     .font(.body)
                     .foregroundColor(.black.opacity(0.7))
             }
@@ -172,12 +172,6 @@ struct SinglePostPin: View {
         }
     }
 }
-
-private func iconForType(_ type: Post.MediaType) -> String {
-    // Same glyph as the story preview placeholder for a missing image.
-    type == .video ? "video.slash" : "photo.badge.exclamationmark"
-}
-
 
 struct ClusterPin: View {
     let count: Int

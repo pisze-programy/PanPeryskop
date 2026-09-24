@@ -84,27 +84,20 @@ test('integration: /stories?day= browses that day even outside the live TTL wind
   // p_future — event in +2 days, created_at 06:00 Warsaw that day (OUTSIDE the
   // live window because created_at > now).
   ins.run('p_future', 52.3, 21.1, 'jutro', Date.parse(`${futureDay}T04:00:00Z`), 'events', futureDay);
-  // p_live — live post, event_date NULL, created now (inside the live window).
-  ins.run('p_live', 52.25, 21.05, 'live!', now, 'live', null);
 
   const bbox = 'sw_lat=52.0&sw_lng=20.9&ne_lat=52.5&ne_lng=21.3';
 
-  // Without day → live window only (today's event + live post; future day hidden).
+  // Without day → the live window only (today's event; the future day is hidden).
   const resWindow = await storiesRoutes.request(`/?${bbox}`, {}, env);
   assert.equal(resWindow.status, 200);
   const windowBody = (await resWindow.json()) as { stories: { id: string }[] };
-  assert.deepEqual(windowBody.stories.map((s) => s.id).sort(), ['p_live', 'p_today']);
+  assert.deepEqual(windowBody.stories.map((s) => s.id).sort(), ['p_today']);
 
   // day=<futureDay> → only that day's event, despite being outside the TTL window.
   const resDay = await storiesRoutes.request(`/?${bbox}&day=${futureDay}`, {}, env);
   assert.equal(resDay.status, 200);
   const dayBody = (await resDay.json()) as { stories: { id: string }[] };
   assert.deepEqual(dayBody.stories.map((s) => s.id), ['p_future']);
-
-  // Live posts (event_date NULL) never match a day query.
-  const resDayToday = await storiesRoutes.request(`/?${bbox}&day=${today}`, {}, env);
-  const dayToday = (await resDayToday.json()) as { stories: { id: string }[] };
-  assert.deepEqual(dayToday.stories.map((s) => s.id), ['p_today']);
 
   // Invalid day format → 400.
   const resBad = await storiesRoutes.request(`/?${bbox}&day=17-08-2026`, {}, env);

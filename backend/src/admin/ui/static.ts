@@ -6,7 +6,6 @@ import { OVERVIEW_JS } from './static/pages/overview.js';
 import { EVENTS_JS } from './static/pages/events.js';
 import { TAGS_JS } from './static/pages/tags.js';
 import { USERS_JS } from './static/pages/users.js';
-import { POSTS_JS } from './static/pages/posts.js';
 import { SEED_JS } from './static/pages/seed.js';
 import { STATS_JS } from './static/pages/stats.js';
 import { REPORTS_JS } from './static/pages/reports.js';
@@ -22,7 +21,6 @@ const FILES: Record<string, { type: string; body: string }> = {
   'js/pages/events.js': { type: JS, body: EVENTS_JS },
   'js/pages/tags.js': { type: JS, body: TAGS_JS },
   'js/pages/users.js': { type: JS, body: USERS_JS },
-  'js/pages/posts.js': { type: JS, body: POSTS_JS },
   'js/pages/seed.js': { type: JS, body: SEED_JS },
   'js/pages/stats.js': { type: JS, body: STATS_JS },
   'js/pages/reports.js': { type: JS, body: REPORTS_JS },

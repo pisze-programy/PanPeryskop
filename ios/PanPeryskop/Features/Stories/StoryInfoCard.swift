@@ -22,7 +22,7 @@ struct StoryInfoCard: View {
             } else if post.isRun {
                 runContent
             } else {
-                eventOrLiveContent
+                eventContent
             }
 
             StoryBadgesView(post: post, tags: tags)
@@ -140,18 +140,14 @@ struct StoryInfoCard: View {
         }
     }
 
-    private var eventOrLiveContent: some View {
+    private var eventContent: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-            if post.isEvent {
-                Text(post.eventInfo.title)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    // Always two lines: a one-line title would shorten the card and
-                    // make the whole layout jump when swiping between stories.
-                    .lineLimit(2, reservesSpace: true)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-            }
+            Text(post.eventInfo.title)
+                .font(.headline)
+                .foregroundColor(.primary)
+                .lineLimit(2, reservesSpace: true)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
 
             HStack(alignment: .center, spacing: Theme.Spacing.l) {
                 VStack(alignment: .center, spacing: 6) {
@@ -178,23 +174,16 @@ struct StoryInfoCard: View {
                 }
                 .frame(width: 168)
 
-                if post.isEvent {
-                    eventDetails
-                } else {
-                    liveAuthor
-                }
+                eventDetails
 
                 Spacer(minLength: 0)
             }
         }
     }
 
-    /// Flip-clock value: first structured showtime, else the event start time, else
-    /// the live post's publish time.
     private var clockTime: String {
         if let times = post.showtimes, !times.isEmpty { return times[0] }
-        if post.isEvent { return post.eventInfo.time ?? "--:--" }
-        return EventDateFormatter.time(post.created_at)
+        return post.eventInfo.time ?? "--:--"
     }
 
     /// Pager selection, only if it still belongs to the current post's showtimes.
@@ -225,17 +214,6 @@ struct StoryInfoCard: View {
                 }
                 .buttonStyle(.plain)
             }
-        }
-    }
-
-    /// Live: avatar + nickname, bottom-aligned with the flip-clock.
-    private var liveAuthor: some View {
-        HStack(spacing: Theme.Spacing.s) {
-            StoryAvatar(url: post.author_avatar_url, size: 32)
-            Text(post.author_name)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
         }
     }
 }

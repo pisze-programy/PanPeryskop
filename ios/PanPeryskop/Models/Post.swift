@@ -49,13 +49,7 @@ struct Post: Codable, Identifiable, Equatable {
         CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
 
-    /// Events (category "events") are re-viewable: "seen" is stored but never blocks
-    /// or hides them. Live stays one-time.
     var isEvent: Bool { category == AppConstants.categoryEvents }
-
-    /// Live user content — the only kind that can be reported. Seeded events and
-    /// curated restaurants are editorial, so the report menu never applies.
-    var isLive: Bool { (category ?? AppConstants.categoryLive) == AppConstants.categoryLive }
 
     /// A running event from maratonypolskie — it gets the run mask.
     var isRun: Bool { source == "maratonypolskie" }
@@ -244,7 +238,7 @@ struct Post: Codable, Identifiable, Equatable {
     }
 
     enum MediaType: String, Codable {
-        case photo, video
+        case photo
     }
 }
 
@@ -278,12 +272,4 @@ struct EventInfo {
     let venue: String?
 }
 
-struct CreatePostResponse: Codable {
-    let id: String
-    let type: String
-    let media_key: String?
-    let thumb_key: String?
-    let created_at: Int64
-    let is_sponsored: Bool?
-    let link_url: String?
-}
+

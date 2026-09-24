@@ -9,8 +9,6 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                PermissionCardsView(showsHeader: true)
-
                 policySection
 
                 accountSection

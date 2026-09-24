@@ -1,15 +1,12 @@
 import SwiftUI
 
-/// Top overlay of the story: close button, optional report menu and the progress row.
+/// Top overlay of the story: the close button and the progress row.
 struct StoryTopBar: View {
     let posts: [Post]
     let currentIndex: Int
     let progressFraction: Double
-    /// The report menu is hidden for event/cinema stories.
-    let showsMenu: Bool
     let topInset: CGFloat
     let onClose: () -> Void
-    let onReport: () -> Void
 
     var body: some View {
         VStack {
@@ -26,23 +23,6 @@ struct StoryTopBar: View {
                         .clipShape(Circle())
                 }
                 Spacer()
-                if showsMenu {
-                    Menu {
-                        Button {
-                            onReport()
-                        } label: {
-                            Label("Zgłoś", systemImage: "flag")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 40, height: 40)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                    }
-                    .simultaneousGesture(TapGesture().onEnded { Haptics.selection() })
-                }
             }
             .padding(.horizontal, Theme.Spacing.l)
 

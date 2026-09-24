@@ -20,11 +20,6 @@ packages:
   KeychainAccess:
     url: https://github.com/kishikawakatsumi/KeychainAccess
     from: 4.2.0
-  FYVideoCompressor:
-    url: https://github.com/T2Je/FYVideoCompressor
-    from: 0.0.6
-  YPImagePicker:
-    path: vendor/YPImagePicker
 
 targets:
   PanPeryskop:
@@ -41,10 +36,6 @@ targets:
         product: LazyPager
       - package: KeychainAccess
         product: KeychainAccess
-      - package: FYVideoCompressor
-        product: FYVideoCompressor
-      - package: YPImagePicker
-        product: YPImagePicker
     info:
       path: PanPeryskop/Info.plist
       properties:
@@ -74,11 +65,6 @@ targets:
         INFOPLIST_KEY_UIRequiresFullScreen: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: ["UIInterfaceOrientationPortrait","UIInterfaceOrientationPortraitUpsideDown","UIInterfaceOrientationLandscapeLeft","UIInterfaceOrientationLandscapeRight"]
-        INFOPLIST_KEY_NSCameraUsageDescription: "Potrzebujemy dostępu do aparatu, aby nagrywać treści."
-        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Zapisujemy kopię zapasową nagrania w Twojej galerii."
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Potrzebujemy dostępu do galerii, aby wybierać zdjęcia i filmy."
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Potrzebujemy mikrofonu do nagrywania filmów."
-        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Używamy Twojej lokalizacji, aby pokazać Twoją pozycję na mapie i przypisywać treści do miejsc."
         GENERATE_INFOPLIST_FILE: YES
 
   PanPeryskopTests:

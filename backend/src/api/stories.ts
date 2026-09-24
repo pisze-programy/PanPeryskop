@@ -1,7 +1,7 @@
 import { CONFIG } from '../config/index';
 import { Hono } from 'hono';
 import { authenticate } from './auth';
-import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED, CATEGORY_LIVE, CATEGORY_EVENTS, CATEGORY_FOOD } from '../core/models';
+import { StoryRow, HeatmapCell, POPULARITY_WEIGHTS, TTL_MS, POST_CATEGORY_SET, STATUS_APPROVED, CATEGORY_EVENTS, CATEGORY_FOOD } from '../core/models';
 import { mediaUrl, originFromRequest, resolvePostMedia } from '../core/media';
 import { tagCatalog, tagIdSet } from '../core/tagCatalog';
 import { cityBbox } from '../admin/cities';
@@ -98,21 +98,8 @@ storiesRoutes.get('/tag-counts', async (c) => {
     }
   }
 
-  const liveRow = await db
-    .prepare(
-      `SELECT COUNT(*) as n FROM posts
-       WHERE lat BETWEEN ? AND ?
-       AND lng BETWEEN ? AND ?
-       AND status = '${STATUS_APPROVED}'
-       AND category = '${CATEGORY_LIVE}'
-       AND created_at >= ?`
-    )
-    .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, Date.now() - TTL_MS)
-    .first<{ n: number }>();
-
   return c.json({
     total,
-    live: liveRow?.n ?? 0,
     counts: Array.from(counts.entries()).map(([tag, count]) => ({ tag, count })),
   });
 });
@@ -274,7 +261,7 @@ storiesRoutes.get('/', async (c) => {
   }
 
   // Day browser: `day=YYYY-MM-DD` shows pins for that day regardless of the live
-  // TTL window (future days are otherwise hidden by created_at <= now). Live posts
+  // TTL window (future days are otherwise hidden by created_at <= now). An event
   // have event_date NULL so they never match a day query.
   const day = q.day ? String(q.day) : null;
   let timeCond = `((p.created_at >= ? AND p.created_at <= ?) OR p.category = '${CATEGORY_FOOD}')`;

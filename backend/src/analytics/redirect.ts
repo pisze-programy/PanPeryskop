@@ -25,9 +25,11 @@ const ALLOWED_HOSTS = [
   'maratonypolskie.pl',
   'ticketmaster.pl',
   'ra.co',
+  'qeeq.pl',
+  'qeeq.com',
 ];
 
-export type RedirectKind = 'flight' | 'bus' | 'place' | 'event' | 'stay' | 'banner';
+export type RedirectKind = 'flight' | 'bus' | 'place' | 'event' | 'stay' | 'banner' | 'car';
 
 function isAllowed(target: string): boolean {
   let url: URL;

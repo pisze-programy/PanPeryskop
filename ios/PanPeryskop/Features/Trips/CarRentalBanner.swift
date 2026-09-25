@@ -15,11 +15,13 @@ struct CarRentalBanner: View {
     private static let subtitle = "Od 49 zł/dzień — bezpłatne odwołanie"
     private static let stops = [
         Gradient.Stop(color: Color(hex: 0xFFFFFF), location: 0),
-        Gradient.Stop(color: Color(hex: 0xE8F0FF), location: 0.5),
-        Gradient.Stop(color: Color(hex: 0xB9D2FF), location: 1),
+        Gradient.Stop(color: Color(hex: 0xFFFFFF), location: 0.5),
+        Gradient.Stop(color: Color(hex: 0xDCE9FF), location: 0.72),
+        Gradient.Stop(color: Color(hex: 0xA8C6FF), location: 1),
     ]
 
-    private static let ink = Color(hex: 0x021439)
+    private static let ink = Color(hex: 0x141414)
+    private static let chevron = Color(hex: 0x3570E6)
 
     var body: some View {
         Button(action: open) {
@@ -38,7 +40,7 @@ struct CarRentalBanner: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: "chevron.right")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(Self.ink.opacity(0.9))
+                    .foregroundColor(Self.chevron)
             }
             .padding(.horizontal, Theme.Spacing.l)
             .padding(.vertical, Theme.Spacing.m)

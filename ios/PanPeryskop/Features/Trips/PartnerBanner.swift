@@ -40,11 +40,12 @@ extension PartnerBanner {
             url: URL(string: "https://api.panperyskop.app/r/revolut")!,
             stops: [
                 .init(color: Color(hex: 0xFFFFFF), location: 0),
-                .init(color: Color(hex: 0xFFFFFF), location: 0.6),
-                .init(color: Color(hex: 0x1C1C1F), location: 1),
+                .init(color: Color(hex: 0xFFFFFF), location: 0.5),
+                .init(color: Color(hex: 0xE4E7FF), location: 0.72),
+                .init(color: Color(hex: 0xB7BDFB), location: 1),
             ],
-            foreground: Color(hex: 0x0A0A0A),
-            chevron: .white,
+            foreground: Color(hex: 0x141414),
+            chevron: Color(hex: 0x4F55F1),
             icon: "revolut"
         ),
         PartnerBanner(
@@ -53,27 +54,29 @@ extension PartnerBanner {
             subtitle: "Uzyskaj nawet 600 € odszkodowania!",
             url: URL(string: "https://api.panperyskop.app/r/airhelp")!,
             stops: [
-                .init(color: Color(hex: 0xF3F5FF), location: 0),
-                .init(color: Color(hex: 0xF3F5FF), location: 0.5),
-                .init(color: Color(hex: 0x6E7BD6), location: 0.82),
-                .init(color: Color(hex: 0xB3516E), location: 1),
+                .init(color: Color(hex: 0xFFFFFF), location: 0),
+                .init(color: Color(hex: 0xFFFFFF), location: 0.5),
+                .init(color: Color(hex: 0xF2DCE3), location: 0.72),
+                .init(color: Color(hex: 0xDDA9BA), location: 1),
             ],
-            foreground: Color(hex: 0x0F1330),
-            chevron: .white,
+            foreground: Color(hex: 0x141414),
+            chevron: Color(hex: 0xB3516E),
             icon: "airhelp"
         ),
         PartnerBanner(
-            id: "airalo",
+            id: "saily",
             title: "Karta eSIM — bez limitu w Europie!",
             subtitle: "Poczuj wolność na wyjeździe, od 16 zł",
-            url: URL(string: "https://api.panperyskop.app/r/airalo")!,
+            url: URL(string: "https://api.panperyskop.app/r/saily")!,
             stops: [
-                .init(color: Color(hex: 0xF2EBE3), location: 0),
-                .init(color: Color(hex: 0xF6C283), location: 0.5),
-                .init(color: Color(hex: 0xF08E48), location: 1),
+                .init(color: Color(hex: 0xFFFFFF), location: 0),
+                .init(color: Color(hex: 0xFFFFFF), location: 0.5),
+                .init(color: Color(hex: 0xFFF7A8), location: 0.72),
+                .init(color: Color(hex: 0xFFF500), location: 1),
             ],
-            foreground: Color(hex: 0x101012),
-            icon: "airalo"
+            foreground: Color(hex: 0x141414),
+            chevron: Color(hex: 0xC7B000),
+            icon: "saily"
         ),
     ]
 }

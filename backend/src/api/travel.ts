@@ -360,11 +360,12 @@ travelRoutes.get('/bus/flixbus', async (c) => {
   }
 });
 
-travelRoutes.get('/car-link', (c) => {
+travelRoutes.get('/car-link', async (c) => {
   const q = c.req.query();
   const iata = (q.iata ?? '').toUpperCase();
   if (!/^[A-Z]{3}$/.test(iata)) return c.json({ error: 'iata required' }, 400);
-  return c.json({ url: carRentalUrl(iata, q.from, q.to) });
+  const url = await mintRedirect(c.env, 'car', carRentalUrl(iata, q.from, q.to));
+  return c.json({ url });
 });
 
 // Stay22 hotel map widget URL. The app opens the URL, the widget does the rest.

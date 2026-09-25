@@ -39,6 +39,7 @@ struct OnboardingVideoBackground: UIViewRepresentable {
         }
 
         func start(resource: String) {
+            try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
             guard let url = Bundle.main.url(forResource: resource, withExtension: "mp4") else { return }
             let item = AVPlayerItem(asset: AVURLAsset(url: url))
             let queue = AVQueuePlayer()
@@ -59,10 +60,10 @@ struct OnboardingVideoBackground: UIViewRepresentable {
         private func observeLifecycle() {
             let center = NotificationCenter.default
             observers.append(center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
-                self?.player?.pause()
+                MainActor.assumeIsolated { self?.player?.pause() }
             })
             observers.append(center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
-                self?.player?.play()
+                MainActor.assumeIsolated { self?.player?.play() }
             })
         }
     }

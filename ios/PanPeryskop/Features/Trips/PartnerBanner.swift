@@ -19,7 +19,7 @@ extension PartnerBanner {
             id: "revolut",
             title: "Darmowa karta walutowa",
             subtitle: "Revolut — Kurs przed płatnością, bez opłat!",
-            url: URL(string: "https://revolut.com/referral/?referral-code=krystikgo!SEP2-26-AR&geo-redirect")!,
+            url: URL(string: "https://api.panperyskop.app/r/revolut")!,
             gradient: [
                 Color(hex: 0x191C1F),
                 Color(hex: 0x1326FD),
@@ -31,7 +31,7 @@ extension PartnerBanner {
             id: "airhelp",
             title: "Opóźniony lub odwołany lot?",
             subtitle: "Uzyskaj nawet 600 € odszkodowania!",
-            url: URL(string: "https://airhelp.tpo.mx/XAt50GXJ")!,
+            url: URL(string: "https://api.panperyskop.app/r/airhelp")!,
             gradient: [
                 Color(hex: 0x2d5fd6),
                 Color(hex: 0x5a4fb4),
@@ -43,7 +43,7 @@ extension PartnerBanner {
             id: "airalo",
             title: "Karta eSIM — bez limitu w Europie!",
             subtitle: "Poczuj wolność na wyjeździe, od 16 zł",
-            url: URL(string: "https://airalo.tpo.mx/O378fS2W")!,
+            url: URL(string: "https://api.panperyskop.app/r/airalo")!,
             gradient: [
                 Color(hex: 0xf2ebe3),
                 Color(hex: 0xf6c283),

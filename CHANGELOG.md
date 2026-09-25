@@ -100,8 +100,11 @@ All notable changes to PanPeryskop. Format based on
 - The city thumbnails in the app bundle are lighter: they are always drawn
   smaller than the file, so the extra quality was dead weight.
 - A Revolut card leads the partner banners: a dark-to-blue gradient in the
-  brand colours, a referral link and the copy "Darmowa karta walutowa" /
-  "Revolut — Kurs przed płatnością, bez opłat!".
+  brand colours and the copy "Darmowa karta walutowa" / "Revolut — Kurs przed
+  płatnością, bez opłat!".
+- Every partner banner opens a fixed server shortlink (`/r/revolut`,
+  `/r/airhelp`, `/r/airalo`). The app holds one stable URL per partner, the
+  target lives in the database, and every tap counts in the click analytics.
 
 ### Fixed
 

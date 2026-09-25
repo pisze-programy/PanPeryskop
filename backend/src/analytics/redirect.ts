@@ -27,7 +27,7 @@ const ALLOWED_HOSTS = [
   'ra.co',
 ];
 
-export type RedirectKind = 'flight' | 'bus' | 'place' | 'event' | 'stay';
+export type RedirectKind = 'flight' | 'bus' | 'place' | 'event' | 'stay' | 'banner';
 
 function isAllowed(target: string): boolean {
   let url: URL;

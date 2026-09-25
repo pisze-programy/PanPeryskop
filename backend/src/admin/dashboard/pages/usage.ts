@@ -14,6 +14,7 @@ const KIND_LABELS: Record<string, string> = {
   place: 'Atrakcja',
   event: 'Wydarzenie',
   stay: 'Nocleg',
+  banner: 'Baner',
 };
 
 pageRoutes.get('/usage', async (c) => {

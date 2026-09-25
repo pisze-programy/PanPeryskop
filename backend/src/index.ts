@@ -76,7 +76,7 @@ app.all('/media/*', async (c) => {
 
   const headers = new Headers();
   object.writeHttpMetadata(headers);
-  headers.set('Cache-Control', 'public, max-age=3600');
+  headers.set('Cache-Control', key.startsWith('partners/') ? 'public, max-age=2592000, immutable' : 'public, max-age=3600');
   headers.set('Access-Control-Allow-Origin', '*');
   headers.set('Accept-Ranges', 'bytes');
 

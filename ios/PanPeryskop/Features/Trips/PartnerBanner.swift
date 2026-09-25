@@ -1,55 +1,79 @@
 import SwiftUI
 
-/// A partner banner under the attractions section. The whole card is one tap
-/// target that opens the partner's landing page in the in-app browser.
 struct PartnerBanner: Identifiable {
     let id: String
     let title: String
     let subtitle: String
     let url: URL
-    /// Left-to-right gradient, so the chevron on the right shows its end colour.
-    let gradient: [Color]
+    let stops: [Gradient.Stop]
     let foreground: Color
+    let chevron: Color
+    let icon: String?
+
+    init(
+        id: String,
+        title: String,
+        subtitle: String,
+        url: URL,
+        stops: [Gradient.Stop],
+        foreground: Color,
+        chevron: Color? = nil,
+        icon: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.url = url
+        self.stops = stops
+        self.foreground = foreground
+        self.chevron = chevron ?? foreground
+        self.icon = icon
+    }
 }
 
 extension PartnerBanner {
-    /// Colours sampled from the partners' own landing pages.
     static let travel: [PartnerBanner] = [
         PartnerBanner(
             id: "revolut",
             title: "Darmowa karta walutowa",
             subtitle: "Revolut — Kurs przed płatnością, bez opłat!",
             url: URL(string: "https://api.panperyskop.app/r/revolut")!,
-            gradient: [
-                Color(hex: 0x191C1F),
-                Color(hex: 0x1326FD),
-                Color(hex: 0x3D5CFF),
+            stops: [
+                .init(color: Color(hex: 0xFFFFFF), location: 0),
+                .init(color: Color(hex: 0xFFFFFF), location: 0.6),
+                .init(color: Color(hex: 0x1C1C1F), location: 1),
             ],
-            foreground: .white
+            foreground: Color(hex: 0x0A0A0A),
+            chevron: .white,
+            icon: "revolut"
         ),
         PartnerBanner(
             id: "airhelp",
             title: "Opóźniony lub odwołany lot?",
             subtitle: "Uzyskaj nawet 600 € odszkodowania!",
             url: URL(string: "https://api.panperyskop.app/r/airhelp")!,
-            gradient: [
-                Color(hex: 0x2d5fd6),
-                Color(hex: 0x5a4fb4),
-                Color(hex: 0xb3516e),
+            stops: [
+                .init(color: Color(hex: 0xF3F5FF), location: 0),
+                .init(color: Color(hex: 0xF3F5FF), location: 0.5),
+                .init(color: Color(hex: 0x6E7BD6), location: 0.82),
+                .init(color: Color(hex: 0xB3516E), location: 1),
             ],
-            foreground: .white
+            foreground: Color(hex: 0x0F1330),
+            chevron: .white,
+            icon: "airhelp"
         ),
         PartnerBanner(
             id: "airalo",
             title: "Karta eSIM — bez limitu w Europie!",
             subtitle: "Poczuj wolność na wyjeździe, od 16 zł",
             url: URL(string: "https://api.panperyskop.app/r/airalo")!,
-            gradient: [
-                Color(hex: 0xf2ebe3),
-                Color(hex: 0xf6c283),
-                Color(hex: 0xf08e48),
+            stops: [
+                .init(color: Color(hex: 0xF2EBE3), location: 0),
+                .init(color: Color(hex: 0xF6C283), location: 0.5),
+                .init(color: Color(hex: 0xF08E48), location: 1),
             ],
-            foreground: Color(hex: 0x101012)
+            foreground: Color(hex: 0x101012),
+            icon: "airalo"
         ),
     ]
 }

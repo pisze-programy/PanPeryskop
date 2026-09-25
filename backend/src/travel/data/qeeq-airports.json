@@ -1,0 +1,990 @@
+{
+ "AAR": {
+  "city": 484,
+  "landmark": 98488
+ },
+ "ABZ": {
+  "city": 3147,
+  "landmark": 99200
+ },
+ "ACE": {
+  "city": 2748,
+  "landmark": 99095
+ },
+ "AES": {
+  "city": 2347,
+  "landmark": 98898
+ },
+ "AGA": {
+  "city": 2287,
+  "landmark": 98856
+ },
+ "AGP": {
+  "city": 2820,
+  "landmark": 99032
+ },
+ "AHO": {
+  "city": 2004,
+  "landmark": 403193
+ },
+ "ALC": {
+  "city": 2757,
+  "landmark": 99072
+ },
+ "AMM": {
+  "city": 2158,
+  "landmark": 18100
+ },
+ "AMS": {
+  "city": 1621,
+  "landmark": 98674
+ },
+ "AOI": {
+  "city": 1753,
+  "landmark": 402845
+ },
+ "ARN": {
+  "city": 2984,
+  "landmark": 99138
+ },
+ "ATH": {
+  "city": 1570,
+  "landmark": 98709
+ },
+ "AUH": {
+  "city": 3140,
+  "landmark": 99125
+ },
+ "AYT": {
+  "city": 3103,
+  "landmark": 99101
+ },
+ "BCM": {
+  "city": 2590,
+  "landmark": 404058
+ },
+ "BCN": {
+  "city": 2765,
+  "landmark": 99191
+ },
+ "BDS": {
+  "city": 1779,
+  "landmark": 98725
+ },
+ "BEG": {
+  "city": 2624,
+  "landmark": 99081
+ },
+ "BFS": {
+  "city": 3159,
+  "landmark": 402789
+ },
+ "BGO": {
+  "city": 2356,
+  "landmark": 98948
+ },
+ "BGY": {
+  "city": 1772,
+  "landmark": 98728
+ },
+ "BHX": {
+  "city": 3161,
+  "landmark": 99338
+ },
+ "BIO": {
+  "city": 2770,
+  "landmark": 99133
+ },
+ "BIQ": {
+  "city": 682,
+  "landmark": 98573
+ },
+ "BJV": {
+  "city": 3107,
+  "landmark": 99168
+ },
+ "BLL": {
+  "city": 487,
+  "landmark": 98487
+ },
+ "BLQ": {
+  "city": 1774,
+  "landmark": 98727
+ },
+ "BNX": {
+  "city": 103184,
+  "landmark": 402774
+ },
+ "BOD": {
+  "city": 692,
+  "landmark": 98569
+ },
+ "BOH": {
+  "city": 3165,
+  "landmark": 99183
+ },
+ "BOJ": {
+  "city": 323,
+  "landmark": 98435
+ },
+ "BRE": {
+  "city": 1145,
+  "landmark": 98639
+ },
+ "BRI": {
+  "city": 1766,
+  "landmark": 98688
+ },
+ "BRQ": {
+  "city": 473,
+  "landmark": 98503
+ },
+ "BRS": {
+  "city": 3169,
+  "landmark": 99269
+ },
+ "BRU": {
+  "city": 232,
+  "landmark": 98377
+ },
+ "BSL": {
+  "city": 3009,
+  "landmark": 98739
+ },
+ "BTS": {
+  "city": 2628,
+  "landmark": 99063
+ },
+ "BUD": {
+  "city": 1675,
+  "landmark": 98705
+ },
+ "BVA": {
+  "city": 672,
+  "landmark": 98637
+ },
+ "BVE": {
+  "city": 707,
+  "landmark": 98560
+ },
+ "BZG": {
+  "city": 2474,
+  "landmark": 98976
+ },
+ "BZR": {
+  "city": 680,
+  "landmark": 98577
+ },
+ "CAG": {
+  "city": 2009,
+  "landmark": 98777
+ },
+ "CCF": {
+  "city": 717,
+  "landmark": 98565
+ },
+ "CFU": {
+  "city": 1572,
+  "landmark": 98643
+ },
+ "CGN": {
+  "city": 1159,
+  "landmark": 98624
+ },
+ "CHQ": {
+  "city": 1573,
+  "landmark": 98673
+ },
+ "CIA": {
+  "city": 1934,
+  "landmark": 98734
+ },
+ "CIY": {
+  "city": 2035,
+  "landmark": 403287
+ },
+ "CLJ": {
+  "city": 2595,
+  "landmark": 99040
+ },
+ "CND": {
+  "city": 2596,
+  "landmark": 99035
+ },
+ "CPH": {
+  "city": 490,
+  "landmark": 98630
+ },
+ "CRL": {
+  "city": 233,
+  "landmark": 98394
+ },
+ "CTA": {
+  "city": 2032,
+  "landmark": 98743
+ },
+ "CWL": {
+  "city": 3176,
+  "landmark": 99325
+ },
+ "DBV": {
+  "city": 452,
+  "landmark": 98605
+ },
+ "DEB": {
+  "city": 1676,
+  "landmark": 99556
+ },
+ "DLE": {
+  "city": 107221,
+  "landmark": 404084
+ },
+ "DLM": {
+  "city": 3110,
+  "landmark": 99120
+ },
+ "DTM": {
+  "city": 1177,
+  "landmark": 98707
+ },
+ "DUB": {
+  "city": 1708,
+  "landmark": 98708
+ },
+ "DXB": {
+  "city": 3143,
+  "landmark": 99164
+ },
+ "EDI": {
+  "city": 3200,
+  "landmark": 99179
+ },
+ "EFL": {
+  "city": 1581,
+  "landmark": 98723
+ },
+ "EGC": {
+  "city": 675,
+  "landmark": 98598
+ },
+ "EIN": {
+  "city": 1635,
+  "landmark": 98845
+ },
+ "EMA": {
+  "city": 3198,
+  "landmark": 99228
+ },
+ "ESB": {
+  "city": 3102,
+  "landmark": 99613
+ },
+ "ESU": {
+  "city": 2289,
+  "landmark": 98848
+ },
+ "EVN": {
+  "city": 103774,
+  "landmark": 404118
+ },
+ "EXT": {
+  "city": 3203,
+  "landmark": 99130
+ },
+ "FAO": {
+  "city": 2516,
+  "landmark": 99003
+ },
+ "FCO": {
+  "city": 1934,
+  "landmark": 98736
+ },
+ "FDH": {
+  "city": 1220,
+  "landmark": 98634
+ },
+ "FEZ": {
+  "city": 2290,
+  "landmark": 98852
+ },
+ "FKB": {
+  "city": 1119,
+  "landmark": 98635
+ },
+ "FMM": {
+  "city": 1355,
+  "landmark": 98651
+ },
+ "FMO": {
+  "city": 1372,
+  "landmark": 98753
+ },
+ "FNC": {
+  "city": 103960,
+  "landmark": 402813
+ },
+ "FNI": {
+  "city": 927,
+  "landmark": 404085
+ },
+ "FSC": {
+  "city": 617,
+  "landmark": 98566
+ },
+ "FUE": {
+  "city": 2744,
+  "landmark": 99074
+ },
+ "GDN": {
+  "city": 2475,
+  "landmark": 99177
+ },
+ "GLA": {
+  "city": 3208,
+  "landmark": 99239
+ },
+ "GNB": {
+  "city": 809,
+  "landmark": 98700
+ },
+ "GOA": {
+  "city": 1843,
+  "landmark": 98724
+ },
+ "GOT": {
+  "city": 2925,
+  "landmark": 99459
+ },
+ "GRO": {
+  "city": 2790,
+  "landmark": 99045
+ },
+ "GRX": {
+  "city": 2793,
+  "landmark": 99041
+ },
+ "GYD": {
+  "city": 102706,
+  "landmark": 402770
+ },
+ "HAM": {
+  "city": 1258,
+  "landmark": 98647
+ },
+ "HAU": {
+  "city": 2381,
+  "landmark": 98904
+ },
+ "HEL": {
+  "city": 563,
+  "landmark": 98591
+ },
+ "HER": {
+  "city": 1573,
+  "landmark": 99665
+ },
+ "HHN": {
+  "city": 1209,
+  "landmark": 98680
+ },
+ "HRG": {
+  "city": 549,
+  "landmark": 98522
+ },
+ "IAS": {
+  "city": 2601,
+  "landmark": 98965
+ },
+ "IBZ": {
+  "city": 2740,
+  "landmark": 99029
+ },
+ "INI": {
+  "city": 103655,
+  "landmark": 403640
+ },
+ "IST": {
+  "city": 3119,
+  "landmark": 404754
+ },
+ "JED": {
+  "city": 2621,
+  "landmark": 98971
+ },
+ "JMK": {
+  "city": 1586,
+  "landmark": 98681
+ },
+ "JSI": {
+  "city": 1596,
+  "landmark": 98663
+ },
+ "JTR": {
+  "city": 1595,
+  "landmark": 98730
+ },
+ "KEF": {
+  "city": 1694,
+  "landmark": 98698
+ },
+ "KGS": {
+  "city": 1582,
+  "landmark": 98670
+ },
+ "KIR": {
+  "city": 1710,
+  "landmark": 98702
+ },
+ "KLU": {
+  "city": 210,
+  "landmark": 98440
+ },
+ "KLX": {
+  "city": 1577,
+  "landmark": 98703
+ },
+ "KRK": {
+  "city": 2479,
+  "landmark": 98939
+ },
+ "KSC": {
+  "city": 2629,
+  "landmark": 99096
+ },
+ "KTW": {
+  "city": 2477,
+  "landmark": 404260
+ },
+ "KUN": {
+  "city": 2172,
+  "landmark": 403495
+ },
+ "LBA": {
+  "city": 3237,
+  "landmark": 99140
+ },
+ "LCA": {
+  "city": 465,
+  "landmark": 98557
+ },
+ "LCJ": {
+  "city": 2480,
+  "landmark": 98993
+ },
+ "LDE": {
+  "city": 1036,
+  "landmark": 98627
+ },
+ "LEI": {
+  "city": 2758,
+  "landmark": 403192
+ },
+ "LGW": {
+  "city": 3243,
+  "landmark": 99292
+ },
+ "LIG": {
+  "city": 862,
+  "landmark": 404088
+ },
+ "LIL": {
+  "city": 861,
+  "landmark": 98644
+ },
+ "LIS": {
+  "city": 2525,
+  "landmark": 98950
+ },
+ "LJU": {
+  "city": 2639,
+  "landmark": 99067
+ },
+ "LNZ": {
+  "city": 211,
+  "landmark": 98387
+ },
+ "LPA": {
+  "city": 2745,
+  "landmark": 99030
+ },
+ "LPL": {
+  "city": 3240,
+  "landmark": 133130
+ },
+ "LRH": {
+  "city": 827,
+  "landmark": 98766
+ },
+ "LTN": {
+  "city": 3243,
+  "landmark": 99701
+ },
+ "LUX": {
+  "city": 2177,
+  "landmark": 98789
+ },
+ "LUZ": {
+  "city": 2481,
+  "landmark": 403551
+ },
+ "LXS": {
+  "city": 103375,
+  "landmark": 404114
+ },
+ "LYS": {
+  "city": 873,
+  "landmark": 98609
+ },
+ "MAD": {
+  "city": 2818,
+  "landmark": 99042
+ },
+ "MAH": {
+  "city": 2742,
+  "landmark": 99023
+ },
+ "MAN": {
+  "city": 3253,
+  "landmark": 99204
+ },
+ "MLA": {
+  "city": 103563,
+  "landmark": 133105
+ },
+ "MLH": {
+  "city": 916,
+  "landmark": 404305
+ },
+ "MME": {
+  "city": 3196,
+  "landmark": 99141
+ },
+ "MMX": {
+  "city": 2957,
+  "landmark": 99422
+ },
+ "MRS": {
+  "city": 881,
+  "landmark": 98590
+ },
+ "MST": {
+  "city": 1650,
+  "landmark": 98737
+ },
+ "MXP": {
+  "city": 1881,
+  "landmark": 98721
+ },
+ "NAP": {
+  "city": 1890,
+  "landmark": 98741
+ },
+ "NCE": {
+  "city": 926,
+  "landmark": 98616
+ },
+ "NCL": {
+  "city": 3259,
+  "landmark": 99128
+ },
+ "NOC": {
+  "city": 1712,
+  "landmark": 98706
+ },
+ "NQY": {
+  "city": 3261,
+  "landmark": 99165
+ },
+ "NRN": {
+  "city": 103864,
+  "landmark": 99650
+ },
+ "NTE": {
+  "city": 920,
+  "landmark": 403639
+ },
+ "NUE": {
+  "city": 1397,
+  "landmark": 98646
+ },
+ "NWI": {
+  "city": 3264,
+  "landmark": 99150
+ },
+ "NYO": {
+  "city": 2967,
+  "landmark": 99689
+ },
+ "OHD": {
+  "city": 2180,
+  "landmark": 98847
+ },
+ "OLB": {
+  "city": 2017,
+  "landmark": 98732
+ },
+ "OMR": {
+  "city": 2602,
+  "landmark": 99021
+ },
+ "OPO": {
+  "city": 2541,
+  "landmark": 98972
+ },
+ "ORK": {
+  "city": 1707,
+  "landmark": 98693
+ },
+ "ORY": {
+  "city": 938,
+  "landmark": 98597
+ },
+ "OSI": {
+  "city": 454,
+  "landmark": 403669
+ },
+ "OSL": {
+  "city": 2413,
+  "landmark": 99024
+ },
+ "OSR": {
+  "city": 477,
+  "landmark": 98506
+ },
+ "OTP": {
+  "city": 2594,
+  "landmark": 98999
+ },
+ "OUD": {
+  "city": 2293,
+  "landmark": 98975
+ },
+ "OVD": {
+  "city": 2833,
+  "landmark": 99117
+ },
+ "PEG": {
+  "city": 1904,
+  "landmark": 98718
+ },
+ "PFO": {
+  "city": 470,
+  "landmark": 98575
+ },
+ "PGF": {
+  "city": 946,
+  "landmark": 98604
+ },
+ "PIK": {
+  "city": 3152,
+  "landmark": 99624
+ },
+ "PIS": {
+  "city": 951,
+  "landmark": 98619
+ },
+ "PLQ": {
+  "city": 2174,
+  "landmark": 98837
+ },
+ "PMI": {
+  "city": 2741,
+  "landmark": 99078
+ },
+ "PMO": {
+  "city": 2045,
+  "landmark": 98748
+ },
+ "POZ": {
+  "city": 2483,
+  "landmark": 99001
+ },
+ "PRG": {
+  "city": 480,
+  "landmark": 98498
+ },
+ "PRN": {
+  "city": 105010,
+  "landmark": 402768
+ },
+ "PSA": {
+  "city": 1913,
+  "landmark": 98742
+ },
+ "PSR": {
+  "city": 1907,
+  "landmark": 403702
+ },
+ "PUY": {
+  "city": 456,
+  "landmark": 98618
+ },
+ "PVK": {
+  "city": 1592,
+  "landmark": 17901
+ },
+ "RAK": {
+  "city": 2291,
+  "landmark": 99022
+ },
+ "RBA": {
+  "city": 2294,
+  "landmark": 98909
+ },
+ "RDZ": {
+  "city": 975,
+  "landmark": 98615
+ },
+ "REG": {
+  "city": 1928,
+  "landmark": 98768
+ },
+ "REU": {
+  "city": 2842,
+  "landmark": 99060
+ },
+ "RHO": {
+  "city": 1593,
+  "landmark": 98685
+ },
+ "RIX": {
+  "city": 2167,
+  "landmark": 98788
+ },
+ "RJK": {
+  "city": 457,
+  "landmark": 98592
+ },
+ "RMF": {
+  "city": 550,
+  "landmark": 98517
+ },
+ "RMI": {
+  "city": 1932,
+  "landmark": 98744
+ },
+ "RMU": {
+  "city": 2829,
+  "landmark": 404755
+ },
+ "RVN": {
+  "city": 599,
+  "landmark": 98539
+ },
+ "RZE": {
+  "city": 2484,
+  "landmark": 404264
+ },
+ "SBZ": {
+  "city": 2608,
+  "landmark": 99015
+ },
+ "SCN": {
+  "city": 1459,
+  "landmark": 404317
+ },
+ "SCQ": {
+  "city": 2854,
+  "landmark": 99270
+ },
+ "SDR": {
+  "city": 2853,
+  "landmark": 99111
+ },
+ "SFT": {
+  "city": 2979,
+  "landmark": 404367
+ },
+ "SJJ": {
+  "city": 255,
+  "landmark": 402769
+ },
+ "SKG": {
+  "city": 1601,
+  "landmark": 98925
+ },
+ "SKP": {
+  "city": 2181,
+  "landmark": 98792
+ },
+ "SNN": {
+  "city": 1715,
+  "landmark": 98715
+ },
+ "SOF": {
+  "city": 325,
+  "landmark": 98642
+ },
+ "SPU": {
+  "city": 459,
+  "landmark": 98535
+ },
+ "STN": {
+  "city": 3243,
+  "landmark": 99124
+ },
+ "STR": {
+  "city": 1498,
+  "landmark": 98655
+ },
+ "SUF": {
+  "city": 1857,
+  "landmark": 98770
+ },
+ "SVG": {
+  "city": 2431,
+  "landmark": 98926
+ },
+ "SVQ": {
+  "city": 2856,
+  "landmark": 99222
+ },
+ "SZG": {
+  "city": 212,
+  "landmark": 98437
+ },
+ "SZY": {
+  "city": 107718,
+  "landmark": 404265
+ },
+ "SZZ": {
+  "city": 106426,
+  "landmark": 403414
+ },
+ "TAT": {
+  "city": 2632,
+  "landmark": 99100
+ },
+ "TFN": {
+  "city": 2749,
+  "landmark": 133125
+ },
+ "TFS": {
+  "city": 2749,
+  "landmark": 99668
+ },
+ "TGD": {
+  "city": 2285,
+  "landmark": 98911
+ },
+ "TIA": {
+  "city": 1,
+  "landmark": 98362
+ },
+ "TKU": {
+  "city": 607,
+  "landmark": 98626
+ },
+ "TLL": {
+  "city": 556,
+  "landmark": 98510
+ },
+ "TLS": {
+  "city": 1047,
+  "landmark": 98649
+ },
+ "TLV": {
+  "city": 1745,
+  "landmark": 98776
+ },
+ "TNG": {
+  "city": 2295,
+  "landmark": 98887
+ },
+ "TOS": {
+  "city": 106912,
+  "landmark": 99086
+ },
+ "TPS": {
+  "city": 2050,
+  "landmark": 403129
+ },
+ "TRD": {
+  "city": 2441,
+  "landmark": 98936
+ },
+ "TRF": {
+  "city": 2420,
+  "landmark": 402790
+ },
+ "TRN": {
+  "city": 1987,
+  "landmark": 98735
+ },
+ "TRS": {
+  "city": 1985,
+  "landmark": 98813
+ },
+ "TSF": {
+  "city": 1983,
+  "landmark": 98747
+ },
+ "TSR": {
+  "city": 2611,
+  "landmark": 99000
+ },
+ "TUF": {
+  "city": 1048,
+  "landmark": 98672
+ },
+ "TZL": {
+  "city": 256,
+  "landmark": 402773
+ },
+ "VAR": {
+  "city": 327,
+  "landmark": 98430
+ },
+ "VCE": {
+  "city": 1992,
+  "landmark": 98943
+ },
+ "VIE": {
+  "city": 214,
+  "landmark": 98396
+ },
+ "VLC": {
+  "city": 2871,
+  "landmark": 99135
+ },
+ "VNO": {
+  "city": 2175,
+  "landmark": 98978
+ },
+ "VRN": {
+  "city": 1994,
+  "landmark": 98738
+ },
+ "VST": {
+  "city": 2999,
+  "landmark": 99079
+ },
+ "WAW": {
+  "city": 2486,
+  "landmark": 98942
+ },
+ "WMI": {
+  "city": 2486,
+  "landmark": 99522
+ },
+ "WRO": {
+  "city": 2487,
+  "landmark": 98954
+ },
+ "ZAD": {
+  "city": 460,
+  "landmark": 98547
+ },
+ "ZAG": {
+  "city": 461,
+  "landmark": 98505
+ },
+ "ZAZ": {
+  "city": 2879,
+  "landmark": 99065
+ },
+ "ZTH": {
+  "city": 1604,
+  "landmark": 98769
+ }
+}

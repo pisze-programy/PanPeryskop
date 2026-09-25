@@ -198,7 +198,14 @@ struct ClusterEventPage: View {
                     ForEach(TripsSheetSection.sections(for: event)) { section in
                         sectionView(section)
                     }
-                    PartnerBannerSection(banners: PartnerBanner.travel) { url in
+                    PartnerBannerSection(
+                        banners: PartnerBanner.travel,
+                        carRental: CarRentalContext(
+                            iata: destination?.iata ?? "",
+                            from: planner.outbound?.date,
+                            to: planner.returning?.date
+                        )
+                    ) { url in
                         onOpenURL(url, .open)
                     }
                     priceFooter

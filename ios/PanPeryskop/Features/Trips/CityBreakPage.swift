@@ -153,7 +153,14 @@ struct CityBreakPage: View {
             )
             .padding(.top, Theme.Spacing.section)
         case .partners:
-            PartnerBannerSection(banners: PartnerBanner.travel) { url in
+            PartnerBannerSection(
+                banners: PartnerBanner.travel,
+                carRental: CarRentalContext(
+                    iata: reachableAirports.first?.iata ?? "",
+                    from: outbound?.date,
+                    to: returning?.date
+                )
+            ) { url in
                 browserItem = BrowserItem(url: url, access: .open)
             }
             .padding(.top, Theme.Spacing.section)

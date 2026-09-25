@@ -99,6 +99,9 @@ All notable changes to PanPeryskop. Format based on
 - The week starts on Monday, whatever the device region says.
 - The city thumbnails in the app bundle are lighter: they are always drawn
   smaller than the file, so the extra quality was dead weight.
+- A Revolut card leads the partner banners: a dark-to-blue gradient in the
+  brand colours, a referral link and the copy "Darmowa karta walutowa" /
+  "Revolut — Kurs przed płatnością, bez opłat!".
 
 ### Fixed
 

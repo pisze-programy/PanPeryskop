@@ -16,6 +16,18 @@ extension PartnerBanner {
     /// Colours sampled from the partners' own landing pages.
     static let travel: [PartnerBanner] = [
         PartnerBanner(
+            id: "revolut",
+            title: "Darmowa karta walutowa",
+            subtitle: "Revolut — Kurs przed płatnością, bez opłat!",
+            url: URL(string: "https://revolut.com/referral/?referral-code=krystikgo!SEP2-26-AR&geo-redirect")!,
+            gradient: [
+                Color(hex: 0x191C1F),
+                Color(hex: 0x1326FD),
+                Color(hex: 0x3D5CFF),
+            ],
+            foreground: .white
+        ),
+        PartnerBanner(
             id: "airhelp",
             title: "Opóźniony lub odwołany lot?",
             subtitle: "Uzyskaj nawet 600 € odszkodowania!",

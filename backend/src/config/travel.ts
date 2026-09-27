@@ -261,8 +261,6 @@ export const travel = {
     provider: 'qeeq',
     siteHost: 'https://www.qeeq.pl',
     searchPath: '/car/search',
-    landingPath: '/car/rental',
-    locale: 'pl',
     currency: 'PLN',
     pickupTime: '10:00',
     dropoffTime: '10:00',

@@ -11,10 +11,9 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 function airportUrl(entry: QeeqAirport, from?: string, to?: string): string {
   const cfg = CONFIG.travel.carRental;
-  const params = new URLSearchParams({ currency: cfg.currency, lang: cfg.locale });
+  const params = new URLSearchParams({ currency: cfg.currency });
   if (!from || !to || !DAY.test(from) || !DAY.test(to)) {
-    params.set('airport', String(entry.landmark));
-    return `${cfg.siteHost}${cfg.landingPath}?${params}`;
+    return `${cfg.siteHost}${cfg.searchPath}?${params}`;
   }
   params.set('pickup_landmark', String(entry.landmark));
   params.set('dropoff_landmark', String(entry.landmark));
@@ -32,6 +31,6 @@ function airportUrl(entry: QeeqAirport, from?: string, to?: string): string {
 export function carRentalUrl(iata: string, from?: string, to?: string): string {
   const cfg = CONFIG.travel.carRental;
   const entry = airports[iata.toUpperCase()];
-  if (!entry) return cfg.siteHost;
+  if (!entry) return `${cfg.siteHost}${cfg.searchPath}?${new URLSearchParams({ currency: cfg.currency })}`;
   return airportUrl(entry, from, to);
 }

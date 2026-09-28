@@ -20,7 +20,7 @@
 
 <p align="center">
   <a href="demo.mp4">
-    <img src="demo-preview.png" width="600" alt="Pan Peryskop Preview" />
+    <img src="demo-preview.jpg" width="600" alt="Pan Peryskop Preview" />
   </a>
 </p>
 

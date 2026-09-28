@@ -1,6 +1,7 @@
 import { CITY_ENTRIES, type CityEntry, type ImageCredit } from './cities';
 import { foldCity } from './airports';
 import { viatorConfigured, viatorNearestCity, viatorProductsForCity, viatorWindowFor, type ViatorEnv } from './viator';
+
 export interface CityPhoto {
   id: string;
   name: string;
@@ -8,6 +9,7 @@ export interface CityPhoto {
   lat: number;
   lng: number;
   costUsd: number;
+  population: number;
   nearby: string[];
   imageUrl: string;
   imageLargeUrl: string;
@@ -37,6 +39,7 @@ export function cityPhotoByCity(city: string): CityPhoto | null {
     lat: entry.lat,
     lng: entry.lng,
     costUsd: entry.costUsd,
+    population: entry.population,
     nearby: entry.nearby ?? [],
     imageUrl: entry.imageUrl,
     imageLargeUrl: entry.imageLargeUrl,
@@ -90,6 +93,7 @@ function toPhoto(entry: CityEntry, namePl: string): CityPhoto {
     lat: entry.lat,
     lng: entry.lng,
     costUsd: entry.costUsd,
+    population: entry.population,
     nearby: entry.nearby ?? [],
     imageUrl: entry.imageUrl,
     imageLargeUrl: entry.imageLargeUrl,
@@ -182,14 +186,23 @@ export function directionsUrl(from: Point, to: Point, mode: TravelMode): string 
 
 const STAY22_API = 'https://www.stay22.com/api/booking';
 const HOTELS_PER_CITY = 5;
-const BBOX_DELTA_LAT = 0.2;
-const BBOX_DELTA_LNG = 0.3;
 const USD_PLN = 3.65;
 
+// The app segment "Ekonomiczne": no star floor, guest score >= 60, price at
+// most costUsd / 15 per night. See _internal/hotel-season.md, section 4.
 export const ECONOMY_PRICE_DIVISOR = 15;
+export const ECONOMY_MIN_GUEST = 60;
 
 export function economyMaxNightlyUsd(costUsd: number): number {
   return Math.max(1, Math.round(costUsd / ECONOMY_PRICE_DIVISOR));
+}
+
+/** The Stay22 zoom for a city. The same rule as the iOS `staysZoomBase`: the
+ *  frame covers the built-up area and the window doubles per zoom step. */
+export function cityZoom(population: number): number {
+  const diameterKm = Math.max(1, Math.sqrt(Math.max(1, population)) / 55);
+  const steps = Math.round(Math.log2(diameterKm / 6.4));
+  return Math.min(13, Math.max(7, 11 - steps));
 }
 
 function nightsBetween(checkin: string, checkout: string): number {
@@ -204,6 +217,7 @@ interface Stay22Prices {
 
 interface Stay22Data {
   name?: string;
+  address?: string;
   stars?: number | null;
   ratingOn10?: string | number;
   reviewCount?: number;
@@ -221,6 +235,7 @@ interface Stay22Result {
 
 export interface HotelOffer {
   name: string;
+  address: string | null;
   stars: number | null;
   score: number;
   reviews: number;
@@ -231,6 +246,7 @@ export interface HotelOffer {
   thumb: string | null;
   lat: number;
   lng: number;
+  km: number;
 }
 
 export function toStayDate(iso: string): string {
@@ -246,7 +262,7 @@ export function parseStay22(text: string): Stay22Result[] {
   return parsed.results ?? [];
 }
 
-function parseHotel(result: Stay22Result): HotelOffer | null {
+function parseHotel(result: Stay22Result, center: Point): HotelOffer | null {
   const total = result.prices?.total;
   const data = result.data ?? {};
   const url = data.urlDirect ?? result.url;
@@ -255,6 +271,7 @@ function parseHotel(result: Stay22Result): HotelOffer | null {
   const [lat, lng] = result.latLng ?? [0, 0];
   return {
     name: data.name,
+    address: data.address ?? null,
     stars: typeof data.stars === 'number' ? data.stars : null,
     score: Number.isFinite(score) ? score : 0,
     reviews: data.reviewCount ?? 0,
@@ -265,6 +282,7 @@ function parseHotel(result: Stay22Result): HotelOffer | null {
     thumb: data.thumb ?? null,
     lat,
     lng,
+    km: Math.round(haversineKm(center.lat, center.lng, lat, lng)),
   };
 }
 
@@ -304,8 +322,10 @@ async function writeStayCache(db: D1Database, key: string, value: HotelOffer[]):
     .catch(() => { /* best effort */ });
 }
 
-async function stay22Hotels(env: Env, point: Point, checkin: string, checkout: string, onMiss?: () => boolean): Promise<HotelOffer[]> {
-  const cacheKey = `stay:${point.lat.toFixed(3)}:${point.lng.toFixed(3)}:${checkin}:${checkout}`;
+async function stay22Hotels(
+  env: Env, point: Point, checkin: string, checkout: string, zoom: number, onMiss?: () => boolean,
+): Promise<HotelOffer[]> {
+  const cacheKey = `stay:${point.lat.toFixed(3)}:${point.lng.toFixed(3)}:${checkin}:${checkout}:z${zoom}`;
   const cached = await readStayCache(env.DB, cacheKey);
   if (cached) return cached;
   if (onMiss && !onMiss()) return [];
@@ -313,10 +333,7 @@ async function stay22Hotels(env: Env, point: Point, checkin: string, checkout: s
   const params = new URLSearchParams({
     centerlat: String(point.lat),
     centerlng: String(point.lng),
-    nelat: String(point.lat + BBOX_DELTA_LAT),
-    nelng: String(point.lng + BBOX_DELTA_LNG),
-    swlat: String(point.lat - BBOX_DELTA_LAT),
-    swlng: String(point.lng - BBOX_DELTA_LNG),
+    zoom: String(zoom),
     width: '1400',
     height: '900',
     checkin: toStayDate(checkin),
@@ -333,7 +350,7 @@ async function stay22Hotels(env: Env, point: Point, checkin: string, checkout: s
     const response = await fetch(`${STAY22_API}?${params.toString()}`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!response.ok) return [];
     const hotels = parseStay22(await response.text())
-      .map(parseHotel)
+      .map((result) => parseHotel(result, point))
       .filter((hotel): hotel is HotelOffer => hotel !== null)
       .sort((a, b) => a.total - b.total);
     await writeStayCache(env.DB, cacheKey, hotels);
@@ -343,15 +360,47 @@ async function stay22Hotels(env: Env, point: Point, checkin: string, checkout: s
   }
 }
 
+/** Standard hotel ranking: a confidence-weighted score, then value for money,
+ *  then distance. Booking uses the same shape (many mid-score reviews beat few
+ *  high-score reviews; closer to the centre beats farther). */
+const PRIOR_SCORE = 8.0;
+const PRIOR_WEIGHT = 50;
+
+export function qualityScore(score: number, reviews: number): number {
+  return (score * reviews + PRIOR_SCORE * PRIOR_WEIGHT) / (reviews + PRIOR_WEIGHT);
+}
+
+/** The app segment "Ekonomiczne" as real hotels: guest score >= 60, price at
+ *  most `maxNightlyUsd` per night. No km filter; the zoom covers the city. */
 export async function fetchCityHotels(
-  env: Env, point: Point, checkin: string, checkout: string, maxNightlyUsd?: number, onMiss?: () => boolean,
+  env: Env, point: Point, checkin: string, checkout: string, zoom: number, maxNightlyUsd?: number, onMiss?: () => boolean,
 ): Promise<HotelOffer[]> {
   const nights = nightsBetween(checkin, checkout);
-  const all = await stay22Hotels(env, point, checkin, checkout, onMiss);
+  const all = await stay22Hotels(env, point, checkin, checkout, zoom, onMiss);
+  const rated = all.filter((hotel) => hotel.reviews === 0 || hotel.score >= 6);
+  const base = rated.length >= Math.min(3, all.length) ? rated : all;
   const capPln = maxNightlyUsd ? maxNightlyUsd * USD_PLN : null;
-  const within = capPln ? all.filter((hotel) => hotel.total / nights <= capPln) : all;
-  const pool = within.length >= Math.min(3, all.length) ? within : all;
-  return pool.slice(0, HOTELS_PER_CITY);
+  const within = capPln ? base.filter((hotel) => hotel.total / nights <= capPln) : base;
+  const pool = within.length >= Math.min(3, base.length) ? within : base;
+  return rankHotels(pool).slice(0, HOTELS_PER_CITY);
+}
+
+/** Quality first, then value, then distance. `hotel.total` is the whole stay,
+ *  so a long stay is not punished by its total. */
+export function rankHotels(hotels: HotelOffer[]): HotelOffer[] {
+  const priced = hotels.map((hotel) => hotel.total).sort((a, b) => a - b);
+  const median = priced.length > 0 ? priced[Math.floor(priced.length / 2)] : 0;
+  const value = (hotel: HotelOffer) => (median > 0 ? Math.min(2, hotel.total / median) : 1);
+  return [...hotels].sort((a, b) => {
+    const qa = qualityScore(a.score, a.reviews);
+    const qb = qualityScore(b.score, b.reviews);
+    if (Math.abs(qa - qb) > 0.15) return qb - qa;
+    const va = value(a);
+    const vb = value(b);
+    if (Math.abs(va - vb) > 0.05) return va - vb;
+    if (a.km !== b.km) return a.km - b.km;
+    return qb - qa;
+  });
 }
 
 const EVENT_TAGS = ['pilka-nozna', 'biegi'];

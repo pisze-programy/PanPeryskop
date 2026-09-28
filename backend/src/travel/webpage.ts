@@ -4,7 +4,7 @@ import { fetchRyanairMonth, fetchWizzairMonth, type FlightCell } from './flights
 import { staysWidgetUrl } from './stay22';
 import { carRentalUrl } from './qeeq';
 import {
-  cityForAirport, cityPhotoByCity, directionsUrl, economyMaxNightlyUsd, eventsInWindow, fetchCityAttractions,
+  cityForAirport, cityPhotoByCity, cityZoom, directionsUrl, economyMaxNightlyUsd, eventsInWindow, fetchCityAttractions,
   fetchCityHotels, fetchCityImage,
   type Attraction, type CityPhoto, type EventOffer, type HotelOffer, type Point,
 } from './citybreak';
@@ -51,6 +51,7 @@ export const WEEKEND_WINDOWS: WeekendWindow[] = [
 ];
 
 const WEEKENDS = 13;
+const WEB_PROVIDER_PACE_MS = 300;
 const PRICE_CAP = 800;
 const PER_WINDOW = 12;
 const MAX_OPTIONS_PER_PLACE = 6;
@@ -96,6 +97,8 @@ export interface HotelPrice {
   lat: number;
   lng: number;
   url: string;
+  address: string | null;
+  km: number;
 }
 
 export interface Offer {
@@ -171,8 +174,8 @@ async function routeFares(
   for (const month of months) {
     try {
       const window = carrier === 'ryanair'
-        ? await fetchRyanairMonth(origin, destination.iata, month, db)
-        : await fetchWizzairMonth(origin, destination.iata, month, db);
+        ? await fetchRyanairMonth(origin, destination.iata, month, db, WEB_PROVIDER_PACE_MS)
+        : await fetchWizzairMonth(origin, destination.iata, month, db, WEB_PROVIDER_PACE_MS);
       out.push(...window.outbound);
       back.push(...window.returning);
     } catch {
@@ -312,16 +315,18 @@ async function enrichPlace(env: Env, place: Place, budget: { left: number }): Pr
     }
   }
   const maxNightlyUsd = photo ? economyMaxNightlyUsd(photo.costUsd) : undefined;
+  const zoom = cityZoom(photo?.population ?? 0);
   let firstHotel: HotelOffer | null = null;
   let placeHotels: HotelOffer[] = [];
   const takeBudget = () => (budget.left > 0 ? (budget.left--, true) : false);
   for (const option of place.options.slice(0, HOTEL_OPTIONS_PER_PLACE)) {
     if (budget.left <= 0) break;
-    const hotels = await fetchCityHotels(env, center, option.start, option.end, maxNightlyUsd, takeBudget);
+    const hotels = await fetchCityHotels(env, center, option.start, option.end, zoom, maxNightlyUsd, takeBudget);
     const [hotel] = hotels;
     if (!hotel) continue;
     option.hotel = {
       name: hotel.name, total: hotel.total, perPerson: hotel.perPerson, lat: hotel.lat, lng: hotel.lng, url: hotel.url,
+      address: hotel.address, km: hotel.km,
     };
     if (!firstHotel) firstHotel = hotel;
     if (placeHotels.length === 0) placeHotels = hotels;
@@ -611,7 +616,9 @@ ${events}${attractions}${nearbyLinks}${renderDirections(deal?.directions ?? [])}
 
 function renderHotel(hotel: HotelOffer): string {
   const stars = hotel.stars ? `${hotel.stars}* - ` : '';
-  return `          <li><a href="${esc(hotel.url)}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(hotel.name)}</a><span class="muted"> ${stars}${hotel.score.toFixed(1)}/10 (${hotel.reviews}) - od ${hotel.perPerson} zł/os</span></li>`;
+  const reviews = hotel.reviews > 0 ? `${hotel.score.toFixed(1)}/10 z ${hotel.reviews} opinii` : 'bez opinii';
+  const km = hotel.km > 0 ? ` - ${hotel.km} km od centrum` : '';
+  return `          <li><a href="${esc(hotel.url)}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(hotel.name)}</a><span class="muted"> ${stars}${reviews} - od ${hotel.perPerson} zł/os${km}</span></li>`;
 }
 
 export function slugify(text: string): string {
@@ -626,6 +633,11 @@ export function slugify(text: string): string {
 export function destinationSlug(origin: OriginPage, place: Place): string {
   const citySlug = origin.slug.replace('tanie-loty-z-', '');
   return `tanie-loty-do-${slugify(place.cityPl ?? place.city)}-z-${citySlug}`;
+}
+
+function destinationSlugFor(origin: OriginPage, cityPlOrName: string): string {
+  const citySlug = origin.slug.replace('tanie-loty-z-', '');
+  return `tanie-loty-do-${slugify(cityPlOrName)}-z-${citySlug}`;
 }
 
 function destinationFaq(origin: OriginPage, name: string): { q: string; a: string }[] {
@@ -824,7 +836,8 @@ h2{font-size:19px;margin-top:30px;border-bottom:1px solid #eee;padding-bottom:6p
 .acard__name{font-weight:600;font-size:14px;color:#141414}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}`;
 
-function docHead(title: string, description: string, url: string, image: string | null, jsonLd: string): string {
+function docHead(title: string, description: string, url: string, image: string | null, jsonLd: string, noindex = false): string {
+  const robots = noindex ? 'noindex,follow' : 'index,follow,max-image-preview:large';
   return `<!doctype html>
 <html lang="pl">
 <head>
@@ -832,14 +845,15 @@ function docHead(title: string, description: string, url: string, image: string 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)} | Pan Peryskop</title>
 <meta name="description" content="${escapeHtml(description)}">
-<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="robots" content="${robots}">
 <link rel="canonical" href="${url}">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(description)}">
 <meta property="og:url" content="${url}">
 <meta property="og:locale" content="pl_PL">
-${image ? `<meta property="og:image" content="${image}">` : ''}
+<meta name="twitter:card" content="summary_large_image">
+${image ? `<meta property="og:image" content="${esc(image)}">` : ''}
 <script type="application/ld+json">${jsonLd}</script>
 <style>${DOC_CSS}</style>
 </head>
@@ -866,7 +880,8 @@ export function renderMonthPage(origin: OriginPage, places: Place[], featured: F
   const title = `Tanie loty z ${origin.genitive} - ${mp.nominative}`;
   const url = `${PUBLIC_BASE}/${origin.slug}/${mp.slug}`;
   const graph = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: title, url, inLanguage: 'pl-PL' };
-  return `${docHead(title, `${title}. Najtańsze kierunki, wydarzenia i atrakcje. Ceny za osobę.`, url, null, JSON.stringify(graph).replace(/</g, '\\u003c'))}
+  const past = key < new Date().toISOString().slice(0, 7);
+  return `${docHead(title, `${title}. Najtańsze kierunki, wydarzenia i atrakcje. Ceny za osobę.`, url, null, JSON.stringify(graph).replace(/</g, '\\u003c'), past)}
 ${renderHeader(origin)}
 <main>
 <h1>${escapeHtml(title)}</h1>
@@ -897,7 +912,7 @@ export function renderDealPage(origin: OriginPage, place: Place, deal: FeaturedD
   const events = deal && deal.events.length ? `<h2>Wydarzenia</h2>\n<ul class="plain">${deal.events.map(renderEvent).join('')}</ul>` : '';
   const directions = deal && deal.directions.length ? `<h2>Jak dojechać</h2>\n<div>${deal.directions.map((link) => `<a href="${esc(link.url)}" rel="nofollow noopener" target="_blank">${escapeHtml(link.label)}</a>`).join(' ')}</div>` : '';
   const graph = { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url, inLanguage: 'pl-PL' };
-  return `${docHead(title, `${title}. Lot, hotel i atrakcje. Cena za osobę.`, url, place.imageLargeUrl, JSON.stringify(graph).replace(/</g, '\\u003c'))}
+  return `${docHead(title, `${title}. Lot, hotel i atrakcje. Cena za osobę.`, url, place.imageLargeUrl, JSON.stringify(graph).replace(/</g, '\\u003c'), true)}
 ${renderHeader(origin)}
 <h1>${escapeHtml(title)}</h1>
 <p class="muted">Najtańszy termin w tym miesiącu. Cena łączna to lot plus połowa noclegu za dwie osoby.</p>
@@ -915,11 +930,16 @@ ${renderFooter()}
 </html>`;
 }
 
-export function renderConnectionsPage(origin: OriginPage, places: Place[], generatedAt: string): string {
+export function renderConnectionsPage(origin: OriginPage, places: Place[], generatedAt: string, extra: { slug: string; label: string }[] = []): string {
   const rows = places.map((place) => {
     const best = place.options[0];
     return `      <li><a href="/${destinationSlug(origin, place)}">${escapeHtml(place.cityPl ?? place.city)}</a><span class="muted"> od ${Math.round(best.price)} zł/os za lot (${best.iata} ${best.carrier})</span></li>`;
   }).join('\n');
+  const known = new Set(places.map((place) => destinationSlug(origin, place)));
+  const extras = extra
+    .filter((item) => !known.has(item.slug))
+    .map((item) => `      <li><a href="/${item.slug}">${escapeHtml(item.label)}</a></li>`)
+    .join('\n');
   const title = `Wszystkie połączenia z ${origin.genitive}`;
   const url = `${PUBLIC_BASE}/${origin.slug}/polaczenia`;
   const graph = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: title, url, inLanguage: 'pl-PL' };
@@ -929,6 +949,7 @@ ${renderHeader(origin)}
 <p class="muted">Wszystkie kierunki i najtańsze ceny lotów za osobę.</p>
 <ul class="plain">
 ${rows}
+${extras}
 </ul>
 ${renderFooter()}
 <p class="muted">Wygenerowano ${escapeHtml(generatedAt)}.</p>
@@ -1067,9 +1088,10 @@ function buildJsonLd(origin: OriginPage, sections: WindowSection[], places: Plac
     name: `${origin.name} - ${offer.city}, ${nightsLabel(offer.nights)}`,
     price: offer.hotel ? Math.round(offer.price + offer.hotel.perPerson) : Math.round(offer.price),
     priceCurrency: 'PLN',
-    url: offer.flightUrl,
+    url: `${PUBLIC_BASE}/${destinationSlugFor(origin, place.city)}`,
+    priceValidUntil: offer.end,
+    availability: 'https://schema.org/InStock',
     validFrom: offer.start,
-    validThrough: offer.end,
     description: offer.hotel ? 'Cena za osobę, lot i nocleg' : 'Cena za osobę, sam lot',
   })));
   const graph = [

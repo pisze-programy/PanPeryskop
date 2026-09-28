@@ -36,7 +36,9 @@ async function upsertDoc(env: Env, slug: string, originId: string, kind: string,
       `INSERT INTO content_docs (slug, origin_id, kind, bytes, hash, updated_at)
        VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(slug) DO UPDATE SET origin_id = excluded.origin_id, kind = excluded.kind,
-         bytes = excluded.bytes, hash = excluded.hash, updated_at = excluded.updated_at`,
+         bytes = excluded.bytes,
+         updated_at = CASE WHEN content_docs.hash = excluded.hash THEN content_docs.updated_at ELSE excluded.updated_at END,
+         hash = excluded.hash`,
     )
     .bind(slug, originId, kind, bytes, hash, Date.now())
     .run();
@@ -111,7 +113,9 @@ export async function storeOriginBundle(env: Env, origin: OriginPage): Promise<B
   }
 
   const connSlug = `${origin.slug}/polaczenia`;
-  const connPut = await putHtml(env, connSlug, renderConnectionsPage(origin, places, data.generatedAt));
+  const allDestSlugs = await destinationDocs(env, origin.id);
+  const extra = allDestSlugs.map((slug) => ({ slug, label: labelFromSlug(origin, slug) }));
+  const connPut = await putHtml(env, connSlug, renderConnectionsPage(origin, places, data.generatedAt, extra));
   await upsertDoc(env, connSlug, origin.id, 'connections', connPut.bytes, connPut.hash);
   urls.push(`${PUBLIC_BASE}/${connSlug}`);
 
@@ -132,6 +136,22 @@ async function docHashes(env: Env, originId: string): Promise<Map<string, string
     .bind(originId)
     .all<{ slug: string; hash: string }>();
   return new Map((results ?? []).map((row) => [row.slug, row.hash ?? '']));
+}
+
+/** Every destination doc for the origin, so the connections page links them all. */
+async function destinationDocs(env: Env, originId: string): Promise<string[]> {
+  const { results } = await env.DB
+    .prepare("SELECT slug FROM content_docs WHERE origin_id = ? AND kind = 'destination'")
+    .bind(originId)
+    .all<{ slug: string }>();
+  return (results ?? []).map((row) => row.slug);
+}
+
+function labelFromSlug(origin: OriginPage, slug: string): string {
+  const tail = slug.slice(slug.lastIndexOf('-do-') + 4);
+  const cut = tail.lastIndexOf(`-z-${origin.slug.replace('tanie-loty-z-', '')}`);
+  const city = cut > 0 ? tail.slice(0, cut) : tail;
+  return city.charAt(0).toUpperCase() + city.slice(1);
 }
 
 export interface ContentDoc {
@@ -192,11 +212,24 @@ export interface DocEntry {
 
 export async function docEntries(env: Env, base: string): Promise<DocEntry[]> {
   const rows = await docs(env);
-  return rows.map((row) => ({
-    slug: row.slug,
-    url: `${base}/${row.slug}`,
-    lastmod: new Date(row.updated_at).toISOString().slice(0, 10),
-  }));
+  const pastMonth = new Date().toISOString().slice(0, 7);
+  return rows
+    .filter((row) => row.kind !== 'deal')
+    .filter((row) => row.kind !== 'month' || monthKeyOf(row.slug) >= pastMonth)
+    .map((row) => ({
+      slug: row.slug,
+      url: `${base}/${row.slug}`,
+      lastmod: new Date(row.updated_at).toISOString().slice(0, 10),
+    }));
+}
+
+function monthKeyOf(slug: string): string {
+  const months = ['styczen', 'luty', 'marzec', 'kwiecien', 'maj', 'czerwiec', 'lipiec', 'sierpien', 'wrzesien', 'pazdziernik', 'listopad', 'grudzien'];
+  const tail = slug.split('/').slice(-1)[0];
+  const match = tail.match(/^([a-z]+)-(\d{4})$/);
+  if (!match) return '9999-99';
+  const idx = months.indexOf(match[1]);
+  return idx < 0 ? '9999-99' : `${match[2]}-${String(idx + 1).padStart(2, '0')}`;
 }
 
 export async function readStoredPageMeta(env: Env, slug: string): Promise<{ html: string; etag: string; lastModified: string } | null> {

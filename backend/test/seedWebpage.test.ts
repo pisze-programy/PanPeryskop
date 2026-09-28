@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { weekendAnchors, windowMonths, cheapestOn, routePrice, renderPage, formatRange, formatDay, WEEKEND_WINDOWS, type Offer } from '../src/travel/webpage';
-import { toStayDate, parseStay22, directionsUrl, economyMaxNightlyUsd, cityForAirport } from '../src/travel/citybreak';
+import { toStayDate, parseStay22, directionsUrl, economyMaxNightlyUsd, cityForAirport, cityZoom, qualityScore, rankHotels, type HotelOffer } from '../src/travel/citybreak';
 import type { FlightCell } from '../src/travel/flightsApi';
 
 function cell(date: string, price: number | null): FlightCell {
@@ -76,7 +76,7 @@ test('renderPage: an offer with a hotel shows the hotel name', () => {
     start: '2026-10-23', end: '2026-10-25', nights: 2, price: 200,
     lat: 49.45, lng: 2.35, imageUrl: null, imageLargeUrl: null, imageCredit: null,
     flightUrl: 'https://api.panperyskop.app/r/abc', stayUrl: 'https://api.panperyskop.app/r/def', carUrl: 'https://api.panperyskop.app/r/ghi',
-    hotel: { name: 'Hotel Test', total: 240, perPerson: 120, lat: 48.8, lng: 2.3, url: 'https://www.booking.com/hotel/test' },
+    hotel: { name: 'Hotel Test', total: 240, perPerson: 120, lat: 48.8, lng: 2.3, url: 'https://www.booking.com/hotel/test', address: 'Rue de Paris', km: 2 },
   };
   const html = renderPage({
     origin: { id: 'poznan', name: 'Poznań', genitive: 'Poznania', slug: 'tanie-loty-z-poznania', iata: 'POZ' },
@@ -131,4 +131,28 @@ test('cityForAirport: uses the curated airport list first', () => {
   assert.equal(cityForAirport('Bergamo', 45.67, 9.70, 'BGY')?.namePl, 'Mediolan');
   assert.equal(cityForAirport('Charleroi', 50.46, 4.45, 'CRL')?.name, 'Brussels');
   assert.equal(cityForAirport('Beauvais', 49.45, 2.11, 'BVA')?.namePl, 'Paryż');
+});
+
+test('cityZoom: matches the iOS staysZoomBase rule', () => {
+  assert.equal(cityZoom(9378375), 8);
+  assert.equal(cityZoom(540000), 10);
+  assert.equal(cityZoom(124398), 11);
+  assert.ok(cityZoom(0) >= 7 && cityZoom(0) <= 13);
+});
+
+test('qualityScore: many mid scores beat few high scores', () => {
+  assert.ok(qualityScore(8.7, 1090) > qualityScore(9.7, 3));
+});
+
+function hotel(name: string, score: number, reviews: number, total: number, km: number): HotelOffer {
+  return { name, address: null, stars: null, score, reviews, type: '', total, perPerson: Math.round(total / 2), url: 'u', thumb: null, lat: 0, lng: 0, km };
+}
+
+test('rankHotels: quality first, not the cheapest', () => {
+  const ranked = rankHotels([
+    hotel('Numa', 9.7, 3, 3847, 0.5),
+    hotel('Italianway', 8.7, 1090, 3187, 0.8),
+    hotel('EasyTopStay', 8.7, 127, 2642, 1.2),
+  ]);
+  assert.equal(ranked[0].name, 'Italianway');
 });

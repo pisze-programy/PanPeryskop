@@ -37,11 +37,11 @@ export interface FlightStation {
 
 
 /** Raw farefinder GET. 404 → null (no such route); any other non-2xx throws. */
-async function fetchFareJson(url: string, timeoutMs: number = CONFIG.travel.flights.timeoutMs): Promise<any | null> {
+async function fetchFareJson(url: string, timeoutMs: number = CONFIG.travel.flights.timeoutMs, paceMs = 0): Promise<any | null> {
   const res = await fetchWithRetry(() => fetch(url, {
     headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'application/json' },
     signal: AbortSignal.timeout(timeoutMs),
-  }));
+  }), transientStatus, paceMs);
   if (res.status === 404) return null;
   if (res.status === 429 || res.status >= 500) {
     throw new Error(`Ryanair farefinder ${res.status}`);
@@ -56,15 +56,15 @@ const REQUEST_ATTEMPTS = 3;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Keep the provider call rate low. A single timer serializes every real HTTP
-// call (including retries), so parallel jobs cannot burst the provider. A cache
-// hit never reaches this gate.
-const PROVIDER_PACE_MS = 300;
+// A caller can ask for a low provider rate. The pace is a per-call parameter,
+// never global state: the iOS app path stays fast, and only content generation
+// opts in. The gate serializes the paced calls of one caller.
 let providerGate: Promise<void> = Promise.resolve();
 
-function paceProvider(): Promise<void> {
+function paceProvider(paceMs: number): Promise<void> {
+  if (paceMs <= 0) return Promise.resolve();
   const next = providerGate.then(async () => {
-    await sleep(PROVIDER_PACE_MS);
+    await sleep(paceMs);
   });
   providerGate = next.then(() => undefined, () => undefined);
   return next;
@@ -74,10 +74,10 @@ function transientStatus(res: Response): boolean {
   return res.status === 429 || res.status >= 500;
 }
 
-async function fetchWithRetry(makeRequest: () => Promise<Response>, isTransient = transientStatus): Promise<Response> {
+async function fetchWithRetry(makeRequest: () => Promise<Response>, isTransient = transientStatus, paceMs = 0): Promise<Response> {
   let last: Response | null = null;
   for (let attempt = 1; ; attempt++) {
-    await paceProvider();
+    await paceProvider(paceMs);
     try {
       last = await makeRequest();
       if (!isTransient(last) || attempt >= REQUEST_ATTEMPTS) return last;
@@ -165,10 +165,11 @@ export async function fetchRyanairAvailabilities(db: D1Database, origin: string,
   return Array.isArray(data) ? data.filter((d): d is string => typeof d === 'string') : [];
 }
 
-/** Per-day cheapest fare for (origin,dest) in `month` (YYYY-MM-01), cached. */
-export async function fetchRyanairCheapestPerDay(db: D1Database, origin: string, dest: string, month: string): Promise<Map<string, CheapestDay>> {
+/** Per-day cheapest fare for (origin,dest) in `month` (YYYY-MM-01), cached.
+ *  `paceMs` is only set by content generation; the app path leaves it 0. */
+export async function fetchRyanairCheapestPerDay(db: D1Database, origin: string, dest: string, month: string, paceMs = 0): Promise<Map<string, CheapestDay>> {
   const data = await cachedJson(db, `price:${origin}:${dest}:${month}`, CONFIG.travel.flights.priceTtlMs, () =>
-    fetchFareJson(`${CONFIG.travel.flights.fareBase}/${origin}/${dest}/cheapestPerDay?market=pl-pl&currency=PLN&outboundMonthOfDate=${month}`));
+    fetchFareJson(`${CONFIG.travel.flights.fareBase}/${origin}/${dest}/cheapestPerDay?market=pl-pl&currency=PLN&outboundMonthOfDate=${month}`, CONFIG.travel.flights.timeoutMs, paceMs));
   const fares = data?.outbound?.fares;
   if (!Array.isArray(fares)) return new Map();
   const out = new Map<string, CheapestDay>();
@@ -236,10 +237,11 @@ export async function fetchRyanairWindow(origin: string, dest: string, eventDay:
   return liveRyanairWindow(db, origin, dest, eventDay);
 }
 
-/** Every day of `month` (YYYY-MM-01), both directions. Two provider calls. */
-export async function fetchRyanairMonth(origin: string, dest: string, month: string, db: D1Database): Promise<FlightWindow> {
-  const outPrices = await fetchRyanairCheapestPerDay(db, origin, dest, month);
-  const retPrices = await fetchRyanairCheapestPerDay(db, dest, origin, month);
+/** Every day of `month` (YYYY-MM-01), both directions. Two provider calls.
+ *  `paceMs` is only set by content generation; the app path leaves it 0. */
+export async function fetchRyanairMonth(origin: string, dest: string, month: string, db: D1Database, paceMs = 0): Promise<FlightWindow> {
+  const outPrices = await fetchRyanairCheapestPerDay(db, origin, dest, month, paceMs);
+  const retPrices = await fetchRyanairCheapestPerDay(db, dest, origin, month, paceMs);
   return buildMonthWindow(month, (day) => buildCell(day, outPrices), (day) => buildCell(day, retPrices));
 }
 
@@ -271,10 +273,10 @@ async function dropCachedJson(db: D1Database, key: string): Promise<void> {
   await db.prepare('DELETE FROM flight_cache WHERE cache_key = ?').bind(key).run().catch(() => { /* best effort */ });
 }
 
-async function wizzairApiBase(db: D1Database): Promise<string> {
+async function wizzairApiBase(db: D1Database, paceMs = 0): Promise<string> {
   const cfg = CONFIG.travel.flights.wizzair;
   const version = await cachedJson(db, WIZZAIR_VERSION_KEY, cfg.versionTtlMs, async () => {
-    await paceProvider();
+    await paceProvider(paceMs);
     const res = await fetch(cfg.pageUrl, {
       headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'text/html' },
       signal: AbortSignal.timeout(CONFIG.travel.flights.timeoutMs * 4),
@@ -285,7 +287,7 @@ async function wizzairApiBase(db: D1Database): Promise<string> {
   return `${cfg.apiHost}/${typeof version === 'string' ? version : cfg.apiVersion}/Api`;
 }
 
-async function postWizzairTimetable(apiBase: string, origin: string, dest: string, fromDay: string, toDay: string, timeoutMs: number = CONFIG.travel.flights.timeoutMs): Promise<Response> {
+async function postWizzairTimetable(apiBase: string, origin: string, dest: string, fromDay: string, toDay: string, timeoutMs: number = CONFIG.travel.flights.timeoutMs, paceMs = 0): Promise<Response> {
   const body = {
     flightList: [
       { departureStation: origin, arrivalStation: dest, from: fromDay, to: toDay },
@@ -296,7 +298,6 @@ async function postWizzairTimetable(apiBase: string, origin: string, dest: strin
     childCount: 0,
     infantCount: 0,
   };
-  await paceProvider();
   return await fetchWithRetry(() => fetch(`${apiBase}/search/timetable`, {
     method: 'POST',
     headers: {
@@ -308,11 +309,11 @@ async function postWizzairTimetable(apiBase: string, origin: string, dest: strin
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
-  }));
+  }), transientStatus, paceMs);
 }
 
-async function fetchWizzairTimetable(db: D1Database, origin: string, dest: string, fromDay: string, toDay: string): Promise<WizzairTimetable> {
-  const attempt = async (): Promise<Response> => await postWizzairTimetable(await wizzairApiBase(db), origin, dest, fromDay, toDay);
+async function fetchWizzairTimetable(db: D1Database, origin: string, dest: string, fromDay: string, toDay: string, paceMs = 0): Promise<WizzairTimetable> {
+  const attempt = async (): Promise<Response> => await postWizzairTimetable(await wizzairApiBase(db, paceMs), origin, dest, fromDay, toDay, CONFIG.travel.flights.timeoutMs, paceMs);
   let res = await attempt();
   if (res.status === 404 || res.status >= 500) {
     await dropCachedJson(db, WIZZAIR_VERSION_KEY);
@@ -443,18 +444,18 @@ export function mergeWizzairMonths(months: WizzairTimetable[]): WizzairTimetable
   };
 }
 
-async function wizzairMonth(db: D1Database, origin: string, dest: string, month: string): Promise<WizzairTimetable> {
+async function wizzairMonth(db: D1Database, origin: string, dest: string, month: string, paceMs = 0): Promise<WizzairTimetable> {
   const cfg = CONFIG.travel.flights;
   const key = `wizz:${origin}:${dest}:${month}`;
   const cached = await cachedJson(db, key, cfg.wizzair.windowTtlMs, async () =>
-    await fetchWizzairTimetable(db, origin, dest, month, addDaysWarsaw(month, 30)), cfg.failureTtlMs);
+    await fetchWizzairTimetable(db, origin, dest, month, addDaysWarsaw(month, 30), paceMs), cfg.failureTtlMs);
   return (cached ?? {}) as WizzairTimetable;
 }
 
-async function cachedWizzairTimetable(db: D1Database, origin: string, dest: string, eventDay: string): Promise<WizzairTimetable> {
+async function cachedWizzairTimetable(db: D1Database, origin: string, dest: string, eventDay: string, paceMs = 0): Promise<WizzairTimetable> {
   const months = monthsInWindow(eventDay);
   const loaded: WizzairTimetable[] = [];
-  for (const month of months) loaded.push(await wizzairMonth(db, origin, dest, month));
+  for (const month of months) loaded.push(await wizzairMonth(db, origin, dest, month, paceMs));
   return mergeWizzairMonths(loaded);
 }
 
@@ -462,9 +463,10 @@ export async function fetchWizzairWindow(origin: string, dest: string, eventDay:
   return buildWizzairWindow(await cachedWizzairTimetable(db, origin, dest, eventDay), eventDay, origin, dest);
 }
 
-/** Every day of `month` (YYYY-MM-01), both directions. One provider call. */
-export async function fetchWizzairMonth(origin: string, dest: string, month: string, db: D1Database): Promise<FlightWindow> {
-  const data = await wizzairMonth(db, origin, dest, month);
+/** Every day of `month` (YYYY-MM-01), both directions. One provider call.
+ *  `paceMs` is only set by content generation; the app path leaves it 0. */
+export async function fetchWizzairMonth(origin: string, dest: string, month: string, db: D1Database, paceMs = 0): Promise<FlightWindow> {
+  const data = await wizzairMonth(db, origin, dest, month, paceMs);
   if (data.noMarket) return { outbound: [], returning: [] };
   const days = monthDays(month);
   const out = resolveStation(data.outboundFlights ?? [], origin, dest);

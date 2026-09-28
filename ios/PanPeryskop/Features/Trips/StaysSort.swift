@@ -4,10 +4,12 @@ struct StaysSort: Equatable {
     static let nightly = "nightly"
     static let total = "total"
 
+    var adults: Int = 1
     var priceper: String = nightly
     var minstars: Int?
     var minguest: Int?
 
+    static let adultOptions: [Int] = [1, 2]
     static let priceOptions: [(String, String)] = [
         (nightly, "Za noc"),
         (total, "Za całość"),
@@ -25,6 +27,6 @@ struct StaysSort: Equatable {
     ]
 
     var isActive: Bool {
-        priceper != Self.nightly || minstars != nil || minguest != nil
+        adults != 1 || priceper != Self.nightly || minstars != nil || minguest != nil
     }
 }

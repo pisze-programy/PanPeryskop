@@ -24,6 +24,21 @@ struct TravelCity: Codable, Identifiable, Equatable {
     let airports: [String]
     let reachable: Bool
     let connections: [CityConnection]
+    let season: [CitySeasonMonth]?
+
+    var seasonMonths: [CitySeasonMonth] { season ?? [] }
+}
+
+struct CitySeasonMonth: Codable, Equatable, Identifiable {
+    let month: Int
+    let nights: Int
+    let index: Double
+    let tempC: Double
+    let precipMm: Double
+    let sun: Double
+    let weather: Int
+
+    var id: Int { month }
 }
 
 struct CityFacts: Codable, Equatable {

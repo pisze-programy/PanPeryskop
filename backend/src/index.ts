@@ -13,6 +13,7 @@ import {clientErrorRoutes} from './api/clientErrors';
 import {appleEventsRoutes} from './api/appleEvents';
 import {reportsRoutes} from './api/reports';
 import {travelRoutes} from './api/travel';
+import {planRoutes} from './api/plan';
 import {usageObserver} from './analytics/observer';
 import {redirectRoutes} from './analytics/redirect';
 import {withSentry} from '@sentry/cloudflare';
@@ -68,6 +69,7 @@ app.route('/client', clientErrorRoutes);
 app.route('/apple', appleEventsRoutes);
 app.route('/reports', reportsRoutes);
 app.route('/travel', travelRoutes);
+app.route('/plan', planRoutes);
 
 app.all('/media/*', async (c) => {
   const key = c.req.path.replace(/^\/media\//, '');

@@ -20,6 +20,14 @@ struct StaysSortSheet: View {
                         .listRowInsets(EdgeInsets())
                     }
                 }
+                Section("Osoby") {
+                    ForEach(StaysSort.adultOptions, id: \.self) { count in
+                        SheetOptionRow(title: adultTitle(count), isSelected: sort.adults == count) {
+                            sort.adults = count
+                        }
+                        .listRowInsets(EdgeInsets())
+                    }
+                }
                 Section("Cena") {
                     ForEach(StaysSort.priceOptions.indices, id: \.self) { index in
                         priceRow(StaysSort.priceOptions[index])
@@ -47,6 +55,10 @@ struct StaysSortSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    private func adultTitle(_ count: Int) -> String {
+        count == 1 ? "1 osoba" : "\(count) osoby"
     }
 
     private func priceRow(_ option: (String, String)) -> some View {

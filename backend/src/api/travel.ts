@@ -412,7 +412,10 @@ travelRoutes.get('/stays-widget', async (c) => {
   const view: StayView = q.view === 'full' ? 'full' : 'mini';
   const priceper = q.priceper === 'total' ? 'total' : q.priceper === 'nightly' ? 'nightly' : undefined;
   const minstars = clampInt(q.minstars, 0, 5);
-  const minguest = clampInt(q.minguest, 0, 10);
+  const minguest = clampInt(q.minguest, 0, 100);
+  const adults = clampInt(q.adults, 0, 6) ?? 1;
+  const minPrice = clampInt(q.min, 0, 100000);
+  const maxPrice = clampInt(q.max, 0, 100000);
   const url = staysWidgetUrl(aid, {
     lat: resolvedLat,
     lng: resolvedLng,
@@ -424,6 +427,9 @@ travelRoutes.get('/stays-widget', async (c) => {
     priceper,
     minstars,
     minguest,
+    adults,
+    minPrice,
+    maxPrice,
   });
   return c.json({ url });
 });

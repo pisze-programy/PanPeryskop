@@ -8,6 +8,9 @@ struct StaysSheet: View {
     var options: [StaysAnchor] = StaysAnchor.allCases
     let checkin: String
     let checkout: String
+    var minstars: Int?
+    var minguest: Int?
+    var segment: Binding<HotelSegment>?
     let onClose: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -30,8 +33,9 @@ struct StaysSheet: View {
             theme: colorScheme == .dark ? "dark" : "light",
             view: .full,
             priceper: sort.priceper,
-            minstars: sort.minstars,
-            minguest: sort.minguest,
+            minstars: sort.minstars ?? minstars,
+            minguest: sort.minguest ?? minguest,
+            adults: sort.adults,
             nearLat: event.lat,
             nearLng: event.lng
         )
@@ -42,6 +46,7 @@ struct StaysSheet: View {
             NavigationStack {
                 VStack(spacing: 0) {
                     header
+                    segmentRow
                     content
                 }
                 .navigationTitle("Noclegi")
@@ -73,6 +78,37 @@ struct StaysSheet: View {
             .foregroundColor(.secondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Theme.Spacing.s)
+    }
+
+    @ViewBuilder
+    private var segmentRow: some View {
+        if let segment {
+            HStack(spacing: Theme.Spacing.s) {
+                ForEach(HotelSegment.allCases) { option in
+                    Button {
+                        Haptics.selection()
+                        segment.wrappedValue = option
+                    } label: {
+                        Text(option.label)
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            segment.wrappedValue == option ? Color.accentColor.opacity(0.15) : Theme.Palette.surface,
+                            in: RoundedRectangle(cornerRadius: Theme.Radius.card)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.Radius.card)
+                                .stroke(segment.wrappedValue == option ? Color.accentColor : .clear, lineWidth: 1.5)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.l)
+            .padding(.bottom, Theme.Spacing.s)
+        }
     }
 
     @ViewBuilder

@@ -17,6 +17,9 @@ export interface StaysWidgetRequest {
   priceper?: 'nightly' | 'total';
   minstars?: number;
   minguest?: number;
+  adults?: number;
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 export function staysWidgetUrl(aid: string, request: StaysWidgetRequest): string {
@@ -42,9 +45,12 @@ export function staysWidgetUrl(aid: string, request: StaysWidgetRequest): string
   params.set('zoom', String(cfg.zoom[request.view]));
   params.set('viewmode', 'map');
   params.set('scroll', request.view === 'full' ? 'enabled' : 'disabled');
+  params.set('adults', String(request.adults ?? 1));
   if (request.priceper) params.set('priceper', request.priceper);
   if (request.minstars) params.set('minstarrating', String(request.minstars));
   if (request.minguest) params.set('minguestrating', String(request.minguest));
+  if (request.minPrice !== undefined) params.set('min', String(request.minPrice));
+  if (request.maxPrice !== undefined) params.set('max', String(request.maxPrice));
   for (const hide of cfg.hidden) params.set(hide, 'true');
   for (const hide of request.view === 'full' ? cfg.fullHidden : cfg.miniHidden) {
     params.set(hide, 'true');

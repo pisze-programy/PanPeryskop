@@ -59,6 +59,15 @@ extension AppConstants {
         return f
     }()
 
+    /// "LLLL" — month name only (e.g. "wrzesień").
+    static let monthFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = warsawCalendar
+        f.locale = Locale(identifier: "pl_PL")
+        f.dateFormat = "LLLL"
+        return f
+    }()
+
     /// "LLLL yyyy" — month section header (e.g. "wrzesień 2026").
     static let monthYearFormatter: DateFormatter = {
         let f = DateFormatter()

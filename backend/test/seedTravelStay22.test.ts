@@ -22,8 +22,9 @@ test('staysWidgetUrl: mini map carries no interactive chrome', () => {
   const url = new URL(staysWidgetUrl('panperyskop', { ...base, lat: 52.4, lng: 16.9 }));
   assert.equal(url.searchParams.get('viewmode'), 'map');
   assert.equal(url.searchParams.get('scroll'), 'disabled');
-  assert.equal(url.searchParams.get('limit'), '10');
+  assert.equal(url.searchParams.get('limit'), '5');
   assert.equal(url.searchParams.get('zoom'), '11');
+  assert.equal(url.searchParams.get('adults'), '1');
   assert.equal(url.searchParams.get('title'), null);
   assert.equal(url.searchParams.get('listviewexpand'), null);
   assert.equal(url.searchParams.get('hideextmaplinking'), 'true');
@@ -42,10 +43,13 @@ test('staysWidgetUrl: mini map carries no interactive chrome', () => {
 });
 
 test('staysWidgetUrl: sort and filter options ride along', () => {
-  const url = new URL(staysWidgetUrl('panperyskop', { ...base, view: 'full', lat: 52.4, lng: 16.9, priceper: 'total', minstars: 4, minguest: 8 }));
+  const url = new URL(staysWidgetUrl('panperyskop', { ...base, view: 'full', lat: 52.4, lng: 16.9, priceper: 'total', minstars: 4, minguest: 8, adults: 2, minPrice: 50, maxPrice: 300 }));
   assert.equal(url.searchParams.get('priceper'), 'total');
   assert.equal(url.searchParams.get('minstarrating'), '4');
   assert.equal(url.searchParams.get('minguestrating'), '8');
+  assert.equal(url.searchParams.get('adults'), '2');
+  assert.equal(url.searchParams.get('min'), '50');
+  assert.equal(url.searchParams.get('max'), '300');
 });
 
 test('staysWidgetUrl: omitted options stay out of the URL', () => {
@@ -53,13 +57,16 @@ test('staysWidgetUrl: omitted options stay out of the URL', () => {
   assert.equal(url.searchParams.get('priceper'), null);
   assert.equal(url.searchParams.get('minstarrating'), null);
   assert.equal(url.searchParams.get('minguestrating'), null);
+  assert.equal(url.searchParams.get('min'), null);
+  assert.equal(url.searchParams.get('max'), null);
+  assert.equal(url.searchParams.get('adults'), '1');
 });
 test('staysWidgetUrl: the full sheet keeps the map and drops its chrome', () => {
   const url = new URL(staysWidgetUrl('panperyskop', { ...base, view: 'full', address: 'Verona' }));
   assert.equal(url.searchParams.get('address'), 'Verona');
   assert.equal(url.searchParams.get('viewmode'), 'map');
   assert.equal(url.searchParams.get('scroll'), 'enabled');
-  assert.equal(url.searchParams.get('limit'), '50');
+  assert.equal(url.searchParams.get('limit'), '10');
   assert.equal(url.searchParams.get('zoom'), '13');
   assert.equal(url.searchParams.get('hidefilters'), 'true');
   assert.equal(url.searchParams.get('hidecheckinout'), 'true');

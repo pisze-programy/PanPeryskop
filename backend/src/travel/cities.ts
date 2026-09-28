@@ -43,6 +43,7 @@ export interface CityEntry {
   nearby: string[];
   next: string[];
   similar: string[];
+  addressAliases?: string[];
   facts: CityFacts;
 }
 
@@ -79,6 +80,7 @@ export interface CityView {
   airports: string[];
   reachable: boolean;
   connections: CityConnection[];
+  season: CitySeasonMonth[];
 }
 
 export const CITY_ENTRIES = citiesJson as CityEntry[];
@@ -202,6 +204,51 @@ export interface CityBreakView {
   airports: CityConnection[];
 }
 
+export interface CitySeasonMonth {
+  month: number;
+  nights: number;
+  index: number;
+  tempC: number;
+  precipMm: number;
+  sun: number;
+  weather: number;
+}
+
+interface CitySeasonRow {
+  city_id: string;
+  month: number;
+  nights: number;
+  idx: number;
+  temp_c: number;
+  precip_mm: number;
+  sun: number;
+  weather: number;
+}
+
+/** Monthly seasonality per city, grouped by city id for the city page. */
+export async function citySeasonByCity(db: DbReader): Promise<Map<string, CitySeasonMonth[]>> {
+  const { results } = await db
+    .prepare(
+      'SELECT city_id, month, nights, idx, temp_c, precip_mm, sun, weather FROM city_season ORDER BY month',
+    )
+    .all<CitySeasonRow>();
+  const out = new Map<string, CitySeasonMonth[]>();
+  for (const r of results ?? []) {
+    const list = out.get(r.city_id) ?? [];
+    list.push({
+      month: r.month,
+      nights: r.nights,
+      index: r.idx,
+      tempC: r.temp_c,
+      precipMm: r.precip_mm,
+      sun: r.sun,
+      weather: r.weather,
+    });
+    out.set(r.city_id, list);
+  }
+  return out;
+}
+
 export async function cityBreakForDay(db: DbReader, origins: string[], day: string): Promise<CityBreakView> {
   const reachable = await reachableDests(db, origins, day);
   const airports = [...reachable.entries()]
@@ -216,11 +263,13 @@ export async function cityBreakForDay(db: DbReader, origins: string[], day: stri
        FROM travel_cities ORDER BY band_rank, cost_usd DESC`,
     )
     .all<CityRow>();
+  const season = await citySeasonByCity(db);
   const cities = (results ?? []).map((row) => {
     const connections = parseList(row.airports)
       .filter((iata) => reachable.has(iata))
       .map((iata) => ({ iata, carriers: [...(reachable.get(iata) ?? [])].sort() }));
     return {
+      season: season.get(row.id) ?? [],
       id: row.id,
       name: row.name,
       namePl: row.name_pl,

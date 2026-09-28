@@ -7,6 +7,9 @@ struct StaysSection: View {
     let checkin: String?
     let checkout: String?
     var anchors: [StaysAnchor]
+    var segment: Binding<HotelSegment>?
+    var minstars: Int?
+    var minguest: Int?
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var anchor: StaysAnchor
@@ -18,12 +21,18 @@ struct StaysSection: View {
         airportCoordinate: CLLocationCoordinate2D?,
         checkin: String?,
         checkout: String?,
-        anchors: [StaysAnchor]? = nil
+        anchors: [StaysAnchor]? = nil,
+        segment: Binding<HotelSegment>? = nil,
+        minstars: Int? = nil,
+        minguest: Int? = nil
     ) {
         self.event = event
         self.airportCoordinate = airportCoordinate
         self.checkin = checkin
         self.checkout = checkout
+        self.segment = segment
+        self.minstars = minstars
+        self.minguest = minguest
         let resolved = anchors ?? StaysAnchor.options(venueIsAirport: event.venueIsAirport == true)
         self.anchors = resolved
         _anchor = State(initialValue: resolved.first ?? .centre)
@@ -58,6 +67,8 @@ struct StaysSection: View {
             checkout: stayDates.checkout,
             theme: theme,
             view: .mini,
+            minstars: minstars,
+            minguest: minguest,
             nearLat: event.lat,
             nearLng: event.lng
         )
@@ -66,6 +77,7 @@ struct StaysSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             header
+            segmentRow
             content
         }
         .padding(.top, Theme.Spacing.section)
@@ -93,6 +105,9 @@ struct StaysSection: View {
                 options: anchors,
                 checkin: stayDates.checkin,
                 checkout: stayDates.checkout,
+                minstars: minstars,
+                minguest: minguest,
+                segment: segment,
                 onClose: { showsFullSheet = false }
             )
         }
@@ -108,6 +123,37 @@ struct StaysSection: View {
             onFilter: showsAnchorFilter ? { showsAnchorSheet = true } : nil
         )
         .padding(.horizontal, Theme.Spacing.l)
+    }
+
+    @ViewBuilder
+    private var segmentRow: some View {
+        if let segment {
+            HStack(spacing: Theme.Spacing.s) {
+                ForEach(HotelSegment.allCases) { option in
+                    Button {
+                        Haptics.selection()
+                        segment.wrappedValue = option
+                    } label: {
+                        Text(option.label)
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 4)
+                        .background(
+                            segment.wrappedValue == option ? Color.accentColor.opacity(0.15) : Theme.Palette.surface,
+                            in: RoundedRectangle(cornerRadius: Theme.Radius.card)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.Radius.card)
+                                .stroke(segment.wrappedValue == option ? Color.accentColor : .clear, lineWidth: 1.5)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.l)
+        }
     }
 
     @ViewBuilder

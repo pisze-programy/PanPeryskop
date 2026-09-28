@@ -2,7 +2,7 @@ import SwiftUI
 import CoreLocation
 
 /// Everything under the gamestrip on a trips page. Both event kinds use this one
-/// layout; only the texts, the distance chips and the button differ.
+/// layout; only the texts, the distance chips and the buttons differ.
 struct TripsEventDetail: View {
     let event: TravelEvent
     let onOpenURL: (URL, BrowserAccess) -> Void
@@ -39,16 +39,26 @@ struct TripsEventDetail: View {
                     onTap: { onOpenMap(coordinate, event.title) }
                 )
             }
-            if let url = linkURL {
-                CapsuleButton(title: buttonTitle, trailingText: buttonTrailing, fullWidth: true) {
-                    onOpenURL(url, linkAccess)
-                }
-            }
+            actionButtons
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.Spacing.l)
         .padding(.top, Theme.Spacing.m)
         .padding(.bottom, Theme.Spacing.m)
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        if let tickets = ticketsURL {
+            CapsuleButton(title: "Bilety", fullWidth: true) {
+                openExternally(tickets)
+            }
+        }
+        if let details = detailsURL {
+            CapsuleButton(title: detailsTitle, trailingText: detailsTrailing, fullWidth: true) {
+                onOpenURL(details.url, details.access)
+            }
+        }
     }
 
     private var distanceRow: some View {
@@ -118,13 +128,17 @@ struct TripsEventDetail: View {
         event.isRun ? 50 : 60
     }
 
-    private var linkURL: URL? {
-        let raw = event.isRun ? (event.link ?? meta?.website) : event.link
-        return URL.normalized(raw)
+    private var ticketsURL: URL? {
+        URL.normalized(event.link).flatMap(searchURL)
     }
 
-    private var linkAccess: BrowserAccess {
-        event.isRun ? .open : .restricted
+    private var detailsURL: (url: URL, access: BrowserAccess)? {
+        if event.isRun {
+            guard let url = URL.normalized(meta?.website) else { return nil }
+            return (url, .open)
+        }
+        guard let url = URL.normalized(meta?.matchUrl) else { return nil }
+        return (url, .restricted)
     }
 
     private var priceLabel: String? {
@@ -132,11 +146,20 @@ struct TripsEventDetail: View {
         return price
     }
 
-    private var buttonTitle: String {
-        priceLabel == nil ? "Zobacz więcej" : "Zapisz się"
+    private var detailsTitle: String {
+        event.isRun ? "Zapisz się" : "Szczegóły meczu"
     }
 
-    private var buttonTrailing: String? {
+    private var detailsTrailing: String? {
         priceLabel
+    }
+
+    private func searchURL(_ url: URL) -> URL? {
+        url.host?.hasSuffix("google.com") == true ? url : nil
+    }
+
+    private func openExternally(_ url: URL) {
+        Haptics.selection()
+        UIApplication.shared.open(url)
     }
 }

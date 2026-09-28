@@ -4,7 +4,44 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.3.1] — build 101, 2026-09-28
+
+### Added
+
+- City seasonality: a 12-month chart of tourist demand with the average
+  temperature and a weather icon (sun, cloud, rain, snow) for each month, fed
+  by Eurostat nights and NASA POWER climate. The element hides itself when a
+  city has no data.
+- A car rental banner under the partner cards, right below Revolut: QEEQ for the
+  airport you picked, with the trip dates when the flight dates are chosen. It
+  opens an external browser with travelpayouts tracking.
+- The partner cards now show the brand logos and a hairlines border. The logo
+  loads from the media store, with a bundled copy as the instant fallback.
+
+### Changed
+
+- The partner cards keep the text on white and carry the brand colour as a soft
+  diagonal gradient on the right, so the eye stays on the copy.
+- The partner links carry Polish where the partner has it: QEEQ opens qeeq.pl
+  (Polish, no commission), Airhelp opens airhelp.pl, and the eSIM card is Saily
+  (saily.com/pl).
+- A match or a run with no purchase link opens a Google AI Mode search. A match
+  keeps two buttons: "Bilety" (the AI search) and "Szczegóły meczu" (the ESPN
+  page).
+
+### Fixed
+
+- The travel replenish skipped every day that the checkpoint already held, so
+  the near week was never refreshed. It now always refetches the near window.
+- The running events keep the races without a start point: the city geocode
+  stands in, so races like Maratona di Pisa are no longer dropped.
+- The football days whose rows lost their league are refetched, so no match
+  shows without its league.
+
+### Changed
+
+- The hotel segment chips now filter the Stay22 map by stars and guest score
+  only. The measured price band and the "ok. X zł" label are gone.
 
 ### Removed
 
@@ -178,6 +215,9 @@ All notable changes to PanPeryskop. Format based on
 
 - The city dots, the city count badges and the band table, which mixed three
   shapes on one map.
+- The Stay22 scraping pipeline: the worker path, the cron, the VPS runner, the
+  measurement scripts and the `city_hotel_stats` table. Seasonality now comes
+  from one Eurostat fetch per city, run by hand.
 
 ## [1.3.0] — build 60, 2026-09-21
 

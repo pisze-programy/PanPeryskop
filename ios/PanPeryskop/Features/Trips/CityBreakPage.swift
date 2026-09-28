@@ -13,6 +13,7 @@ struct CityBreakPage: View {
     @State private var browserItem: BrowserItem?
     @State private var outbound: FlightWindowCell?
     @State private var returning: FlightWindowCell?
+    @State private var hotelSegment: HotelSegment = .economy
 
     init(
         viewModel: TripsViewModel,
@@ -53,7 +54,7 @@ struct CityBreakPage: View {
                 LazyVStack(spacing: 0) {
                     Color.clear.frame(height: 0).id(Self.topId)
                     ForEach(CityBreakSection.sections(for: city)) { section in
-                        sectionView(section)
+                        sectionView(section, proxy: proxy)
                     }
                 }
                 .padding(.bottom, Theme.Spacing.xl)
@@ -109,7 +110,7 @@ struct CityBreakPage: View {
     }
 
     @ViewBuilder
-    private func sectionView(_ section: CityBreakSection) -> some View {
+    private func sectionView(_ section: CityBreakSection, proxy: ScrollViewProxy) -> some View {
         switch section {
         case .hero:
             CityHeroSection(city: city) { url in
@@ -135,13 +136,18 @@ struct CityBreakPage: View {
                 viewModel.selectGroup(posts: [], cities: [other])
             }
             .padding(.top, Theme.Spacing.section)
+        case .hotels:
+            CityHotelSection(city: city)
         case .stays:
             StaysSection(
                 event: event,
                 airportCoordinate: airportCoordinate,
                 checkin: outbound?.date,
                 checkout: returning?.date,
-                anchors: [.centre]
+                anchors: [.centre],
+                segment: $hotelSegment,
+                minstars: hotelSegment.minStars,
+                minguest: hotelSegment.minGuest
             )
             .padding(.top, Theme.Spacing.section)
         case .places:

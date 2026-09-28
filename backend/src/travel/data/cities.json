@@ -10,6 +10,12 @@
   "bandRank": 1,
   "costUsd": 8835,
   "population": 56987,
+  "addressAliases": [
+   "monaco",
+   "monte-carlo",
+   "monte carlo",
+   "la condamine"
+  ],
   "airports": [
    "NCE",
    "CUF",

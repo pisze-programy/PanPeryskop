@@ -41,10 +41,11 @@ function travelDays(runType: TravelRunType, coveredDays?: Set<string>): string[]
 export async function runTravelProvider(source: TravelSource, opts: TravelRunOptions): Promise<TravelManifest> {
   const { runType, store, coveredDays } = opts;
   const days = travelDays(runType, coveredDays);
+  const refresh = runType === 'replenish' ? refreshWindow() : null;
   const events: TravelEvent[] = [];
   const seen = new Set<string>();
   for (const day of days) {
-    if (coveredDays?.has(day)) continue;
+    if (coveredDays?.has(day) && !refresh?.has(day)) continue;
     for (const e of await source.fetchDay(day, { store })) {
       if (seen.has(e.externalId)) continue;
       seen.add(e.externalId);
@@ -52,4 +53,12 @@ export async function runTravelProvider(source: TravelSource, opts: TravelRunOpt
     }
   }
   return { provider: source.id, runType, days, events };
+}
+
+/** The near window a replenish run always refetches, covered or not. */
+function refreshWindow(): Set<string> {
+  const today = todayWarsaw();
+  const out = new Set<string>();
+  for (let i = 0; i < CONFIG.travel.replenishDays; i++) out.add(addDaysWarsaw(today, i));
+  return out;
 }

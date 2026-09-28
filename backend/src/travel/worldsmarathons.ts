@@ -9,6 +9,7 @@ import { CONFIG } from '../config/index';
 import { GeoStore } from '../seed/core/geo';
 import { warsawMidnightMs } from '../seed/core/dates';
 import { resolveTravelGeo } from './geo';
+import { googleAiSearchUrl, raceSearchQuery } from './searchLink';
 import { TravelEvent } from './store';
 import type { TravelSource } from './run';
 
@@ -87,11 +88,9 @@ function coordsOf(e: WmEvent): WmCoords | null {
   return { lat, lng };
 }
 
-/** Google AI Mode (`udm=50`) search for a race's tickets — the fallback when the
- *  provider ships no website. */
-function googleSearchUrl(title: string, city: string, day: string): string {
-  const year = day.slice(0, 4);
-  return `https://www.google.com/search?${new URLSearchParams({ udm: '50', q: `${title} ${city} ${year} tickets` })}`;
+/** The race's ticket fallback: a Polish Google AI Mode search. */
+function fallbackLink(title: string, city: string, day: string): string {
+  return googleAiSearchUrl(raceSearchQuery(title, city, day.slice(0, 4)));
 }
 
 /** Map one API row to a TravelEvent; null when it is non-European or unusable.
@@ -143,7 +142,7 @@ export function parseWmEvent(e: WmEvent, fallbackDay: string, coords?: WmCoords 
     country: String(e?.country ?? '').trim(),
     startMs,
     tag: CONFIG.travel.tags.runs,
-    link: website ?? googleSearchUrl(title, city, validDate ? raceDate : fallbackDay),
+    link: website ?? fallbackLink(title, city, validDate ? raceDate : fallbackDay),
     meta: JSON.stringify(meta),
   };
 }

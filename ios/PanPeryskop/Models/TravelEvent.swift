@@ -81,6 +81,7 @@ struct TravelEventMeta: Decodable {
     let awayColor: String?
     let website: String?
     let countryCode: String?
+    let matchUrl: String?
 }
 
 struct Airport: Codable, Identifiable, Hashable {

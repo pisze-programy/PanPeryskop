@@ -25,6 +25,15 @@ test('parseEspnEvent: stores the venue local date and hour', () => {
   assert.equal(meta.date, '2026-09-20');
 });
 
+test('parseEspnEvent: no ticket link falls back to a Polish Google AI Mode search', () => {
+  const e = parseEspnEvent(row({ links: [] }));
+  assert.ok(e);
+  const url = new URL(e!.link!);
+  assert.equal(url.origin, 'https://www.google.com');
+  assert.equal(url.searchParams.get('udm'), '50');
+  assert.match(url.searchParams.get('q')!, /Arsenal vs Chelsea London 2026 gdzie zakupić bilety na mecz/);
+});
+
 test('resolveZone: country zone, city override, unknown', () => {
   assert.equal(resolveZone('Germany', 'Berlin'), 'Europe/Berlin');
   assert.equal(resolveZone('England', 'London'), 'Europe/London');

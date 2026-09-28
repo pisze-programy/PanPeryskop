@@ -73,13 +73,13 @@ test('parseWmEvent: a supplied geocode replaces a missing start point', () => {
   assert.equal(e!.lng, 2.2);
 });
 
-test('parseWmEvent: no website falls back to a Google AI Mode search', () => {
+test('parseWmEvent: no website falls back to a Polish Google AI Mode search', () => {
   const e = parseWmEvent(row({ website: undefined }), '2026-12-31');
   assert.ok(e);
   const url = new URL(e!.link!);
   assert.equal(url.origin, 'https://www.google.com');
   assert.equal(url.searchParams.get('udm'), '50');
-  assert.match(url.searchParams.get('q')!, /Cursa dels Nassos 10 km Barcelona 2026 tickets/);
+  assert.match(url.searchParams.get('q')!, /Cursa dels Nassos 10 km Barcelona 2026 gdzie zapisać się na bieg/);
 });
 
 test('runTravelProvider: collects a source over the window and dedupes', async () => {

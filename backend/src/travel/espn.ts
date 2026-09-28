@@ -4,6 +4,7 @@ import { keepEuropeanCityEvent } from './airports';
 import espnLeaguesJson from './data/espn-leagues.json';
 import { resolveTravelGeo } from './geo';
 import { localDateTime } from './localTime';
+import { googleAiSearchUrl, matchSearchQuery } from './searchLink';
 import { TravelEvent } from './store';
 import type { TravelSource } from './run';
 
@@ -107,6 +108,8 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
   const local = localDateTime(startMs, geo.country, geo.city);
   const competitors = e.competitions?.[0]?.competitors ?? [];
   const venueName = e.competitions?.[0]?.venue?.fullName ?? null;
+  const year = (local?.date ?? '').slice(0, 4) || String(new Date(startMs).getUTCFullYear());
+  const matchUrl = eventLink(e);
   const meta = {
     ...(local ?? {}),
     venue: venueName,
@@ -115,6 +118,7 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
     awayCode: competitors[1]?.team?.abbreviation ?? null,
     homeColor: competitors[0]?.team?.color ?? null,
     awayColor: competitors[1]?.team?.color ?? null,
+    matchUrl,
   };
   return {
     provider: CONFIG.travel.provider,
@@ -124,7 +128,7 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
     country: geo.country,
     startMs,
     tag: CONFIG.travel.tags.espn,
-    link: eventLink(e),
+    link: googleAiSearchUrl(matchSearchQuery(eventTitle(e), geo.city, year)),
     meta: JSON.stringify(meta),
   };
 }

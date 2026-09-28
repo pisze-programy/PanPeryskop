@@ -27,6 +27,18 @@ struct TravelCity: Codable, Identifiable, Equatable {
     let season: [CitySeasonMonth]?
 
     var seasonMonths: [CitySeasonMonth] { season ?? [] }
+
+    /// Map zoom that covers the built-up area. The window doubles per zoom step
+    /// down; the base step is the ~6.4 km that a zoom of 11 shows in the mini
+    /// frame. The area scales with the square root of the population.
+    private var staysZoomBase: Int {
+        let diameterKm = max(1, Double(population).squareRoot() / 55)
+        let steps = Int((log2(diameterKm / 6.4)).rounded())
+        return min(13, max(7, 11 - steps))
+    }
+
+    var staysMiniZoom: Int { min(14, staysZoomBase + 1) }
+    var staysSheetZoom: Int { staysZoomBase }
 }
 
 struct CitySeasonMonth: Codable, Equatable, Identifiable {

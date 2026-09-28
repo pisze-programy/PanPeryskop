@@ -4,6 +4,16 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.1] — build 104, 2026-09-28
+
+### Changed
+
+- The stay map shows 10 pins in the mini view and 20 in the full sheet (was 5
+  and 10).
+- The map zoom now follows the city size (population): the full sheet covers
+  the whole city, the mini view about half. It no longer shows one fixed
+  window centred on the middle.
+
 ## [1.3.1] — build 103, 2026-09-28
 
 ### Changed

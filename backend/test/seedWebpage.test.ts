@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { weekendAnchors, windowMonths, cheapestOn, routePrice, renderPage, formatRange, formatDay, WEEKEND_WINDOWS, type Offer } from '../src/travel/webpage';
-import { toStayDate, parseStay22, directionsUrl, economyMaxNightlyUsd } from '../src/travel/citybreak';
+import { toStayDate, parseStay22, directionsUrl, economyMaxNightlyUsd, cityForAirport } from '../src/travel/citybreak';
 import type { FlightCell } from '../src/travel/flightsApi';
 
 function cell(date: string, price: number | null): FlightCell {
@@ -22,8 +22,15 @@ test('weekendAnchors: from a Friday includes that day', () => {
   );
 });
 
-test('windowMonths: covers every weekend month once', () => {
-  assert.deepEqual(windowMonths('2026-09-28'), ['2026-10-01']);
+test('windowMonths: covers the default 90-day window', () => {
+  assert.deepEqual(windowMonths('2026-09-28'), ['2026-10-01', '2026-11-01', '2026-12-01']);
+});
+
+test('windowMonths: 13 weekends reach into December', () => {
+  const months = windowMonths('2026-09-28', 13);
+  assert.ok(months.includes('2026-10-01'), 'October');
+  assert.ok(months.includes('2026-11-01'), 'November');
+  assert.ok(months.includes('2026-12-01'), 'December');
 });
 
 test('cheapestOn: takes the lowest fare for the exact day', () => {
@@ -60,6 +67,25 @@ test('renderPage: writes the origin title and the offer links', () => {
   assert.match(html, /Tanie loty z Poznania/);
   assert.match(html, /https:\/\/api\.panperyskop\.app\/r\/abc/);
   assert.match(html, /573 zł/);
+  assert.match(html, /bez hotelu/);
+});
+
+test('renderPage: an offer with a hotel shows the hotel name', () => {
+  const offer: Offer = {
+    city: 'Paris', cityPl: 'Paryż', iata: 'BVA', carrier: 'ryanair', window: 'pt-ndz',
+    start: '2026-10-23', end: '2026-10-25', nights: 2, price: 200,
+    lat: 49.45, lng: 2.35, imageUrl: null, imageLargeUrl: null, imageCredit: null,
+    flightUrl: 'https://api.panperyskop.app/r/abc', stayUrl: 'https://api.panperyskop.app/r/def', carUrl: 'https://api.panperyskop.app/r/ghi',
+    hotel: { name: 'Hotel Test', total: 240, perPerson: 120, lat: 48.8, lng: 2.3, url: 'https://www.booking.com/hotel/test' },
+  };
+  const html = renderPage({
+    origin: { id: 'poznan', name: 'Poznań', genitive: 'Poznania', slug: 'tanie-loty-z-poznania', iata: 'POZ' },
+    sections: [{ window: WEEKEND_WINDOWS[0], groups: [{ start: '2026-10-23', end: '2026-10-25', offers: [offer] }] }],
+    featured: [],
+    generatedAt: '2026-09-28',
+  });
+  assert.match(html, /Hotel Test/);
+  assert.doesNotMatch(html, /bez hotelu/);
 });
 
 test('toStayDate: converts ISO to the Stay22 M/D/YYYY form', () => {
@@ -99,4 +125,10 @@ test('formatDay: reads like Polish', () => {
 test('economyMaxNightlyUsd: divides the city cost by 15', () => {
   assert.equal(economyMaxNightlyUsd(1677), 112);
   assert.equal(economyMaxNightlyUsd(1434), 96);
+});
+
+test('cityForAirport: uses the curated airport list first', () => {
+  assert.equal(cityForAirport('Bergamo', 45.67, 9.70, 'BGY')?.namePl, 'Mediolan');
+  assert.equal(cityForAirport('Charleroi', 50.46, 4.45, 'CRL')?.name, 'Brussels');
+  assert.equal(cityForAirport('Beauvais', 49.45, 2.11, 'BVA')?.namePl, 'Paryż');
 });

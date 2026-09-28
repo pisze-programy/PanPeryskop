@@ -20,6 +20,7 @@ export interface StaysWidgetRequest {
   adults?: number;
   minPrice?: number;
   maxPrice?: number;
+  zoom?: number;
 }
 
 export function staysWidgetUrl(aid: string, request: StaysWidgetRequest): string {
@@ -42,7 +43,7 @@ export function staysWidgetUrl(aid: string, request: StaysWidgetRequest): string
   params.set('campaign', cfg.campaign);
   params.set('mapstyle', request.theme);
   params.set('limit', String(cfg.limits[request.view]));
-  params.set('zoom', String(cfg.zoom[request.view]));
+  params.set('zoom', String(request.zoom ?? cfg.zoom[request.view]));
   params.set('viewmode', 'map');
   params.set('scroll', request.view === 'full' ? 'enabled' : 'disabled');
   params.set('adults', String(request.adults ?? 1));

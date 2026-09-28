@@ -56,6 +56,20 @@ const REQUEST_ATTEMPTS = 3;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Keep the provider call rate low. A single timer serializes every real HTTP
+// call (including retries), so parallel jobs cannot burst the provider. A cache
+// hit never reaches this gate.
+const PROVIDER_PACE_MS = 300;
+let providerGate: Promise<void> = Promise.resolve();
+
+function paceProvider(): Promise<void> {
+  const next = providerGate.then(async () => {
+    await sleep(PROVIDER_PACE_MS);
+  });
+  providerGate = next.then(() => undefined, () => undefined);
+  return next;
+}
+
 function transientStatus(res: Response): boolean {
   return res.status === 429 || res.status >= 500;
 }
@@ -63,6 +77,7 @@ function transientStatus(res: Response): boolean {
 async function fetchWithRetry(makeRequest: () => Promise<Response>, isTransient = transientStatus): Promise<Response> {
   let last: Response | null = null;
   for (let attempt = 1; ; attempt++) {
+    await paceProvider();
     try {
       last = await makeRequest();
       if (!isTransient(last) || attempt >= REQUEST_ATTEMPTS) return last;
@@ -259,6 +274,7 @@ async function dropCachedJson(db: D1Database, key: string): Promise<void> {
 async function wizzairApiBase(db: D1Database): Promise<string> {
   const cfg = CONFIG.travel.flights.wizzair;
   const version = await cachedJson(db, WIZZAIR_VERSION_KEY, cfg.versionTtlMs, async () => {
+    await paceProvider();
     const res = await fetch(cfg.pageUrl, {
       headers: { 'User-Agent': CONFIG.travel.flights.userAgent, Accept: 'text/html' },
       signal: AbortSignal.timeout(CONFIG.travel.flights.timeoutMs * 4),
@@ -280,6 +296,7 @@ async function postWizzairTimetable(apiBase: string, origin: string, dest: strin
     childCount: 0,
     infantCount: 0,
   };
+  await paceProvider();
   return await fetchWithRetry(() => fetch(`${apiBase}/search/timetable`, {
     method: 'POST',
     headers: {

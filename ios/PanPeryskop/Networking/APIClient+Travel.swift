@@ -127,6 +127,7 @@ extension APIClient {
         params["adults"] = String(query.adults ?? 1)
         if let minPrice = query.minPrice { params["min"] = String(minPrice) }
         if let maxPrice = query.maxPrice { params["max"] = String(maxPrice) }
+        if let zoom = query.zoom { params["zoom"] = String(zoom) }
         if let nearLat = query.nearLat, let nearLng = query.nearLng {
             params["nearLat"] = String(nearLat)
             params["nearLng"] = String(nearLng)

@@ -22,7 +22,7 @@ test('staysWidgetUrl: mini map carries no interactive chrome', () => {
   const url = new URL(staysWidgetUrl('panperyskop', { ...base, lat: 52.4, lng: 16.9 }));
   assert.equal(url.searchParams.get('viewmode'), 'map');
   assert.equal(url.searchParams.get('scroll'), 'disabled');
-  assert.equal(url.searchParams.get('limit'), '5');
+  assert.equal(url.searchParams.get('limit'), '10');
   assert.equal(url.searchParams.get('zoom'), '11');
   assert.equal(url.searchParams.get('adults'), '1');
   assert.equal(url.searchParams.get('title'), null);
@@ -66,7 +66,7 @@ test('staysWidgetUrl: the full sheet keeps the map and drops its chrome', () => 
   assert.equal(url.searchParams.get('address'), 'Verona');
   assert.equal(url.searchParams.get('viewmode'), 'map');
   assert.equal(url.searchParams.get('scroll'), 'enabled');
-  assert.equal(url.searchParams.get('limit'), '10');
+  assert.equal(url.searchParams.get('limit'), '20');
   assert.equal(url.searchParams.get('zoom'), '13');
   assert.equal(url.searchParams.get('hidefilters'), 'true');
   assert.equal(url.searchParams.get('hidecheckinout'), 'true');

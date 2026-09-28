@@ -14,10 +14,11 @@ import {appleEventsRoutes} from './api/appleEvents';
 import {reportsRoutes} from './api/reports';
 import {travelRoutes} from './api/travel';
 import {planRoutes, contentRoutes} from './api/plan';
-import {buildNextStale, storeOriginBundle} from './travel/content';
-import {ORIGIN_PAGES} from './travel/webpage';
+import {buildNextStale, docUrls, storeOriginBundle} from './travel/content';
+import {submitIndexNow} from './travel/indexnow';
+import {ORIGIN_PAGES, PUBLIC_BASE} from './travel/webpage';
 import {usageObserver} from './analytics/observer';
-import {redirectRoutes} from './analytics/redirect';
+import {redirectRoutes, pruneRedirectTokens} from './analytics/redirect';
 import {withSentry} from '@sentry/cloudflare';
 import {sentryOptions} from './analytics/sentry';
 import {tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
@@ -152,6 +153,18 @@ app.post('/admin/content/build', async (c) => {
   return c.json({ built: built?.slug ?? null });
 });
 
+app.post('/admin/content/indexnow', async (c) => {
+  const token = c.req.header('Authorization')?.replace('Bearer ', '');
+  if (!c.env.ADMIN_SECRET || token !== c.env.ADMIN_SECRET) return c.json({ error: 'Forbidden' }, 403);
+  const subs = await docUrls(c.env, PUBLIC_BASE);
+  const urlList = [PUBLIC_BASE, ...subs];
+  let submitted = 0;
+  for (let i = 0; i < urlList.length; i += 500) {
+    submitted += await submitIndexNow(urlList.slice(i, i + 500));
+  }
+  return c.json({ submitted, total: urlList.length });
+});
+
 export default withSentry<Env, SeedQueueMessage>(
   (env) => sentryOptions(env),
   {
@@ -184,6 +197,7 @@ export default withSentry<Env, SeedQueueMessage>(
         pruneSeedData(env, 'cron')
           .then(() => pruneSeedManifests(env))
           .then(() => pruneFlightCache(env.DB))
+          .then(() => pruneRedirectTokens(env))
           .then((dropped) => console.log(`seed cleanup cron done (flight_cache -${dropped})`))
           .catch((e) => console.error(`seed cleanup cron failed: ${(e as Error).message}`))
       );

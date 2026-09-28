@@ -37,7 +37,7 @@ struct CityBreakPage: View {
 
     private var staysMinPrice: Int? {
         switch hotelSegment {
-        case .luxury: return max(40, city.costUsd / 10)
+        case .luxury: return min(450, max(40, city.costUsd / 15))
         default: return nil
         }
     }
@@ -160,7 +160,9 @@ struct CityBreakPage: View {
                 minstars: hotelSegment.minStars,
                 minguest: hotelSegment.minGuest,
                 minPrice: staysMinPrice,
-                maxPrice: staysMaxPrice
+                maxPrice: staysMaxPrice,
+                miniZoom: city.staysMiniZoom,
+                sheetZoom: city.staysSheetZoom
             )
             .padding(.top, Theme.Spacing.section)
         case .places:

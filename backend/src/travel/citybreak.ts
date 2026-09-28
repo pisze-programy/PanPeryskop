@@ -55,7 +55,14 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function cityForAirport(name: string, lat: number, lng: number): CityPhoto | null {
+export function cityForAirport(name: string, lat: number, lng: number, iata?: string): CityPhoto | null {
+  if (iata) {
+    const listed = CITY_ENTRIES.filter((entry) => (entry.airports ?? []).includes(iata));
+    if (listed.length > 0) {
+      const main = listed.reduce((best, entry) => (entry.population > best.population ? entry : best), listed[0]);
+      return toPhoto(main, main.namePl);
+    }
+  }
   const exact = cityPhotoByCity(name);
   if (exact) return exact;
   let best: CityEntry | null = null;
@@ -71,18 +78,22 @@ export function cityForAirport(name: string, lat: number, lng: number): CityPhot
     }
   }
   if (!best) return null;
-  const namePl = /region|stołeczny/i.test(best.namePl) ? best.name : best.namePl;
+  return toPhoto(best, best.namePl);
+}
+
+function toPhoto(entry: CityEntry, namePl: string): CityPhoto {
+  const safePl = /region|stołeczny/i.test(namePl) ? entry.name : namePl;
   return {
-    id: best.id,
-    name: best.name,
-    namePl,
-    lat: best.lat,
-    lng: best.lng,
-    costUsd: best.costUsd,
-    nearby: best.nearby ?? [],
-    imageUrl: best.imageUrl,
-    imageLargeUrl: best.imageLargeUrl,
-    credit: best.imageCredit,
+    id: entry.id,
+    name: entry.name,
+    namePl: safePl,
+    lat: entry.lat,
+    lng: entry.lng,
+    costUsd: entry.costUsd,
+    nearby: entry.nearby ?? [],
+    imageUrl: entry.imageUrl,
+    imageLargeUrl: entry.imageLargeUrl,
+    credit: entry.imageCredit,
   };
 }
 
@@ -258,6 +269,19 @@ function parseHotel(result: Stay22Result): HotelOffer | null {
 }
 
 const STAY_TTL_MS = 6 * 3_600_000;
+// Stay22 asks for about one request a second and no bursts. Only a cache miss
+// waits here.
+const STAY_PACE_MS = 1_000;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+let stayGate: Promise<void> = Promise.resolve();
+
+function paceStay(): Promise<void> {
+  const next = stayGate.then(async () => {
+    await sleep(STAY_PACE_MS);
+  });
+  stayGate = next.then(() => undefined, () => undefined);
+  return next;
+}
 
 async function readStayCache(db: D1Database, key: string): Promise<HotelOffer[] | null> {
   const row = await db
@@ -280,10 +304,12 @@ async function writeStayCache(db: D1Database, key: string, value: HotelOffer[]):
     .catch(() => { /* best effort */ });
 }
 
-async function stay22Hotels(env: Env, point: Point, checkin: string, checkout: string): Promise<HotelOffer[]> {
+async function stay22Hotels(env: Env, point: Point, checkin: string, checkout: string, onMiss?: () => boolean): Promise<HotelOffer[]> {
   const cacheKey = `stay:${point.lat.toFixed(3)}:${point.lng.toFixed(3)}:${checkin}:${checkout}`;
   const cached = await readStayCache(env.DB, cacheKey);
   if (cached) return cached;
+  if (onMiss && !onMiss()) return [];
+  await paceStay();
   const params = new URLSearchParams({
     centerlat: String(point.lat),
     centerlng: String(point.lng),
@@ -318,13 +344,13 @@ async function stay22Hotels(env: Env, point: Point, checkin: string, checkout: s
 }
 
 export async function fetchCityHotels(
-  env: Env, point: Point, checkin: string, checkout: string, maxNightlyUsd?: number,
+  env: Env, point: Point, checkin: string, checkout: string, maxNightlyUsd?: number, onMiss?: () => boolean,
 ): Promise<HotelOffer[]> {
   const nights = nightsBetween(checkin, checkout);
-  const all = await stay22Hotels(env, point, checkin, checkout);
+  const all = await stay22Hotels(env, point, checkin, checkout, onMiss);
   const capPln = maxNightlyUsd ? maxNightlyUsd * USD_PLN : null;
   const within = capPln ? all.filter((hotel) => hotel.total / nights <= capPln) : all;
-  const pool = within.length > 0 ? within : all;
+  const pool = within.length >= Math.min(3, all.length) ? within : all;
   return pool.slice(0, HOTELS_PER_CITY);
 }
 

@@ -21,6 +21,7 @@ struct StaysWidgetQuery {
     var adults: Int?
     var minPrice: Int?
     var maxPrice: Int?
+    var zoom: Int?
     /// Event coordinates, used to resolve an address-only point to coordinates.
     var nearLat: Double?
     var nearLng: Double?
@@ -37,6 +38,7 @@ struct StaysWidgetQuery {
             String(adults ?? 1),
             String(minPrice ?? 0),
             String(maxPrice ?? 0),
+            String(zoom ?? 0),
             point.key,
             String(nearLat ?? 0),
             String(nearLng ?? 0),

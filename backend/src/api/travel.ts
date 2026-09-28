@@ -416,6 +416,7 @@ travelRoutes.get('/stays-widget', async (c) => {
   const adults = clampInt(q.adults, 0, 6) ?? 1;
   const minPrice = clampInt(q.min, 0, 100000);
   const maxPrice = clampInt(q.max, 0, 100000);
+  const zoom = clampInt(q.zoom, 4, 16);
   const url = staysWidgetUrl(aid, {
     lat: resolvedLat,
     lng: resolvedLng,
@@ -430,6 +431,7 @@ travelRoutes.get('/stays-widget', async (c) => {
     adults,
     minPrice,
     maxPrice,
+    zoom,
   });
   return c.json({ url });
 });

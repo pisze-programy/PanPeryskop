@@ -64,6 +64,11 @@ function redirectBase(env: Env): string {
   return env.REDIRECT_BASE ?? 'https://api.panperyskop.app';
 }
 
+export async function pruneRedirectTokens(env: Env): Promise<number> {
+  const result = await env.DB.prepare('DELETE FROM redirect_tokens WHERE expires_at < ?').bind(Date.now()).run();
+  return Number(result.meta?.changes ?? 0);
+}
+
 redirectRoutes.get('/r/:token', async (c) => {
   const token = c.req.param('token');
   const row = await c.env.DB

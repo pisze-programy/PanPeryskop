@@ -1,0 +1,1 @@
+ALTER TABLE content_docs ADD COLUMN hash TEXT NOT NULL DEFAULT '';

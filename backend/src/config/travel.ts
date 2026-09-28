@@ -210,7 +210,7 @@ export const travel = {
     unitsystem: 'metric',
     invmode: 'accommodation',
     hotelsapi: 'booking',
-    limits: { mini: 5, full: 10 },
+    limits: { mini: 10, full: 20 },
     // Lower zoom keeps the hotel pins inside the frame; the widget default (16)
     // shows a single building.
     zoom: { mini: 11, full: 13 },

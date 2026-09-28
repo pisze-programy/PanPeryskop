@@ -12,6 +12,8 @@ struct StaysSection: View {
     var minguest: Int?
     var minPrice: Int?
     var maxPrice: Int?
+    var miniZoom: Int?
+    var sheetZoom: Int?
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var anchor: StaysAnchor
@@ -28,7 +30,9 @@ struct StaysSection: View {
         minstars: Int? = nil,
         minguest: Int? = nil,
         minPrice: Int? = nil,
-        maxPrice: Int? = nil
+        maxPrice: Int? = nil,
+        miniZoom: Int? = nil,
+        sheetZoom: Int? = nil
     ) {
         self.event = event
         self.airportCoordinate = airportCoordinate
@@ -39,6 +43,8 @@ struct StaysSection: View {
         self.minguest = minguest
         self.minPrice = minPrice
         self.maxPrice = maxPrice
+        self.miniZoom = miniZoom
+        self.sheetZoom = sheetZoom
         let resolved = anchors ?? StaysAnchor.options(venueIsAirport: event.venueIsAirport == true)
         self.anchors = resolved
         _anchor = State(initialValue: resolved.first ?? .centre)
@@ -77,6 +83,7 @@ struct StaysSection: View {
             minguest: minguest,
             minPrice: minPrice,
             maxPrice: maxPrice,
+            zoom: miniZoom,
             nearLat: event.lat,
             nearLng: event.lng
         )
@@ -117,6 +124,7 @@ struct StaysSection: View {
                 minguest: minguest,
                 minPrice: minPrice,
                 maxPrice: maxPrice,
+                zoom: sheetZoom,
                 segment: segment,
                 onClose: { showsFullSheet = false }
             )

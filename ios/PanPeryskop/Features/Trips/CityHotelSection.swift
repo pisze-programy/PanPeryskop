@@ -171,7 +171,7 @@ enum HotelSegment: String, CaseIterable, Identifiable {
 
     var minGuest: Int? {
         switch self {
-        case .economy: return nil
+        case .economy: return 60
         case .recommended: return 60
         case .luxury: return 80
         }

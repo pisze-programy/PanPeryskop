@@ -4,6 +4,14 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.1] — build 103, 2026-09-28
+
+### Changed
+
+- The Premium map filter now uses a price floor that scales with the city's
+  cost of living (about cost/10: ~410 zł in Poznań, ~3200 zł in Monaco) instead
+  of one fixed value.
+
 ## [1.3.1] — build 102, 2026-09-28
 
 ### Changed

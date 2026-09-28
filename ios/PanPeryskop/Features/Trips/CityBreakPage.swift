@@ -35,6 +35,15 @@ struct CityBreakPage: View {
 
     private var event: TravelEvent { city.asTravelEvent(day: viewModel.anchorDate) }
 
+    private var staysMinPrice: Int? {
+        switch hotelSegment {
+        case .luxury: return max(40, city.costUsd / 10)
+        default: return nil
+        }
+    }
+
+    private var staysMaxPrice: Int? { hotelSegment.maxPriceUsd }
+
     private var airportCoordinate: CLLocationCoordinate2D? {
         guard let connection = city.connections.first,
               let destination = viewModel.destinations.first(where: { $0.iata == connection.iata }) else { return nil }
@@ -145,7 +154,8 @@ struct CityBreakPage: View {
                 segment: $hotelSegment,
                 minstars: hotelSegment.minStars,
                 minguest: hotelSegment.minGuest,
-                maxPrice: hotelSegment.maxPriceUsd
+                minPrice: staysMinPrice,
+                maxPrice: staysMaxPrice
             )
             .padding(.top, Theme.Spacing.section)
         case .places:

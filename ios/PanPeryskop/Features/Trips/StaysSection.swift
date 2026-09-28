@@ -10,6 +10,7 @@ struct StaysSection: View {
     var segment: Binding<HotelSegment>?
     var minstars: Int?
     var minguest: Int?
+    var minPrice: Int?
     var maxPrice: Int?
 
     @Environment(\.colorScheme) private var colorScheme
@@ -26,6 +27,7 @@ struct StaysSection: View {
         segment: Binding<HotelSegment>? = nil,
         minstars: Int? = nil,
         minguest: Int? = nil,
+        minPrice: Int? = nil,
         maxPrice: Int? = nil
     ) {
         self.event = event
@@ -35,6 +37,7 @@ struct StaysSection: View {
         self.segment = segment
         self.minstars = minstars
         self.minguest = minguest
+        self.minPrice = minPrice
         self.maxPrice = maxPrice
         let resolved = anchors ?? StaysAnchor.options(venueIsAirport: event.venueIsAirport == true)
         self.anchors = resolved
@@ -72,6 +75,7 @@ struct StaysSection: View {
             view: .mini,
             minstars: minstars,
             minguest: minguest,
+            minPrice: minPrice,
             maxPrice: maxPrice,
             nearLat: event.lat,
             nearLng: event.lng
@@ -111,6 +115,7 @@ struct StaysSection: View {
                 checkout: stayDates.checkout,
                 minstars: minstars,
                 minguest: minguest,
+                minPrice: minPrice,
                 maxPrice: maxPrice,
                 segment: segment,
                 onClose: { showsFullSheet = false }

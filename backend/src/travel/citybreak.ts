@@ -104,20 +104,18 @@ export function parseStay22(text: string): Stay22Result[] {
   return parsed.results ?? [];
 }
 
-function hotelFromResult(result: Stay22Result): HotelOffer | null {
+function parseHotel(result: Stay22Result): HotelOffer | null {
   const total = result.prices?.total;
   const data = result.data ?? {};
-  const score = Number(data.ratingOn10 ?? NaN);
-  const reviews = data.reviewCount ?? 0;
   const url = data.urlDirect ?? result.url;
   if (total == null || !data.name || !url) return null;
-  if (!Number.isFinite(score) || score < MIN_SCORE || reviews < MIN_REVIEWS) return null;
+  const score = Number(data.ratingOn10 ?? NaN);
   const [lat, lng] = result.latLng ?? [0, 0];
   return {
     name: data.name,
     stars: typeof data.stars === 'number' ? data.stars : null,
-    score,
-    reviews,
+    score: Number.isFinite(score) ? score : 0,
+    reviews: data.reviewCount ?? 0,
     type: data.type ?? '',
     total: Math.round(total),
     perPerson: Math.round(total / 2),
@@ -147,12 +145,13 @@ export async function fetchCityHotels(env: Env, point: Point, checkin: string, c
   try {
     const response = await fetch(`${STAY22_API}?${params.toString()}`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!response.ok) return [];
-    const results = parseStay22(await response.text());
-    return results
-      .map(hotelFromResult)
-      .filter((hotel): hotel is HotelOffer => hotel !== null)
-      .sort((a, b) => a.total - b.total)
-      .slice(0, HOTELS_PER_CITY);
+    const all = parseStay22(await response.text())
+      .map(parseHotel)
+      .filter((hotel): hotel is HotelOffer => hotel !== null);
+    const good = all.filter((hotel) => hotel.score >= MIN_SCORE && hotel.reviews >= MIN_REVIEWS);
+    const reviewed = all.filter((hotel) => hotel.reviews >= 5);
+    const pool = good.length > 0 ? good : reviewed.length > 0 ? reviewed : all;
+    return pool.sort((a, b) => a.total - b.total).slice(0, HOTELS_PER_CITY);
   } catch {
     return [];
   }

@@ -4,7 +4,7 @@ import { fetchRyanairMonth, fetchWizzairMonth, type FlightCell } from './flights
 import { staysWidgetUrl } from './stay22';
 import { carRentalUrl } from './qeeq';
 import {
-  cityPhotoByCity, directionsUrl, eventsInWindow, fetchCityHotels,
+  cityPhotoByCity, directionsUrl, economyMaxNightlyUsd, eventsInWindow, fetchCityHotels,
   type CityPhoto, type EventOffer, type HotelOffer, type Point,
 } from './citybreak';
 import { mintRedirect } from '../analytics/redirect';
@@ -282,11 +282,12 @@ async function enrichPlace(env: Env, place: Place, budget: { left: number }): Pr
   const photo = cityPhotoByCity(place.city);
   const airport: Point = { lat: place.lat, lng: place.lng };
   const center: Point = photo ? { lat: photo.lat, lng: photo.lng } : airport;
+  const maxNightlyUsd = photo ? economyMaxNightlyUsd(photo.costUsd) : undefined;
   let firstHotel: HotelOffer | null = null;
   for (const option of place.options.slice(0, HOTEL_OPTIONS_PER_PLACE)) {
     if (budget.left <= 0) break;
     budget.left--;
-    const [hotel] = await fetchCityHotels(env, center, option.start, option.end);
+    const [hotel] = await fetchCityHotels(env, center, option.start, option.end, maxNightlyUsd);
     if (!hotel) continue;
     option.hotel = {
       name: hotel.name, total: hotel.total, perPerson: hotel.perPerson, lat: hotel.lat, lng: hotel.lng,
@@ -359,45 +360,56 @@ const MONTHS_GEN = [
   'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
   'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia',
 ];
-const WEEKDAYS = ['niedz.', 'pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.'];
+const WEEKDAYS = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
 
 function nightsLabel(nights: number): string {
   if (nights === 1) return '1 noc';
-  if (nights >= 2 && nights <= 4) return `${nights} noce`;
-  return `${nights} nocy`;
+  const last = nights % 10;
+  const lastTwo = nights % 100;
+  const few = last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14);
+  return `${nights} ${few ? 'noce' : 'nocy'}`;
 }
 
 export function formatRange(start: string, end: string, nights: number): string {
   const from = new Date(`${start}T00:00:00Z`);
   const to = new Date(`${end}T00:00:00Z`);
   const sameMonth = from.getUTCMonth() === to.getUTCMonth() && from.getUTCFullYear() === to.getUTCFullYear();
-  const left = sameMonth ? `${from.getUTCDate()}` : `${from.getUTCDate()} ${MONTHS_GEN[from.getUTCMonth()]}`;
-  const right = `${to.getUTCDate()} ${MONTHS_GEN[to.getUTCMonth()]}`;
-  return `${WEEKDAYS[from.getUTCDay()]}, ${left} - ${right}, ${nightsLabel(nights)}`;
+  const sameYear = from.getUTCFullYear() === to.getUTCFullYear();
+  const left = sameMonth
+    ? `${from.getUTCDate()}`
+    : sameYear
+      ? `${from.getUTCDate()} ${MONTHS_GEN[from.getUTCMonth()]}`
+      : `${from.getUTCDate()} ${MONTHS_GEN[from.getUTCMonth()]} ${from.getUTCFullYear()}`;
+  const right = sameYear
+    ? `${to.getUTCDate()} ${MONTHS_GEN[to.getUTCMonth()]}`
+    : `${to.getUTCDate()} ${MONTHS_GEN[to.getUTCMonth()]} ${to.getUTCFullYear()}`;
+  return `${WEEKDAYS[from.getUTCDay()]} ${left} - ${WEEKDAYS[to.getUTCDay()]} ${right}, ${nightsLabel(nights)}`;
 }
 
 export function formatDay(iso: string): string {
   const day = new Date(`${iso}T00:00:00Z`);
-  return `${WEEKDAYS[day.getUTCDay()]}, ${day.getUTCDate()} ${MONTHS_GEN[day.getUTCMonth()]}`;
+  return `${WEEKDAYS[day.getUTCDay()]} ${day.getUTCDate()} ${MONTHS_GEN[day.getUTCMonth()]}`;
 }
 
 function renderOption(offer: Offer): string {
+  const hotel = offer.hotel;
+  const total = hotel ? Math.round(offer.price + hotel.perPerson) : null;
+  const headline = total !== null ? `od ${total} zł/os` : `od ${Math.round(offer.price)} zł/os`;
+  const detail = hotel
+    ? `lot ${Math.round(offer.price)} zł/os + hotel ${hotel.total} zł za 2 osoby, od ${hotel.perPerson} zł/os`
+    : `lot ${Math.round(offer.price)} zł/os, sam lot`;
   return `          <li class="opt">
-            <span class="opt__head"><a class="opt__date" href="${offer.flightUrl}" rel="nofollow sponsored" target="_blank">${formatRange(offer.start, offer.end, offer.nights)}</a><span class="opt__price">lot od <strong>${Math.round(offer.price)} zł</strong>/os</span></span>
-            <span class="opt__links"><a href="${offer.stayUrl}" rel="nofollow sponsored" target="_blank">Hotele</a><a href="${offer.carUrl}" rel="nofollow sponsored" target="_blank">Auto od 49 zł/dzień</a></span>
+            <div class="opt__head"><a class="opt__date" href="${offer.flightUrl}" rel="nofollow sponsored noopener" target="_blank">${formatRange(offer.start, offer.end, offer.nights)}</a><span class="opt__total">${headline}</span></div>
+            <div class="opt__detail">${detail}</div>
+            <div class="opt__actions"><a href="${offer.flightUrl}" rel="nofollow sponsored noopener" target="_blank">Wybierz lot</a><a href="${offer.stayUrl}" rel="nofollow sponsored noopener" target="_blank">Noclegi na te daty</a><a href="${offer.carUrl}" rel="nofollow sponsored noopener" target="_blank">Auto na te daty</a></div>
           </li>`;
-}
-
-function renderHotel(hotel: HotelOffer): string {
-  const stars = hotel.stars ? `${hotel.stars}* - ` : '';
-  return `          <li><a href="${hotel.url}" rel="nofollow sponsored" target="_blank">${escapeHtml(hotel.name)}</a><span class="muted"> ${stars}${hotel.score.toFixed(1)}/10 (${hotel.reviews}) - od ${hotel.perPerson} zł/os</span></li>`;
 }
 
 function renderEvent(event: EventOffer): string {
   const kind = event.tag === 'biegi' ? 'Bieg' : 'Mecz';
   const venue = event.venue ? ` - ${escapeHtml(event.venue)}` : '';
   const title = event.link
-    ? `<a href="${event.link}" rel="nofollow" target="_blank">${escapeHtml(event.title)}</a>`
+    ? `<a href="${event.link}" rel="nofollow noopener" target="_blank">${escapeHtml(event.title)}</a>`
     : escapeHtml(event.title);
   return `          <li>${kind}: ${title}<span class="muted"> ${formatDay(event.start)}${venue}</span></li>`;
 }
@@ -405,9 +417,17 @@ function renderEvent(event: EventOffer): string {
 function renderDirections(links: { label: string; url: string }[]): string {
   if (links.length === 0) return '';
   const items = links
-    .map((link) => `<a href="${link.url}" rel="nofollow" target="_blank">${escapeHtml(link.label)}</a>`)
+    .map((link) => `<a href="${link.url}" rel="nofollow noopener" target="_blank">${escapeHtml(link.label)}</a>`)
     .join('');
   return `        <h4>Jak dojechać</h4>\n        <div class="directions">${items}</div>\n`;
+}
+
+const FALLBACK_TINTS = ['#4F55F1', '#2563EB', '#7A4FE0', '#0F766E', '#B45309'];
+
+function fallbackPanel(name: string): string {
+  let hash = 0;
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return `<span class="place__ph" style="background:${FALLBACK_TINTS[hash % FALLBACK_TINTS.length]}">${escapeHtml(name)}</span>`;
 }
 
 function renderPlace(place: Place, deal: FeaturedDeal | undefined): string {
@@ -418,26 +438,25 @@ function renderPlace(place: Place, deal: FeaturedDeal | undefined): string {
     : '';
   const image = place.imageLargeUrl
     ? `<img src="${place.imageLargeUrl}" alt="${escapeHtml(name)}" loading="lazy">`
-    : `<span class="place__ph">${escapeHtml(name.slice(0, 1))}</span>`;
-  const cheapestHotel = deal?.hotels[0];
-  const headline = cheapestHotel
-    ? `łącznie od <strong>${Math.round(best.price + cheapestHotel.perPerson)} zł</strong>/os`
-    : `lot od <strong>${Math.round(best.price)} zł</strong>/os`;
-  const hotels = deal && deal.hotels.length
-    ? `        <h4>Noclegi</h4>\n        <ul class="plain">\n${deal.hotels.map(renderHotel).join('\n')}\n        </ul>\n`
-    : `        <h4>Noclegi</h4>\n        <ul class="plain">\n          <li><a href="${best.stayUrl}" rel="nofollow sponsored" target="_blank">Zobacz hotele i ceny</a></li>\n        </ul>\n`;
+    : fallbackPanel(name);
+  const priced = place.options.filter((option) => option.hotel);
+  const headline = priced.length > 0
+    ? `od <strong>${Math.min(...priced.map((option) => Math.round(option.price + (option.hotel?.perPerson ?? 0))))} zł</strong>/os`
+    : `od <strong>${Math.round(best.price)} zł</strong>/os`;
+  const note = priced.length > 0 ? 'za osobę, lot i nocleg' : 'za osobę, sam lot';
   const events = deal && deal.events.length
     ? `        <h4>Wydarzenia</h4>\n        <ul class="plain">\n${deal.events.map(renderEvent).join('\n')}\n        </ul>\n`
     : '';
   return `    <article class="place">
-      <a class="place__img" href="${best.flightUrl}" rel="nofollow sponsored" target="_blank">${image}${credit}</a>
+      <a class="place__img" href="${best.flightUrl}" rel="nofollow sponsored noopener" target="_blank">${image}${credit}</a>
       <div class="place__body">
-        <h3><a href="${best.flightUrl}" rel="nofollow sponsored" target="_blank">${escapeHtml(name)}</a></h3>
-        <p class="place__price">${headline}</p>
+        <h3><a href="${best.flightUrl}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(name)}</a></h3>
+        <p class="place__price">${headline} <span class="place__note">${note}</span></p>
+        <h4>Terminy</h4>
         <ul class="options">
 ${place.options.map(renderOption).join('\n')}
         </ul>
-${hotels}${events}${renderDirections(deal?.directions ?? [])}      </div>
+${events}${renderDirections(deal?.directions ?? [])}      </div>
     </article>`;
 }
 
@@ -569,23 +588,26 @@ h2{font-size:19px;margin-top:34px;border-bottom:1px solid #eee;padding-bottom:6p
 .place{display:grid;grid-template-columns:240px 1fr;gap:0;border:1px solid #eee;border-radius:12px;overflow:hidden;margin:16px 0;align-items:stretch}
 .place__img{position:relative;display:block;height:100%;min-height:200px;overflow:hidden;background:#eef0f7;text-decoration:none}
 .place__img img{width:100%;height:100%;object-fit:cover;display:block}
-.place__ph{display:flex;align-items:center;justify-content:center;height:100%;min-height:180px;font-size:64px;font-weight:800;color:#fff;background:linear-gradient(135deg,#5B6BE8,#93A0F2)}
-.credit{position:absolute;right:6px;bottom:4px;font-size:10px;color:#fff;background:rgba(0,0,0,.45);padding:1px 5px;border-radius:4px}
-.place__body{padding:14px 18px 18px}
+.place__ph{display:flex;align-items:center;justify-content:center;height:100%;min-height:200px;padding:16px;text-align:center;font-size:20px;font-weight:700;color:#fff}
+.credit{position:absolute;right:6px;bottom:4px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:1px 5px;border-radius:4px}
+.place__body{padding:16px 18px 18px}
 .place__body h3{margin:0 0 2px;font-size:21px}
 .place__body h3 a{color:#141414;text-decoration:none}
-.place__price{margin:0 0 10px;color:#333;font-size:15px}
-.place__body h4{margin:16px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#888;border:0}
+.place__price{margin:0 0 14px;font-size:22px;font-weight:800;color:#141414}
+.place__note{font-size:13px;font-weight:400;color:#6B7280}
+.place__body h4{margin:22px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#6B7280;border:0}
 .options{list-style:none;padding:0;margin:0}
-.opt{display:flex;flex-direction:column;gap:5px;padding:10px 0;border-bottom:1px solid #f2f2f2}
-.opt__head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.opt{border:1px solid #eee;border-radius:10px;padding:12px;margin:10px 0}
+.opt__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .opt__date{color:#141414;text-decoration:none;font-weight:600;font-size:15px}
-.opt__price{color:#777;white-space:nowrap;font-size:13px}
-.opt__links a{margin-right:16px;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
+.opt__total{font-weight:700;white-space:nowrap;font-size:15px}
+.opt__detail{margin-top:4px;color:#6B7280;font-size:13px}
+.opt__actions{margin-top:10px;padding-top:10px;border-top:1px solid #f2f2f2}
+.opt__actions a{display:inline-block;margin-right:16px;padding:4px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
 .plain{list-style:none;padding:0;margin:0;font-size:14px}
 .plain li{padding:4px 0;border-bottom:1px solid #f4f4f4}
 .directions a{display:inline-block;margin:2px 12px 2px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
-.muted{color:#888}
+.muted{color:#6B7280}
 .pcard{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;margin:8px 0;text-decoration:none;color:#141414}
 .pcard__logo{width:40px;height:40px;flex:none;border-radius:9px;background:#fff;object-fit:contain;padding:5px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .pcard__body{flex:1;display:flex;flex-direction:column}
@@ -644,24 +666,32 @@ export function renderJson(data: OriginData): string {
   return JSON.stringify({
     origin: { id: data.origin.id, name: data.origin.name, iata: data.origin.iata },
     generatedAt: data.generatedAt,
+    priceNote: 'Ceny za osobę. Cena łączna to lot plus połowa ceny noclegu za 2 osoby.',
     places: places.map((place) => {
       const deal = dealByCity.get(foldCity(place.city));
       const best = place.options[0];
-      const cheapestHotel = deal?.hotels[0];
+      const priced = place.options.filter((option) => option.hotel);
+      const total = priced.length > 0
+        ? Math.min(...priced.map((option) => Math.round(option.price + (option.hotel?.perPerson ?? 0))))
+        : null;
       return {
         city: place.city,
         cityPl: place.cityPl,
         iata: place.iata,
         image: place.imageLargeUrl,
         imageCredit: place.imageCredit,
-        priceFrom: { flight: best.price, total: cheapestHotel ? Math.round(best.price + cheapestHotel.perPerson) : null },
+        priceFrom: { flight: best.price, total, currency: 'PLN', perPerson: true },
         options: place.options.map((offer) => ({
           start: offer.start,
           end: offer.end,
           nights: offer.nights,
-          price: offer.price,
+          flightPrice: offer.price,
+          hotelTotal: offer.hotel?.total ?? null,
+          hotelName: offer.hotel?.name ?? null,
+          totalPerPerson: offer.hotel ? Math.round(offer.price + offer.hotel.perPerson) : null,
           flightUrl: offer.flightUrl,
           stayUrl: offer.stayUrl,
+          carUrl: offer.carUrl,
         })),
         hotels: (deal?.hotels ?? []).map((hotel) => ({
           name: hotel.name,

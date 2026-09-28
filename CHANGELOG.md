@@ -11,6 +11,8 @@ All notable changes to PanPeryskop. Format based on
 - The Premium map filter now uses a price floor that scales with the city's
   cost of living (about cost/10: ~410 zł in Poznań, ~3200 zł in Monaco) instead
   of one fixed value.
+- The Ekonomiczne map filter now caps the nightly price with a value that
+  scales with the city (about cost/15), instead of a fixed 150 €.
 
 ## [1.3.1] — build 102, 2026-09-28
 

@@ -7,6 +7,7 @@ export interface CityPhoto {
   namePl: string;
   lat: number;
   lng: number;
+  costUsd: number;
   imageUrl: string;
   imageLargeUrl: string;
   credit: ImageCredit | null;
@@ -34,6 +35,7 @@ export function cityPhotoByCity(city: string): CityPhoto | null {
     namePl: entry.namePl,
     lat: entry.lat,
     lng: entry.lng,
+    costUsd: entry.costUsd,
     imageUrl: entry.imageUrl,
     imageLargeUrl: entry.imageLargeUrl,
     credit: entry.imageCredit,
@@ -51,9 +53,13 @@ export function directionsUrl(from: Point, to: Point, mode: TravelMode): string 
 }
 
 const STAY22_API = 'https://www.stay22.com/api/booking';
-const MIN_SCORE = 7.5;
-const MIN_REVIEWS = 50;
 const HOTELS_PER_CITY = 3;
+
+export const ECONOMY_PRICE_DIVISOR = 15;
+
+export function economyMaxNightlyUsd(costUsd: number): number {
+  return Math.max(1, Math.round(costUsd / ECONOMY_PRICE_DIVISOR));
+}
 
 interface Stay22Prices {
   total?: number;
@@ -126,7 +132,9 @@ function parseHotel(result: Stay22Result): HotelOffer | null {
   };
 }
 
-export async function fetchCityHotels(env: Env, point: Point, checkin: string, checkout: string): Promise<HotelOffer[]> {
+export async function fetchCityHotels(
+  env: Env, point: Point, checkin: string, checkout: string, maxNightlyUsd?: number,
+): Promise<HotelOffer[]> {
   const params = new URLSearchParams({
     lat: String(point.lat),
     lng: String(point.lng),
@@ -141,17 +149,16 @@ export async function fetchCityHotels(env: Env, point: Point, checkin: string, c
     height: '900',
     selectedHotelProvider: 'booking',
   });
+  if (maxNightlyUsd && maxNightlyUsd > 0) params.set('max', String(maxNightlyUsd));
   if (env.STAY22_AID) params.set('aid', env.STAY22_AID);
   try {
     const response = await fetch(`${STAY22_API}?${params.toString()}`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!response.ok) return [];
-    const all = parseStay22(await response.text())
+    return parseStay22(await response.text())
       .map(parseHotel)
-      .filter((hotel): hotel is HotelOffer => hotel !== null);
-    const good = all.filter((hotel) => hotel.score >= MIN_SCORE && hotel.reviews >= MIN_REVIEWS);
-    const reviewed = all.filter((hotel) => hotel.reviews >= 5);
-    const pool = good.length > 0 ? good : reviewed.length > 0 ? reviewed : all;
-    return pool.sort((a, b) => a.total - b.total).slice(0, HOTELS_PER_CITY);
+      .filter((hotel): hotel is HotelOffer => hotel !== null)
+      .sort((a, b) => a.total - b.total)
+      .slice(0, HOTELS_PER_CITY);
   } catch {
     return [];
   }

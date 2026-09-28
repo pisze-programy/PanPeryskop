@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { weekendAnchors, windowMonths, cheapestOn, routePrice, renderPage, WEEKEND_WINDOWS, type Offer } from '../src/travel/webpage';
+import { weekendAnchors, windowMonths, cheapestOn, routePrice, renderPage, formatRange, formatDay, WEEKEND_WINDOWS, type Offer } from '../src/travel/webpage';
 import { toStayDate, parseStay22, directionsUrl } from '../src/travel/citybreak';
 import type { FlightCell } from '../src/travel/flightsApi';
 
@@ -49,7 +49,7 @@ test('renderPage: writes the origin title and the offer links', () => {
     city: 'Paris', cityPl: 'Paryż', iata: 'BVA', carrier: 'ryanair', window: 'pt-ndz',
     start: '2026-10-23', end: '2026-10-25', nights: 2, price: 573,
     lat: 49.45, lng: 2.35, imageUrl: null, imageLargeUrl: null, imageCredit: null,
-    flightUrl: 'https://api.panperyskop.app/r/abc', stayUrl: 'https://api.panperyskop.app/r/def', carUrl: 'https://api.panperyskop.app/r/ghi',
+    flightUrl: 'https://api.panperyskop.app/r/abc', stayUrl: 'https://api.panperyskop.app/r/def', carUrl: 'https://api.panperyskop.app/r/ghi', hotel: null,
   };
   const html = renderPage({
     origin: { id: 'poznan', name: 'Poznań', genitive: 'Poznania', iata: 'POZ' },
@@ -79,4 +79,19 @@ test('directionsUrl: builds a Google Maps transit link', () => {
   assert.match(url, /google\.com\/maps\/dir/);
   assert.match(url, /travelmode=transit/);
   assert.match(url, /origin=49\.45%2C2\.35/);
+});
+
+test('formatRange: reads like Polish', () => {
+  assert.equal(formatRange('2026-10-08', '2026-10-12', 4), 'czwartek 8 - poniedziałek 12 października, 4 noce');
+  assert.equal(formatRange('2026-11-06', '2026-11-08', 2), 'piątek 6 - niedziela 8 listopada, 2 noce');
+  assert.equal(formatRange('2026-10-30', '2026-11-01', 2), 'piątek 30 października - niedziela 1 listopada, 2 noce');
+  assert.equal(formatRange('2026-12-31', '2027-01-03', 3), 'czwartek 31 grudnia 2026 - niedziela 3 stycznia 2027, 3 noce');
+  assert.equal(formatRange('2026-11-07', '2026-11-08', 1), 'sobota 7 - niedziela 8 listopada, 1 noc');
+  assert.equal(formatRange('2026-11-06', '2026-11-09', 3), 'piątek 6 - poniedziałek 9 listopada, 3 noce');
+  assert.equal(formatRange('2026-11-06', '2026-11-11', 5), 'piątek 6 - środa 11 listopada, 5 nocy');
+  assert.equal(formatRange('2026-11-06', '2026-11-28', 22), 'piątek 6 - sobota 28 listopada, 22 noce');
+});
+
+test('formatDay: reads like Polish', () => {
+  assert.equal(formatDay('2026-11-08'), 'niedziela 8 listopada');
 });

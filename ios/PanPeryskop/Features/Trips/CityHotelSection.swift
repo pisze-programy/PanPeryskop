@@ -176,13 +176,4 @@ enum HotelSegment: String, CaseIterable, Identifiable {
         case .luxury: return 80
         }
     }
-
-    /// USD, the unit the Stay22 widget's price filter uses. 162 ≈ 150 EUR.
-    var maxPriceUsd: Int? {
-        switch self {
-        case .economy: return 162
-        case .recommended: return nil
-        case .luxury: return nil
-        }
-    }
 }

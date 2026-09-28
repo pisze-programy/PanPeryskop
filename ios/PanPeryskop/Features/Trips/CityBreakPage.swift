@@ -42,7 +42,12 @@ struct CityBreakPage: View {
         }
     }
 
-    private var staysMaxPrice: Int? { hotelSegment.maxPriceUsd }
+    private var staysMaxPrice: Int? {
+        switch hotelSegment {
+        case .economy: return max(20, city.costUsd / 15)
+        default: return nil
+        }
+    }
 
     private var airportCoordinate: CLLocationCoordinate2D? {
         guard let connection = city.connections.first,

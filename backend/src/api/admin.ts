@@ -682,6 +682,20 @@ adminRoutes.post('/unban', async (c) => {
   return c.json({ ok: true, device_id: body.device_id });
 });
 
+// Days whose stored rows lack meta (an older parser dropped it, or a league was
+// unknown). The VPS travel runner treats them as uncovered and refetches them.
+adminRoutes.get('/travel/missing-meta', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const provider = c.req.query('provider');
+  if (!provider) return c.json({ error: 'provider required' }, 400);
+  const rows = await c.env.DB
+    .prepare(`SELECT DISTINCT date(start_ms / 1000, 'unixepoch', '+2 hours') AS day
+              FROM travel_events WHERE provider = ? AND meta IS NULL ORDER BY day`)
+    .bind(provider)
+    .all<{ day: string }>();
+  return c.json({ days: (rows.results ?? []).map((r) => r.day) });
+});
+
 // No moderation/no media — upsert by (provider, external_id), idempotent.
 adminRoutes.post('/travel/ingest', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);

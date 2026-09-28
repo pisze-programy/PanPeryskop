@@ -59,6 +59,14 @@ function log(provider: string, msg: string): void {
   console.log(`[travel-${provider}] ${new Date().toISOString()} ${msg}`);
 }
 
+async function missingMetaDays(base: string, secret: string, provider: string): Promise<string[]> {
+  const url = `${base}/admin/travel/missing-meta?provider=${encodeURIComponent(provider)}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${secret}` } });
+  if (!res.ok) return [];
+  const body = (await res.json().catch(() => null)) as { days?: unknown } | null;
+  return Array.isArray(body?.days) ? body.days.filter((d): d is string => typeof d === 'string') : [];
+}
+
 async function main(): Promise<void> {
   const env = loadEnv();
   const base = env.BASE_URL || 'https://api.panperyskop.app';
@@ -90,6 +98,11 @@ async function main(): Promise<void> {
   const store = checkpointGeoStore(cp);
   const force = process.argv.includes('--force');
   const coveredDays = force ? new Set<string>() : new Set(Object.keys(cp.scopes ?? {}));
+  if (!force) {
+    const missing = await missingMetaDays(base, secret, provider);
+    for (const day of missing) coveredDays.delete(day);
+    if (missing.length > 0) log(provider, `re-healing ${missing.length} day(s) without meta: ${missing.join(',')}`);
+  }
   const runType = backfill ? 'backfill' : 'replenish';
   log(provider, `start ${runType}${force ? ' --force' : ''} (${coveredDays.size} covered days)`);
 

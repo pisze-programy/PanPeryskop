@@ -2,27 +2,33 @@ import { addDaysWarsaw, todayWarsaw } from '../seed/core/dates';
 import { destinationsFrom, foldCity, type Destination } from './airports';
 import { fetchRyanairMonth, fetchWizzairMonth, type FlightCell } from './flightsApi';
 import { staysWidgetUrl } from './stay22';
+import { carRentalUrl } from './qeeq';
+import {
+  cityPhotoByCity, directionsUrl, eventsInWindow, fetchCityHotels,
+  type CityPhoto, type EventOffer, type HotelOffer, type Point,
+} from './citybreak';
 import { mintRedirect } from '../analytics/redirect';
 
 export interface OriginPage {
   id: string;
   name: string;
+  genitive: string;
   iata: string;
 }
 
 export const ORIGIN_PAGES: OriginPage[] = [
-  { id: 'poznan', name: 'Poznań', iata: 'POZ' },
-  { id: 'warszawa', name: 'Warszawa', iata: 'WAW' },
-  { id: 'wroclaw', name: 'Wrocław', iata: 'WRO' },
-  { id: 'gdansk', name: 'Gdańsk', iata: 'GDN' },
-  { id: 'krakow', name: 'Kraków', iata: 'KRK' },
-  { id: 'katowice', name: 'Katowice', iata: 'KTW' },
-  { id: 'rzeszow', name: 'Rzeszów', iata: 'RZE' },
-  { id: 'bydgoszcz', name: 'Bydgoszcz', iata: 'BZG' },
-  { id: 'lodz', name: 'Łódź', iata: 'LCJ' },
-  { id: 'szczecin', name: 'Szczecin', iata: 'SZZ' },
-  { id: 'lublin', name: 'Lublin', iata: 'LUZ' },
-  { id: 'olsztyn', name: 'Olsztyn', iata: 'SZY' },
+  { id: 'poznan', name: 'Poznań', genitive: 'Poznania', iata: 'POZ' },
+  { id: 'warszawa', name: 'Warszawa', genitive: 'Warszawy', iata: 'WAW' },
+  { id: 'wroclaw', name: 'Wrocław', genitive: 'Wrocławia', iata: 'WRO' },
+  { id: 'gdansk', name: 'Gdańsk', genitive: 'Gdańska', iata: 'GDN' },
+  { id: 'krakow', name: 'Kraków', genitive: 'Krakowa', iata: 'KRK' },
+  { id: 'katowice', name: 'Katowice', genitive: 'Katowic', iata: 'KTW' },
+  { id: 'rzeszow', name: 'Rzeszów', genitive: 'Rzeszowa', iata: 'RZE' },
+  { id: 'bydgoszcz', name: 'Bydgoszcz', genitive: 'Bydgoszczy', iata: 'BZG' },
+  { id: 'lodz', name: 'Łódź', genitive: 'Łodzi', iata: 'LCJ' },
+  { id: 'szczecin', name: 'Szczecin', genitive: 'Szczecina', iata: 'SZZ' },
+  { id: 'lublin', name: 'Lublin', genitive: 'Lublina', iata: 'LUZ' },
+  { id: 'olsztyn', name: 'Olsztyn', genitive: 'Olsztyna', iata: 'SZY' },
 ];
 
 export interface WeekendWindow {
@@ -80,6 +86,7 @@ export function windowMonths(today: string): string[] {
 
 export interface Offer {
   city: string;
+  cityPl: string | null;
   iata: string;
   carrier: string;
   window: string;
@@ -87,8 +94,14 @@ export interface Offer {
   end: string;
   nights: number;
   price: number;
+  lat: number;
+  lng: number;
+  imageUrl: string | null;
+  imageLargeUrl: string | null;
+  imageCredit: CityPhoto['credit'];
   flightUrl: string;
   stayUrl: string;
+  carUrl: string;
 }
 
 export interface WindowSection {
@@ -146,6 +159,65 @@ async function routeFares(
   return { destination, carrier, out, back };
 }
 
+interface DraftOffer {
+  city: string;
+  iata: string;
+  carrier: 'ryanair' | 'wizzair';
+  lat: number;
+  lng: number;
+  price: number;
+}
+
+async function toOffer(
+  env: Env, origin: OriginPage, draft: DraftOffer, window: WeekendWindow, start: string, end: string,
+): Promise<Offer> {
+  const aid = env.STAY22_AID ?? '';
+  const photo = cityPhotoByCity(draft.city);
+  return {
+    city: draft.city,
+    cityPl: photo?.namePl ?? null,
+    iata: draft.iata,
+    carrier: draft.carrier,
+    window: window.key,
+    start,
+    end,
+    nights: window.nights,
+    price: draft.price,
+    lat: draft.lat,
+    lng: draft.lng,
+    imageUrl: photo?.imageUrl ?? null,
+    imageLargeUrl: photo?.imageLargeUrl ?? null,
+    imageCredit: photo?.credit ?? null,
+    flightUrl: await mintRedirect(env, 'flight', carrierBookingUrl(draft.carrier, origin.iata, draft.iata, start, end)),
+    stayUrl: await mintRedirect(env, 'stay', staysWidgetUrl(aid, {
+      lat: draft.lat, lng: draft.lng,
+      checkin: start, checkout: end,
+      theme: 'light', view: 'full', adults: 2,
+    })),
+    carUrl: await mintRedirect(env, 'car', carRentalUrl(draft.iata, start, end)),
+  };
+}
+
+function pickCheapestPerCity(fares: RouteFares[], start: string, end: string): DraftOffer[] {
+  const byCity = new Map<string, DraftOffer>();
+  for (const fare of fares) {
+    const price = routePrice(fare.out, fare.back, start, end);
+    if (price === null || price > PRICE_CAP) continue;
+    const key = foldCity(fare.destination.city);
+    const current = byCity.get(key);
+    if (current && current.price <= price) continue;
+    byCity.set(key, {
+      city: fare.destination.city,
+      iata: fare.destination.iata,
+      carrier: fare.carrier,
+      lat: fare.destination.lat,
+      lng: fare.destination.lng,
+      price,
+    });
+  }
+  return [...byCity.values()].sort((a, b) => a.price - b.price).slice(0, PER_WINDOW);
+}
+
 async function buildOffers(env: Env, origin: OriginPage): Promise<WindowSection[]> {
   const today = todayWarsaw();
   const months = windowMonths(today);
@@ -156,44 +228,53 @@ async function buildOffers(env: Env, origin: OriginPage): Promise<WindowSection[
   }
   const fares = await mapLimit(jobs, FETCH_CONCURRENCY, (job) =>
     routeFares(env.DB, origin.iata, job.destination, job.carrier, months));
-  const aid = env.STAY22_AID ?? '';
   const sections: WindowSection[] = [];
   for (const window of WEEKEND_WINDOWS) {
-    const groups = weekendAnchors(today, WEEKENDS).map((friday) => ({
-      start: addDaysWarsaw(friday, window.startOffset),
-      end: addDaysWarsaw(friday, window.endOffset),
-      offers: [] as Offer[],
-    }));
-    for (const group of groups) {
-      const byCity = new Map<string, Offer>();
-      for (const fare of fares) {
-        const price = routePrice(fare.out, fare.back, group.start, group.end);
-        if (price === null || price > PRICE_CAP) continue;
-        const key = foldCity(fare.destination.city);
-        const current = byCity.get(key);
-        if (current && current.price <= price) continue;
-        byCity.set(key, {
-          city: fare.destination.city,
-          iata: fare.destination.iata,
-          carrier: fare.carrier,
-          window: window.key,
-          start: group.start,
-          end: group.end,
-          nights: window.nights,
-          price,
-          flightUrl: await mintRedirect(env, 'flight', carrierBookingUrl(fare.carrier, origin.iata, fare.destination.iata, group.start, group.end)),
-          stayUrl: await mintRedirect(env, 'stay', staysWidgetUrl(aid, {
-            lat: fare.destination.lat, lng: fare.destination.lng,
-            checkin: group.start, checkout: group.end,
-            theme: 'light', view: 'full', adults: 2,
-          })),
-        });
-      }
-      group.offers = [...byCity.values()].sort((a, b) => a.price - b.price).slice(0, PER_WINDOW);
+    const groups: { start: string; end: string; offers: Offer[] }[] = [];
+    for (const friday of weekendAnchors(today, WEEKENDS)) {
+      const start = addDaysWarsaw(friday, window.startOffset);
+      const end = addDaysWarsaw(friday, window.endOffset);
+      const drafts = pickCheapestPerCity(fares, start, end);
+      const offers = await Promise.all(drafts.map((draft) => toOffer(env, origin, draft, window, start, end)));
+      groups.push({ start, end, offers });
     }
     sections.push({ window, groups });
   }
   return sections;
+}
+
+export interface FeaturedDeal {
+  offer: Offer;
+  photo: CityPhoto | null;
+  hotels: HotelOffer[];
+  events: EventOffer[];
+  directions: { label: string; url: string }[];
+}
+
+const ENRICH_CONCURRENCY = 3;
+
+function buildDirections(airport: Point, hotels: HotelOffer[], events: EventOffer[]): { label: string; url: string }[] {
+  const links: { label: string; url: string }[] = [];
+  const hotel = hotels[0];
+  const event = events[0];
+  if (hotel) links.push({ label: 'Lotnisko - hotel', url: directionsUrl(airport, hotel, 'transit') });
+  if (event) links.push({ label: 'Lotnisko - wydarzenie', url: directionsUrl(airport, event, 'transit') });
+  if (hotel && event) links.push({ label: 'Hotel - wydarzenie', url: directionsUrl(hotel, event, 'walking') });
+  return links;
+}
+
+async function enrichPlace(env: Env, place: Place): Promise<FeaturedDeal> {
+  const offer = place.options[0];
+  const photo = cityPhotoByCity(place.city);
+  const airport: Point = { lat: place.lat, lng: place.lng };
+  const center: Point = photo ? { lat: photo.lat, lng: photo.lng } : airport;
+  const hotels = await fetchCityHotels(env, center, offer.start, offer.end);
+  const events = await eventsInWindow(env.DB, center, offer.start, offer.end);
+  return { offer, photo, hotels, events, directions: buildDirections(airport, hotels, events) };
+}
+
+async function buildFeatured(env: Env, sections: WindowSection[]): Promise<FeaturedDeal[]> {
+  return mapLimit(groupPlaces(sections), ENRICH_CONCURRENCY, (place) => enrichPlace(env, place));
 }
 
 function escapeHtml(value: string): string {
@@ -202,58 +283,247 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function renderOffer(offer: Offer): string {
-  const dates = `${offer.start} – ${offer.end}`;
-  return `      <li class="row">
-        <span class="dest">${escapeHtml(offer.city)}<em>${offer.nights} noce</em></span>
-        <span class="dates">${dates}</span>
-        <span class="price">${Math.round(offer.price)} zł</span>
-        <span class="links"><a href="${offer.flightUrl}" rel="nofollow sponsored" target="_blank">LOTY</a><a href="${offer.stayUrl}" rel="nofollow sponsored" target="_blank">NOCLEGI</a></span>
-      </li>`;
+export interface Place {
+  city: string;
+  cityPl: string | null;
+  iata: string;
+  lat: number;
+  lng: number;
+  imageUrl: string | null;
+  imageLargeUrl: string | null;
+  imageCredit: CityPhoto['credit'];
+  options: Offer[];
 }
 
-function renderGroup(group: { start: string; end: string; offers: Offer[] }): string {
-  if (group.offers.length === 0) return '';
-  return `    <h3>${group.start} – ${group.end}</h3>
-    <ul class="list">
-${group.offers.map(renderOffer).join('\n')}
-    </ul>`;
+export function groupPlaces(sections: WindowSection[]): Place[] {
+  const byCity = new Map<string, Place>();
+  for (const section of sections) {
+    for (const group of section.groups) {
+      for (const offer of group.offers) {
+        const key = foldCity(offer.city);
+        const place = byCity.get(key);
+        if (place) place.options.push(offer);
+        else byCity.set(key, {
+          city: offer.city,
+          cityPl: offer.cityPl,
+          iata: offer.iata,
+          lat: offer.lat,
+          lng: offer.lng,
+          imageUrl: offer.imageUrl,
+          imageLargeUrl: offer.imageLargeUrl,
+          imageCredit: offer.imageCredit,
+          options: [offer],
+        });
+      }
+    }
+  }
+  for (const place of byCity.values()) place.options.sort((a, b) => a.price - b.price);
+  return [...byCity.values()].sort((a, b) => a.options[0].price - b.options[0].price);
 }
 
-function renderSection(section: WindowSection): string {
-  const body = section.groups.map(renderGroup).filter(Boolean).join('\n');
-  if (!body) return '';
-  return `  <section>
-    <h2>${section.window.label}</h2>
-${body}
+function renderOption(offer: Offer): string {
+  return `          <li class="opt">
+            <span class="opt__head"><a class="opt__date" href="${offer.flightUrl}" rel="nofollow sponsored" target="_blank">${offer.start} - ${offer.end}, ${offer.nights} noce</a><span class="opt__price">lot od <strong>${Math.round(offer.price)} zł</strong>/os</span></span>
+            <span class="opt__links"><a href="${offer.stayUrl}" rel="nofollow sponsored" target="_blank">Hotele</a><a href="${offer.carUrl}" rel="nofollow sponsored" target="_blank">Auto od 49 zł/dzień</a></span>
+          </li>`;
+}
+
+function renderHotel(hotel: HotelOffer): string {
+  const stars = hotel.stars ? `${hotel.stars}* - ` : '';
+  return `          <li><a href="${hotel.url}" rel="nofollow sponsored" target="_blank">${escapeHtml(hotel.name)}</a><span class="muted"> ${stars}${hotel.score.toFixed(1)}/10 (${hotel.reviews}) - od ${hotel.perPerson} zł/os</span></li>`;
+}
+
+function renderEvent(event: EventOffer): string {
+  const kind = event.tag === 'biegi' ? 'Bieg' : 'Mecz';
+  const venue = event.venue ? ` - ${escapeHtml(event.venue)}` : '';
+  const title = event.link
+    ? `<a href="${event.link}" rel="nofollow" target="_blank">${escapeHtml(event.title)}</a>`
+    : escapeHtml(event.title);
+  return `          <li>${kind}: ${title}<span class="muted"> ${event.start}${venue}</span></li>`;
+}
+
+function renderDirections(links: { label: string; url: string }[]): string {
+  if (links.length === 0) return '';
+  const items = links
+    .map((link) => `<a href="${link.url}" rel="nofollow" target="_blank">${escapeHtml(link.label)}</a>`)
+    .join('');
+  return `        <h4>Jak dojechać</h4>\n        <div class="directions">${items}</div>\n`;
+}
+
+function renderPlace(place: Place, deal: FeaturedDeal | undefined): string {
+  const name = place.cityPl ?? place.city;
+  const best = place.options[0];
+  const credit = place.imageCredit?.author
+    ? `<span class="credit">${escapeHtml(place.imageCredit.author)} / Unsplash</span>`
+    : '';
+  const image = place.imageLargeUrl
+    ? `<img src="${place.imageLargeUrl}" alt="${escapeHtml(name)}" loading="lazy">`
+    : `<span class="place__ph">${escapeHtml(name.slice(0, 1))}</span>`;
+  const cheapestHotel = deal?.hotels[0];
+  const headline = cheapestHotel
+    ? `łącznie od <strong>${Math.round(best.price + cheapestHotel.perPerson)} zł</strong>/os`
+    : `lot od <strong>${Math.round(best.price)} zł</strong>/os`;
+  const hotels = deal && deal.hotels.length
+    ? `        <h4>Noclegi</h4>\n        <ul class="plain">\n${deal.hotels.map(renderHotel).join('\n')}\n        </ul>\n`
+    : '';
+  const events = deal && deal.events.length
+    ? `        <h4>Wydarzenia</h4>\n        <ul class="plain">\n${deal.events.map(renderEvent).join('\n')}\n        </ul>\n`
+    : '';
+  return `    <article class="place">
+      <a class="place__img" href="${best.flightUrl}" rel="nofollow sponsored" target="_blank">${image}${credit}</a>
+      <div class="place__body">
+        <h3><a href="${best.flightUrl}" rel="nofollow sponsored" target="_blank">${escapeHtml(name)}</a></h3>
+        <p class="place__price">${headline}</p>
+        <ul class="options">
+${place.options.map(renderOption).join('\n')}
+        </ul>
+${hotels}${events}${renderDirections(deal?.directions ?? [])}      </div>
+    </article>`;
+}
+
+interface PartnerCard {
+  id: string;
+  title: string;
+  subtitle: string;
+  url: string;
+  logo: string;
+  background: string;
+  chevron: string;
+}
+
+const LOGO_BASE = 'https://api.panperyskop.app/media/partners';
+
+const PARTNERS: PartnerCard[] = [
+  {
+    id: 'revolut', title: 'Darmowa karta walutowa', subtitle: 'Kurs przed płatnością, bez opłat',
+    url: 'https://api.panperyskop.app/r/revolut', logo: `${LOGO_BASE}/revolut.png`,
+    background: 'linear-gradient(135deg,#fff 0%,#fff 50%,#E4E7FF 72%,#B7BDFB 100%)', chevron: '#4F55F1',
+  },
+  {
+    id: 'airhelp', title: 'Opóźniony lub odwołany lot?', subtitle: 'Nawet 600 EUR odszkodowania',
+    url: 'https://api.panperyskop.app/r/airhelp', logo: `${LOGO_BASE}/airhelp.png`,
+    background: 'linear-gradient(135deg,#fff 0%,#fff 50%,#F2DCE3 72%,#DDA9BA 100%)', chevron: '#B3516E',
+  },
+  {
+    id: 'saily', title: 'Karta eSIM bez limitu w Europie', subtitle: 'Od 16 zł na wyjazd',
+    url: 'https://api.panperyskop.app/r/saily', logo: `${LOGO_BASE}/saily.png`,
+    background: 'linear-gradient(135deg,#fff 0%,#fff 50%,#FFF7A8 72%,#FFF500 100%)', chevron: '#C7B000',
+  },
+];
+
+function renderPartnerCard(card: PartnerCard): string {
+  return `      <a class="pcard" href="${card.url}" rel="nofollow sponsored" target="_blank" style="background:${card.background}">
+        <img class="pcard__logo" src="${card.logo}" alt="" loading="lazy">
+        <span class="pcard__body"><span class="pcard__title">${escapeHtml(card.title)}</span><span class="pcard__sub">${escapeHtml(card.subtitle)}</span></span>
+        <span class="pcard__chev" style="color:${card.chevron}">&gt;</span>
+      </a>`;
+}
+
+function renderCarCard(place: Place | undefined): string {
+  const carUrl = place?.options[0]?.carUrl;
+  if (!carUrl) return '';
+  return `      <a class="pcard" href="${carUrl}" rel="nofollow sponsored" target="_blank" style="background:linear-gradient(135deg,#fff 0%,#fff 50%,#DCE9FF 72%,#A8C6FF 100%)">
+        <img class="pcard__logo" src="${LOGO_BASE}/qeeq.png" alt="" loading="lazy">
+        <span class="pcard__body"><span class="pcard__title">Wynajmij auto przy lotnisku</span><span class="pcard__sub">Od 49 zł/dzień, bezpłatne odwołanie</span></span>
+        <span class="pcard__chev" style="color:#3570E6">&gt;</span>
+      </a>`;
+}
+
+function renderPartners(places: Place[]): string {
+  return `  <section class="partners">
+    <h2>Partnerzy</h2>
+${renderPartnerCard(PARTNERS[0])}
+${renderCarCard(places[0])}
+${PARTNERS.slice(1).map(renderPartnerCard).join('\n')}
   </section>`;
 }
 
-export function renderPage(origin: OriginPage, sections: WindowSection[], generatedAt: string): string {
-  const content = sections.map(renderSection).filter(Boolean).join('\n');
-  const title = `Tanie loty na weekendy z ${origin.name}`;
+function buildJsonLd(origin: OriginPage, sections: WindowSection[]): string {
+  const offers = sections.flatMap((section) => section.groups.flatMap((group) =>
+    group.offers.map((offer) => ({
+      '@type': 'Offer',
+      name: `${origin.name} – ${offer.city}`,
+      price: offer.price,
+      priceCurrency: 'PLN',
+      url: offer.flightUrl,
+      availability: 'https://schema.org/InStock',
+      validFrom: group.start,
+    }))));
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `Tanie loty na weekendy z ${origin.genitive}`,
+    numberOfItems: offers.length,
+    itemListElement: offers.map((offer, index) => ({ '@type': 'ListItem', position: index + 1, item: offer })),
+  };
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
+export function renderPage(data: OriginData): string {
+  const { origin, sections, featured, generatedAt } = data;
+  const places = groupPlaces(sections);
+  const dealByCity = new Map(featured.map((deal) => [foldCity(deal.offer.city), deal]));
+  const title = `Tanie loty na weekendy z ${origin.genitive}`;
+  const description = `Najtańsze loty na najbliższe weekendy z ${origin.genitive}. Terminy, hotele i wydarzenia (biegi, mecze) z linkami do rezerwacji.`;
+  const canonical = `https://api.panperyskop.app/plan/${origin.id}`;
+  const heroImage = places.find((place) => place.imageLargeUrl)?.imageLargeUrl;
+  const content = places.map((place) => renderPlace(place, dealByCity.get(foldCity(place.city)))).join('\n');
   return `<!doctype html>
 <html lang="pl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)} | Pan Peryskop</title>
-<meta name="description" content="Najtańsze loty na najbliższe weekendy z ${escapeHtml(origin.name)}. Ceny lotów i noclegów z linkami do rezerwacji.">
-<link rel="canonical" href="https://panperyskop.app/plan/${origin.id}">
+<meta name="description" content="${escapeHtml(description)}">
+<link rel="canonical" href="${canonical}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${escapeHtml(description)}">
+<meta property="og:url" content="${canonical}">
+<meta property="og:locale" content="pl_PL">
+${heroImage ? `<meta property="og:image" content="${heroImage}">` : ''}
+<script type="application/ld+json">${buildJsonLd(origin, sections)}</script>
 <style>
-body{font-family:system-ui,Arial,sans-serif;color:#141414;margin:0;padding:24px 16px;max-width:840px;margin:0 auto}
-h1{font-size:26px}h2{font-size:19px;margin-top:32px;border-bottom:1px solid #eee;padding-bottom:6px}h3{font-size:15px;color:#555}
-.list{list-style:none;padding:0;margin:0}.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f2f2f2}
-.dest{flex:1;font-weight:600}.dest em{font-weight:400;color:#888;font-style:normal;font-size:13px;margin-left:6px}
-.dates{color:#555;font-size:13px}.price{font-weight:700;white-space:nowrap}
-.links a{margin-left:8px;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
-.foot{margin-top:32px;color:#888;font-size:12px}
+*{box-sizing:border-box}
+body{font-family:system-ui,Arial,sans-serif;color:#141414;margin:0 auto;padding:0 16px 48px;max-width:880px}
+h1{font-size:28px;margin:24px 0 4px}
+.lead{color:#555;margin:0 0 20px}
+h2{font-size:19px;margin-top:34px;border-bottom:1px solid #eee;padding-bottom:6px}
+.place{display:grid;grid-template-columns:240px 1fr;gap:0;border:1px solid #eee;border-radius:12px;overflow:hidden;margin:16px 0}
+.place__img{position:relative;display:block;min-height:180px;background:#eef0f7}
+.place__img img{width:100%;height:100%;object-fit:cover;display:block}
+.place__ph{display:flex;align-items:center;justify-content:center;height:100%;min-height:180px;font-size:42px;font-weight:800;color:#c9cdf0;background:linear-gradient(135deg,#eef0f7,#dfe3f7)}
+.credit{position:absolute;right:6px;bottom:4px;font-size:10px;color:#fff;background:rgba(0,0,0,.45);padding:1px 5px;border-radius:4px}
+.place__body{padding:14px 18px 18px}
+.place__body h3{margin:0 0 2px;font-size:21px}
+.place__body h3 a{color:#141414;text-decoration:none}
+.place__price{margin:0 0 10px;color:#333;font-size:15px}
+.place__body h4{margin:16px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#888;border:0}
+.options{list-style:none;padding:0;margin:0}
+.opt{display:flex;flex-direction:column;gap:4px;padding:8px 0;border-bottom:1px solid #f4f4f4;font-size:14px}
+.opt__head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.opt__date{color:#141414;text-decoration:none;font-weight:600}
+.opt__price{color:#555;white-space:nowrap}
+.opt__links a{margin-right:14px;color:#4F55F1;text-decoration:none;font-weight:700;font-size:13px}
+.plain{list-style:none;padding:0;margin:0;font-size:14px}
+.plain li{padding:4px 0;border-bottom:1px solid #f4f4f4}
+.directions a{display:inline-block;margin:2px 12px 2px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
+.muted{color:#888}
+.pcard{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;margin:8px 0;text-decoration:none;color:#141414}
+.pcard__logo{width:40px;height:40px;flex:none;border-radius:9px;background:#fff;object-fit:contain;padding:5px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.pcard__body{flex:1;display:flex;flex-direction:column}
+.pcard__title{font-weight:600;font-size:15px}
+.pcard__sub{font-size:12px;opacity:.75}
+.pcard__chev{font-size:20px;font-weight:700}
+.foot{margin-top:34px;color:#888;font-size:12px}
+@media(max-width:640px){.place{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <h1>${escapeHtml(title)}</h1>
-<p>Ceny biletów w obie strony. Kliknij LOTY, aby sprawdzić termin, oraz NOCLEGI, aby wybrać hotel.</p>
+<p class="lead">Miejsca, terminy i hotele. Ceny za osobę.</p>
 ${content}
+${renderPartners(places)}
 <p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne i mogą się zmienić u przewoźnika. Serwis korzysta z linków partnerskich.</p>
 </body>
 </html>`;
@@ -263,9 +533,83 @@ export function originById(id: string): OriginPage | null {
   return ORIGIN_PAGES.find((origin) => origin.id === id) ?? null;
 }
 
-export async function originPage(env: Env, id: string): Promise<string | null> {
+export interface OriginData {
+  origin: OriginPage;
+  sections: WindowSection[];
+  featured: FeaturedDeal[];
+  generatedAt: string;
+}
+
+const PAGE_TTL_MS = 20 * 60_000;
+const pageCache = new Map<string, { at: number; data: OriginData }>();
+
+export async function originData(env: Env, id: string): Promise<OriginData | null> {
+  const cached = pageCache.get(id);
+  if (cached && Date.now() - cached.at < PAGE_TTL_MS) return cached.data;
   const origin = originById(id);
   if (!origin) return null;
   const sections = await buildOffers(env, origin);
-  return renderPage(origin, sections, todayWarsaw());
+  const featured = await buildFeatured(env, sections);
+  const data = { origin, sections, featured, generatedAt: todayWarsaw() };
+  pageCache.set(id, { at: Date.now(), data });
+  return data;
+}
+
+export async function originPage(env: Env, id: string): Promise<string | null> {
+  const data = await originData(env, id);
+  return data ? renderPage(data) : null;
+}
+
+export function renderJson(data: OriginData): string {
+  const places = groupPlaces(data.sections);
+  const dealByCity = new Map(data.featured.map((deal) => [foldCity(deal.offer.city), deal]));
+  return JSON.stringify({
+    origin: { id: data.origin.id, name: data.origin.name, iata: data.origin.iata },
+    generatedAt: data.generatedAt,
+    places: places.map((place) => {
+      const deal = dealByCity.get(foldCity(place.city));
+      const best = place.options[0];
+      const cheapestHotel = deal?.hotels[0];
+      return {
+        city: place.city,
+        cityPl: place.cityPl,
+        iata: place.iata,
+        image: place.imageLargeUrl,
+        imageCredit: place.imageCredit,
+        priceFrom: { flight: best.price, total: cheapestHotel ? Math.round(best.price + cheapestHotel.perPerson) : null },
+        options: place.options.map((offer) => ({
+          start: offer.start,
+          end: offer.end,
+          nights: offer.nights,
+          price: offer.price,
+          flightUrl: offer.flightUrl,
+          stayUrl: offer.stayUrl,
+        })),
+        hotels: (deal?.hotels ?? []).map((hotel) => ({
+          name: hotel.name,
+          stars: hotel.stars,
+          score: hotel.score,
+          reviews: hotel.reviews,
+          perPerson: hotel.perPerson,
+          url: hotel.url,
+          lat: hotel.lat,
+          lng: hotel.lng,
+        })),
+        events: (deal?.events ?? []).map((event) => ({
+          title: event.title,
+          tag: event.tag,
+          start: event.start,
+          venue: event.venue,
+          link: event.link,
+          lat: event.lat,
+          lng: event.lng,
+        })),
+        directions: deal?.directions ?? [],
+      };
+    }),
+  });
+}
+
+export function sitemapUrls(base: string): string[] {
+  return ORIGIN_PAGES.map((origin) => `${base}/plan/${origin.id}`);
 }

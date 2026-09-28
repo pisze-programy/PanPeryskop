@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { carRentalUrl } from '../src/travel/qeeq';
+import { carRentalPrice, carRentalUrl } from '../src/travel/qeeq';
 
 test('carRentalUrl: dates open the QEEQ search for the airport', () => {
   const url = new URL(carRentalUrl('BCN', '2026-10-25', '2026-10-26'));
@@ -35,4 +35,9 @@ test('carRentalUrl: a bad date keeps the airport without dates', () => {
   assert.equal(url.pathname, '/car/search');
   assert.equal(url.searchParams.get('pickup_landmark'), '99191');
   assert.equal(url.searchParams.get('from_date_0'), null);
+});
+
+test('carRentalPrice: a measured airport has a rate, an unknown airport the floor', () => {
+  assert.ok(carRentalPrice('BCN') > 0);
+  assert.equal(carRentalPrice('ZZZ'), 49);
 });

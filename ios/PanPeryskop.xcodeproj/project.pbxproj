@@ -117,7 +117,6 @@
 		7F032AA75243C9DC471A771D /* PlaceSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50862340B8C3F217D19CE888 /* PlaceSlider.swift */; };
 		7F057E350C86565718BC4D8F /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AEC0301C06FDC8E6D0BD73E /* MapView.swift */; };
 		8300E0BE741D17D30E6D869B /* DateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E2600CD901D47BDA2BB05D /* DateTests.swift */; };
-		83396805BC14D994957C701C /* CityWeatherSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8BB0F643D8F5D9DE19A786 /* CityWeatherSection.swift */; };
 		84D197577717604F47047F82 /* RailSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD67997E1977E7A508573268 /* RailSliderView.swift */; };
 		855D4453DB1274F73B0CBCCB /* MapOverlayExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CBAFAB9586FD8D5B7797BA3 /* MapOverlayExtensions.swift */; };
 		85A674B5860A678FA414D654 /* URL+Normalized.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6A61775F927FA9665A2DAD5 /* URL+Normalized.swift */; };
@@ -305,7 +304,6 @@
 		67D934D4FFA1AEA8B9221837 /* HTTPClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPClientTests.swift; sourceTree = "<group>"; };
 		682C03AEF0EB077C934D1BB2 /* CityPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityPalette.swift; sourceTree = "<group>"; };
 		699A1534196B738A2DDB1706 /* CarRentalBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarRentalBanner.swift; sourceTree = "<group>"; };
-		6A8BB0F643D8F5D9DE19A786 /* CityWeatherSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityWeatherSection.swift; sourceTree = "<group>"; };
 		6A8C92845BBE44979F331583 /* FlightMonthCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightMonthCalendar.swift; sourceTree = "<group>"; };
 		6AA79C3D276675FEA7D1BE6A /* TravelPlace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelPlace.swift; sourceTree = "<group>"; };
 		6ACC720AF26AB168403D40E7 /* Chip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chip.swift; sourceTree = "<group>"; };
@@ -571,7 +569,6 @@
 				204A6CD407356E80BE13E709 /* CityNearbySection.swift */,
 				682C03AEF0EB077C934D1BB2 /* CityPalette.swift */,
 				955268C35B85674B1DD78310 /* CityPhoto.swift */,
-				6A8BB0F643D8F5D9DE19A786 /* CityWeatherSection.swift */,
 				1AF40CD110313C0595051A7C /* ClusterSheet.swift */,
 				37AB53DA95A6D6FBE3DDD950 /* DestinationMapPage.swift */,
 				D676D24F12D7E46EE15AB3F9 /* DestinationMapRail.swift */,
@@ -943,7 +940,6 @@
 				AF342EE167143D8C9D297D8E /* CityPhoto.swift in Sources */,
 				055A4335E8E7618BBEEC6605 /* CityPinView.swift in Sources */,
 				0A6E5B2B3DB370A6ADFB2FF0 /* CityThumbStore.swift in Sources */,
-				83396805BC14D994957C701C /* CityWeatherSection.swift in Sources */,
 				8982411BA4D21E9253F6C7E7 /* ClubNightMeta.swift in Sources */,
 				5758403F6B57DEBE0C876190 /* ClusterSheet.swift in Sources */,
 				2CF78395B0580F1D6FB70BFB /* Color+Hex.swift in Sources */,
@@ -1236,7 +1232,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 101;
+				CURRENT_PROJECT_VERSION = 102;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1296,7 +1292,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 101;
+				CURRENT_PROJECT_VERSION = 102;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

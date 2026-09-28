@@ -2,6 +2,7 @@ import Foundation
 
 struct CarLinkResponse: Decodable {
     let url: String
+    let price: Double?
 }
 
 // MARK: - Travel (Wycieczki)
@@ -99,12 +100,11 @@ extension APIClient {
         return try await get("/travel/places", params: params)
     }
 
-    static func getCarLink(iata: String, from: String?, to: String?) async throws -> URL? {
+    static func getCarLink(iata: String, from: String?, to: String?) async throws -> CarLinkResponse {
         var params = ["iata": iata]
         if let from { params["from"] = from }
         if let to { params["to"] = to }
-        let response: CarLinkResponse = try await get("/travel/car-link", params: params)
-        return URL(string: response.url)
+        return try await get("/travel/car-link", params: params)
     }
 
     /// Stay22 hotel map widget URL for one anchor, date window and listing options.

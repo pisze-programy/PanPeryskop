@@ -10,6 +10,7 @@ struct StaysSheet: View {
     let checkout: String
     var minstars: Int?
     var minguest: Int?
+    var maxPrice: Int?
     var segment: Binding<HotelSegment>?
     let onClose: () -> Void
 
@@ -36,6 +37,7 @@ struct StaysSheet: View {
             minstars: sort.minstars ?? minstars,
             minguest: sort.minguest ?? minguest,
             adults: sort.adults,
+            maxPrice: maxPrice,
             nearLat: event.lat,
             nearLng: event.lng
         )

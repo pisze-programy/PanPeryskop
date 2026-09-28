@@ -121,9 +121,6 @@ struct CityBreakPage: View {
         case .facts:
             CityFactsSection(city: city)
                 .padding(.top, Theme.Spacing.section)
-        case .weather:
-            CityWeatherSection(city: city)
-                .padding(.top, Theme.Spacing.section)
         case .cityEvents:
             CityEventsSection(city: city, origins: viewModel.originIatas) { event in
                 viewModel.selectNearbyEvent(event)
@@ -147,7 +144,8 @@ struct CityBreakPage: View {
                 anchors: [.centre],
                 segment: $hotelSegment,
                 minstars: hotelSegment.minStars,
-                minguest: hotelSegment.minGuest
+                minguest: hotelSegment.minGuest,
+                maxPrice: hotelSegment.maxPriceUsd
             )
             .padding(.top, Theme.Spacing.section)
         case .places:

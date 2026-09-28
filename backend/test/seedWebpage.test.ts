@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { weekendAnchors, windowMonths, cheapestOn, routePrice, renderPage, WEEKEND_WINDOWS, type Offer } from '../src/travel/webpage';
+import { toStayDate, parseStay22, directionsUrl } from '../src/travel/citybreak';
 import type { FlightCell } from '../src/travel/flightsApi';
 
 function cell(date: string, price: number | null): FlightCell {
@@ -45,16 +46,37 @@ test('routePrice: null when one leg has no fare', () => {
 
 test('renderPage: writes the origin title and the offer links', () => {
   const offer: Offer = {
-    city: 'Paryż', iata: 'BVA', carrier: 'ryanair', window: 'pt-ndz',
+    city: 'Paris', cityPl: 'Paryż', iata: 'BVA', carrier: 'ryanair', window: 'pt-ndz',
     start: '2026-10-23', end: '2026-10-25', nights: 2, price: 573,
-    flightUrl: 'https://api.panperyskop.app/r/abc', stayUrl: 'https://api.panperyskop.app/r/def',
+    lat: 49.45, lng: 2.35, imageUrl: null, imageLargeUrl: null, imageCredit: null,
+    flightUrl: 'https://api.panperyskop.app/r/abc', stayUrl: 'https://api.panperyskop.app/r/def', carUrl: 'https://api.panperyskop.app/r/ghi',
   };
-  const html = renderPage(
-    { id: 'poznan', name: 'Poznań', iata: 'POZ' },
-    [{ window: WEEKEND_WINDOWS[0], groups: [{ start: '2026-10-23', end: '2026-10-25', offers: [offer] }] }],
-    '2026-09-28',
-  );
-  assert.match(html, /Tanie loty na weekendy z Poznań/);
+  const html = renderPage({
+    origin: { id: 'poznan', name: 'Poznań', genitive: 'Poznania', iata: 'POZ' },
+    sections: [{ window: WEEKEND_WINDOWS[0], groups: [{ start: '2026-10-23', end: '2026-10-25', offers: [offer] }] }],
+    featured: [],
+    generatedAt: '2026-09-28',
+  });
+  assert.match(html, /Tanie loty na weekendy z Poznania/);
   assert.match(html, /https:\/\/api\.panperyskop\.app\/r\/abc/);
   assert.match(html, /573 zł/);
+});
+
+test('toStayDate: converts ISO to the Stay22 M/D/YYYY form', () => {
+  assert.equal(toStayDate('2026-11-13'), '11/13/2026');
+  assert.equal(toStayDate('2026-10-02'), '10/2/2026');
+});
+
+test('parseStay22: reads plain JSON and JSONP', () => {
+  const body = '{"results":[{"hid":"bk-1"}]}';
+  assert.deepEqual(parseStay22(body), [{ hid: 'bk-1' }]);
+  const jsonp = '/**/ typeof cb === \'function\' && cb({"results":[{"hid":"bk-2"}]});';
+  assert.deepEqual(parseStay22(jsonp), [{ hid: 'bk-2' }]);
+});
+
+test('directionsUrl: builds a Google Maps transit link', () => {
+  const url = directionsUrl({ lat: 49.45, lng: 2.35 }, { lat: 48.85, lng: 2.35 }, 'transit');
+  assert.match(url, /google\.com\/maps\/dir/);
+  assert.match(url, /travelmode=transit/);
+  assert.match(url, /origin=49\.45%2C2\.35/);
 });

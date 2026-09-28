@@ -10,7 +10,7 @@ import { buildCatalogue } from '../travel/catalogue';
 import { cityBreakForDay } from '../travel/cities';
 import { viatorNearestCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
 import { staysWidgetUrl, type StayTheme, type StayView } from '../travel/stay22';
-import { carRentalUrl } from '../travel/qeeq';
+import { carRentalPrice, carRentalUrl } from '../travel/qeeq';
 import { alertFlightFailure } from '../travel/alerts';
 import { addDaysWarsaw } from '../seed/core/dates';
 import { captureException, isInitialized } from '@sentry/cloudflare';
@@ -365,7 +365,7 @@ travelRoutes.get('/car-link', async (c) => {
   const iata = (q.iata ?? '').toUpperCase();
   if (!/^[A-Z]{3}$/.test(iata)) return c.json({ error: 'iata required' }, 400);
   const url = await mintRedirect(c.env, 'car', carRentalUrl(iata, q.from, q.to));
-  return c.json({ url });
+  return c.json({ url, price: carRentalPrice(iata) });
 });
 
 // Stay22 hotel map widget URL. The app opens the URL, the widget does the rest.

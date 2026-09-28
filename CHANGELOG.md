@@ -4,6 +4,20 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.1] — build 102, 2026-09-28
+
+### Changed
+
+- The Ekonomiczne / Polecane / Premium chips now set the Stay22 map filters
+  directly: Ekonomiczne keeps hostels and hotels with a nightly cap of about
+  150 €, Polecane needs 3 stars and a 6.0 score, Premium needs 4 stars and an
+  8.0 score.
+- The seasonality chart draws the monthly temperature as a smooth line.
+
+### Removed
+
+- The "Pogoda" section (temperature, humidity, air quality) from the city page.
+
 ## [1.3.1] — build 101, 2026-09-28
 
 ### Added
@@ -28,6 +42,8 @@ All notable changes to PanPeryskop. Format based on
 - A match or a run with no purchase link opens a Google AI Mode search. A match
   keeps two buttons: "Bilety" (the AI search) and "Szczegóły meczu" (the ESPN
   page).
+- The hotel segment chips now filter the Stay22 map by stars and guest score
+  only. The measured price band and the "ok. X zł" label are gone.
 
 ### Fixed
 
@@ -37,11 +53,6 @@ All notable changes to PanPeryskop. Format based on
   stands in, so races like Maratona di Pisa are no longer dropped.
 - The football days whose rows lost their league are refetched, so no match
   shows without its league.
-
-### Changed
-
-- The hotel segment chips now filter the Stay22 map by stars and guest score
-  only. The measured price band and the "ok. X zł" label are gone.
 
 ### Removed
 

@@ -262,6 +262,7 @@ export const travel = {
     siteHost: 'https://www.qeeq.pl',
     searchPath: '/car/search',
     currency: 'PLN',
+    defaultPrice: 49,
     pickupTime: '10:00',
     dropoffTime: '10:00',
   },

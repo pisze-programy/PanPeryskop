@@ -1,5 +1,6 @@
 import { CONFIG } from '../config/index';
 import qeeqAirports from './data/qeeq-airports.json';
+import qeeqPrices from './data/qeeq-prices.json';
 
 interface QeeqAirport {
   landmark: number;
@@ -7,6 +8,7 @@ interface QeeqAirport {
 }
 
 const airports = qeeqAirports as Record<string, QeeqAirport>;
+const prices = qeeqPrices as Record<string, number>;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 function searchUrl(entry: QeeqAirport, from?: string, to?: string): string {
@@ -25,6 +27,11 @@ function searchUrl(entry: QeeqAirport, from?: string, to?: string): string {
     params.set('to_date_1', cfg.dropoffTime);
   }
   return `${cfg.siteHost}${cfg.searchPath}?${params}`;
+}
+
+/** The banner price: the measured per-day rate for the airport, else the floor. */
+export function carRentalPrice(iata: string): number {
+  return prices[iata.toUpperCase()] ?? CONFIG.travel.carRental.defaultPrice;
 }
 
 export function carRentalUrl(iata: string, from?: string, to?: string): string {

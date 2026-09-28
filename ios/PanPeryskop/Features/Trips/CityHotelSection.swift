@@ -22,16 +22,10 @@ struct CityHotelSection: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             Divider()
-            HStack(spacing: Theme.Spacing.s) {
-                Text("Sezonowość".uppercased())
-                    .font(Theme.Typo.sectionLabel)
-                    .kerning(0.6)
-                    .foregroundColor(.secondary)
-                Spacer(minLength: 0)
-                Text("ruch turystyczny i pogoda")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
+            Text("Sezonowość".uppercased())
+                .font(Theme.Typo.sectionLabel)
+                .kerning(0.6)
+                .foregroundColor(.secondary)
         }
         .padding(.horizontal, Theme.Spacing.l)
     }
@@ -88,17 +82,30 @@ struct CityHotelSection: View {
         let minT = temps.min() ?? 0
         let maxT = temps.max() ?? 1
         let span = max(0.001, maxT - minT)
-        var path = Path()
-        for (index, month) in months.enumerated() {
-            let x = perBar / 2 + CGFloat(index) * (perBar + Self.barSpacing)
-            let y = (1 - CGFloat((month.tempC - minT) / span)) * Self.chartHeight
-            if index == 0 {
-                path.move(to: CGPoint(x: x, y: y))
-            } else {
-                path.addLine(to: CGPoint(x: x, y: y))
-            }
+        let points = months.enumerated().map { index, month in
+            CGPoint(
+                x: perBar / 2 + CGFloat(index) * (perBar + Self.barSpacing),
+                y: (1 - CGFloat((month.tempC - minT) / span)) * Self.chartHeight
+            )
         }
-        return path.stroke(Color.orange.opacity(0.9), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+        return smoothPath(points)
+            .stroke(Color.orange.opacity(0.9), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+    }
+
+    private func smoothPath(_ points: [CGPoint]) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+        path.move(to: first)
+        for index in 0..<(points.count - 1) {
+            let p0 = index > 0 ? points[index - 1] : points[index]
+            let p1 = points[index]
+            let p2 = points[index + 1]
+            let p3 = index + 2 < points.count ? points[index + 2] : p2
+            let c1 = CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6)
+            let c2 = CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
+            path.addCurve(to: p2, control1: c1, control2: c2)
+        }
+        return path
     }
 
     private func monthRow(perBar: CGFloat) -> some View {
@@ -165,8 +172,17 @@ enum HotelSegment: String, CaseIterable, Identifiable {
     var minGuest: Int? {
         switch self {
         case .economy: return nil
-        case .recommended: return nil
+        case .recommended: return 60
         case .luxury: return 80
+        }
+    }
+
+    /// USD, the unit the Stay22 widget's price filter uses. 162 ≈ 150 EUR.
+    var maxPriceUsd: Int? {
+        switch self {
+        case .economy: return 162
+        case .recommended: return nil
+        case .luxury: return nil
         }
     }
 }

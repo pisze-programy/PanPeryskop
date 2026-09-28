@@ -8,6 +8,7 @@ import { CONFIG } from '../config/index';
 // the WM_COOKIE env var (e.g. "cf_clearance=…; wm_s=…") when running on the VPS.
 import { GeoStore } from '../seed/core/geo';
 import { warsawMidnightMs } from '../seed/core/dates';
+import { resolveTravelGeo } from './geo';
 import { TravelEvent } from './store';
 import type { TravelSource } from './run';
 
@@ -72,12 +73,32 @@ interface WmEvent {
   geoStartPoint?: { coordinates?: number[] };
 }
 
-/** Map one API row to a TravelEvent; null when it is non-European or un-geocoded. */
-export function parseWmEvent(e: WmEvent, fallbackDay: string): TravelEvent | null {
+interface WmCoords {
+  lat: number;
+  lng: number;
+}
+
+/** The provider's start point as [lng, lat], or null when absent or unusable. */
+function coordsOf(e: WmEvent): WmCoords | null {
   const coords = e?.geoStartPoint?.coordinates;
   if (!Array.isArray(coords) || coords.length < 2) return null;
   const [lng, lat] = coords;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
+
+/** Google AI Mode (`udm=50`) search for a race's tickets — the fallback when the
+ *  provider ships no website. */
+function googleSearchUrl(title: string, city: string, day: string): string {
+  const year = day.slice(0, 4);
+  return `https://www.google.com/search?${new URLSearchParams({ udm: '50', q: `${title} ${city} ${year} tickets` })}`;
+}
+
+/** Map one API row to a TravelEvent; null when it is non-European or unusable.
+ *  `coords` overrides the provider start point (used after a city geocode). */
+export function parseWmEvent(e: WmEvent, fallbackDay: string, coords?: WmCoords | null): TravelEvent | null {
+  const point = coords ?? coordsOf(e);
+  if (!point) return null;
   const cc = String(e?.countryCode ?? '').toUpperCase();
   if (!CONFIG.travel.europe.isoCodes.has(cc)) return null;
   const externalId = String(e?.id ?? '').trim();
@@ -96,9 +117,8 @@ export function parseWmEvent(e: WmEvent, fallbackDay: string): TravelEvent | nul
   // startMs is a LOCAL-DAY ANCHOR, not a UTC instant: the provider gives the race's
   // local wall clock, so we place it on that date in Europe/Warsaw. The app groups
   // by that day and shows meta.time. (ESPN events carry a real instant instead.)
-  const startMs = /^\d{4}-\d{2}-\d{2}$/.test(raceDate)
-    ? warsawMidnightMs(raceDate) + timeToMs(time)
-    : warsawMidnightMs(fallbackDay);
+  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(raceDate);
+  const startMs = validDate ? warsawMidnightMs(raceDate) + timeToMs(time) : warsawMidnightMs(fallbackDay);
 
   const meta = {
     distance: e?.distance ?? null,
@@ -111,34 +131,54 @@ export function parseWmEvent(e: WmEvent, fallbackDay: string): TravelEvent | nul
     countryCode: cc,
   };
 
+  const website = typeof e?.website === 'string' && e.website.length > 0 ? e.website : null;
+
   return {
     provider: CONFIG.travel.worldsmarathons.provider,
     externalId,
     title,
-    lat,
-    lng,
+    lat: point.lat,
+    lng: point.lng,
     city,
     country: String(e?.country ?? '').trim(),
     startMs,
     tag: CONFIG.travel.tags.runs,
-    link: typeof e?.website === 'string' ? e.website : null,
+    link: website ?? googleSearchUrl(title, city, validDate ? raceDate : fallbackDay),
     meta: JSON.stringify(meta),
   };
 }
 
-/** Fetch one day's running races (Europe only). */
-export async function fetchWorldsmarathonsDay(day: string, _opts?: { store?: GeoStore }): Promise<TravelEvent[]> {
+/** Fetch one day's running races (Europe only). Rows without a provider start
+ *  point are geocoded by city, so a race is dropped only when that fails too. */
+export async function fetchWorldsmarathonsDay(day: string, opts?: { store?: GeoStore }): Promise<TravelEvent[]> {
   const data = (await fetchSearch(wmDate(day), wmDate(day))) as { results?: WmEvent[] };
   const results = Array.isArray(data?.results) ? data.results : [];
   const out: TravelEvent[] = [];
   const seen = new Set<string>();
   for (const e of results) {
-    const ev = parseWmEvent(e, day);
+    const ev = await toTravelEvent(e, day, opts?.store);
     if (!ev || seen.has(ev.externalId)) continue;
     seen.add(ev.externalId);
     out.push(ev);
   }
   return out;
+}
+
+async function toTravelEvent(e: WmEvent, day: string, store?: GeoStore): Promise<TravelEvent | null> {
+  const point = coordsOf(e);
+  if (point) return parseWmEvent(e, day, point);
+  const cc = String(e?.countryCode ?? '').toUpperCase();
+  if (!CONFIG.travel.europe.isoCodes.has(cc)) return null;
+  const city = String(e?.city ?? '').trim();
+  if (!city) return null;
+  const geo = await resolveTravelGeo({
+    name: String(e?.title ?? city),
+    city,
+    store,
+    provider: CONFIG.travel.worldsmarathons.provider,
+  });
+  if (!geo) return null;
+  return parseWmEvent(e, day, { lat: geo.lat, lng: geo.lng });
 }
 
 /** worldsmarathons travel source — running races (tag `biegi`). */

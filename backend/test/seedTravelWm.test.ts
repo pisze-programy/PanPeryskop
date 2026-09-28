@@ -66,6 +66,22 @@ test('parseWmEvent: skips non-European and un-geocoded rows', () => {
   assert.equal(parseWmEvent(row({ id: '  ' }), '2026-12-31'), null);
 });
 
+test('parseWmEvent: a supplied geocode replaces a missing start point', () => {
+  const e = parseWmEvent(row({ geoStartPoint: undefined }), '2026-12-31', { lat: 41.4, lng: 2.2 });
+  assert.ok(e);
+  assert.equal(e!.lat, 41.4);
+  assert.equal(e!.lng, 2.2);
+});
+
+test('parseWmEvent: no website falls back to a Google AI Mode search', () => {
+  const e = parseWmEvent(row({ website: undefined }), '2026-12-31');
+  assert.ok(e);
+  const url = new URL(e!.link!);
+  assert.equal(url.origin, 'https://www.google.com');
+  assert.equal(url.searchParams.get('udm'), '50');
+  assert.match(url.searchParams.get('q')!, /Cursa dels Nassos 10 km Barcelona 2026 tickets/);
+});
+
 test('runTravelProvider: collects a source over the window and dedupes', async () => {
   const seen: string[] = [];
   const source = {

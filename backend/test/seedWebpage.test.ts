@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { weekendAnchors, windowMonths, cheapestOn, routePrice, renderPage, formatRange, formatDay, WEEKEND_WINDOWS, type Offer } from '../src/travel/webpage';
-import { toStayDate, parseStay22, directionsUrl } from '../src/travel/citybreak';
+import { toStayDate, parseStay22, directionsUrl, economyMaxNightlyUsd } from '../src/travel/citybreak';
 import type { FlightCell } from '../src/travel/flightsApi';
 
 function cell(date: string, price: number | null): FlightCell {
@@ -52,12 +52,12 @@ test('renderPage: writes the origin title and the offer links', () => {
     flightUrl: 'https://api.panperyskop.app/r/abc', stayUrl: 'https://api.panperyskop.app/r/def', carUrl: 'https://api.panperyskop.app/r/ghi', hotel: null,
   };
   const html = renderPage({
-    origin: { id: 'poznan', name: 'Poznań', genitive: 'Poznania', iata: 'POZ' },
+    origin: { id: 'poznan', name: 'Poznań', genitive: 'Poznania', slug: 'tanie-loty-z-poznania', iata: 'POZ' },
     sections: [{ window: WEEKEND_WINDOWS[0], groups: [{ start: '2026-10-23', end: '2026-10-25', offers: [offer] }] }],
     featured: [],
     generatedAt: '2026-09-28',
   });
-  assert.match(html, /Tanie loty na weekendy z Poznania/);
+  assert.match(html, /Tanie loty z Poznania/);
   assert.match(html, /https:\/\/api\.panperyskop\.app\/r\/abc/);
   assert.match(html, /573 zł/);
 });
@@ -94,4 +94,9 @@ test('formatRange: reads like Polish', () => {
 
 test('formatDay: reads like Polish', () => {
   assert.equal(formatDay('2026-11-08'), 'niedziela 8 listopada');
+});
+
+test('economyMaxNightlyUsd: divides the city cost by 15', () => {
+  assert.equal(economyMaxNightlyUsd(1677), 112);
+  assert.equal(economyMaxNightlyUsd(1434), 96);
 });

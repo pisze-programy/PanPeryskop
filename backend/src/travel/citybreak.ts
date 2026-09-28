@@ -1,6 +1,6 @@
 import { CITY_ENTRIES, type CityEntry, type ImageCredit } from './cities';
 import { foldCity } from './airports';
-
+import { viatorConfigured, viatorNearestCity, viatorProductsForCity, viatorWindowFor, type ViatorEnv } from './viator';
 export interface CityPhoto {
   id: string;
   name: string;
@@ -8,6 +8,7 @@ export interface CityPhoto {
   lat: number;
   lng: number;
   costUsd: number;
+  nearby: string[];
   imageUrl: string;
   imageLargeUrl: string;
   credit: ImageCredit | null;
@@ -36,10 +37,126 @@ export function cityPhotoByCity(city: string): CityPhoto | null {
     lat: entry.lat,
     lng: entry.lng,
     costUsd: entry.costUsd,
+    nearby: entry.nearby ?? [],
     imageUrl: entry.imageUrl,
     imageLargeUrl: entry.imageLargeUrl,
     credit: entry.imageCredit,
   };
+}
+
+const MAX_CITY_KM = 150;
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export function cityForAirport(name: string, lat: number, lng: number): CityPhoto | null {
+  const exact = cityPhotoByCity(name);
+  if (exact) return exact;
+  let best: CityEntry | null = null;
+  let bestKm = Infinity;
+  for (const entry of CITY_ENTRIES) {
+    const km = haversineKm(lat, lng, entry.lat, entry.lng);
+    if (km > MAX_CITY_KM) continue;
+    const larger = best === null || entry.population > best.population;
+    const nearerTie = best !== null && entry.population === best.population && km < bestKm;
+    if (larger || nearerTie) {
+      best = entry;
+      bestKm = km;
+    }
+  }
+  if (!best) return null;
+  const namePl = /region|stołeczny/i.test(best.namePl) ? best.name : best.namePl;
+  return {
+    id: best.id,
+    name: best.name,
+    namePl,
+    lat: best.lat,
+    lng: best.lng,
+    costUsd: best.costUsd,
+    nearby: best.nearby ?? [],
+    imageUrl: best.imageUrl,
+    imageLargeUrl: best.imageLargeUrl,
+    credit: best.imageCredit,
+  };
+}
+
+export interface CityImage {
+  url: string;
+  author: string;
+  creditUrl: string;
+}
+
+const IMAGE_TTL_MS = 30 * 24 * 3_600_000;
+const WIKI_API = 'https://commons.wikimedia.org/w/api.php';
+
+export async function fetchCityImage(env: Env, name: string, lat: number, lng: number): Promise<CityImage | null> {
+  const key = `img:${name.toLowerCase()}:${lat.toFixed(2)}:${lng.toFixed(2)}`;
+  const cached = await env.DB
+    .prepare('SELECT payload FROM image_cache WHERE cache_key = ? AND expires_at > ?')
+    .bind(key, Date.now())
+    .first<{ payload: string }>();
+  if (cached) {
+    try {
+      return JSON.parse(cached.payload) as CityImage;
+    } catch {
+      return null;
+    }
+  }
+  const params = new URLSearchParams({
+    action: 'query',
+    generator: 'geosearch',
+    ggscoord: `${lat}|${lng}`,
+    ggsradius: '5000',
+    ggslimit: '12',
+    ggsnamespace: '6',
+    prop: 'imageinfo',
+    iiprop: 'url|extmetadata',
+    iiurlwidth: '1200',
+    format: 'json',
+  });
+  try {
+    const response = await fetch(`${WIKI_API}?${params.toString()}`, {
+      headers: { 'User-Agent': 'PanPeryskopBot/1.0 (https://panperyskop.app; kontakt@panperyskop.app)' },
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as {
+      query?: { pages?: Record<string, { title?: string; imageinfo?: { thumburl?: string; url?: string; descriptionurl?: string; extmetadata?: { Artist?: { value?: string } } }[] }> };
+    };
+    const pages = Object.values(payload.query?.pages ?? {});
+    const wants = name.toLowerCase();
+    const scored = pages
+      .map((page) => {
+        const info = page.imageinfo?.[0];
+        const title = (page.title ?? '').toLowerCase();
+        if (!info || !/\.(jpe?g|png)$/i.test(info.thumburl ?? info.url ?? '')) return null;
+        const score = title.includes(wants) ? 2 : 0;
+        return { info, score };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .sort((a, b) => b.score - a.score);
+    const best = scored[0]?.info;
+    if (!best) return null;
+    const image: CityImage = {
+      url: best.thumburl ?? best.url ?? '',
+      author: (best.extmetadata?.Artist?.value ?? 'Wikimedia').replace(/<[^>]+>/g, '').trim(),
+      creditUrl: best.descriptionurl ?? '',
+    };
+    if (!image.url) return null;
+    await env.DB
+      .prepare('INSERT INTO image_cache (cache_key, payload, expires_at) VALUES (?, ?, ?) ON CONFLICT(cache_key) DO UPDATE SET payload = excluded.payload, expires_at = excluded.expires_at')
+      .bind(key, JSON.stringify(image), Date.now() + IMAGE_TTL_MS)
+      .run()
+      .catch(() => { /* best effort */ });
+    return image;
+  } catch {
+    return null;
+  }
 }
 
 export function directionsUrl(from: Point, to: Point, mode: TravelMode): string {
@@ -53,12 +170,20 @@ export function directionsUrl(from: Point, to: Point, mode: TravelMode): string 
 }
 
 const STAY22_API = 'https://www.stay22.com/api/booking';
-const HOTELS_PER_CITY = 3;
+const HOTELS_PER_CITY = 5;
+const BBOX_DELTA_LAT = 0.2;
+const BBOX_DELTA_LNG = 0.3;
+const USD_PLN = 3.65;
 
 export const ECONOMY_PRICE_DIVISOR = 15;
 
 export function economyMaxNightlyUsd(costUsd: number): number {
   return Math.max(1, Math.round(costUsd / ECONOMY_PRICE_DIVISOR));
+}
+
+function nightsBetween(checkin: string, checkout: string): number {
+  const nights = Math.round((Date.parse(`${checkout}T00:00:00Z`) - Date.parse(`${checkin}T00:00:00Z`)) / 86_400_000);
+  return Math.max(1, nights);
 }
 
 interface Stay22Prices {
@@ -132,12 +257,42 @@ function parseHotel(result: Stay22Result): HotelOffer | null {
   };
 }
 
-export async function fetchCityHotels(
-  env: Env, point: Point, checkin: string, checkout: string, maxNightlyUsd?: number,
-): Promise<HotelOffer[]> {
+const STAY_TTL_MS = 6 * 3_600_000;
+
+async function readStayCache(db: D1Database, key: string): Promise<HotelOffer[] | null> {
+  const row = await db
+    .prepare('SELECT payload FROM stay_cache WHERE cache_key = ? AND expires_at > ?')
+    .bind(key, Date.now())
+    .first<{ payload: string }>();
+  if (!row) return null;
+  try {
+    return JSON.parse(row.payload) as HotelOffer[];
+  } catch {
+    return null;
+  }
+}
+
+async function writeStayCache(db: D1Database, key: string, value: HotelOffer[]): Promise<void> {
+  await db
+    .prepare('INSERT INTO stay_cache (cache_key, payload, expires_at) VALUES (?, ?, ?) ON CONFLICT(cache_key) DO UPDATE SET payload = excluded.payload, expires_at = excluded.expires_at')
+    .bind(key, JSON.stringify(value), Date.now() + STAY_TTL_MS)
+    .run()
+    .catch(() => { /* best effort */ });
+}
+
+async function stay22Hotels(env: Env, point: Point, checkin: string, checkout: string): Promise<HotelOffer[]> {
+  const cacheKey = `stay:${point.lat.toFixed(3)}:${point.lng.toFixed(3)}:${checkin}:${checkout}`;
+  const cached = await readStayCache(env.DB, cacheKey);
+  if (cached) return cached;
   const params = new URLSearchParams({
-    lat: String(point.lat),
-    lng: String(point.lng),
+    centerlat: String(point.lat),
+    centerlng: String(point.lng),
+    nelat: String(point.lat + BBOX_DELTA_LAT),
+    nelng: String(point.lng + BBOX_DELTA_LNG),
+    swlat: String(point.lat - BBOX_DELTA_LAT),
+    swlng: String(point.lng - BBOX_DELTA_LNG),
+    width: '1400',
+    height: '900',
     checkin: toStayDate(checkin),
     checkout: toStayDate(checkout),
     adults: '2',
@@ -145,23 +300,32 @@ export async function fetchCityHotels(
     currency: 'PLN',
     priceper: 'total',
     limit: '99',
-    width: '1400',
-    height: '900',
     selectedHotelProvider: 'booking',
   });
-  if (maxNightlyUsd && maxNightlyUsd > 0) params.set('max', String(maxNightlyUsd));
   if (env.STAY22_AID) params.set('aid', env.STAY22_AID);
   try {
     const response = await fetch(`${STAY22_API}?${params.toString()}`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!response.ok) return [];
-    return parseStay22(await response.text())
+    const hotels = parseStay22(await response.text())
       .map(parseHotel)
       .filter((hotel): hotel is HotelOffer => hotel !== null)
-      .sort((a, b) => a.total - b.total)
-      .slice(0, HOTELS_PER_CITY);
+      .sort((a, b) => a.total - b.total);
+    await writeStayCache(env.DB, cacheKey, hotels);
+    return hotels;
   } catch {
     return [];
   }
+}
+
+export async function fetchCityHotels(
+  env: Env, point: Point, checkin: string, checkout: string, maxNightlyUsd?: number,
+): Promise<HotelOffer[]> {
+  const nights = nightsBetween(checkin, checkout);
+  const all = await stay22Hotels(env, point, checkin, checkout);
+  const capPln = maxNightlyUsd ? maxNightlyUsd * USD_PLN : null;
+  const within = capPln ? all.filter((hotel) => hotel.total / nights <= capPln) : all;
+  const pool = within.length > 0 ? within : all;
+  return pool.slice(0, HOTELS_PER_CITY);
 }
 
 const EVENT_TAGS = ['pilka-nozna', 'biegi'];
@@ -188,6 +352,7 @@ export interface EventOffer {
   link: string | null;
   lat: number;
   lng: number;
+  km: number;
 }
 
 function venueFromMeta(meta: string | null): string | null {
@@ -227,5 +392,38 @@ export async function eventsInWindow(db: D1Database, point: Point, start: string
     link: row.link,
     lat: row.lat,
     lng: row.lng,
+    km: Math.round(haversineKm(point.lat, point.lng, row.lat, row.lng)),
   }));
+}
+
+export interface Attraction {
+  name: string;
+  price: number | null;
+  currency: string | null;
+  rating: number | null;
+  link: string;
+  image: string | null;
+  duration: number | null;
+}
+
+export async function fetchCityAttractions(env: Env, point: Point, day: string, limit = 3): Promise<Attraction[]> {
+  const viatorEnv = env as unknown as ViatorEnv;
+  if (!viatorConfigured(viatorEnv)) return [];
+  try {
+    const city = await viatorNearestCity(env.DB, point.lat, point.lng);
+    if (!city) return [];
+    const window = viatorWindowFor(day);
+    const { places } = await viatorProductsForCity(env.DB, viatorEnv, city.destinationId, window, 0, limit);
+    return places.map((product) => ({
+      name: product.title,
+      price: product.fromPrice,
+      currency: product.currency,
+      rating: product.rating,
+      link: product.productUrl,
+      image: product.imageUrl,
+      duration: product.durationMinutes,
+    }));
+  } catch {
+    return [];
+  }
 }

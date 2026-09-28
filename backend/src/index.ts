@@ -13,7 +13,9 @@ import {clientErrorRoutes} from './api/clientErrors';
 import {appleEventsRoutes} from './api/appleEvents';
 import {reportsRoutes} from './api/reports';
 import {travelRoutes} from './api/travel';
-import {planRoutes} from './api/plan';
+import {planRoutes, contentRoutes} from './api/plan';
+import {buildNextStale, storeOriginBundle} from './travel/content';
+import {ORIGIN_PAGES} from './travel/webpage';
 import {usageObserver} from './analytics/observer';
 import {redirectRoutes} from './analytics/redirect';
 import {withSentry} from '@sentry/cloudflare';
@@ -34,6 +36,7 @@ configureNominatimPace(15_000);
 const SEED_CRON = '0 2 * * *';        // 02:00 UTC daily — roll the seed window one day forward
 const CLEANUP_CRON = '0 4 * * *';     // 04:00 UTC daily — audit cleanup (4-day retention)
 const WATCHDOG_CRON = '0 * * * *';    // hourly — mark stuck batches failed
+const CONTENT_CRON = '*/15 * * * *';  // every 15 min — rebuild one stale origin page (paced)
 const VIATOR_CRON = '0 3 * * 1';      // Monday 03:00 UTC — refresh the Viator destination catalogue
 // The app browses [today, today+SEED_DAYS_AHEAD]; the morning cron seeds the
 // new far edge (today+SEED_DAYS_AHEAD). Single-flight skips already-active days.
@@ -70,6 +73,7 @@ app.route('/apple', appleEventsRoutes);
 app.route('/reports', reportsRoutes);
 app.route('/travel', travelRoutes);
 app.route('/plan', planRoutes);
+app.route('/', contentRoutes);
 
 app.all('/media/*', async (c) => {
   const key = c.req.path.replace(/^\/media\//, '');
@@ -132,6 +136,22 @@ app.post('/admin/seed', async (c) => {
   }
 });
 
+// Manual content rebuild (admin-only). Builds one origin page into R2 and D1.
+// No origin = build the next stale origin. Paced: one page per call.
+app.post('/admin/content/build', async (c) => {
+  const token = c.req.header('Authorization')?.replace('Bearer ', '');
+  if (!c.env.ADMIN_SECRET || token !== c.env.ADMIN_SECRET) return c.json({ error: 'Forbidden' }, 403);
+  const body = (await c.req.json<{ origin?: string }>().catch(() => ({}))) as { origin?: string };
+  if (body.origin) {
+    const origin = ORIGIN_PAGES.find((page) => page.id === body.origin || page.slug === body.origin);
+    if (!origin) return c.json({ error: 'Unknown origin' }, 400);
+    const result = await storeOriginBundle(c.env, origin);
+    return c.json(result);
+  }
+  const built = await buildNextStale(c.env);
+  return c.json({ built: built?.slug ?? null });
+});
+
 export default withSentry<Env, SeedQueueMessage>(
   (env) => sentryOptions(env),
   {
@@ -140,6 +160,14 @@ export default withSentry<Env, SeedQueueMessage>(
     await runQueue(env, batch);
   },
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    if (controller.cron === CONTENT_CRON) {
+      ctx.waitUntil(
+        buildNextStale(env)
+          .then((origin) => console.log(origin ? `content cron: rebuilt ${origin.slug}` : 'content cron: all fresh'))
+          .catch((e) => console.error(`content cron failed: ${(e as Error).message}`))
+      );
+      return;
+    }
     if (controller.cron === VIATOR_CRON) {
       // Weekly copy of the Viator destination catalogue (their recommended cadence);
       // the product pages themselves are cached lazily per city.

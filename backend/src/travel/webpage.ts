@@ -4,8 +4,9 @@ import { fetchRyanairMonth, fetchWizzairMonth, type FlightCell } from './flights
 import { staysWidgetUrl } from './stay22';
 import { carRentalUrl } from './qeeq';
 import {
-  cityPhotoByCity, directionsUrl, economyMaxNightlyUsd, eventsInWindow, fetchCityHotels,
-  type CityPhoto, type EventOffer, type HotelOffer, type Point,
+  cityForAirport, cityPhotoByCity, directionsUrl, economyMaxNightlyUsd, eventsInWindow, fetchCityAttractions,
+  fetchCityHotels, fetchCityImage,
+  type Attraction, type CityPhoto, type EventOffer, type HotelOffer, type Point,
 } from './citybreak';
 import { mintRedirect } from '../analytics/redirect';
 
@@ -13,23 +14,26 @@ export interface OriginPage {
   id: string;
   name: string;
   genitive: string;
+  slug: string;
   iata: string;
 }
 
 export const ORIGIN_PAGES: OriginPage[] = [
-  { id: 'poznan', name: 'Poznań', genitive: 'Poznania', iata: 'POZ' },
-  { id: 'warszawa', name: 'Warszawa', genitive: 'Warszawy', iata: 'WAW' },
-  { id: 'wroclaw', name: 'Wrocław', genitive: 'Wrocławia', iata: 'WRO' },
-  { id: 'gdansk', name: 'Gdańsk', genitive: 'Gdańska', iata: 'GDN' },
-  { id: 'krakow', name: 'Kraków', genitive: 'Krakowa', iata: 'KRK' },
-  { id: 'katowice', name: 'Katowice', genitive: 'Katowic', iata: 'KTW' },
-  { id: 'rzeszow', name: 'Rzeszów', genitive: 'Rzeszowa', iata: 'RZE' },
-  { id: 'bydgoszcz', name: 'Bydgoszcz', genitive: 'Bydgoszczy', iata: 'BZG' },
-  { id: 'lodz', name: 'Łódź', genitive: 'Łodzi', iata: 'LCJ' },
-  { id: 'szczecin', name: 'Szczecin', genitive: 'Szczecina', iata: 'SZZ' },
-  { id: 'lublin', name: 'Lublin', genitive: 'Lublina', iata: 'LUZ' },
-  { id: 'olsztyn', name: 'Olsztyn', genitive: 'Olsztyna', iata: 'SZY' },
+  { id: 'poznan', name: 'Poznań', genitive: 'Poznania', slug: 'tanie-loty-z-poznania', iata: 'POZ' },
+  { id: 'warszawa', name: 'Warszawa', genitive: 'Warszawy', slug: 'tanie-loty-z-warszawy', iata: 'WAW' },
+  { id: 'wroclaw', name: 'Wrocław', genitive: 'Wrocławia', slug: 'tanie-loty-z-wroclawia', iata: 'WRO' },
+  { id: 'gdansk', name: 'Gdańsk', genitive: 'Gdańska', slug: 'tanie-loty-z-gdanska', iata: 'GDN' },
+  { id: 'krakow', name: 'Kraków', genitive: 'Krakowa', slug: 'tanie-loty-z-krakowa', iata: 'KRK' },
+  { id: 'katowice', name: 'Katowice', genitive: 'Katowic', slug: 'tanie-loty-z-katowic', iata: 'KTW' },
+  { id: 'rzeszow', name: 'Rzeszów', genitive: 'Rzeszowa', slug: 'tanie-loty-z-rzeszowa', iata: 'RZE' },
+  { id: 'bydgoszcz', name: 'Bydgoszcz', genitive: 'Bydgoszczy', slug: 'tanie-loty-z-bydgoszczy', iata: 'BZG' },
+  { id: 'lodz', name: 'Łódź', genitive: 'Łodzi', slug: 'tanie-loty-z-lodzi', iata: 'LCJ' },
+  { id: 'szczecin', name: 'Szczecin', genitive: 'Szczecina', slug: 'tanie-loty-z-szczecina', iata: 'SZZ' },
+  { id: 'lublin', name: 'Lublin', genitive: 'Lublina', slug: 'tanie-loty-z-lublina', iata: 'LUZ' },
+  { id: 'olsztyn', name: 'Olsztyn', genitive: 'Olsztyna', slug: 'tanie-loty-z-olsztyna', iata: 'SZY' },
 ];
+
+export const PUBLIC_BASE = 'https://panperyskop.app';
 
 export interface WeekendWindow {
   key: string;
@@ -91,6 +95,7 @@ export interface HotelPrice {
   perPerson: number;
   lat: number;
   lng: number;
+  url: string;
 }
 
 export interface Offer {
@@ -108,6 +113,10 @@ export interface Offer {
   imageUrl: string | null;
   imageLargeUrl: string | null;
   imageCredit: CityPhoto['credit'];
+  cityId?: string | null;
+  cityNearby?: string[];
+  cityLat?: number | null;
+  cityLng?: number | null;
   flightUrl: string;
   stayUrl: string;
   carUrl: string;
@@ -160,11 +169,15 @@ async function routeFares(
   const out: FlightCell[] = [];
   const back: FlightCell[] = [];
   for (const month of months) {
-    const window = carrier === 'ryanair'
-      ? await fetchRyanairMonth(origin, destination.iata, month, db)
-      : await fetchWizzairMonth(origin, destination.iata, month, db);
-    out.push(...window.outbound);
-    back.push(...window.returning);
+    try {
+      const window = carrier === 'ryanair'
+        ? await fetchRyanairMonth(origin, destination.iata, month, db)
+        : await fetchWizzairMonth(origin, destination.iata, month, db);
+      out.push(...window.outbound);
+      back.push(...window.returning);
+    } catch {
+      // A provider outage must not fail the whole page; other routes still render.
+    }
   }
   return { destination, carrier, out, back };
 }
@@ -182,9 +195,9 @@ async function toOffer(
   env: Env, origin: OriginPage, draft: DraftOffer, window: WeekendWindow, start: string, end: string,
 ): Promise<Offer> {
   const aid = env.STAY22_AID ?? '';
-  const photo = cityPhotoByCity(draft.city);
+  const photo = cityForAirport(draft.city, draft.lat, draft.lng);
   return {
-    city: draft.city,
+    city: photo?.name ?? draft.city,
     cityPl: photo?.namePl ?? null,
     iata: draft.iata,
     carrier: draft.carrier,
@@ -198,6 +211,10 @@ async function toOffer(
     imageUrl: photo?.imageUrl ?? null,
     imageLargeUrl: photo?.imageLargeUrl ?? null,
     imageCredit: photo?.credit ?? null,
+    cityId: photo?.id ?? null,
+    cityNearby: photo?.nearby ?? [],
+    cityLat: photo?.lat ?? null,
+    cityLng: photo?.lng ?? null,
     flightUrl: await mintRedirect(env, 'flight', carrierBookingUrl(draft.carrier, origin.iata, draft.iata, start, end)),
     stayUrl: await mintRedirect(env, 'stay', staysWidgetUrl(aid, {
       lat: draft.lat, lng: draft.lng,
@@ -258,13 +275,14 @@ export interface FeaturedDeal {
   offer: Offer;
   photo: CityPhoto | null;
   hotels: HotelOffer[];
+  attractions: Attraction[];
   events: EventOffer[];
   directions: { label: string; url: string }[];
 }
 
 const ENRICH_CONCURRENCY = 3;
-const HOTEL_BUDGET = 40;
-const HOTEL_OPTIONS_PER_PLACE = 2;
+const HOTEL_BUDGET = 400;
+const HOTEL_OPTIONS_PER_PLACE = 6;
 
 function buildDirections(airport: Point, center: Point, hotels: HotelOffer[], events: EventOffer[]): { label: string; url: string }[] {
   const links: { label: string; url: string }[] = [
@@ -279,27 +297,43 @@ function buildDirections(airport: Point, center: Point, hotels: HotelOffer[], ev
 }
 
 async function enrichPlace(env: Env, place: Place, budget: { left: number }): Promise<FeaturedDeal> {
-  const photo = cityPhotoByCity(place.city);
+  const photo = cityForAirport(place.city, place.lat, place.lng);
   const airport: Point = { lat: place.lat, lng: place.lng };
   const center: Point = photo ? { lat: photo.lat, lng: photo.lng } : airport;
+  if (!photo) {
+    const wiki = await fetchCityImage(env, place.city, center.lat, center.lng);
+    if (wiki) {
+      const credit = { photoUrl: wiki.creditUrl, author: wiki.author, authorUrl: wiki.creditUrl };
+      for (const option of place.options) {
+        option.imageUrl = wiki.url;
+        option.imageLargeUrl = wiki.url;
+        option.imageCredit = credit;
+      }
+    }
+  }
   const maxNightlyUsd = photo ? economyMaxNightlyUsd(photo.costUsd) : undefined;
   let firstHotel: HotelOffer | null = null;
+  let placeHotels: HotelOffer[] = [];
   for (const option of place.options.slice(0, HOTEL_OPTIONS_PER_PLACE)) {
     if (budget.left <= 0) break;
     budget.left--;
-    const [hotel] = await fetchCityHotels(env, center, option.start, option.end, maxNightlyUsd);
+    const hotels = await fetchCityHotels(env, center, option.start, option.end, maxNightlyUsd);
+    const [hotel] = hotels;
     if (!hotel) continue;
     option.hotel = {
-      name: hotel.name, total: hotel.total, perPerson: hotel.perPerson, lat: hotel.lat, lng: hotel.lng,
+      name: hotel.name, total: hotel.total, perPerson: hotel.perPerson, lat: hotel.lat, lng: hotel.lng, url: hotel.url,
     };
     if (!firstHotel) firstHotel = hotel;
+    if (placeHotels.length === 0) placeHotels = hotels;
   }
   const anchor = place.options[0];
   const events = await eventsInWindow(env.DB, center, anchor.start, anchor.end);
+  const attractions = await fetchCityAttractions(env, center, anchor.start);
   return {
     offer: anchor,
     photo,
-    hotels: firstHotel ? [firstHotel] : [],
+    hotels: placeHotels.length > 0 ? placeHotels : firstHotel ? [firstHotel] : [],
+    attractions,
     events,
     directions: buildDirections(airport, center, firstHotel ? [firstHotel] : [], events),
   };
@@ -325,6 +359,10 @@ export interface Place {
   imageUrl: string | null;
   imageLargeUrl: string | null;
   imageCredit: CityPhoto['credit'];
+  cityId: string | null;
+  nearby: string[];
+  cityLat: number;
+  cityLng: number;
   options: Offer[];
 }
 
@@ -345,6 +383,10 @@ export function groupPlaces(sections: WindowSection[]): Place[] {
           imageUrl: offer.imageUrl,
           imageLargeUrl: offer.imageLargeUrl,
           imageCredit: offer.imageCredit,
+          cityId: offer.cityId ?? null,
+          nearby: offer.cityNearby ?? [],
+          cityLat: offer.cityLat ?? offer.lat,
+          cityLng: offer.cityLng ?? offer.lng,
           options: [offer],
         });
       }
@@ -386,32 +428,115 @@ export function formatRange(start: string, end: string, nights: number): string 
   return `${WEEKDAYS[from.getUTCDay()]} ${left} - ${WEEKDAYS[to.getUTCDay()]} ${right}, ${nightsLabel(nights)}`;
 }
 
+const MONTHS_ABBR = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+const MONTHS_NOM = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
+const MONTHS_LOC = ['styczniu', 'lutym', 'marcu', 'kwietniu', 'maju', 'czerwcu', 'lipcu', 'sierpniu', 'wrześniu', 'październiku', 'listopadzie', 'grudniu'];
+
+export function monthParts(month: string): { slug: string; nominative: string; locative: string; key: string } {
+  const [year, mon] = month.split('-');
+  const index = Number(mon) - 1;
+  return {
+    slug: `${slugify(MONTHS_NOM[index])}-${year}`,
+    nominative: `${MONTHS_NOM[index]} ${year}`,
+    locative: `${MONTHS_LOC[index]} ${year}`,
+    key: `${year}-${mon}`,
+  };
+}
+
+export function dealSlug(origin: OriginPage, place: Place, key: string): string {
+  return `${destinationSlug(origin, place)}/${monthParts(key).slug}`;
+}
+
+export function monthOptions(place: Place, key: string): Offer[] {
+  return place.options.filter((option) => option.start.slice(0, 7) === key);
+}
+
+export function formatRangeShort(start: string, end: string): string {
+  const from = new Date(`${start}T00:00:00Z`);
+  const to = new Date(`${end}T00:00:00Z`);
+  const sameMonth = from.getUTCMonth() === to.getUTCMonth() && from.getUTCFullYear() === to.getUTCFullYear();
+  const left = `${from.getUTCDate()}`;
+  const right = `${to.getUTCDate()} ${MONTHS_ABBR[to.getUTCMonth()]}`;
+  return sameMonth ? `${left}-${right}` : `${from.getUTCDate()} ${MONTHS_ABBR[from.getUTCMonth()]} - ${right}`;
+}
+
+export function dateParts(start: string, end: string): { month: string; day: string; range: string } {
+  const from = new Date(`${start}T00:00:00Z`);
+  const to = new Date(`${end}T00:00:00Z`);
+  const sameMonth = from.getUTCMonth() === to.getUTCMonth() && from.getUTCFullYear() === to.getUTCFullYear();
+  return {
+    month: MONTHS_ABBR[from.getUTCMonth()],
+    day: String(from.getUTCDate()),
+    range: sameMonth ? `do ${to.getUTCDate()}` : `do ${to.getUTCDate()} ${MONTHS_ABBR[to.getUTCMonth()]}`,
+  };
+}
+
 export function formatDay(iso: string): string {
   const day = new Date(`${iso}T00:00:00Z`);
   return `${WEEKDAYS[day.getUTCDay()]} ${day.getUTCDate()} ${MONTHS_GEN[day.getUTCMonth()]}`;
 }
 
-function renderOption(offer: Offer): string {
+function kmBetween(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(6371 * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s)));
+}
+
+export interface OptionFlags {
+  best: boolean;
+}
+
+function optionFlags(place: Place): Map<string, OptionFlags> {
+  const score = (option: Offer) => option.price / Math.max(1, option.nights);
+  const best = place.options.reduce((a, b) => (score(a) <= score(b) ? a : b), place.options[0]);
+  const map = new Map<string, OptionFlags>();
+  for (const option of place.options) map.set(option.start, { best: option.start === best.start });
+  return map;
+}
+
+function renderCalendar(start: string, end: string): string {
+  const from = new Date(`${start}T00:00:00Z`);
+  const to = new Date(`${end}T00:00:00Z`);
+  const sameMonth = from.getUTCMonth() === to.getUTCMonth() && from.getUTCFullYear() === to.getUTCFullYear();
+  const cal = (month: string, day: string) => `<span class="cal" aria-hidden="true"><span class="cal__top">${month}</span><span class="cal__day">${day}</span></span>`;
+  if (sameMonth) return cal(MONTHS_ABBR[from.getUTCMonth()], `${from.getUTCDate()}-${to.getUTCDate()}`);
+  return `${cal(MONTHS_ABBR[from.getUTCMonth()], String(from.getUTCDate()))}<span class="cal__arrow">-&gt;</span>${cal(MONTHS_ABBR[to.getUTCMonth()], String(to.getUTCDate()))}`;
+}
+
+function renderOption(offer: Offer, flags: OptionFlags | undefined, originIata: string): string {
   const hotel = offer.hotel;
   const total = hotel ? Math.round(offer.price + hotel.perPerson) : null;
   const headline = total !== null ? `od ${total} zł/os` : `od ${Math.round(offer.price)} zł/os`;
+  const full = formatRange(offer.start, offer.end, offer.nights);
+  const cls = flags?.best ? 'opt opt--best' : 'opt';
+  const badge = flags?.best ? '<span class="opt__badge">Dobra oferta</span>' : '';
   const detail = hotel
-    ? `lot ${Math.round(offer.price)} zł/os + hotel ${hotel.total} zł za 2 osoby, od ${hotel.perPerson} zł/os`
-    : `lot ${Math.round(offer.price)} zł/os, sam lot`;
-  return `          <li class="opt">
-            <div class="opt__head"><a class="opt__date" href="${offer.flightUrl}" rel="nofollow sponsored noopener" target="_blank">${formatRange(offer.start, offer.end, offer.nights)}</a><span class="opt__total">${headline}</span></div>
+    ? `lot ${originIata}-${offer.iata} + hotel <a href="${hotel.url}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(hotel.name)}</a>`
+    : `lot ${originIata}-${offer.iata}, bez hotelu`;
+  return `          <li class="${cls}">
+            ${badge}
+            <div class="opt__head"><a class="opt__date" href="${offer.flightUrl}" rel="nofollow sponsored noopener" target="_blank" aria-label="${escapeHtml(full)}">${renderCalendar(offer.start, offer.end)}<span class="sr-only">${escapeHtml(full)}</span></a><span class="opt__right"><span class="opt__total">${headline}</span><span class="opt__nights">${nightsLabel(offer.nights)}</span></span></div>
             <div class="opt__detail">${detail}</div>
             <div class="opt__actions"><a href="${offer.flightUrl}" rel="nofollow sponsored noopener" target="_blank">Wybierz lot</a><a href="${offer.stayUrl}" rel="nofollow sponsored noopener" target="_blank">Noclegi na te daty</a><a href="${offer.carUrl}" rel="nofollow sponsored noopener" target="_blank">Auto na te daty</a></div>
           </li>`;
 }
 
+function renderAttraction(attraction: Attraction): string {
+  const price = attraction.price != null ? `od ${Math.round(attraction.price)} zł` : '';
+  const rating = attraction.rating ? ` - ${attraction.rating.toFixed(1)}/5` : '';
+  return `          <li><a href="${attraction.link}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(attraction.name)}</a><span class="muted"> ${price}${rating}</span></li>`;
+}
+
 function renderEvent(event: EventOffer): string {
   const kind = event.tag === 'biegi' ? 'Bieg' : 'Mecz';
   const venue = event.venue ? ` - ${escapeHtml(event.venue)}` : '';
+  const km = event.km ? ` - ${event.km} km` : '';
   const title = event.link
     ? `<a href="${event.link}" rel="nofollow noopener" target="_blank">${escapeHtml(event.title)}</a>`
     : escapeHtml(event.title);
-  return `          <li>${kind}: ${title}<span class="muted"> ${formatDay(event.start)}${venue}</span></li>`;
+  return `          <li>${kind}: ${title}<span class="muted"> ${formatDay(event.start)}${venue}${km}</span></li>`;
 }
 
 function renderDirections(links: { label: string; url: string }[]): string {
@@ -430,34 +555,373 @@ function fallbackPanel(name: string): string {
   return `<span class="place__ph" style="background:${FALLBACK_TINTS[hash % FALLBACK_TINTS.length]}">${escapeHtml(name)}</span>`;
 }
 
-function renderPlace(place: Place, deal: FeaturedDeal | undefined): string {
+function renderPlace(origin: OriginPage, place: Place, deal: FeaturedDeal | undefined, siblings: Place[]): string {
   const name = place.cityPl ?? place.city;
   const best = place.options[0];
   const credit = place.imageCredit?.author
     ? `<span class="credit">${escapeHtml(place.imageCredit.author)} / Unsplash</span>`
     : '';
-  const image = place.imageLargeUrl
-    ? `<img src="${place.imageLargeUrl}" alt="${escapeHtml(name)}" loading="lazy">`
+  const image = place.imageUrl
+    ? `<img src="${place.imageUrl}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" width="240" height="200">`
     : fallbackPanel(name);
   const priced = place.options.filter((option) => option.hotel);
   const headline = priced.length > 0
     ? `od <strong>${Math.min(...priced.map((option) => Math.round(option.price + (option.hotel?.perPerson ?? 0))))} zł</strong>/os`
     : `od <strong>${Math.round(best.price)} zł</strong>/os`;
   const note = priced.length > 0 ? 'za osobę, lot i nocleg' : 'za osobę, sam lot';
+  const avg = Math.round(place.options.reduce((sum, option) => sum + option.price, 0) / place.options.length);
+  const flags = optionFlags(place);
   const events = deal && deal.events.length
     ? `        <h4>Wydarzenia</h4>\n        <ul class="plain">\n${deal.events.map(renderEvent).join('\n')}\n        </ul>\n`
+    : '';
+  const attractions = deal && deal.attractions.length
+    ? `        <h4>Atrakcje</h4>\n        <ul class="plain">\n${deal.attractions.map(renderAttraction).join('\n')}\n        </ul>\n`
+    : '';
+  const nearby = siblings
+    .filter((other) => other.cityId !== null && place.nearby.includes(other.cityId) && other.city !== place.city)
+    .slice(0, 8);
+  const nearbyLinks = nearby.length > 0
+    ? `        <h4>Miasta obok</h4>\n        <div class="origins">${nearby.map((other) => `<a href="/${destinationSlug(origin, other)}">${escapeHtml(other.cityPl ?? other.city)} (${kmBetween(place.cityLat, place.cityLng, other.cityLat, other.cityLng)} km)</a>`).join('')}</div>\n`
     : '';
   return `    <article class="place">
       <a class="place__img" href="${best.flightUrl}" rel="nofollow sponsored noopener" target="_blank">${image}${credit}</a>
       <div class="place__body">
-        <h3><a href="${best.flightUrl}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(name)}</a></h3>
-        <p class="place__price">${headline} <span class="place__note">${note}</span></p>
+        <h3><a href="/${destinationSlug(origin, place)}">${escapeHtml(name)}</a></h3>
+        <p class="place__price">${headline} <span class="place__note">${note}</span> <span class="place__avg">średnio ${avg} zł za lot</span></p>
         <h4>Terminy</h4>
         <ul class="options">
-${place.options.map(renderOption).join('\n')}
+${place.options.map((option) => renderOption(option, flags.get(option.start), origin.iata)).join('\n')}
         </ul>
-${events}${renderDirections(deal?.directions ?? [])}      </div>
+${events}${attractions}${nearbyLinks}${renderDirections(deal?.directions ?? [])}      </div>
     </article>`;
+}
+
+function renderHotel(hotel: HotelOffer): string {
+  const stars = hotel.stars ? `${hotel.stars}* - ` : '';
+  return `          <li><a href="${hotel.url}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(hotel.name)}</a><span class="muted"> ${stars}${hotel.score.toFixed(1)}/10 (${hotel.reviews}) - od ${hotel.perPerson} zł/os</span></li>`;
+}
+
+export function slugify(text: string): string {
+  const map: Record<string, string> = { ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z' };
+  return text
+    .toLowerCase()
+    .replace(/[ąćęłńóśźż]/g, (ch) => map[ch] ?? ch)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export function destinationSlug(origin: OriginPage, place: Place): string {
+  const citySlug = origin.slug.replace('tanie-loty-z-', '');
+  return `tanie-loty-do-${slugify(place.cityPl ?? place.city)}-z-${citySlug}`;
+}
+
+function destinationFaq(origin: OriginPage, name: string): { q: string; a: string }[] {
+  return [
+    { q: `Ile kosztuje lot z ${origin.genitive}?`, a: `Ceny w obie strony do kierunku ${name} są na liście terminów. Cena łączna dolicza połowę kosztu noclegu za dwie osoby.` },
+    { q: `Kiedy lecieć z ${origin.genitive}?`, a: 'Najtaniej wypadają weekendy poza szczytem sezonu. Lista pokazuje najbliższe opcje.' },
+    { q: 'Jak dojechać z lotniska do centrum?', a: 'W sekcji "Jak dojechać" są linki do nawigacji.' },
+  ];
+}
+
+export function renderDestinationPage(
+  origin: OriginPage, place: Place, deal: FeaturedDeal | undefined, siblings: Place[], generatedAt: string,
+): string {
+  const name = place.cityPl ?? place.city;
+  const best = place.options[0];
+  const priced = place.options.filter((option) => option.hotel);
+  const headline = priced.length > 0
+    ? Math.min(...priced.map((option) => Math.round(option.price + (option.hotel?.perPerson ?? 0))))
+    : Math.round(best.price);
+  const url = `${PUBLIC_BASE}/${destinationSlug(origin, place)}`;
+  const title = `${name} - tanie loty z ${origin.genitive}`;
+  const description = `${name}: tanie loty z ${origin.genitive} - najtańsze weekendy, ceny w obie strony, noclegi i wydarzenia. Od ${headline} zł/os.`;
+  const heroImage = place.imageLargeUrl;
+  const flags = optionFlags(place);
+  const avg = Math.round(place.options.reduce((sum, option) => sum + option.price, 0) / place.options.length);
+  const options = place.options.map((option) => renderOption(option, flags.get(option.start), origin.iata)).join('\n');
+  const hotels = deal && deal.hotels.length
+    ? `<h2>Noclegi</h2>\n<ul class="plain">${deal.hotels.map(renderHotel).join('')}</ul>`
+    : '';
+  const attractions = deal && deal.attractions.length
+    ? `<h2>Atrakcje</h2>\n<ul class="plain">${deal.attractions.map(renderAttraction).join('')}</ul>`
+    : '';
+  const events = deal && deal.events.length
+    ? `<h2>Wydarzenia</h2>\n<ul class="plain">${deal.events.map(renderEvent).join('')}</ul>`
+    : '';
+  const directions = deal && deal.directions.length
+    ? `<h2>Jak dojechać</h2>\n<div class="directions">${deal.directions.map((link) => `<a href="${link.url}" rel="nofollow noopener" target="_blank">${escapeHtml(link.label)}</a>`).join('')}</div>`
+    : '';
+  const faq = destinationFaq(origin, name);
+  const faqHtml = faq.map((entry) => `<h3 class="faq__q">${escapeHtml(entry.q)}</h3><p class="faq__a">${escapeHtml(entry.a)}</p>`).join('');
+  const links = siblings
+    .filter((other) => other.city !== place.city)
+    .slice(0, 12)
+    .map((other) => `<a href="/${destinationSlug(origin, other)}">${escapeHtml(other.cityPl ?? other.city)} (${kmBetween(place.cityLat, place.cityLng, other.cityLat, other.cityLng)} km)</a>`)
+    .join('');
+  const monthKeys = [...new Set(place.options.map((option) => option.start.slice(0, 7)))].sort();
+  const monthLinks = monthKeys
+    .map((key) => `<a href="/${dealSlug(origin, place, key)}">${escapeHtml(monthParts(key).nominative)}</a>`)
+    .join('');
+  const graph = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'WebPage', '@id': `${url}#page`, url, name: title, inLanguage: 'pl-PL', image: heroImage },
+      { '@type': 'BreadcrumbList', itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Pan Peryskop', item: PUBLIC_BASE },
+        { '@type': 'ListItem', position: 2, name: `Loty z ${origin.genitive}`, item: `${PUBLIC_BASE}/${origin.slug}` },
+        { '@type': 'ListItem', position: 3, name: `${name}`, item: url },
+      ] },
+      { '@type': 'FAQPage', mainEntity: faq.map((entry) => ({ '@type': 'Question', name: entry.q, acceptedAnswer: { '@type': 'Answer', text: entry.a } })) },
+    ],
+  };
+  const jsonLd = JSON.stringify(graph).replace(/</g, '\\u003c');
+  return `<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(title)} - od ${headline} zł/os | Pan Peryskop</title>
+<meta name="description" content="${escapeHtml(description)}">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="${url}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${escapeHtml(description)}">
+<meta property="og:url" content="${url}">
+<meta property="og:locale" content="pl_PL">
+${heroImage ? `<meta property="og:image" content="${heroImage}">` : ''}
+<script type="application/ld+json">${jsonLd}</script>
+<style>
+*{box-sizing:border-box}
+body{font-family:system-ui,Arial,sans-serif;color:#141414;margin:0 auto;padding:0 16px 48px;max-width:880px}
+.site{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #eee;margin-bottom:8px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:18px;color:#141414;text-decoration:none}
+.origins{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+.origins a{color:#4F55F1;text-decoration:none;font-weight:600}
+h1{font-size:28px;margin:16px 0 4px}
+.lead{color:#555;margin:0 0 16px}
+.hero{width:100%;height:260px;object-fit:cover;border-radius:12px;display:block;margin:8px 0 16px}
+h2{font-size:19px;margin-top:30px;border-bottom:1px solid #eee;padding-bottom:6px}
+.opt{border:1px solid #eee;border-radius:10px;padding:12px;margin:10px 0}
+.opt__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.opt__date{color:#141414;text-decoration:none;font-weight:600;font-size:15px}
+.opt__total{font-weight:700;white-space:nowrap;font-size:15px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.opt__date{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:600;font-size:15px}
+.cal{display:inline-flex;flex-direction:column;width:52px;flex:none;border:1px solid #d9dbe8;border-radius:8px;overflow:hidden;text-align:center}
+.cal__top{background:#4F55F1;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 0}
+.cal__day{font-size:20px;font-weight:800;line-height:1.35;color:#141414;background:#fff}
+.cal__meta{display:flex;flex-direction:column;gap:2px}
+.cal__range{font-size:13px;font-weight:600;color:#141414}
+.cal__day{font-size:16px;font-weight:800;line-height:1.5;color:#141414;background:#fff}
+.cal__arrow{font-weight:700;color:#6B7280;margin:0 6px}
+.opt__right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.opt__nights{font-size:12px;color:#6B7280}
+.opt__badges{margin-top:6px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px}
+.badge--cheap{background:#e7f6ec;color:#12693a;border:1px solid #9ad1a8}
+.badge--reco{background:#eef7ef;color:#2f6b45;border:1px solid #b7dcc3}
+.opt--best{border-color:#9ad1a8;background:#f7fcf8}
+.opt{position:relative}
+.opt__badge{position:absolute;top:-9px;right:10px;background:#12693a;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+.place__avg{font-size:12px;font-weight:400;color:#6B7280;margin-left:8px}
+.opt__detail{margin-top:4px;color:#6B7280;font-size:13px}
+.opt__actions{margin-top:10px;padding-top:10px;border-top:1px solid #f2f2f2}
+.opt__actions a{display:inline-block;margin-right:16px;padding:4px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
+.plain{list-style:none;padding:0;margin:0;font-size:14px}
+.plain li{padding:6px 0;border-bottom:1px solid #f4f4f4}
+.directions a{display:inline-block;margin:2px 12px 2px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
+.faq__q{font-size:15px;margin:16px 0 2px}
+.faq__a{margin:0 0 10px;color:#4B5563;font-size:14px}
+.muted{color:#6B7280}
+.foot{margin-top:34px;color:#6B7280;font-size:12px}
+.site-foot{border-top:1px solid #eee;margin-top:34px;padding-top:14px}
+.foot-links{margin:10px 0 0;font-size:13px}
+.foot-links a{color:#4F55F1;text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+${renderHeader(origin)}
+<h1>${escapeHtml(title)}</h1>
+<p class="lead">Kierunek ${escapeHtml(name)}: najtańsze weekendy z ${escapeHtml(origin.genitive)}. Od ${headline} zł/os. Cena obejmuje lot w obie strony i nocleg dla dwóch osób.</p>
+${heroImage ? `<img class="hero" src="${heroImage}" alt="${escapeHtml(name)}" fetchpriority="high" decoding="async" width="1000" height="500">` : ''}
+<h2>Terminy i ceny</h2>
+<p class="muted">Średnia cena lotu: ${avg} zł/os.</p>
+<ul class="options">
+${options}
+</ul>
+${hotels}
+${attractions}
+${events}
+${directions}
+<h2>Częste pytania</h2>
+${faqHtml}
+${monthLinks ? `<h2>Terminy miesięczne</h2><div class="origins">${monthLinks}</div>` : ''}
+${links ? `<h2>Inne kierunki z ${escapeHtml(origin.genitive)}</h2><div class="origins">${links}</div>` : ''}
+${renderFooter()}
+<p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne. Serwis korzysta z linków partnerskich.</p>
+</body>
+</html>`;
+}
+
+const DOC_CSS = `*{box-sizing:border-box}
+body{font-family:system-ui,Arial,sans-serif;color:#141414;margin:0 auto;padding:0 16px 48px;max-width:880px}
+.site{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #eee;margin-bottom:8px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:18px;color:#141414;text-decoration:none}
+.origins{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+.origins a{color:#4F55F1;text-decoration:none;font-weight:600}
+h1{font-size:27px;margin:16px 0 8px}
+h2{font-size:19px;margin-top:30px;border-bottom:1px solid #eee;padding-bottom:6px}
+.plain{list-style:none;padding:0;margin:0;font-size:15px}
+.plain li{padding:6px 0;border-bottom:1px solid #f4f4f4}
+.opt{border:1px solid #eee;border-radius:10px;padding:12px;margin:10px 0}
+.opt--best{border-color:#9ad1a8;background:#f7fcf8}
+.opt{position:relative}
+.opt__badge{position:absolute;top:-9px;right:10px;background:#12693a;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+.opt__head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.opt__date{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.cal{display:inline-flex;flex-direction:column;width:52px;flex:none;border:1px solid #d9dbe8;border-radius:8px;overflow:hidden;text-align:center}
+.cal__top{background:#4F55F1;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 0}
+.cal__day{font-size:16px;font-weight:800;line-height:1.5;background:#fff}
+.cal__arrow{font-weight:700;color:#6B7280;margin:0 6px}
+.opt__right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.opt__total{font-weight:700;white-space:nowrap;font-size:15px}
+.opt__nights{font-size:12px;color:#6B7280}
+.opt__badges{margin-top:6px}
+.opt__detail{margin-top:4px;color:#6B7280;font-size:13px}
+.opt__actions{margin-top:10px;padding-top:10px;border-top:1px solid #f2f2f2}
+.opt__actions a{display:inline-block;margin-right:16px;padding:4px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px}
+.badge--cheap{background:#e7f6ec;color:#12693a;border:1px solid #9ad1a8}
+.badge--reco{background:#eef7ef;color:#2f6b45;border:1px solid #b7dcc3}
+.muted{color:#6B7280}
+.site-foot{border-top:1px solid #eee;margin-top:34px;padding-top:14px}
+.foot-links a{color:#4F55F1;text-decoration:none;font-weight:600}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}`;
+
+function docHead(title: string, description: string, url: string, image: string | null, jsonLd: string): string {
+  return `<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(title)} | Pan Peryskop</title>
+<meta name="description" content="${escapeHtml(description)}">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="${url}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${escapeHtml(description)}">
+<meta property="og:url" content="${url}">
+<meta property="og:locale" content="pl_PL">
+${image ? `<meta property="og:image" content="${image}">` : ''}
+<script type="application/ld+json">${jsonLd}</script>
+<style>${DOC_CSS}</style>
+</head>
+<body>`;
+}
+
+export function renderMonthPage(origin: OriginPage, places: Place[], key: string, generatedAt: string): string {
+  const mp = monthParts(key);
+  const rows = places.map((place) => {
+    const opts = monthOptions(place, key);
+    if (opts.length === 0) return '';
+    const best = opts.reduce((a, b) => (b.price < a.price ? b : a), opts[0]);
+    const total = best.hotel ? Math.round(best.price + best.hotel.perPerson) : Math.round(best.price);
+    return `      <li><a href="/${dealSlug(origin, place, key)}">${escapeHtml(place.cityPl ?? place.city)}</a><span class="muted"> od ${total} zł/os - ${formatRangeShort(best.start, best.end)}, ${nightsLabel(best.nights)}</span></li>`;
+  }).filter(Boolean).join('\n');
+  const title = `Tanie loty z ${origin.genitive} - ${mp.nominative}`;
+  const url = `${PUBLIC_BASE}/${origin.slug}/${mp.slug}`;
+  const graph = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: title, url, inLanguage: 'pl-PL' };
+  return `${docHead(title, `${title}. Najtańsze kierunki i terminy. Ceny za osobę.`, url, null, JSON.stringify(graph).replace(/</g, '\\u003c'))}
+${renderHeader(origin)}
+<h1>${escapeHtml(title)}</h1>
+<p class="muted">Najtańsze kierunki w tym miesiącu. Ceny za osobę.</p>
+<h2>Kierunki</h2>
+<ul class="plain">
+${rows}
+</ul>
+${renderFooter()}
+<p class="muted">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne.</p>
+</body>
+</html>`;
+}
+
+export function renderDealPage(origin: OriginPage, place: Place, deal: FeaturedDeal | undefined, key: string, generatedAt: string): string {
+  const opts = monthOptions(place, key);
+  if (opts.length === 0) return '';
+  const option = opts.reduce((a, b) => (b.price < a.price ? b : a), opts[0]);
+  const mp = monthParts(key);
+  const name = place.cityPl ?? place.city;
+  const title = `${name} - tani weekend w ${mp.locative}`;
+  const url = `${PUBLIC_BASE}/${dealSlug(origin, place, key)}`;
+  const hotels = deal && deal.hotels.length ? `<h2>Noclegi</h2>\n<ul class="plain">${deal.hotels.map(renderHotel).join('')}</ul>` : '';
+  const attractions = deal && deal.attractions.length ? `<h2>Atrakcje</h2>\n<ul class="plain">${deal.attractions.map(renderAttraction).join('')}</ul>` : '';
+  const events = deal && deal.events.length ? `<h2>Wydarzenia</h2>\n<ul class="plain">${deal.events.map(renderEvent).join('')}</ul>` : '';
+  const directions = deal && deal.directions.length ? `<h2>Jak dojechać</h2>\n<div>${deal.directions.map((link) => `<a href="${link.url}" rel="nofollow noopener" target="_blank">${escapeHtml(link.label)}</a>`).join(' ')}</div>` : '';
+  const graph = { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url, inLanguage: 'pl-PL' };
+  return `${docHead(title, `${title}. Lot, hotel i atrakcje. Cena za osobę.`, url, place.imageLargeUrl, JSON.stringify(graph).replace(/</g, '\\u003c'))}
+${renderHeader(origin)}
+<h1>${escapeHtml(title)}</h1>
+<p class="muted">Najtańszy termin w tym miesiącu. Cena łączna to lot plus połowa noclegu za dwie osoby.</p>
+<ul class="options">
+${renderOption(option, { best: true }, origin.iata)}
+</ul>
+${hotels}
+${attractions}
+${events}
+${directions}
+<p><a href="/${destinationSlug(origin, place)}">Wszystkie terminy: ${escapeHtml(name)}</a> - <a href="/${origin.slug}/${mp.slug}">Cały ${escapeHtml(mp.nominative)}</a></p>
+${renderFooter()}
+<p class="muted">Wygenerowano ${escapeHtml(generatedAt)}.</p>
+</body>
+</html>`;
+}
+
+export function renderConnectionsPage(origin: OriginPage, places: Place[], generatedAt: string): string {
+  const rows = places.map((place) => {
+    const best = place.options[0];
+    return `      <li><a href="/${destinationSlug(origin, place)}">${escapeHtml(place.cityPl ?? place.city)}</a><span class="muted"> od ${Math.round(best.price)} zł/os za lot (${best.iata} ${best.carrier})</span></li>`;
+  }).join('\n');
+  const title = `Wszystkie połączenia z ${origin.genitive}`;
+  const url = `${PUBLIC_BASE}/${origin.slug}/polaczenia`;
+  const graph = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: title, url, inLanguage: 'pl-PL' };
+  return `${docHead(title, `${title}. Ceny lotów w obie strony za osobę.`, url, null, JSON.stringify(graph).replace(/</g, '\\u003c'))}
+${renderHeader(origin)}
+<h1>${escapeHtml(title)}</h1>
+<p class="muted">Wszystkie kierunki i najtańsze ceny lotów za osobę.</p>
+<ul class="plain">
+${rows}
+</ul>
+${renderFooter()}
+<p class="muted">Wygenerowano ${escapeHtml(generatedAt)}.</p>
+</body>
+</html>`;
+}
+
+export function renderIndexPage(generatedAt: string): string {
+  const links = ORIGIN_PAGES
+    .map((origin) => `<li><a href="/${origin.slug}">Tanie loty z ${escapeHtml(origin.genitive)}</a></li>`)
+    .join('');
+  const url = `${PUBLIC_BASE}/tanie-loty`;
+  return `<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tanie loty i weekendy z polskich lotnisk | Pan Peryskop</title>
+<meta name="description" content="Najtańsze weekendy z polskich lotnisk. Loty, hotele i wydarzenia. Wybierz miasto wylotu.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="${url}">
+</head>
+<body style="font-family:system-ui,Arial,sans-serif;max-width:760px;margin:0 auto;padding:24px 16px">
+<h1>Tanie loty i weekendy z polskich lotnisk</h1>
+<p>Wybierz miasto wylotu, aby zobaczyć najtańsze kierunki i terminy.</p>
+<ul class="plain">${links}</ul>
+<p style="color:#6B7280;font-size:13px"><a href="/sitemap.xml">Mapa strony</a> - <a href="/llms.txt">Dla AI</a></p>
+<p style="color:#6B7280;font-size:12px">Wygenerowano ${escapeHtml(generatedAt)}.</p>
+</body>
+</html>`;
 }
 
 interface PartnerCard {
@@ -470,29 +934,29 @@ interface PartnerCard {
   chevron: string;
 }
 
-const LOGO_BASE = 'https://api.panperyskop.app/media/partners';
+const LOGO_BASE = '/media/partners';
 
 const PARTNERS: PartnerCard[] = [
   {
     id: 'revolut', title: 'Darmowa karta walutowa', subtitle: 'Kurs przed płatnością, bez opłat',
-    url: 'https://api.panperyskop.app/r/revolut', logo: `${LOGO_BASE}/revolut.png`,
+    url: '/r/revolut', logo: `${LOGO_BASE}/revolut.png`,
     background: 'linear-gradient(135deg,#fff 0%,#fff 50%,#E4E7FF 72%,#B7BDFB 100%)', chevron: '#4F55F1',
   },
   {
     id: 'airhelp', title: 'Opóźniony lub odwołany lot?', subtitle: 'Nawet 600 EUR odszkodowania',
-    url: 'https://api.panperyskop.app/r/airhelp', logo: `${LOGO_BASE}/airhelp.png`,
+    url: '/r/airhelp', logo: `${LOGO_BASE}/airhelp.png`,
     background: 'linear-gradient(135deg,#fff 0%,#fff 50%,#F2DCE3 72%,#DDA9BA 100%)', chevron: '#B3516E',
   },
   {
     id: 'saily', title: 'Karta eSIM bez limitu w Europie', subtitle: 'Od 16 zł na wyjazd',
-    url: 'https://api.panperyskop.app/r/saily', logo: `${LOGO_BASE}/saily.png`,
+    url: '/r/saily', logo: `${LOGO_BASE}/saily.png`,
     background: 'linear-gradient(135deg,#fff 0%,#fff 50%,#FFF7A8 72%,#FFF500 100%)', chevron: '#C7B000',
   },
 ];
 
 function renderPartnerCard(card: PartnerCard): string {
   return `      <a class="pcard" href="${card.url}" rel="nofollow sponsored" target="_blank" style="background:${card.background}">
-        <img class="pcard__logo" src="${card.logo}" alt="" loading="lazy">
+        <img class="pcard__logo" src="${card.logo}" alt="" loading="lazy" decoding="async" width="40" height="40">
         <span class="pcard__body"><span class="pcard__title">${escapeHtml(card.title)}</span><span class="pcard__sub">${escapeHtml(card.subtitle)}</span></span>
         <span class="pcard__chev" style="color:${card.chevron}">&gt;</span>
       </a>`;
@@ -502,7 +966,7 @@ function renderCarCard(place: Place | undefined): string {
   const carUrl = place?.options[0]?.carUrl;
   if (!carUrl) return '';
   return `      <a class="pcard" href="${carUrl}" rel="nofollow sponsored" target="_blank" style="background:linear-gradient(135deg,#fff 0%,#fff 50%,#DCE9FF 72%,#A8C6FF 100%)">
-        <img class="pcard__logo" src="${LOGO_BASE}/qeeq.png" alt="" loading="lazy">
+        <img class="pcard__logo" src="${LOGO_BASE}/qeeq.png" alt="" loading="lazy" decoding="async" width="40" height="40">
         <span class="pcard__body"><span class="pcard__title">Wynajmij auto przy lotnisku</span><span class="pcard__sub">Od 49 zł/dzień, bezpłatne odwołanie</span></span>
         <span class="pcard__chev" style="color:#3570E6">&gt;</span>
       </a>`;
@@ -511,12 +975,22 @@ function renderCarCard(place: Place | undefined): string {
 function renderHeader(origin: OriginPage): string {
   const links = ORIGIN_PAGES
     .filter((page) => page.id !== origin.id)
-    .map((page) => `<a href="/plan/${page.id}">${escapeHtml(page.name)}</a>`)
+    .map((page) => `<a href="/${page.slug}">${escapeHtml(page.name)}</a>`)
     .join('');
   return `  <header class="site">
-    <a class="brand" href="https://panperyskop.app">Pan Peryskop</a>
+    <a class="brand" href="/tanie-loty">Tanie loty</a>
     <nav class="origins"><span class="origins__label">Loty z:</span>${links}</nav>
   </header>`;
+}
+
+function renderFooter(): string {
+  const links = ORIGIN_PAGES
+    .map((origin) => `<a href="/${origin.slug}">${escapeHtml(origin.name)}</a>`)
+    .join('');
+  return `  <footer class="site-foot">
+    <nav class="origins">${links}</nav>
+    <p class="foot-links"><a href="/tanie-loty">Wszystkie lotniska</a> - <a href="/sitemap.xml">Mapa strony</a> - <a href="/llms.txt">Dla LLM</a></p>
+  </footer>`;
 }
 
 function renderPartners(places: Place[]): string {
@@ -528,55 +1002,176 @@ ${PARTNERS.slice(1).map(renderPartnerCard).join('\n')}
   </section>`;
 }
 
-function buildJsonLd(origin: OriginPage, sections: WindowSection[]): string {
-  const offers = sections.flatMap((section) => section.groups.flatMap((group) =>
+export function faqFor(origin: OriginPage): { q: string; a: string }[] {
+  return [
+    {
+      q: `Kiedy loty z ${origin.genitive} są najtańsze?`,
+      a: 'Najtaniej wypadają wtorki, środy i soboty oraz terminy poza sezonem. Lista powyżej pokazuje najtańsze weekendy.',
+    },
+    {
+      q: `Jak kupić tani bilet z ${origin.genitive}?`,
+      a: 'Wybierz termin z listy, kliknij "Wybierz lot" i zarezerwuj u przewoźnika. Ceny są za osobę w obie strony.',
+    },
+    {
+      q: 'Czy cena zawiera nocleg?',
+      a: 'Cena "od ... zł/os" to sam lot. Cena łączna dolicza połowę kosztu noclegu za dwie osoby.',
+    },
+    {
+      q: `Z jakiego lotniska są loty z ${origin.genitive}?`,
+      a: `Z lotniska ${origin.iata} w ${origin.name}. Obsługiwane kierunki są na liście powyżej.`,
+    },
+  ];
+}
+
+function buildJsonLd(origin: OriginPage, sections: WindowSection[], places: Place[]): string {
+  const url = `${PUBLIC_BASE}/${origin.slug}`;
+  const items = sections.flatMap((section) => section.groups.flatMap((group) =>
     group.offers.map((offer) => ({
       '@type': 'Offer',
-      name: `${origin.name} – ${offer.city}`,
+      name: `${origin.name} - ${offer.city}`,
       price: offer.price,
       priceCurrency: 'PLN',
       url: offer.flightUrl,
       availability: 'https://schema.org/InStock',
-      validFrom: group.start,
+      validFrom: offer.start,
+      validThrough: offer.end,
     }))));
-  const data = {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: `Tanie loty na weekendy z ${origin.genitive}`,
-    numberOfItems: offers.length,
-    itemListElement: offers.map((offer, index) => ({ '@type': 'ListItem', position: index + 1, item: offer })),
-  };
-  return JSON.stringify(data).replace(/</g, '\\u003c');
+  const graph = [
+    {
+      '@type': 'WebPage',
+      '@id': `${url}#page`,
+      url,
+      name: `Tanie loty z ${origin.genitive}`,
+      inLanguage: 'pl-PL',
+      isPartOf: { '@type': 'WebSite', name: 'Pan Peryskop', url: PUBLIC_BASE },
+      image: places.find((place) => place.imageLargeUrl)?.imageLargeUrl,
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Pan Peryskop', item: PUBLIC_BASE },
+        { '@type': 'ListItem', position: 2, name: `Loty z ${origin.genitive}`, item: url },
+      ],
+    },
+    {
+      '@type': 'ItemList',
+      name: `Tanie weekendy z ${origin.genitive}`,
+      numberOfItems: items.length,
+      itemListElement: items.map((item, index) => ({ '@type': 'ListItem', position: index + 1, item })),
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: faqFor(origin).map((entry) => ({
+        '@type': 'Question',
+        name: entry.q,
+        acceptedAnswer: { '@type': 'Answer', text: entry.a },
+      })),
+    },
+  ];
+  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c');
+}
+
+const TIPS = [
+  'Bądź elastyczny: wybieraj środek tygodnia i terminy poza sezonem.',
+  'Sprawdzaj cały miesiąc, nie jeden dzień.',
+  'Rezerwuj wcześniej w sezonie, ale miej oczy otwarte na last minute.',
+  'Z bagażem podręcznym sprawdź limity przewoźnika przed zakupem.',
+];
+
+const ADVICE = [
+  'Bagaż: linie niskokosztowe mają własne limity. Sprawdź je przed zakupem.',
+  'Dokumenty: sprawdź ważność dowodu lub paszportu. Część krajów wymaga wizy.',
+  'Ubezpieczenie: warto wykupić polisę podróżną, szczególnie na wyjazd zagraniczny.',
+];
+
+function renderList(items: string[]): string {
+  return `<ul class="plain">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+}
+
+function renderPopular(origin: OriginPage, places: Place[]): string {
+  if (places.length === 0) return '';
+  const items = places.slice(0, 6).map((place) => {
+    const name = place.cityPl ?? place.city;
+    const priced = place.options.filter((option) => option.hotel);
+    const best = place.options[0];
+    const price = priced.length > 0
+      ? Math.min(...priced.map((option) => Math.round(option.price + (option.hotel?.perPerson ?? 0))))
+      : Math.round(best.price);
+    return `<li><a href="${best.flightUrl}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(name)}</a><span class="muted"> od ${price} zł/os</span></li>`;
+  }).join('');
+  return `  <section class="editorial">
+    <h2>Popularne kierunki z ${escapeHtml(origin.genitive)}</h2>
+    <ul class="plain">${items}</ul>
+  </section>`;
+}
+
+function renderFaq(origin: OriginPage): string {
+  const items = faqFor(origin)
+    .map((entry) => `<h3 class="faq__q">${escapeHtml(entry.q)}</h3><p class="faq__a">${escapeHtml(entry.a)}</p>`)
+    .join('');
+  return `  <section class="editorial">
+    <h2>Częste pytania o loty z ${escapeHtml(origin.genitive)}</h2>
+    ${items}
+  </section>`;
+}
+
+function renderEditorial(origin: OriginPage, places: Place[]): string {
+  const about = `  <section class="editorial">
+    <h2>O tym zestawieniu</h2>
+    <p>Zestawienie pokazuje najtańsze weekendy z ${escapeHtml(origin.genitive)}. Ceny lotów pochodzą z Ryanair i Wizzair i są za osobę w obie strony. Hotele to segment ekonomiczny dla dwóch osób. Wydarzenia to mecze i biegi w okolicy. Ceny zmieniają się u przewoźnika.</p>
+  </section>`;
+  const popular = renderPopular(origin, places);
+  const tips = `  <section class="editorial">
+    <h2>Jak znaleźć najtańsze loty z ${escapeHtml(origin.genitive)}</h2>
+    ${renderList(TIPS)}
+  </section>`;
+  const advice = `  <section class="editorial">
+    <h2>Porady przed wyjazdem</h2>
+    ${renderList(ADVICE)}
+  </section>`;
+  return `${about}\n${popular}\n${tips}\n${advice}\n${renderFaq(origin)}`;
 }
 
 export function renderPage(data: OriginData): string {
   const { origin, sections, featured, generatedAt } = data;
   const places = groupPlaces(sections);
   const dealByCity = new Map(featured.map((deal) => [foldCity(deal.offer.city), deal]));
-  const title = `Tanie loty na weekendy z ${origin.genitive}`;
-  const description = `Najtańsze loty na najbliższe weekendy z ${origin.genitive}. Terminy, hotele i wydarzenia (biegi, mecze) z linkami do rezerwacji.`;
-  const canonical = `https://api.panperyskop.app/plan/${origin.id}`;
+  const title = `Tanie loty z ${origin.genitive}`;
+  const description = `Tanie loty z ${origin.genitive}. Najtańsze weekendy, ceny lotów, hotele i wydarzenia (biegi, mecze). Sprawdź terminy i rezerwuj.`;
+  const url = `${PUBLIC_BASE}/${origin.slug}`;
   const heroImage = places.find((place) => place.imageLargeUrl)?.imageLargeUrl;
-  const content = places.map((place) => renderPlace(place, dealByCity.get(foldCity(place.city)))).join('\n');
+  const cards = places.map((place) => renderPlace(origin, place, dealByCity.get(foldCity(place.city)), places)).join('\n');
+  const others = ORIGIN_PAGES
+    .filter((page) => page.id !== origin.id)
+    .map((page) => `<a href="/${page.slug}">${escapeHtml(page.name)}</a>`)
+    .join('');
+  const monthKeys = [...new Set(places.flatMap((place) => place.options.map((option) => option.start.slice(0, 7))))].sort();
+  const monthLinks = monthKeys
+    .map((key) => `<a href="/${origin.slug}/${monthParts(key).slug}">${escapeHtml(monthParts(key).nominative)}</a>`)
+    .join('');
   return `<!doctype html>
 <html lang="pl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} | Pan Peryskop</title>
+<title>${escapeHtml(title)} - weekendy, hotele i wydarzenia | Pan Peryskop</title>
 <meta name="description" content="${escapeHtml(description)}">
-<link rel="canonical" href="${canonical}">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="${url}">
+<link rel="alternate" type="application/json" href="${PUBLIC_BASE}/plan/json/${origin.id}">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(description)}">
-<meta property="og:url" content="${canonical}">
+<meta property="og:url" content="${url}">
 <meta property="og:locale" content="pl_PL">
 ${heroImage ? `<meta property="og:image" content="${heroImage}">` : ''}
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="https://panperyskop.app/icon.png">
-<script type="application/ld+json">${buildJsonLd(origin, sections)}</script>
+<script type="application/ld+json">${buildJsonLd(origin, sections, places)}</script>
 <style>
 *{box-sizing:border-box}
 body{font-family:system-ui,Arial,sans-serif;color:#141414;margin:0 auto;padding:0 16px 48px;max-width:880px}
+a:focus-visible{outline:3px solid #4F55F1;outline-offset:2px}
 .site{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #eee;margin-bottom:8px;flex-wrap:wrap}
 .brand{font-weight:800;font-size:18px;color:#141414;text-decoration:none}
 .origins{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
@@ -601,11 +1196,33 @@ h2{font-size:19px;margin-top:34px;border-bottom:1px solid #eee;padding-bottom:6p
 .opt__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .opt__date{color:#141414;text-decoration:none;font-weight:600;font-size:15px}
 .opt__total{font-weight:700;white-space:nowrap;font-size:15px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.opt__date{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:600;font-size:15px}
+.cal{display:inline-flex;flex-direction:column;width:52px;flex:none;border:1px solid #d9dbe8;border-radius:8px;overflow:hidden;text-align:center}
+.cal__top{background:#4F55F1;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 0}
+.cal__day{font-size:20px;font-weight:800;line-height:1.35;color:#141414;background:#fff}
+.cal__meta{display:flex;flex-direction:column;gap:2px}
+.cal__range{font-size:13px;font-weight:600;color:#141414}
+.cal__day{font-size:16px;font-weight:800;line-height:1.5;color:#141414;background:#fff}
+.cal__arrow{font-weight:700;color:#6B7280;margin:0 6px}
+.opt__right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.opt__nights{font-size:12px;color:#6B7280}
+.opt__badges{margin-top:6px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px}
+.badge--cheap{background:#e7f6ec;color:#12693a;border:1px solid #9ad1a8}
+.badge--reco{background:#eef7ef;color:#2f6b45;border:1px solid #b7dcc3}
+.opt--best{border-color:#9ad1a8;background:#f7fcf8}
+.opt{position:relative}
+.opt__badge{position:absolute;top:-9px;right:10px;background:#12693a;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+.place__avg{font-size:12px;font-weight:400;color:#6B7280;margin-left:8px}
 .opt__detail{margin-top:4px;color:#6B7280;font-size:13px}
 .opt__actions{margin-top:10px;padding-top:10px;border-top:1px solid #f2f2f2}
 .opt__actions a{display:inline-block;margin-right:16px;padding:4px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
+.editorial{max-width:760px}
 .plain{list-style:none;padding:0;margin:0;font-size:14px}
 .plain li{padding:4px 0;border-bottom:1px solid #f4f4f4}
+.faq__q{font-size:15px;margin:16px 0 2px;color:#141414}
+.faq__a{margin:0 0 10px;color:#4B5563;font-size:14px}
 .directions a{display:inline-block;margin:2px 12px 2px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
 .muted{color:#6B7280}
 .pcard{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;margin:8px 0;text-decoration:none;color:#141414}
@@ -614,23 +1231,35 @@ h2{font-size:19px;margin-top:34px;border-bottom:1px solid #eee;padding-bottom:6p
 .pcard__title{font-weight:600;font-size:15px}
 .pcard__sub{font-size:12px;opacity:.75}
 .pcard__chev{font-size:20px;font-weight:700}
-.foot{margin-top:34px;color:#888;font-size:12px}
+.foot{margin-top:34px;color:#6B7280;font-size:12px}
+.site-foot{border-top:1px solid #eee;margin-top:34px;padding-top:14px}
+.foot-links{margin:10px 0 0;font-size:13px}
+.foot-links a{color:#4F55F1;text-decoration:none;font-weight:600}
 @media(max-width:640px){.place{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 ${renderHeader(origin)}
 <h1>${escapeHtml(title)}</h1>
-<p class="lead">Miejsca, terminy i hotele. Ceny za osobę.</p>
-${content}
+<p class="lead">Loty, hotele i wydarzenia na najbliższe weekendy. Ceny podajemy za osobę.</p>
+<h2>Kierunki i terminy</h2>
+${cards}
+${renderEditorial(origin, places)}
 ${renderPartners(places)}
-<p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne i mogą się zmienić u przewoźnika. Serwis korzysta z linków partnerskich.</p>
+<section class="editorial"><h2>Miesięczne zestawienia</h2><div class="origins">${monthLinks}</div><p class="foot-links"><a href="/${origin.slug}/polaczenia">Wszystkie połączenia z ${escapeHtml(origin.genitive)}</a></p></section>
+<section class="editorial"><h2>Tanie loty z innych miast</h2><div class="origins">${others}</div></section>
+${renderFooter()}
+<p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne i mogą się zmienić u przewoźnika lub w hotelu. Serwis korzysta z linków partnerskich.</p>
 </body>
 </html>`;
 }
 
 export function originById(id: string): OriginPage | null {
   return ORIGIN_PAGES.find((origin) => origin.id === id) ?? null;
+}
+
+export function originBySlug(slug: string): OriginPage | null {
+  return ORIGIN_PAGES.find((origin) => origin.slug === slug) ?? null;
 }
 
 export interface OriginData {
@@ -643,9 +1272,9 @@ export interface OriginData {
 const PAGE_TTL_MS = 20 * 60_000;
 const pageCache = new Map<string, { at: number; data: OriginData }>();
 
-export async function originData(env: Env, id: string): Promise<OriginData | null> {
+export async function originData(env: Env, id: string, force = false): Promise<OriginData | null> {
   const cached = pageCache.get(id);
-  if (cached && Date.now() - cached.at < PAGE_TTL_MS) return cached.data;
+  if (!force && cached && Date.now() - cached.at < PAGE_TTL_MS) return cached.data;
   const origin = originById(id);
   if (!origin) return null;
   const sections = await buildOffers(env, origin);
@@ -655,8 +1284,8 @@ export async function originData(env: Env, id: string): Promise<OriginData | nul
   return data;
 }
 
-export async function originPage(env: Env, id: string): Promise<string | null> {
-  const data = await originData(env, id);
+export async function originPage(env: Env, id: string, force = false): Promise<string | null> {
+  const data = await originData(env, id, force);
   return data ? renderPage(data) : null;
 }
 
@@ -712,6 +1341,13 @@ export function renderJson(data: OriginData): string {
           lat: event.lat,
           lng: event.lng,
         })),
+        attractions: (deal?.attractions ?? []).map((attraction) => ({
+          name: attraction.name,
+          price: attraction.price,
+          currency: attraction.currency,
+          rating: attraction.rating,
+          link: attraction.link,
+        })),
         directions: deal?.directions ?? [],
       };
     }),
@@ -719,5 +1355,5 @@ export function renderJson(data: OriginData): string {
 }
 
 export function sitemapUrls(base: string): string[] {
-  return ORIGIN_PAGES.map((origin) => `${base}/plan/${origin.id}`);
+  return ORIGIN_PAGES.map((origin) => `${base}/${origin.slug}`);
 }

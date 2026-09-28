@@ -1,5 +1,6 @@
 name = "panperyskop-api"
 main = "src/index.ts"
+
 # workers.dev is intentionally disabled (no `workers_dev` key) — the only entrypoint
 # is the custom domain api.panperyskop.app.
 # 2026-03-24+: required by Browser Run binding's .quickAction() (kupbilecik scraping).
@@ -33,7 +34,7 @@ enabled = true
 # 02:00 daily seed; 04:00 daily audit cleanup (4-day retention); hourly liveness
 # watchdog (marks batches stuck in created/fetching/ingesting as failed).
 [triggers]
-crons = [ "0 2 * * *", "0 4 * * *", "0 * * * *", "0 3 * * 1" ]
+crons = [ "0 2 * * *", "0 4 * * *", "0 * * * *", "0 3 * * 1", "*/15 * * * *" ]
 
 # Queue wake-ups for the v2 seed pipeline. The queue is NOT the state: seed_units
 # (D1) is the durable work-list. A { type:'unit' } message drains the pending
@@ -77,6 +78,7 @@ binding = "MEDIA"
 bucket_name = "panperyskop-media"
 
 [vars]
+REDIRECT_BASE = "https://panperyskop.app"
 # Production mode: real OAuth id_token verification (Sign in with Apple is the
 # only login). Local dev can override via .dev.vars (ENVIRONMENT=development).
 ENVIRONMENT = "production"
@@ -101,3 +103,38 @@ VIATOR_ENV = "production"
 [[routes]]
 pattern = "api.panperyskop.app"
 custom_domain = true
+
+# The travel content site on the main domain. The Pages site keeps the
+# marketing pages; these routes let the Worker serve the travel pages and the
+# crawler files (sitemap, robots, llms).
+[[routes]]
+pattern = "panperyskop.app/tanie-loty*"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/sitemap.xml"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/robots.txt"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/llms.txt"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/plan/*"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/coverage.json"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/r/*"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/media/*"
+zone_name = "panperyskop.app"

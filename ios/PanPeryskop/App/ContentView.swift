@@ -50,6 +50,7 @@ struct ContentView: View {
             }
         }
         .task {
+            MetaSignals.registered()
             await MetaSignals.beganAfterConsent()
         }
         .onChange(of: pendingStoryId) { _, newId in

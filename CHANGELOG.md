@@ -4,7 +4,7 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.3.1] — build 106, 2026-09-29
 
 ### Changed
 

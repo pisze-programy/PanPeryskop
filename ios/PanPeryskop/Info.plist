@@ -32,8 +32,6 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>FacebookAppID</key>
 	<string>1316364160498615</string>
-	<key>FacebookAutoLogAppEventsEnabled</key>
-	<false/>
 	<key>FacebookClientToken</key>
 	<string>b2e9d80b3cf0de4e2666209e39b06251</string>
 	<key>FacebookDisplayName</key>

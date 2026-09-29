@@ -49,6 +49,9 @@ struct ContentView: View {
                 await router.openStory(id: storyId, map: mapViewModel)
             }
         }
+        .task {
+            await MetaSignals.beganAfterConsent()
+        }
         .onChange(of: pendingStoryId) { _, newId in
             guard let newId else { return }
             pendingStoryId = nil

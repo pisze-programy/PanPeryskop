@@ -159,6 +159,7 @@ struct TripsEventDetail: View {
     }
 
     private func openExternally(_ url: URL) {
+        MetaSignals.checkout(kind: .event, id: event.id, name: event.title)
         Haptics.selection()
         UIApplication.shared.open(url)
     }

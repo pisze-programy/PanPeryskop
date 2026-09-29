@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct PanPeryskopApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var authManager = AuthManager()
     @StateObject private var regionStore = RegionStore.shared
     @State private var pendingStoryId: String?
@@ -29,6 +30,10 @@ struct PanPeryskopApp: App {
                 if let id = DeepLink.storyId(from: url) {
                     pendingStoryId = id
                 }
+            }
+            .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+                guard isAuthenticated else { return }
+                MetaSignals.registered()
             }
         }
     }

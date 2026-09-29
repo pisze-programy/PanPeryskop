@@ -156,6 +156,10 @@ struct MapScreen: View {
             guard id == nil else { return }
             tripsViewModel.clearSelectionPublic()
         }
+        .onChange(of: tripsViewModel.selectedEventGroup?.id) { _, id in
+            guard id != nil, let group = tripsViewModel.selectedEventGroup else { return }
+            MetaSignals.content(kind: .event, id: group.contentId, name: group.events.first?.title ?? group.contentId)
+        }
     }
 
     private var activeProvider: any MapContentProvider {
@@ -172,6 +176,7 @@ struct MapScreen: View {
     }
 
     private func selectCity(_ city: City) {
+        MetaSignals.content(kind: .city, id: city.id, name: city.name)
         mapViewModel.selectCity(city)
         switch category {
         case .events:
@@ -236,7 +241,8 @@ struct MapScreen: View {
     }
 
     private func openStoryViewer(_ posts: [Post]) {
-        guard !posts.isEmpty else { return }
+        guard let first = posts.first else { return }
+        MetaSignals.content(kind: .story, id: first.id, name: first.id)
         Haptics.impact(.medium)
         storyPosts = posts
         selectedStoryIndex = 0

@@ -85,6 +85,10 @@ ENVIRONMENT = "production"
 APPLE_CLIENT_ID = "pl.piszeprogramy.panperyskop"
 # Cron schedule mirrors [triggers] crons — dashboard reads this as single source of truth.
 CRON_SCHEDULE = "0 2 * * *"
+# Meta Conversions API dataset (app events for the iOS app). The access token is
+# a secret (wrangler secret put META_CAPI_TOKEN); without it the Worker skips the
+# send.
+META_DATASET_ID = "2537328813346373"
 # goingapp scraping. Public Algolia app id; API key + Cloudinary sig are secrets
 # (wrangler secret put ALGOLIA_API_KEY / CLOUDINARY_SIG)
 ALGOLIA_APP_ID = "FAFFKUSLK0"

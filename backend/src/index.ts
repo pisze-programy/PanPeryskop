@@ -19,6 +19,7 @@ import {submitIndexNow} from './travel/indexnow';
 import {ORIGIN_PAGES, PUBLIC_BASE} from './travel/webpage';
 import {usageObserver} from './analytics/observer';
 import {redirectRoutes, pruneRedirectTokens} from './analytics/redirect';
+import {metaRoutes} from './api/meta';
 import {withSentry} from '@sentry/cloudflare';
 import {sentryOptions} from './analytics/sentry';
 import {tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
@@ -60,6 +61,7 @@ app.use(
 app.use('*', usageObserver());
 
 app.route('/', redirectRoutes);
+app.route('/meta', metaRoutes);
 
 app.route('/auth', authRoutes);
 app.route('/users', usersRoutes);

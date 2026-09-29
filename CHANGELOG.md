@@ -4,6 +4,25 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Meta Ads measurement. After you answer the system tracking prompt, the app
+  reports the install, the registration, opened content and outbound booking
+  clicks to Meta, so we can measure which ads bring people in. The prompt
+  appears on the map screen after sign-in. Until you answer it, no advertising
+  identifier leaves the device.
+- The privacy policy and the terms name Meta Platforms Ireland Ltd. as a
+  recipient for advertising measurement, and describe the data and the legal
+  basis.
+
+### Changed
+
+- The App Store privacy labels gain the "Data Used to Track You" declaration for
+  the device advertising identifier, the install identifier and product
+  interaction.
+
 ## [1.3.1] — build 104, 2026-09-28
 
 ### Changed

@@ -14,4 +14,11 @@ export const analytics = {
     // anonymous totals; the client id exists only because GA4 requires one.
     sendUserId: false,
   },
+  // Meta Conversions API (app events). The dataset id is a var; the access token
+  // is a secret (wrangler secret put META_CAPI_TOKEN). Without both, the Worker
+  // skips the send.
+  meta: {
+    version: 'v26.0',
+    timeoutMs: 5_000,
+  },
 } as const;

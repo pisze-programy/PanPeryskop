@@ -27,6 +27,7 @@ struct PartnerBannerSection: View {
     private func bannerCard(_ banner: PartnerBanner) -> some View {
         Button {
             Haptics.selection()
+            MetaSignals.checkout(kind: .banner, id: banner.id, name: banner.title)
             onOpen(banner.url)
         } label: {
             HStack(spacing: Theme.Spacing.m) {

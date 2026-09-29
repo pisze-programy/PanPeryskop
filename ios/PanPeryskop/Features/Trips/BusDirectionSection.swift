@@ -138,6 +138,7 @@ struct BusDirectionSection: View {
 
     private func openBusBooking(_ raw: String?) {
         guard let raw, let url = URL(string: raw) else { return }
+        MetaSignals.checkout(kind: .bus, id: "\(fromCity)-\(toCity)", name: "\(fromCity) → \(toCity)")
         UIApplication.shared.open(url)
     }
 

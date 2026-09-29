@@ -390,6 +390,7 @@ struct CityFlightSheet: View {
             outbound: outbound?.date,
             returning: returning?.date
         ) else { return }
+        MetaSignals.checkout(kind: .flight, id: "\(from)-\(to)", name: option.carrier.displayName)
         UIApplication.shared.open(url)
     }
 }

@@ -20,6 +20,9 @@ packages:
   KeychainAccess:
     url: https://github.com/kishikawakatsumi/KeychainAccess
     from: 4.2.0
+  FacebookSDK:
+    url: https://github.com/facebook/facebook-ios-sdk
+    from: 18.1.1
 
 targets:
   PanPeryskop:
@@ -36,6 +39,8 @@ targets:
         product: LazyPager
       - package: KeychainAccess
         product: KeychainAccess
+      - package: FacebookSDK
+        product: FacebookCore
     info:
       path: PanPeryskop/Info.plist
       properties:
@@ -45,9 +50,20 @@ targets:
           - CFBundleURLName: com.panperyskop
             CFBundleURLSchemes:
               - panperyskop
+              - fb1316364160498615
+        FacebookAppID: "1316364160498615"
+        FacebookClientToken: "b2e9d80b3cf0de4e2666209e39b06251"
+        FacebookDisplayName: Pan Peryskop iOS
+        FacebookAutoLogAppEventsEnabled: false
+        NSUserTrackingUsageDescription: "Pomaga nam mierzyć skuteczność reklam i docierać do osób szukających miejskich atrakcji. Nie łączymy tych danych z Twoim kontem."
+        SKAdNetworkItems:
+          - SKAdNetworkIdentifier: v9wttpbfk9.skadnetwork
+          - SKAdNetworkIdentifier: n38lu8286q.skadnetwork
         ITSAppUsesNonExemptEncryption: false
         LSApplicationQueriesSchemes:
           - comgooglemaps
+          - fbapi
+          - fb-messenger-share-api
         # Provider links often use cleartext http; the in-app browser must load them.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true

@@ -58,6 +58,11 @@ interface Env {
   ANALYTICS_SALT?: string;
   // Base URL for minted shortlinks (defaults to the production API host).
   REDIRECT_BASE?: string;
+  // Meta Conversions API (app events). The dataset id is a var; the access token
+  // is a secret (wrangler secret put META_CAPI_TOKEN). Without both, the Worker
+  // skips the send.
+  META_DATASET_ID?: string;
+  META_CAPI_TOKEN?: string;
   // Sentry DSN (EU region). Error monitoring only; no user data is sent.
   SENTRY_DSN?: string;
 }

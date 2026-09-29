@@ -88,6 +88,7 @@ struct CarrierFlightCard: View {
             outbound: outbound,
             returning: returning
         ) else { return }
+        MetaSignals.checkout(kind: .flight, id: "\(originIata)-\(destinationIata)", name: carrier.displayName)
         UIApplication.shared.open(url)
     }
 

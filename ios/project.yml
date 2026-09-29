@@ -55,7 +55,7 @@ targets:
         FacebookClientToken: "b2e9d80b3cf0de4e2666209e39b06251"
         FacebookDisplayName: Pan Peryskop iOS
         FacebookAutoLogAppEventsEnabled: false
-        NSUserTrackingUsageDescription: "Pomaga nam mierzyć skuteczność reklam i docierać do osób szukających miejskich atrakcji. Nie łączymy tych danych z Twoim kontem."
+        NSUserTrackingUsageDescription: "Pomaga nam mierzyć skuteczność reklam i docierać do osób, które szukają miejskich atrakcji."
         SKAdNetworkItems:
           - SKAdNetworkIdentifier: v9wttpbfk9.skadnetwork
           - SKAdNetworkIdentifier: n38lu8286q.skadnetwork

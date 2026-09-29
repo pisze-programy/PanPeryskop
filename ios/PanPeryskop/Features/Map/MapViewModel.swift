@@ -49,8 +49,9 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         static let vpLng = "map.viewport.lng"
         static let vpSpanLat = "map.viewport.span_lat"
         static let vpSpanLng = "map.viewport.span_lng"
+        static let vpCityId = "map.viewport.city_id"
 
-        static var viewportKeys: [String] { [vpLat, vpLng, vpSpanLat, vpSpanLng] }
+        static var viewportKeys: [String] { [vpLat, vpLng, vpSpanLat, vpSpanLng, vpCityId] }
     }
 
     init() {
@@ -127,28 +128,37 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     var restoredViewport: MKCoordinateRegion? {
         let d = UserDefaults.standard
         guard d.object(forKey: MapPrefs.vpLat) != nil else { return nil }
+        guard d.string(forKey: MapPrefs.vpCityId) == selectedCity.id else { return nil }
+        let span = MKCoordinateSpan(
+            latitudeDelta: d.double(forKey: MapPrefs.vpSpanLat),
+            longitudeDelta: d.double(forKey: MapPrefs.vpSpanLng)
+        )
+        guard span.latitudeDelta > 0, span.latitudeDelta <= Self.maxViewportSpan else { return nil }
         return MKCoordinateRegion(
             center: CLLocationCoordinate2D(
                 latitude: d.double(forKey: MapPrefs.vpLat),
                 longitude: d.double(forKey: MapPrefs.vpLng)
             ),
-            span: MKCoordinateSpan(
-                latitudeDelta: d.double(forKey: MapPrefs.vpSpanLat),
-                longitudeDelta: d.double(forKey: MapPrefs.vpSpanLng)
-            )
+            span: span
         )
     }
+
+    /// A view wider than a city is not a place to return to. Without this cap the
+    /// map reopens over half of Europe after one zoom-out.
+    private static let maxViewportSpan = 6.0
 
     var initialRegion: MKCoordinateRegion {
         restoredViewport ?? selectedCity.region
     }
 
     func saveViewport(_ region: MKCoordinateRegion) {
+        guard region.span.latitudeDelta <= Self.maxViewportSpan else { return }
         let d = UserDefaults.standard
         d.set(region.center.latitude, forKey: MapPrefs.vpLat)
         d.set(region.center.longitude, forKey: MapPrefs.vpLng)
         d.set(region.span.latitudeDelta, forKey: MapPrefs.vpSpanLat)
         d.set(region.span.longitudeDelta, forKey: MapPrefs.vpSpanLng)
+        d.set(selectedCity.id, forKey: MapPrefs.vpCityId)
     }
 
     func onRegionChange(swLat: Double, swLng: Double, neLat: Double, neLng: Double) {

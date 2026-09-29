@@ -52,7 +52,7 @@
 		<true/>
 	</dict>
 	<key>NSUserTrackingUsageDescription</key>
-	<string>Pomaga nam mierzyć skuteczność reklam i docierać do osób szukających miejskich atrakcji. Nie łączymy tych danych z Twoim kontem.</string>
+	<string>Pomaga nam mierzyć skuteczność reklam i docierać do osób, które szukają miejskich atrakcji.</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict>

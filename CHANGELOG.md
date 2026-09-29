@@ -4,6 +4,20 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- The bundled city thumbnails are 240×120 (were 400×200). About 2.4 MB lighter in
+  the app, and the pin, the card and the hero now share one 2:1 crop, so the
+  blur-up no longer shifts the frame.
+- The nearby-city card and the hero load the sharper network photo over the
+  placeholder, instead of upscaling the light bundle image.
+
+### Fixed
+
+- Four city photos: Bari, Modena, Rimini and Sliema.
+
 ## [1.3.1] — build 105, 2026-09-29
 
 ### Added

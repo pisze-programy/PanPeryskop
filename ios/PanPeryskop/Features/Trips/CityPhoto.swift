@@ -3,7 +3,7 @@ import UIKit
 
 struct CityPhoto: View {
     let city: TravelCity
-    var wantsLarge = false
+    var networkURL: URL? = nil
     var showsPlaceholder = true
 
     private var bundle: UIImage? { CityThumbStore.image(for: city.id) }
@@ -18,10 +18,9 @@ struct CityPhoto: View {
                     }
                     if let bundle {
                         photo(bundle)
-                        if wantsLarge { RemoteImage(url: city.heroURL) }
+                        RemoteImage(url: networkURL)
                     } else {
-                        RemoteImage(url: city.thumbURL)
-                        RemoteImage(url: city.heroURL)
+                        RemoteImage(url: networkURL ?? city.thumbURL)
                     }
                 }
             }

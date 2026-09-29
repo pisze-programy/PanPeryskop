@@ -16,15 +16,15 @@ interface CityEntry {
   imageUrl: string;
 }
 
-/** The 400x200 hero crop. Handles both shapes: the Unsplash query form
- *  (`w=600&h=600`) and the older resize proxy path (`width=600,height=600`). */
+/** The 240x120 placeholder crop. Handles both shapes: the Unsplash query form
+ *  (`w=600&h=300`) and the older resize proxy path (`width=600,height=600`). */
 export function thumbUrl(imageUrl: string): string {
   if (/images\.unsplash\.com/.test(imageUrl)) {
     return imageUrl
-      .replace(/([?&])w=\d+/, `$1w=400`)
-      .replace(/([?&])h=\d+/, `$1h=200`);
+      .replace(/([?&])w=\d+/, `$1w=240`)
+      .replace(/([?&])h=\d+/, `$1h=120`);
   }
-  return imageUrl.replace(/width=\d+,height=\d+,quality=\d+/, 'width=400,height=200,quality=70');
+  return imageUrl.replace(/width=\d+,height=\d+,quality=\d+/, 'width=240,height=120,quality=70');
 }
 
 async function download(id: string, url: string): Promise<string> {
@@ -46,7 +46,7 @@ async function download(id: string, url: string): Promise<string> {
 }
 
 function encode(source: string, target: string): void {
-  execFileSync('cwebp', ['-quiet', '-q', '60', '-resize', '400', '200', source, '-o', target]);
+  execFileSync('cwebp', ['-quiet', '-q', '50', '-resize', '240', '120', source, '-o', target]);
 }
 
 async function main(): Promise<void> {

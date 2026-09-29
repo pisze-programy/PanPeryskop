@@ -67,7 +67,7 @@ struct CityNearbySection: View {
     }
 
     private func photo(_ city: TravelCity) -> some View {
-        CityPhoto(city: city)
+        CityPhoto(city: city, networkURL: city.thumbURL)
             .frame(width: Self.cardWidth, height: Self.photoHeight)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
     }

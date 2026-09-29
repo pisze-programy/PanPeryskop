@@ -9,7 +9,7 @@ struct CityHeroSection: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            CityPhoto(city: city, wantsLarge: true)
+            CityPhoto(city: city, networkURL: city.heroURL)
             scrim
             labels
         }

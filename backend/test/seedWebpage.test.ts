@@ -76,7 +76,7 @@ test('renderPage: an offer with a hotel shows the hotel name', () => {
     start: '2026-10-23', end: '2026-10-25', nights: 2, price: 200,
     lat: 49.45, lng: 2.35, imageUrl: null, imageLargeUrl: null, imageCredit: null,
     flightUrl: 'https://api.panperyskop.app/r/abc', stayUrl: 'https://api.panperyskop.app/r/def', carUrl: 'https://api.panperyskop.app/r/ghi',
-    hotel: { name: 'Hotel Test', total: 240, perPerson: 120, lat: 48.8, lng: 2.3, url: 'https://www.booking.com/hotel/test', address: 'Rue de Paris', km: 2 },
+    hotel: { name: 'Hotel Test', total: 240, perPerson: 120, lat: 48.8, lng: 2.3, url: 'https://www.booking.com/hotel/test', address: 'Rue de Paris', km: 2, stars: 3, score: 8.5, reviews: 100 },
   };
   const html = renderPage({
     origin: { id: 'poznan', name: 'Poznań', genitive: 'Poznania', slug: 'tanie-loty-z-poznania', iata: 'POZ' },

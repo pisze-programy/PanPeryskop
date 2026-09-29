@@ -99,6 +99,9 @@ export interface HotelPrice {
   url: string;
   address: string | null;
   km: number;
+  stars: number | null;
+  score: number;
+  reviews: number;
 }
 
 export interface Offer {
@@ -326,7 +329,7 @@ async function enrichPlace(env: Env, place: Place, budget: { left: number }): Pr
     if (!hotel) continue;
     option.hotel = {
       name: hotel.name, total: hotel.total, perPerson: hotel.perPerson, lat: hotel.lat, lng: hotel.lng, url: hotel.url,
-      address: hotel.address, km: hotel.km,
+      address: hotel.address, km: hotel.km, stars: hotel.stars, score: hotel.score, reviews: hotel.reviews,
     };
     if (!firstHotel) firstHotel = hotel;
     if (placeHotels.length === 0) placeHotels = hotels;
@@ -375,6 +378,10 @@ export interface Place {
   options: Offer[];
 }
 
+export function offerTotal(offer: Offer): number {
+  return offer.hotel ? Math.round(offer.price + offer.hotel.perPerson) : Math.round(offer.price);
+}
+
 export function groupPlaces(sections: WindowSection[]): Place[] {
   const byCity = new Map<string, Place>();
   for (const section of sections) {
@@ -402,9 +409,11 @@ export function groupPlaces(sections: WindowSection[]): Place[] {
     }
   }
   for (const place of byCity.values()) {
-    place.options = place.options.sort((a, b) => a.price - b.price).slice(0, MAX_OPTIONS_PER_PLACE);
+    const anyHotel = place.options.some((option) => option.hotel);
+    const key = (option: Offer) => (anyHotel && !option.hotel ? Number.MAX_SAFE_INTEGER : offerTotal(option));
+    place.options = place.options.sort((a, b) => key(a) - key(b)).slice(0, MAX_OPTIONS_PER_PLACE);
   }
-  return [...byCity.values()].sort((a, b) => a.options[0].price - b.options[0].price);
+  return [...byCity.values()].sort((a, b) => offerTotal(a.options[0]) - offerTotal(b.options[0]));
 }
 
 const MONTHS_GEN = [
@@ -505,10 +514,15 @@ export interface OptionFlags {
 }
 
 function optionFlags(place: Place): Map<string, OptionFlags> {
-  const score = (option: Offer) => option.price / Math.max(1, option.nights);
-  const best = place.options.reduce((a, b) => (score(a) <= score(b) ? a : b), place.options[0]);
+  const byMonth = new Map<string, Offer>();
+  for (const option of place.options) {
+    const key = option.start.slice(0, 7);
+    const current = byMonth.get(key);
+    if (!current || offerTotal(option) <= offerTotal(current)) byMonth.set(key, option);
+  }
+  const best = new Set([...byMonth.values()].map((option) => option.start));
   const map = new Map<string, OptionFlags>();
-  for (const option of place.options) map.set(option.start, { best: option.start === best.start });
+  for (const option of place.options) map.set(option.start, { best: best.has(option.start) });
   return map;
 }
 
@@ -519,21 +533,35 @@ function renderCalendar(start: string, end: string): string {
   return `${cal(from.getUTCMonth(), String(from.getUTCDate()))}<span class="cal__arrow">-&gt;</span>${cal(to.getUTCMonth(), String(to.getUTCDate()))}`;
 }
 
+function hotelMeta(hotel: HotelPrice): string {
+  const parts: string[] = [];
+  if (hotel.stars) parts.push(`${hotel.stars}*`);
+  if (hotel.reviews > 0) parts.push(`${hotel.score.toFixed(1)}/10 z ${hotel.reviews} opinii`);
+  if (hotel.km > 0) parts.push(`${hotel.km} km od centrum`);
+  return parts.join(' - ');
+}
+
+function shortHotelName(name: string): string {
+  return name.length > 42 ? `${name.slice(0, 40).trimEnd()}...` : name;
+}
+
 function renderOption(offer: Offer, flags: OptionFlags | undefined, originIata: string): string {
   const hotel = offer.hotel;
-  const total = hotel ? Math.round(offer.price + hotel.perPerson) : null;
-  const headline = total !== null ? `od ${total} zł/os` : `od ${Math.round(offer.price)} zł/os`;
+  const total = offerTotal(offer);
+  const headline = `łącznie ${total} zł`;
   const full = formatRange(offer.start, offer.end, offer.nights);
   const cls = flags?.best ? 'opt opt--best' : 'opt';
   const badge = flags?.best ? '<span class="opt__badge">Dobra oferta</span>' : '';
-  const detail = hotel
-    ? `lot ${originIata}-${offer.iata} + hotel <a href="${esc(hotel.url)}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(hotel.name)}</a>`
-    : `lot ${originIata}-${offer.iata}, bez hotelu`;
+  const flightRow = `<div class="opt__line"><span class="opt__ico">-</span><a class="opt__lbl" href="${esc(offer.flightUrl)}" rel="nofollow sponsored noopener" target="_blank">Lot ${originIata}-${offer.iata}</a><span class="opt__val">${Math.round(offer.price)} zł/os</span></div>`;
+  const hotelRow = hotel
+    ? `<div class="opt__line"><span class="opt__ico">-</span><a class="opt__lbl" href="${esc(hotel.url)}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(shortHotelName(hotel.name))}</a><span class="opt__val">${hotel.perPerson} zł/os</span></div>
+            <div class="opt__hotelmeta">${escapeHtml(hotelMeta(hotel))}</div>`
+    : `<div class="opt__line"><span class="opt__ico">-</span><span class="opt__lbl muted">bez hotelu - sam lot</span></div>`;
   return `          <li class="${cls}">
             ${badge}
-            <div class="opt__head"><a class="opt__date" href="${esc(offer.flightUrl)}" rel="nofollow sponsored noopener" target="_blank" aria-label="${escapeHtml(full)}">${renderCalendar(offer.start, offer.end)}<span class="sr-only">${escapeHtml(full)}</span></a><span class="opt__right"><span class="opt__total">${headline}</span><span class="opt__nights">${nightsLabel(offer.nights)}</span></span></div>
-            <div class="opt__detail">${detail}</div>
-            <div class="opt__actions"><a href="${esc(offer.flightUrl)}" rel="nofollow sponsored noopener" target="_blank">Zakup bilety lotnicze</a><a href="${esc(offer.stayUrl)}" rel="nofollow sponsored noopener" target="_blank">Noclegi (${nightsLabel(offer.nights)})</a><a href="${esc(offer.carUrl)}" rel="nofollow sponsored noopener" target="_blank">Auto od 49 zł na lotnisku</a></div>
+            <div class="opt__head"><a class="opt__date" href="${esc(offer.flightUrl)}" rel="nofollow sponsored noopener" target="_blank" aria-label="${escapeHtml(full)}">${renderCalendar(offer.start, offer.end)}<span class="sr-only">${escapeHtml(full)}</span></a><span class="opt__right"><span class="opt__total">${headline}</span><span class="opt__nights">${nightsLabel(offer.nights)}, za osobę</span></span></div>
+            <div class="opt__detail">${flightRow}${hotelRow}</div>
+            <div class="opt__actions"><a href="${esc(offer.flightUrl)}" rel="nofollow sponsored noopener" target="_blank">Bilety lotnicze</a><a href="${esc(offer.stayUrl)}" rel="nofollow sponsored noopener" target="_blank">Noclegi (${nightsLabel(offer.nights)})</a><a href="${esc(offer.carUrl)}" rel="nofollow sponsored noopener" target="_blank">Auto od 49 zł</a></div>
           </li>`;
 }
 
@@ -618,7 +646,8 @@ function renderHotel(hotel: HotelOffer): string {
   const stars = hotel.stars ? `${hotel.stars}* - ` : '';
   const reviews = hotel.reviews > 0 ? `${hotel.score.toFixed(1)}/10 z ${hotel.reviews} opinii` : 'bez opinii';
   const km = hotel.km > 0 ? ` - ${hotel.km} km od centrum` : '';
-  return `          <li><a href="${esc(hotel.url)}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(hotel.name)}</a><span class="muted"> ${stars}${reviews} - od ${hotel.perPerson} zł/os${km}</span></li>`;
+  return `          <li class="hrow"><span class="opt__ico">-</span><a href="${esc(hotel.url)}" rel="nofollow sponsored noopener" target="_blank">${escapeHtml(shortHotelName(hotel.name))}</a><span class="opt__val">${hotel.perPerson} zł/os</span></li>
+          <li class="hrrow-meta"><span class="muted">${stars}${reviews}${km}</span></li>`;
 }
 
 export function slugify(text: string): string {
@@ -756,7 +785,15 @@ h2{font-size:19px;margin-top:30px;border-bottom:1px solid #eee;padding-bottom:6p
 .opt{position:relative}
 .opt__badge{position:absolute;top:-9px;right:10px;background:#12693a;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
 .place__avg{font-size:12px;font-weight:400;color:#6B7280;margin-left:8px}
-.opt__detail{margin-top:4px;color:#6B7280;font-size:13px}
+.opt__detail{margin-top:8px;padding-top:8px;border-top:1px solid #eef0f4;font-size:13px}
+.opt__line{display:flex;align-items:center;gap:8px;padding:3px 0;color:#141414}
+.opt__ico{width:18px;flex:none;font-size:14px}
+.opt__lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#141414;text-decoration:none;font-weight:500}
+.opt__lbl:hover{text-decoration:underline}
+.opt__val{white-space:nowrap;font-weight:700;color:#141414}
+.opt__hotelmeta{margin-left:26px;font-size:12px;color:#6B7280}
+.hrow{display:flex;align-items:center;gap:8px;border:0}
+.hrrow-meta{margin-left:26px;font-size:12px;border:0;padding:0 0 6px}
 .opt__actions{margin-top:10px;padding-top:10px;border-top:1px solid #f2f2f2}
 .opt__actions a{display:inline-block;margin-right:16px;padding:4px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
 .plain{list-style:none;padding:0;margin:0;font-size:14px}
@@ -819,7 +856,15 @@ h2{font-size:19px;margin-top:30px;border-bottom:1px solid #eee;padding-bottom:6p
 .opt__total{font-weight:700;white-space:nowrap;font-size:15px}
 .opt__nights{font-size:12px;color:#6B7280}
 .opt__badges{margin-top:6px}
-.opt__detail{margin-top:4px;color:#6B7280;font-size:13px}
+.opt__detail{margin-top:8px;padding-top:8px;border-top:1px solid #eef0f4;font-size:13px}
+.opt__line{display:flex;align-items:center;gap:8px;padding:3px 0;color:#141414}
+.opt__ico{width:18px;flex:none;font-size:14px}
+.opt__lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#141414;text-decoration:none;font-weight:500}
+.opt__lbl:hover{text-decoration:underline}
+.opt__val{white-space:nowrap;font-weight:700;color:#141414}
+.opt__hotelmeta{margin-left:26px;font-size:12px;color:#6B7280}
+.hrow{display:flex;align-items:center;gap:8px;border:0}
+.hrrow-meta{margin-left:26px;font-size:12px;border:0;padding:0 0 6px}
 .opt__actions{margin-top:10px;padding-top:10px;border-top:1px solid #f2f2f2}
 .opt__actions a{display:inline-block;margin-right:16px;padding:4px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
 .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px}
@@ -1279,7 +1324,15 @@ h2{font-size:19px;margin-top:34px;border-bottom:1px solid #eee;padding-bottom:6p
 .opt{position:relative}
 .opt__badge{position:absolute;top:-9px;right:10px;background:#12693a;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
 .place__avg{font-size:12px;font-weight:400;color:#6B7280;margin-left:8px}
-.opt__detail{margin-top:4px;color:#6B7280;font-size:13px}
+.opt__detail{margin-top:8px;padding-top:8px;border-top:1px solid #eef0f4;font-size:13px}
+.opt__line{display:flex;align-items:center;gap:8px;padding:3px 0;color:#141414}
+.opt__ico{width:18px;flex:none;font-size:14px}
+.opt__lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#141414;text-decoration:none;font-weight:500}
+.opt__lbl:hover{text-decoration:underline}
+.opt__val{white-space:nowrap;font-weight:700;color:#141414}
+.opt__hotelmeta{margin-left:26px;font-size:12px;color:#6B7280}
+.hrow{display:flex;align-items:center;gap:8px;border:0}
+.hrrow-meta{margin-left:26px;font-size:12px;border:0;padding:0 0 6px}
 .opt__actions{margin-top:10px;padding-top:10px;border-top:1px solid #f2f2f2}
 .opt__actions a{display:inline-block;margin-right:16px;padding:4px 0;color:#4F55F1;text-decoration:none;font-weight:600;font-size:13px}
 .editorial{max-width:760px}

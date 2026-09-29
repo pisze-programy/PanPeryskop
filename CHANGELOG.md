@@ -4,6 +4,18 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.1] — build 107, 2026-09-29
+
+### Fixed
+
+- App events now reach Meta. The SDK's automatic event logging was off from
+  launch and switched on only after the map appeared, so the install event fired
+  into a disabled queue and was lost. The switch now follows the tracking status
+  at launch. A returning user starts the SDK normally, and a fresh install still
+  waits for the prompt.
+- A restored session reported no registration, because the change handler does
+  not run for the initial value. The map view reports it now, once per install.
+
 ## [1.3.1] — build 106, 2026-09-29
 
 ### Changed

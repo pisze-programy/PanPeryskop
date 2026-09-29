@@ -50,7 +50,10 @@ struct InAppBrowserView: View {
             toolbar
         }
         .background(Color(.systemBackground))
-        .onAppear { MetaSignals.outbound(url: url) }
+        .onAppear {
+            MetaSignals.outbound(url: url)
+            ProductAnalytics.outbound(url: url)
+        }
     }
 
     private var loadFailedView: some View {

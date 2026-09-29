@@ -89,6 +89,10 @@ CRON_SCHEDULE = "0 2 * * *"
 # a secret (wrangler secret put META_CAPI_TOKEN); without it the Worker skips the
 # send.
 META_DATASET_ID = "2537328813346373"
+# Shared header the app sends on POST /meta/checkout. The same value ships in the
+# app binary as FacebookClientToken, so it is public; it stops drive-by posts.
+# Keep in sync with ios/project.yml (FacebookClientToken).
+META_CLIENT_TOKEN = "b2e9d80b3cf0de4e2666209e39b06251"
 # goingapp scraping. Public Algolia app id; API key + Cloudinary sig are secrets
 # (wrangler secret put ALGOLIA_API_KEY / CLOUDINARY_SIG)
 ALGOLIA_APP_ID = "FAFFKUSLK0"

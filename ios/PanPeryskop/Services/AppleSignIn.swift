@@ -40,19 +40,21 @@ struct AppleSignInButton: UIViewRepresentable {
 
         @objc func handleTap() {
             #if DEBUG
-            parent.onSuccess(AppleSignInResult(
-                identityToken: "dev-apple-" + UUID().uuidString,
-                userIdentifier: "apple-dev-" + String(UUID().uuidString.prefix(10)),
-                fullName: nil
-            ))
-            #else
+            if ProcessInfo.processInfo.arguments.contains("-FakeAppleSignIn") {
+                parent.onSuccess(AppleSignInResult(
+                    identityToken: "dev-apple-" + UUID().uuidString,
+                    userIdentifier: "apple-dev-" + String(UUID().uuidString.prefix(10)),
+                    fullName: nil
+                ))
+                return
+            }
+            #endif
             let request = ASAuthorizationAppleIDProvider().createRequest()
             request.requestedScopes = [.fullName, .email]
             let controller = ASAuthorizationController(authorizationRequests: [request])
             controller.delegate = self
             controller.presentationContextProvider = self
             controller.performRequests()
-            #endif
         }
 
         func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {

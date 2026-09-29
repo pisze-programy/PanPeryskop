@@ -391,6 +391,7 @@ struct CityFlightSheet: View {
             returning: returning?.date
         ) else { return }
         MetaSignals.checkout(kind: .flight, id: "\(from)-\(to)", name: option.carrier.displayName)
+        ProductAnalytics.bookingTapped(kind: .flight, id: "\(from)-\(to)")
         UIApplication.shared.open(url)
     }
 }

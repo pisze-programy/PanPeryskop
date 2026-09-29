@@ -8,8 +8,10 @@ struct CityNearbySection: View {
 
     @Environment(\.region) private var region
 
-    private static let cardWidth: CGFloat = 180
-    private static let photoHeight: CGFloat = 120
+    // 2:1, the ratio of the bundled thumb and of the card photo. The placeholder
+    // and the loaded photo must share one crop, or the picture jumps on load.
+    static let cardWidth: CGFloat = 180
+    static let photoHeight: CGFloat = 90
 
     var body: some View {
         Group {

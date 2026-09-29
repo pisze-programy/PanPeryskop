@@ -120,6 +120,7 @@ struct Stay22MapView: UIViewRepresentable {
         private func openExternally(_ url: URL) {
             DispatchQueue.main.async {
                 MetaSignals.checkout(kind: .stay, id: url.host ?? "stay22", name: "Stay22")
+                ProductAnalytics.bookingTapped(kind: .stay, id: url.host ?? "stay22")
                 UIApplication.shared.open(url)
             }
         }

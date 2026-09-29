@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import citiesJson from './data/cities.json';
+import { devVar } from './dev-vars';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -33,12 +34,6 @@ interface CityEntry {
 interface WikipediaSummary {
   thumbnail?: { source?: string };
   originalimage?: { source?: string };
-}
-
-function devVar(name: string): string {
-  const raw = readFileSync(join(__dirname, '..', '..', '.dev.vars'), 'utf8');
-  const line = raw.split('\n').find((l) => l.startsWith(`${name}=`));
-  return line ? line.slice(name.length + 1).trim() : '';
 }
 
 const BASE_URL = process.env.BASE_URL ?? 'https://api.panperyskop.app';

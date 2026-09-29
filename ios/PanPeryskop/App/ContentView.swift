@@ -16,6 +16,7 @@ struct ContentView: View {
             if router.showProfile {
                 ProfileView(onBack: { router.showProfile = false })
                     .environmentObject(authManager)
+                    .trackScreen("profile")
             } else {
                 MapScreen(
                     category: router.category,
@@ -27,6 +28,7 @@ struct ContentView: View {
                     storyPosts: $router.storyPosts
                 )
                 .environmentObject(authManager)
+                .trackScreen("map")
             }
 
             if router.showStoryViewer {
@@ -38,6 +40,7 @@ struct ContentView: View {
                 )
                 .zIndex(999)
                 .transition(.opacity)
+                .trackScreen("story")
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -50,8 +53,8 @@ struct ContentView: View {
             }
         }
         .task {
-            MetaSignals.registered()
             await MetaSignals.beganAfterConsent()
+            ProductAnalytics.trackingAnswered()
         }
         .onChange(of: pendingStoryId) { _, newId in
             guard let newId else { return }

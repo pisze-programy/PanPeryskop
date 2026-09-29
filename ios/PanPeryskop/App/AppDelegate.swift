@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         Settings.shared.isAutoLogAppEventsEnabled = ATTrackingManager.trackingAuthorizationStatus != .notDetermined
         ApplicationDelegate.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
+        ProductAnalytics.start()
         return true
     }
 }

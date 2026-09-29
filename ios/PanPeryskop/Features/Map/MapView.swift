@@ -147,6 +147,7 @@ struct MapScreen: View {
         }
         .sheet(item: $tripsViewModel.selectedEventGroup) { _ in
             ClusterSheet(viewModel: tripsViewModel)
+                .trackScreen("cluster")
         }
         .onChange(of: tripsViewModel.selectionId) { _, _ in
             guard let coordinate = tripsViewModel.selectionCoordinate else { return }
@@ -159,6 +160,7 @@ struct MapScreen: View {
         .onChange(of: tripsViewModel.selectedEventGroup?.id) { _, id in
             guard id != nil, let group = tripsViewModel.selectedEventGroup else { return }
             MetaSignals.content(kind: .event, id: group.contentId, name: group.events.first?.title ?? group.contentId)
+            ProductAnalytics.contentOpened(kind: .event, id: group.contentId)
         }
     }
 
@@ -177,6 +179,7 @@ struct MapScreen: View {
 
     private func selectCity(_ city: City) {
         MetaSignals.content(kind: .city, id: city.id, name: city.name)
+        ProductAnalytics.contentOpened(kind: .city, id: city.id)
         mapViewModel.selectCity(city)
         switch category {
         case .events:
@@ -217,6 +220,7 @@ struct MapScreen: View {
 
     private func handleGroupTap(_ group: MapGroup) {
         Haptics.impact(.medium)
+        ProductAnalytics.pinTapped(kind: "group", id: group.id)
         guard category == .trips else {
             openStoryViewer(group.posts)
             return
@@ -227,11 +231,13 @@ struct MapScreen: View {
     private func handleCityTap(_ city: CityPin) {
         guard category == .trips else { return }
         Haptics.impact(.medium)
+        ProductAnalytics.pinTapped(kind: "city", id: city.city.id)
         tripsViewModel.selectGroup(posts: [], cities: [city.city])
     }
 
     private func handlePinTap(_ pin: MapPin) {
         let post = pin.post
+        ProductAnalytics.pinTapped(kind: category == .trips ? "event" : "story", id: post.id)
         if category == .trips {
             Haptics.impact(.medium)
             _ = tripsViewModel.selectTravelEvent(postId: post.id)
@@ -243,6 +249,7 @@ struct MapScreen: View {
     private func openStoryViewer(_ posts: [Post]) {
         guard let first = posts.first else { return }
         MetaSignals.content(kind: .story, id: first.id, name: first.id)
+        ProductAnalytics.contentOpened(kind: .story, id: first.id)
         Haptics.impact(.medium)
         storyPosts = posts
         selectedStoryIndex = 0

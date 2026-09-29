@@ -28,6 +28,7 @@ struct PartnerBannerSection: View {
         Button {
             Haptics.selection()
             MetaSignals.checkout(kind: .banner, id: banner.id, name: banner.title)
+            ProductAnalytics.bookingTapped(kind: .banner, id: banner.id)
             onOpen(banner.url)
         } label: {
             HStack(spacing: Theme.Spacing.m) {

@@ -28,6 +28,13 @@ struct AppPolicyView: View {
                     .foregroundColor(.secondary)
             }
 
+            Section("Statystyki") {
+                Label("Google Analytics for Firebase", systemImage: "chart.bar")
+                Text("Zbieramy zdarzenia o użyciu Aplikacji: otwarte ekrany, listy miejsc, dotknięcia punktów na mapie i przejścia do rezerwacji, razem z modelem urządzenia, wersją systemu i losowym identyfikatorem instalacji. Nie łączymy ich z Twoim kontem i nie zawierają identyfikatora reklamowego. Szczegóły w Polityce prywatności.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
             Section("Zdjęcia miast") {
                 Label("© Wikimedia Commons contributors", systemImage: "photo")
                 Text("Zdjęcia miast pochodzą z Wikimedia Commons i są udostępniane na licencjach Creative Commons (CC BY / CC BY-SA). Źródło każdego zdjęcia jest zapisane przy mieście.")

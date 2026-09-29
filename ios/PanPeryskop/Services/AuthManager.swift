@@ -63,6 +63,12 @@ class AuthManager: ObservableObject {
     private let usernameKey = "username"
     private let fallbackUsernameKey = "fallback_username"
     private var deviceId: String
+    private var justRegistered = false
+
+    func consumeJustRegistered() -> Bool {
+        defer { justRegistered = false }
+        return justRegistered
+    }
 
     init() {
         if let existing = try? keychain.get(deviceIdKey), !existing.isEmpty {
@@ -101,6 +107,7 @@ class AuthManager: ObservableObject {
         avatarUrl = resp.avatar_url
         username = resp.username
         try? keychain.set(resp.session_token, key: sessionTokenKey)
+        justRegistered = resp.is_new
         isAuthenticated = true
     }
 
@@ -139,6 +146,7 @@ class AuthManager: ObservableObject {
         avatarUrl = resp.avatar_url
         username = resp.username
         try? keychain.set(resp.session_token, key: sessionTokenKey)
+        justRegistered = resp.is_new
         isAuthenticated = true
     }
 

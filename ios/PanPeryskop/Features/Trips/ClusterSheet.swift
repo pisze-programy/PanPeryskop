@@ -69,6 +69,7 @@ struct ClusterSheet: View {
                 eventDay: currentEvent?.isoDay ?? "",
                 onClose: { expanded = nil }
             )
+            .trackScreen("places")
         }
         .sheet(item: $browserItem) { item in
             InAppBrowserView(
@@ -144,6 +145,7 @@ struct ClusterSheet: View {
                 scrollTopToken: scrollTopToken,
                 onTapHeader: { scrollTopToken += 1 }
             )
+            .trackScreen("city")
         }
     }
 
@@ -294,6 +296,7 @@ struct ClusterEventPage: View {
 
     private var heroDetails: some View {
         TripsEventDetail(event: event, onOpenURL: onOpenURL, onOpenMap: onOpenMap)
+            .trackScreen("event")
     }
 
     private var noAirportHint: some View {

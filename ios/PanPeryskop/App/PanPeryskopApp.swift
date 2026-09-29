@@ -32,8 +32,9 @@ struct PanPeryskopApp: App {
                 }
             }
             .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
-                guard isAuthenticated else { return }
+                guard isAuthenticated, authManager.consumeJustRegistered() else { return }
                 MetaSignals.registered()
+                ProductAnalytics.registered()
             }
         }
     }

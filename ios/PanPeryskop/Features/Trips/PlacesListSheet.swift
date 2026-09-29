@@ -28,5 +28,6 @@ struct PlacesListSheet: View {
             )
             .presentationDetents([.medium, .large])
         }
+        .task { ProductAnalytics.placesOpened(kind: kind.rawValue, day: eventDay) }
     }
 }

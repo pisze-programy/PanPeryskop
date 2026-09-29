@@ -1,8 +1,8 @@
 name: PanPeryskop
 
 settings:
-  MARKETING_VERSION: "1.3.1"
-  CURRENT_PROJECT_VERSION: 107
+  MARKETING_VERSION: "1.3.2"
+  CURRENT_PROJECT_VERSION: 109
   DEVELOPMENT_TEAM: "3UKH2QRFKZ"
   SWIFT_VERSION: "6.0"
   INFOPLIST_KEY_CFBundleDisplayName: "Pan Peryskop"
@@ -23,6 +23,9 @@ packages:
   FacebookSDK:
     url: https://github.com/facebook/facebook-ios-sdk
     from: 18.1.1
+  FirebaseSDK:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: 12.19.2
 
 targets:
   PanPeryskop:
@@ -41,6 +44,23 @@ targets:
         product: KeychainAccess
       - package: FacebookSDK
         product: FacebookCore
+      - package: FirebaseSDK
+        product: FirebaseAnalyticsCore
+    preBuildScripts:
+      - name: Firebase config guard
+        basedOnDependencyAnalysis: false
+        script: |
+          PLIST="$SRCROOT/PanPeryskop/GoogleService-Info.plist"
+          if [ ! -f "$PLIST" ]; then
+            echo "error: GoogleService-Info.plist is missing in ios/PanPeryskop."
+            echo "error: Download it from the Firebase console for project panperyskop-2efa8."
+            exit 1
+          fi
+          if [ "$(/usr/bin/plutil -extract IS_ANALYTICS_ENABLED raw "$PLIST" 2>/dev/null)" != "true" ]; then
+            echo "error: IS_ANALYTICS_ENABLED is not true in GoogleService-Info.plist."
+            echo "error: A fresh download from the console writes false, and false stops collection."
+            exit 1
+          fi
     info:
       path: PanPeryskop/Info.plist
       properties:
@@ -89,6 +109,8 @@ targets:
       - path: PanPeryskopTests
     dependencies:
       - target: PanPeryskop
+      - package: FacebookSDK
+        product: FacebookCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pl.piszeprogramy.panperyskop.tests

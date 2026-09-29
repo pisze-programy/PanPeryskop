@@ -13,6 +13,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { devVar } from './dev-vars';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA = join(__dirname, 'data', 'cities.json');
@@ -24,7 +25,7 @@ const HERO_WIDTH = 1000;
 const HERO_HEIGHT = 500;
 const QUALITY = 80;
 const AGENT = 'PanPeryskop/1.0 (city photos; contact: dev@panperyskop.app)';
-const ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY ?? 'NrXiGkYCcmozMxTPcB4ZsUnx5dfE4RsIbIDGFYdZIKY';
+const ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY ?? devVar('UNSPLASH_ACCESS_KEY');
 
 interface Credit {
   photoUrl: string;

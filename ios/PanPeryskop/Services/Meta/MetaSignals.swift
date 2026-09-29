@@ -11,16 +11,17 @@ enum MetaSignals {
         MetaEvents.sendRegistration()
     }
 
-    static func content(kind: MetaContentKind, id: String, name: String) {
+    static func content(kind: ContentKind, id: String, name: String) {
         MetaEvents.sendContent(kind: kind, id: id, name: name)
     }
 
-    static func checkout(kind: MetaContentKind, id: String, name: String) {
+    static func checkout(kind: ContentKind, id: String, name: String) {
         let eventId = UUID().uuidString
         MetaEvents.sendCheckout(kind: kind, id: id, name: name, eventId: eventId)
         MetaCheckoutReport.send(
             eventId: eventId,
             kind: kind,
+            id: id,
             label: name,
             trackingEnabled: TrackingConsent.isAuthorized
         )

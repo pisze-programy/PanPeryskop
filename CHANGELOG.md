@@ -4,6 +4,45 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [1.3.2] — build 109, 2026-09-29
+
+### Added
+
+- Product analytics (Google Analytics for Firebase). The app records which screens
+  are open, how long they stay open, which places and map pins are used, and which
+  booking links are tapped. No advertising identifier, no account id, no free
+  text. These events are never joined to your account.
+- The build fails when `GoogleService-Info.plist` is missing, or when its
+  `IS_ANALYTICS_ENABLED` is not `true`. The Firebase console writes `false` in a
+  fresh download, and `false` stops collection without an error.
+
+### Fixed
+
+- A returning user reported a registration. The app now reports one only when the
+  server says the account is new.
+- The Debug build could not sign in. A test path replaced the real Sign in with
+  Apple flow; it now needs the `-FakeAppleSignIn` launch argument.
+
+### Changed
+
+- The privacy policy and the in-app policy page describe the analytics.
+
+## [1.3.1] — build 108, 2026-09-29
+
+### Fixed
+
+- The nearby-city card photo is 2:1. Before, it was a 1:1 square. It zoomed into
+  the buildings and cut off the rest of the city. The card frame is 2:1 now. The
+  load is silent.
+- Meta events reach the SDK now. The SDK drops an event when a parameter value is
+  not a string or a number. `content_ids` was an array, so `ViewContent` and the
+  booking click were lost.
+- The app sends `CompleteRegistration` only on a sign-in change. Before, every
+  existing user sent one after the update.
+- A banner tap sends `PartnerReferral`. Only a booking tap sends
+  `InitiateCheckout`.
+- `POST /meta/checkout` needs the client header.
+
 ## [1.3.1] — build 107, 2026-09-29
 
 ### Fixed

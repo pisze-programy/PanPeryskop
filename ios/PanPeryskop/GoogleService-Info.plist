@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyA_LLaATrsP8i3o9u8aRSkxXkGAoUU16WQ</string>
+	<key>BUNDLE_ID</key>
+	<string>pl.piszeprogramy.panperyskop</string>
+	<key>GCM_SENDER_ID</key>
+	<string>718990475380</string>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:718990475380:ios:1b00b846ad8c099a431121</string>
+	<key>IS_ADS_ENABLED</key>
+	<false/>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<true/>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true/>
+	<key>IS_GCM_ENABLED</key>
+	<true/>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true/>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>PROJECT_ID</key>
+	<string>panperyskop-2efa8</string>
+	<key>STORAGE_BUCKET</key>
+	<string>panperyskop-2efa8.firebasestorage.app</string>
+</dict>
+</plist>

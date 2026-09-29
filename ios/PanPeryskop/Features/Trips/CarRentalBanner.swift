@@ -66,6 +66,7 @@ struct CarRentalBanner: View {
     private func open() {
         guard let url else { return }
         MetaSignals.checkout(kind: .car, id: context.iata, name: Self.title)
+        ProductAnalytics.bookingTapped(kind: .car, id: context.iata)
         Haptics.selection()
         UIApplication.shared.open(url)
     }

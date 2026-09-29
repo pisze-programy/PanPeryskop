@@ -1,27 +1,20 @@
 import FBSDKCoreKit
 
-enum MetaContentKind: String {
-    case city
-    case event
-    case place
-    case story
-    case flight
-    case bus
-    case stay
-    case banner
-    case car
-    case partner
-}
-
 enum MetaTaxonomy {
     static let registration = AppEvents.Name("CompleteRegistration")
     static let contentView = AppEvents.Name("ViewContent")
     static let checkout = AppEvents.Name("InitiateCheckout")
+    static let referral = AppEvents.Name("PartnerReferral")
 
-    static func parameters(kind: MetaContentKind, id: String, name: String, eventId: String?) -> [AppEvents.ParameterName: Any] {
+    static func eventName(for kind: ContentKind) -> AppEvents.Name {
+        referralKinds.contains(kind) ? referral : checkout
+    }
+
+    static func parameters(kind: ContentKind, id: String, name: String, eventId: String?) -> [AppEvents.ParameterName: Any] {
+        // The SDK drops any parameter that is not a string or a number. An array kills the event.
         var out: [AppEvents.ParameterName: Any] = [
             AppEvents.ParameterName("content_type"): kind.rawValue,
-            AppEvents.ParameterName("content_ids"): [id],
+            AppEvents.ParameterName("content_ids"): id,
             AppEvents.ParameterName("content_name"): name,
             AppEvents.ParameterName("content_category"): category(for: kind)
         ]
@@ -29,12 +22,12 @@ enum MetaTaxonomy {
         return out
     }
 
-    static func category(for kind: MetaContentKind) -> String {
+    static func category(for kind: ContentKind) -> String {
         referralKinds.contains(kind) ? "referral" : "booking"
     }
 
     struct Partner {
-        let kind: MetaContentKind
+        let kind: ContentKind
         let id: String
         let name: String
     }
@@ -44,7 +37,7 @@ enum MetaTaxonomy {
         return Partner(kind: kind(for: host) ?? .partner, id: host, name: host)
     }
 
-    static func kind(for host: String) -> MetaContentKind? {
+    static func kind(for host: String) -> ContentKind? {
         partnerHosts.first { host == $0.suffix || host.hasSuffix("." + $0.suffix) }?.kind
     }
 
@@ -52,7 +45,7 @@ enum MetaTaxonomy {
         deniedHosts.contains { host == $0 || host.hasSuffix("." + $0) }
     }
 
-    private static let referralKinds: Set<MetaContentKind> = [.banner, .partner]
+    private static let referralKinds: Set<ContentKind> = [.banner, .partner]
 
     private static let deniedHosts = [
         // Our own pages and the shortlink namespace. A banner logs at its own tap.
@@ -64,7 +57,7 @@ enum MetaTaxonomy {
         "espn.com"
     ]
 
-    private static let partnerHosts: [(suffix: String, kind: MetaContentKind)] = [
+    private static let partnerHosts: [(suffix: String, kind: ContentKind)] = [
         ("ryanair.com", .flight),
         ("wizzair.com", .flight),
         ("kupbilecik.pl", .flight),

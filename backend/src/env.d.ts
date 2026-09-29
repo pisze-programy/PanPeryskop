@@ -63,6 +63,9 @@ interface Env {
   // skips the send.
   META_DATASET_ID?: string;
   META_CAPI_TOKEN?: string;
+  // Shared header the app sends on POST /meta/checkout. Public (it ships in the
+  // app binary as FacebookClientToken); it only closes the open-internet case.
+  META_CLIENT_TOKEN?: string;
   // Sentry DSN (EU region). Error monitoring only; no user data is sent.
   SENTRY_DSN?: string;
 }

@@ -19,6 +19,8 @@ struct RemoteImage: View {
             }
             .clipped()
             .task(id: url) {
+                image = nil
+                shown = false
                 guard let url else { return }
                 if let hit = RemoteImageStore.shared.cached(url) {
                     image = hit

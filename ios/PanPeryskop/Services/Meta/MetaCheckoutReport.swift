@@ -1,31 +1,44 @@
+import FBSDKCoreKit
 import Foundation
 import UIKit
 
 @MainActor
 enum MetaCheckoutReport {
-    static func send(eventId: String, kind: MetaContentKind, label: String, trackingEnabled: Bool) {
-        Task { await post(eventId: eventId, kind: kind, label: label, trackingEnabled: trackingEnabled) }
+    static func send(eventId: String, kind: ContentKind, id: String, label: String, trackingEnabled: Bool) {
+        Task { await post(eventId: eventId, kind: kind, id: id, label: label, trackingEnabled: trackingEnabled) }
     }
 
-    private static func post(eventId: String, kind: MetaContentKind, label: String, trackingEnabled: Bool) async {
+    private static func post(eventId: String, kind: ContentKind, id: String, label: String, trackingEnabled: Bool) async {
         guard let url = URL(string: "\(APIClient.baseURL)/meta/checkout") else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(clientToken, forHTTPHeaderField: "x-pp-client")
         request.httpBody = try? JSONEncoder().encode(Payload(
             eventId: eventId,
             kind: kind.rawValue,
+            contentId: id,
             label: label,
-            anonId: InstallID.value,
+            anonId: anonID,
             trackingEnabled: trackingEnabled ? 1 : 0,
             extinfo: extinfo
         ))
         _ = try? await URLSession.shared.data(for: request)
     }
 
+    private static var anonID: String {
+        let sdk = AppEvents.shared.anonymousID ?? ""
+        return sdk.isEmpty ? InstallID.value : sdk
+    }
+
+    private static var clientToken: String {
+        Bundle.main.object(forInfoDictionaryKey: "FacebookClientToken") as? String ?? ""
+    }
+
     private struct Payload: Encodable {
         let eventId: String
         let kind: String
+        let contentId: String
         let label: String
         let anonId: String
         let trackingEnabled: Int
@@ -35,6 +48,7 @@ enum MetaCheckoutReport {
             case kind
             case label
             case extinfo
+            case contentId = "content_id"
             case eventId = "event_id"
             case anonId = "anon_id"
             case trackingEnabled = "tracking_enabled"

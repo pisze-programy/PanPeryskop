@@ -120,6 +120,7 @@ struct CityBreakPage: View {
                 eventDay: event.isoDay,
                 onClose: { expanded = nil }
             )
+            .trackScreen("places")
         }
     }
 

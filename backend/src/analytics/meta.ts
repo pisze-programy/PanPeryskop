@@ -5,9 +5,12 @@ import { CONFIG } from '../config/index';
 // the same click through the Facebook SDK with the same event_id, so Meta
 // removes the double count and keeps one conversion.
 
+const REFERRAL_KINDS = new Set(['banner', 'partner']);
+
 export interface CheckoutReport {
   eventId: string;
   kind: string;
+  contentId: string;
   label: string;
   anonId: string;
   trackingEnabled: number;
@@ -15,7 +18,9 @@ export interface CheckoutReport {
 }
 
 /** Pure payload builder (unit-testable). Meta requires action_source, event_id,
- *  advertiser_tracking_enabled and extinfo for an app event. */
+ *  advertiser_tracking_enabled and extinfo for an app event. A referral tap is
+ *  not a checkout: it gets its own event name, so an optimised campaign never
+ *  buys a banner tap. */
 export function buildCheckoutEvent(
   report: CheckoutReport,
   ip: string,
@@ -23,7 +28,7 @@ export function buildCheckoutEvent(
   now: number
 ): Record<string, unknown> {
   return {
-    event_name: 'InitiateCheckout',
+    event_name: REFERRAL_KINDS.has(report.kind) ? 'PartnerReferral' : 'InitiateCheckout',
     event_time: Math.floor(now / 1000),
     event_id: report.eventId,
     action_source: 'app',
@@ -38,8 +43,9 @@ export function buildCheckoutEvent(
     },
     custom_data: {
       content_type: report.kind,
-      content_ids: [report.kind],
+      content_ids: [report.contentId],
       content_name: report.label,
+      content_category: REFERRAL_KINDS.has(report.kind) ? 'referral' : 'booking',
     },
   };
 }

@@ -38,7 +38,8 @@
       <li><strong>Dane lokalizacyjne:</strong> aplikacja prosi o dostęp do lokalizacji tylko podczas korzystania (When In Use) — w celu pokazania Twojej pozycji na mapie i przypisywania publikowanych treści do miejsc. Lokalizacja nie jest śledzona w tle.</li>
       <li><strong>Treści publikowane przez użytkownika:</strong> zdjęcia, filmy (z dźwiękiem), opisy oraz współrzędne geograficzne publikowane przez Ciebie w Aplikacji.</li>
       <li><strong>Dane techniczne:</strong> dzienniki błędów (np. informacje o nieudanych wysyłkach), służące do utrzymania i diagnozowania Aplikacji. Błędy zapisujemy bez powiązania z kontem — nie zawierają identyfikatora użytkownika ani urządzenia.</li>
-      <li><strong>Statystyki użycia (anonimowe):</strong> zagregowane liczniki tego, które funkcje Aplikacji są używane (np. liczba otwarć listy wydarzeń, wyszukań lotów, połączeń autobusowych albo przejść do rezerwacji). Statystyki nie zawierają identyfikatora użytkownika ani urządzenia, nie zawierają adresu IP i nie pozwalają zidentyfikować osoby. Nie łączymy ich z Twoim kontem.</li>
+      <li><strong>Statystyki użycia (anonimowe, po stronie serwera):</strong> zagregowane liczniki tego, które funkcje Aplikacji są używane (np. liczba otwarć listy wydarzeń, wyszukań lotów, połączeń autobusowych albo przejść do rezerwacji). Statystyki nie zawierają identyfikatora użytkownika ani urządzenia, nie zawierają adresu IP i nie pozwalają zidentyfikować osoby. Nie łączymy ich z Twoim kontem.</li>
+      <li><strong>Statystyki użycia w Aplikacji (Google Analytics for Firebase):</strong> żeby wiedzieć, które ekrany, miejsca i punkty na mapie są używane i ile czasu im poświęcasz, Aplikacja zapisuje zdarzenia (np. otwarcie ekranu, otwarcie listy miejsc, dotknięcie punktu na mapie, przejście do rezerwacji) razem z modelem urządzenia, wersją systemu, językiem, strefą czasową i losowym identyfikatorem instalacji Aplikacji, który tworzy biblioteka Google. Tego identyfikatora nie łączymy z Twoim kontem. Nie zawiera on Twojego imienia, adresu e-mail ani identyfikatora reklamowego (IDFA). Nie używamy tych danych do profilowania reklam i nie sprzedajemy ich.</li>
       <li><strong>Dane pomiaru reklam (za Twoją zgodą):</strong> gdy w systemowym pytaniu o śledzenie (App Tracking Transparency) wyrazisz zgodę, przekazujemy do Meta Platforms identyfikator reklamowy urządzenia (IDFA), techniczny identyfikator instalacji Aplikacji, model urządzenia, wersję systemu, język, rozmiar ekranu, strefę czasową oraz adres IP — wyłącznie w celu pomiaru skuteczności reklam Aplikacji. Gdy zgody nie ma, identyfikator reklamowy nie jest przekazywany, a zdarzenia wysyłamy w zakresie ograniczonym i bez identyfikatora reklamowego.</li>
     </ul>
 
@@ -49,7 +50,7 @@
       <li>zapewnienia działania konta i bezpieczeństwa,</li>
       <li>umożliwienia zgłaszania treści i prowadzenia moderacji (zgodnie z Regulaminem),</li>
       <li>obsługi Twoich żądań i kontaktu (np. wsparcie),</li>
-      <li>poprawy jakości i użyteczności Aplikacji (anonimowe statystyki użycia) — podstawą jest nasz uzasadniony interes (art. 6 ust. 1 lit. f RODO),</li>
+      <li>poprawy jakości i użyteczności Aplikacji (statystyki użycia: liczniki po stronie serwera oraz zdarzenia z Aplikacji) — podstawą jest nasz uzasadniony interes (art. 6 ust. 1 lit. f RODO),</li>
       <li>zapewnienia niezawodności i usuwania błędów (dzienniki błędów) — podstawą jest nasz uzasadniony interes (art. 6 ust. 1 lit. f RODO),</li>
       <li>pomiaru skuteczności reklam Aplikacji (Meta Platforms) — podstawą jest Twoja zgoda wyrażona w systemowym pytaniu o śledzenie (art. 6 ust. 1 lit. a RODO). Zgodę możesz wycofać w każdej chwili w Ustawieniach systemu (Prywatność i bezpieczeństwo → Śledzenie),</li>
       <li>spełnienia obowiązków prawnych.</li>
@@ -95,9 +96,7 @@
         Zdarzenia błędów nie zawierają danych identyfikujących użytkownika; korzystamy z regionu UE
         (Frankfurt). Przekazanie poza EOG odbywa się na podstawie EU-U.S. Data Privacy Framework
         oraz standardowych klauzul umownych.</li>
-      <li><strong>Google Ireland Limited</strong> — anonimowe statystyki użycia (Google Analytics 4).
-        Wysyłamy wyłącznie zagregowane zdarzenia bez identyfikatora użytkownika i bez adresu IP,
-        z użyciem endpointu zbierania w UE. Przekazanie poza EOG odbywa się na podstawie
+      <li><strong>Google Ireland Limited</strong> — statystyki użycia: (a) zagregowane liczniki wysyłane z serwera, bez identyfikatora użytkownika i bez adresu IP, z użyciem endpointu zbierania w UE; (b) zdarzenia z Aplikacji (Google Analytics for Firebase) z losowym identyfikatorem instalacji, bez identyfikatora reklamowego. Przekazanie poza EOG odbywa się na podstawie
         EU-U.S. Data Privacy Framework oraz standardowych klauzul umownych.</li>
       <li><strong>Meta Platforms Ireland Limited</strong>, 4 Grand Canal Square, Grand Canal Harbour,
         Dublin 2, Irlandia — pomiar skuteczności reklam Aplikacji. Zakres danych i cel opisujemy

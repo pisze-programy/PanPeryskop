@@ -89,6 +89,7 @@ struct CarrierFlightCard: View {
             returning: returning
         ) else { return }
         MetaSignals.checkout(kind: .flight, id: "\(originIata)-\(destinationIata)", name: carrier.displayName)
+        ProductAnalytics.bookingTapped(kind: .flight, id: "\(originIata)-\(destinationIata)")
         UIApplication.shared.open(url)
     }
 

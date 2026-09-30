@@ -259,3 +259,22 @@ h3 { font-size: var(--t-row); font-family: var(--serif); font-weight: 400; lette
 .tile-panel .label { color: var(--invert-45); }
 .tile-panel strong { font-family: var(--serif); font-size: clamp(1.75rem, 3vw, 2.75rem); font-weight: 400; letter-spacing: -0.03em; }
 @media (max-width: 699px) { h1 { letter-spacing: -0.06em; } }
+
+/* Kontrolki slidera i animowany przyklad — mechanika hero z oryginalu. */
+.hero-control { justify-content: flex-start; gap: 14px; text-align: left; }
+.example { flex: 1 1 auto; min-width: 0; font-size: clamp(0.9375rem, 0.9rem + 0.3vw, 1.0625rem); color: var(--ink-65); transition: opacity .2s var(--ease-standard); }
+.example.is-swap { opacity: 0; }
+.slider-controls { display: flex; gap: 7px; margin-left: auto; }
+.ctrl { width: 36px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 40px; background: #fff; color: var(--ink); font: 500 0.875rem/1 var(--sans); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background-color .15s var(--ease-standard), transform .1s var(--ease-standard); }
+.ctrl:hover { background: var(--surface); }
+.ctrl:active { transform: scale(.98); }
+.ctrl--float { position: absolute; top: 50%; margin-top: -18px; z-index: 3; box-shadow: 0 6px 20px rgba(1, 14, 36, 0.14); }
+.ctrl--float:first-of-type { left: 6px; }
+.ctrl--right { right: 6px; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 18px; margin-top: 22px; }
+.mosaic[data-slider] { width: 100%; justify-content: flex-start; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-inline: var(--gutter); }
+.mosaic[data-slider]::-webkit-scrollbar { display: none; }
+.mosaic[data-slider] .mcard { scroll-snap-align: center; }
+.foot-marks { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 28px; margin-top: 44px; font-size: 0.8125rem; color: var(--ink-65); }
+.foot-marks span, .foot-marks a { display: inline-flex; align-items: center; gap: 8px; }
+.foot-marks img, .foot-marks svg { width: 22px; height: 22px; border-radius: 6px; }

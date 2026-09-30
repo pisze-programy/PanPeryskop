@@ -67,6 +67,14 @@ export interface SiteText {
   mosaicCta: string;
   tilePanelTitle: string;
   tilePanelMeta: string;
+  examples: string[];
+  prev: string;
+  next: string;
+  pause: string;
+  play: string;
+  footApp: string;
+  footFree: string;
+  footStore: string;
   footLinks: FootLink[];
   footAirportsLabel: string;
   footRights: string;
@@ -202,14 +210,22 @@ ${schema}
 
   <main id="main">
     <section class="hero" id="hero">
-      <div class="slides" id="slides">
+      <div class="slides" id="slides" data-examples='${JSON.stringify(t.examples).replace(/'/g, "&#39;")}'>
         <article class="slide">
           <h1>${t.heroTitle}</h1>
           <p class="lead">${t.heroLead}</p>
-          <div class="hero-control">
+          <form class="hero-control" aria-label="${t.heroLead}">
+            <span class="example" id="example" aria-live="polite">${t.examples[0]}</span>
+            <div class="slider-controls">
+              <button type="button" class="ctrl" data-slide-prev aria-label="${t.prev}">‹</button>
+              <button type="button" class="ctrl" data-slide-pause data-label-play="${t.play}" aria-label="${t.pause}">II</button>
+              <button type="button" class="ctrl" data-slide-next aria-label="${t.next}">›</button>
+            </div>
+          </form>
+          <p class="hero-actions">
             <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
             <a class="link-arrow" href="/tanie-loty">${t.flightsLink}</a>
-          </div>
+          </p>
           <div class="hero-media">
             <img src="${HERO_IMAGE}" alt="${t.heroAlt}" width="2000" height="1250" fetchpriority="high" decoding="async" />
           </div>
@@ -221,8 +237,12 @@ ${schema}
           <h1>${t.slide2Title}</h1>
           <p class="lead">${t.slide2Lead}</p>
           <div class="hero-control">
-            <a class="btn btn-primary" href="/tanie-loty">${t.flightsLink}</a>
-            <a class="link-arrow" href="${APP_STORE}" rel="noopener">${t.download}</a>
+            <span class="example" aria-hidden="true">${t.examples[1]}</span>
+            <div class="slider-controls">
+              <button type="button" class="ctrl" data-slide-prev aria-label="${t.prev}">‹</button>
+              <button type="button" class="ctrl" data-slide-pause aria-label="${t.pause}">II</button>
+              <button type="button" class="ctrl" data-slide-next aria-label="${t.next}">›</button>
+            </div>
           </div>
           <div class="hero-media">
             <img src="${SLIDE_IMAGE}" alt="" width="2000" height="1250" loading="lazy" decoding="async" />
@@ -243,7 +263,9 @@ ${features}
       <h2>${t.plansTitle}</h2>
       <p class="lead">${t.plansLead}</p>
       <a class="btn btn-quiet" href="/tanie-loty">${t.plansCta}</a>
-      <div class="mosaic">
+      <div class="mosaic" data-slider>
+        <button type="button" class="ctrl ctrl--float" data-slide-prev aria-label="${t.prev}">‹</button>
+        <button type="button" class="ctrl ctrl--float ctrl--right" data-slide-next aria-label="${t.next}">›</button>
         <div class="mcard mcard--w1">
           <h4>${t.mosaicMap}</h4>
           <div class="mmap"><i style="left:26%;top:30%"></i><i style="left:62%;top:22%"></i><i style="left:44%;top:64%"></i></div>
@@ -285,6 +307,11 @@ ${faq}
 ${ORIGIN_PAGES.map((origin) => `      <a href="/${origin.slug}">${airportLabel(origin)}</a>`).join('\n')}
     </div>
     <p class="foot-wordmark">Pan Peryskop</p>
+    <div class="foot-marks">
+      <span><img src="/icon.png" alt="" width="26" height="26" /> ${t.footApp}</span>
+      <span>${t.footFree}</span>
+      <a href="${APP_STORE}" rel="noopener">${APPLE_ICON} ${t.footStore}</a>
+    </div>
     <div class="foot-meta">
       <span>${t.footRights}</span>
       <span><a href="/sitemap.xml">${t.footSitemap}</a> · <a href="/llms.txt">${t.footAi}</a> · <a href="/privacy">${t.footLinks[2].label}</a> · <a href="/terms">${t.footLinks[3].label}</a></span>

@@ -84,3 +84,42 @@ if (slides) {
   sync();
   start();
 }
+
+// Slider: slajdy, kropki, prev/next/pause i animowany przyklad. Ta sama
+// mechanika obsluguje hero i mozaike planow.
+document.querySelectorAll('.slides, [data-slider]').forEach((strip) => {
+  const panels = Array.from(strip.children).filter((el) => !el.classList.contains('ctrl'));
+  const root = strip.closest('section') ?? document;
+  const dots = Array.from(root.querySelectorAll('.dots button'));
+  const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const example = root.querySelector('#example');
+  const examples = JSON.parse(strip.dataset.examples ?? '[]');
+  let timer;
+  let index = 0;
+
+  const goTo = (next) => {
+    index = (next + panels.length) % panels.length;
+    panels[index]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    if (dots.length) dots.forEach((dot, i) => dot.setAttribute('aria-selected', String(i === index)));
+    if (example && examples.length && !calm.matches) {
+      example.classList.add('is-swap');
+      window.setTimeout(() => { example.textContent = examples[index % examples.length]; example.classList.remove('is-swap'); }, 200);
+    }
+  };
+  const stop = () => { if (timer) clearInterval(timer); timer = undefined; };
+  const start = () => { if (calm.matches || panels.length < 2) return; stop(); timer = setInterval(() => goTo(index + 1), 7000); };
+  const hold = () => { stop(); window.setTimeout(start, 12000); };
+
+  root.querySelectorAll('.dots button').forEach((dot, i) => dot.addEventListener('click', () => { goTo(i); hold(); }));
+  root.querySelectorAll('[data-slide-prev]').forEach((b) => b.addEventListener('click', () => { goTo(index - 1); hold(); }));
+  root.querySelectorAll('[data-slide-next]').forEach((b) => b.addEventListener('click', () => { goTo(index + 1); hold(); }));
+  root.querySelectorAll('[data-slide-pause]').forEach((b) => b.addEventListener('click', () => {
+    const running = Boolean(timer);
+    const playLabel = b.dataset.labelPlay ?? '';
+    const pauseLabel = b.getAttribute('aria-label') ?? '';
+    if (running) { stop(); b.textContent = '▶'; b.setAttribute('aria-label', playLabel); }
+    else { start(); b.textContent = 'II'; b.setAttribute('aria-label', pauseLabel); }
+  }));
+  strip.addEventListener('pointerdown', hold);
+  start();
+});

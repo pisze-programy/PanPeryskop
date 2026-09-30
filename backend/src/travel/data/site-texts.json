@@ -55,8 +55,8 @@
         "label": "City-break",
         "title": "Weekend bez wydarzenia też znajdziemy",
         "body": "Sam lot i hotel, gdy chcesz po prostu odpocząć. Ceny za osobę, terminy na najbliższe miesiące.",
-        "link": "Zobacz kierunki",
-        "href": "/tanie-loty",
+        "link": "Wszystkie połączenia",
+        "href": "/tanie-loty-z-poznania/polaczenia",
         "alt": "Lizbona",
         "images": [
           "https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=800&h=800&fit=crop&auto=format&q=75",
@@ -71,7 +71,7 @@
         "label": "Loty",
         "title": "Tanie loty z 12 lotnisk w Polsce",
         "body": "Zestawienie dla każdego lotniska wylotu: kierunki, terminy i ceny za osobę.",
-        "link": "Wszystkie lotniska i kierunki",
+        "link": "Wszystkie lotniska",
         "href": "/tanie-loty",
         "alt": "Warszawa",
         "images": [],
@@ -148,7 +148,20 @@
     "mosaicPriceLabel": "cena za osobę",
     "mosaicCta": "Zobacz",
     "tilePanelTitle": "Trasa",
-    "tilePanelMeta": "12 lotnisk wylotu"
+    "tilePanelMeta": "12 lotnisk wylotu",
+    "examples": [
+      "Koncert dziś wieczorem w Poznaniu",
+      "Mecz w Barcelonie — lot 218 zł",
+      "Bieg w Lizbonie w listopadzie",
+      "Weekend w Gdańsku bez wydarzenia"
+    ],
+    "prev": "Poprzedni",
+    "next": "Następny",
+    "pause": "Zatrzymaj",
+    "play": "Odtwórz",
+    "footApp": "Aplikacja na iOS",
+    "footFree": "Darmowa · bez reklam",
+    "footStore": "App Store"
   },
   "en": {
     "lang": "en",
@@ -206,8 +219,8 @@
         "label": "City break",
         "title": "A weekend with no event at all",
         "body": "Just a flight and a hotel, when you want a rest. Prices per person, dates for the coming months.",
-        "link": "See destinations",
-        "href": "/tanie-loty",
+        "link": "All connections",
+        "href": "/tanie-loty-z-poznania/polaczenia",
         "alt": "Lisbon",
         "images": [
           "https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=800&h=800&fit=crop&auto=format&q=75",
@@ -222,7 +235,7 @@
         "label": "Flights",
         "title": "Cheap flights from 12 Polish airports",
         "body": "A list for every departure airport: destinations, dates and prices per person.",
-        "link": "All airports and destinations",
+        "link": "All airports",
         "href": "/tanie-loty",
         "alt": "Warsaw",
         "images": [],
@@ -299,6 +312,19 @@
     "mosaicPriceLabel": "price per person",
     "mosaicCta": "See",
     "tilePanelTitle": "Route",
-    "tilePanelMeta": "12 departure airports"
+    "tilePanelMeta": "12 departure airports",
+    "examples": [
+      "A concert tonight in Poznań",
+      "A match in Barcelona — flight 218 zł",
+      "A race in Lisbon in November",
+      "A weekend in Gdańsk, no event"
+    ],
+    "prev": "Previous",
+    "next": "Next",
+    "pause": "Pause",
+    "play": "Play",
+    "footApp": "App for iOS",
+    "footFree": "Free · no ads",
+    "footStore": "App Store"
   }
 }

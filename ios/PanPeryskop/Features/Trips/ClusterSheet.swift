@@ -206,6 +206,13 @@ struct ClusterEventPage: View {
                             iata: destination?.iata ?? "",
                             from: planner.outbound?.date,
                             to: planner.returning?.date
+                        ),
+                        luggage: LuggageContext(
+                            city: event.city,
+                            iata: destination?.iata,
+                            preferAirport: true,
+                            from: planner.outbound?.date,
+                            to: planner.returning?.date
                         )
                     ) { url in
                         onOpenURL(url, .open)

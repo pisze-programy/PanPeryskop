@@ -11,6 +11,7 @@ import { cityBreakForDay } from '../travel/cities';
 import { viatorNearestCity, viatorProductsForCity, viatorConfigured, viatorWindowFor } from '../travel/viator';
 import { staysWidgetUrl, type StayTheme, type StayView } from '../travel/stay22';
 import { carRentalPrice, carRentalUrl } from '../travel/qeeq';
+import { cityForAirport, cityIdFor, luggagePrice, luggageSlug, luggageUrl } from '../travel/radical';
 import { alertFlightFailure } from '../travel/alerts';
 import { addDaysWarsaw } from '../seed/core/dates';
 import { captureException, isInitialized } from '@sentry/cloudflare';
@@ -367,6 +368,26 @@ travelRoutes.get('/car-link', async (c) => {
   const url = await mintRedirect(c.env, 'car', carRentalUrl(iata, q.from, q.to));
   return c.json({ url, price: carRentalPrice(iata) });
 });
+
+// Luggage storage next to the event or the city. A small town has no storage,
+// so the city that owns the airport we fly into takes over. An event with a run
+// or a match starts at the airport, because that is where the bag arrives.
+travelRoutes.get('/luggage-link', async (c) => {
+  const q = c.req.query();
+  const cityId = cityIdFor(q.city ?? '');
+  const iata = (q.iata ?? '').toUpperCase();
+  const airportCity = /^[A-Z]{3}$/.test(iata) ? cityForAirport(iata) : null;
+  const from = isDay(q.from) ? q.from : undefined;
+  const to = isDay(q.to) ? q.to : undefined;
+  const order = q.prefer === 'airport' ? [airportCity, cityId] : [cityId, airportCity];
+  const chosen = order.find((id) => id !== null && id !== '' && luggageSlug(id)) ?? null;
+  const url = await mintRedirect(c.env, 'luggage', luggageUrl(chosen, from, to));
+  return c.json({ url, price: luggagePrice(chosen ?? cityId ?? '') });
+});
+
+function isDay(value: string | undefined): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
 
 // Stay22 hotel map widget URL. The app opens the URL, the widget does the rest.
 travelRoutes.get('/stays-widget', async (c) => {

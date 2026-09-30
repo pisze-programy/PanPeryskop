@@ -5,6 +5,7 @@ import SwiftUI
 struct PartnerBannerSection: View {
     let banners: [PartnerBanner]
     var carRental: CarRentalContext? = nil
+    var luggage: LuggageContext? = nil
     let onOpen: (URL) -> Void
 
     var body: some View {
@@ -17,6 +18,9 @@ struct PartnerBannerSection: View {
                     if index == 0, let carRental, !carRental.iata.isEmpty {
                         CarRentalBanner(context: carRental)
                     }
+                }
+                if let luggage {
+                    LuggageBanner(context: luggage)
                 }
             }
             .padding(.horizontal, Theme.Spacing.l)

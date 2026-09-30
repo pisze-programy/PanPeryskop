@@ -181,6 +181,13 @@ struct CityBreakPage: View {
                     iata: reachableAirports.first?.iata ?? "",
                     from: outbound?.date,
                     to: returning?.date
+                ),
+                luggage: LuggageContext(
+                    city: city.id,
+                    iata: reachableAirports.first?.iata,
+                    preferAirport: false,
+                    from: outbound?.date,
+                    to: returning?.date
                 )
             ) { url in
                 browserItem = BrowserItem(url: url, access: .open)

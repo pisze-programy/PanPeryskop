@@ -27,9 +27,10 @@ const ALLOWED_HOSTS = [
   'ra.co',
   'qeeq.pl',
   'qeeq.com',
+  'tp.media',
 ];
 
-export type RedirectKind = 'flight' | 'bus' | 'place' | 'event' | 'stay' | 'banner' | 'car';
+export type RedirectKind = 'flight' | 'bus' | 'place' | 'event' | 'stay' | 'banner' | 'car' | 'luggage';
 
 function isAllowed(target: string): boolean {
   let url: URL;

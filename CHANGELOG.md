@@ -4,6 +4,22 @@ All notable changes to PanPeryskop. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- A luggage storage banner, last in the partner section of the event sheet and
+  the city page. The link opens Radical Storage in Polish and carries the city
+  and the two travel days. 234 of 322 cities have storage there; a city without
+  it falls back to the city that owns the airport we fly into, and then to the
+  home page with the same dates. The price is "od 20 zł/dzień", with a data file
+  that overrides it per city, as the car banner does.
+
+### Changed
+
+- The Worker accepts `city` and `story` as event kinds. The app already sent
+  both, and the whitelist had drifted. A test now compares the two lists.
+
 ## [1.3.2] — build 109, 2026-09-29
 
 ### Added

@@ -5,6 +5,11 @@ struct CarLinkResponse: Decodable {
     let price: Double?
 }
 
+struct LuggageLinkResponse: Decodable {
+    let url: String
+    let price: Double?
+}
+
 // MARK: - Travel (Wycieczki)
 
 extension APIClient {
@@ -105,6 +110,21 @@ extension APIClient {
         if let from { params["from"] = from }
         if let to { params["to"] = to }
         return try await get("/travel/car-link", params: params)
+    }
+
+    static func getLuggageLink(
+        city: String?,
+        iata: String?,
+        preferAirport: Bool,
+        from: String?,
+        to: String?
+    ) async throws -> LuggageLinkResponse {
+        var params = ["prefer": preferAirport ? "airport" : "city"]
+        if let city, !city.isEmpty { params["city"] = city }
+        if let iata, !iata.isEmpty { params["iata"] = iata }
+        if let from { params["from"] = from }
+        if let to { params["to"] = to }
+        return try await get("/travel/luggage-link", params: params)
     }
 
     /// Stay22 hotel map widget URL for one anchor, date window and listing options.

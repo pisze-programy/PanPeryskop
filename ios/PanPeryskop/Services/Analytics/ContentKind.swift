@@ -8,5 +8,6 @@ enum ContentKind: String {
     case stay
     case banner
     case car
+    case luggage
     case partner
 }

@@ -266,6 +266,16 @@ export const travel = {
     pickupTime: '10:00',
     dropoffTime: '10:00',
   },
+  luggage: {
+    provider: 'radicalstorage',
+    tpBase: 'https://tp.media/r',
+    campaignId: '209',
+    marker: '778460',
+    p: '5867',
+    trs: '574753',
+    locale: 'pl',
+    defaultPrice: 20,
+  },
   api: {
     maxWindowMs: 370 * 24 * 3_600_000,
     maxLimit: 1000,

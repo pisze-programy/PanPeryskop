@@ -95,3 +95,25 @@ test('the app and the Worker agree on the referral kinds', () => {
 
   assert.deepEqual(swiftKinds, workerKinds, 'the SDK event name and the CAPI event name would diverge, and event_id dedup would break');
 });
+
+test('every app content kind is a kind the Worker accepts', () => {
+  const swift = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'ios', 'PanPeryskop', 'Services', 'Analytics', 'ContentKind.swift'),
+    'utf8'
+  );
+  const cases = [...swift.matchAll(/case ([a-z_]+)/g)].map((match) => match[1]).sort();
+
+  const worker = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'api', 'meta.ts'),
+    'utf8'
+  );
+  const line = /const KINDS = new Set\(\[([^\]]*)\]\)/.exec(worker);
+  assert.ok(line, 'KINDS not found in api/meta.ts');
+  const kinds = line[1]
+    .split(',')
+    .map((entry) => entry.trim().replace(/'/g, ''))
+    .filter((entry) => entry.length > 0)
+    .sort();
+
+  assert.deepEqual(cases, kinds, 'a kind the app sends without a Worker entry is rejected, and the tap is lost');
+});

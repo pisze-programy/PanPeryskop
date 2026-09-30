@@ -90,6 +90,7 @@
 		5800F431FEDF2DEADCED9F67 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00F40BE570D7ED784BC23D9D /* APIClient.swift */; };
 		58472186BFBEB2BF75D1C73A /* CarRentalBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 699A1534196B738A2DDB1706 /* CarRentalBanner.swift */; };
 		58769822566001813543CB5B /* TripsSheetSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11C07AA07EA5392B6D727C2 /* TripsSheetSection.swift */; };
+		5A70F0DAF5893ECC5DB00AA6 /* LuggageBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B457FCEF374AA8B96550DD11 /* LuggageBanner.swift */; };
 		5B221ECE16461D449A77D4B2 /* onboarding-background.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 8ABD45D141DABACFF08684A8 /* onboarding-background.mp4 */; };
 		5D26DF0BE89840F84382A370 /* StaysAnchorPoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140AFF403C2BBDE47B612F2B /* StaysAnchorPoint.swift */; };
 		5D5EAB45065D8EB978CCB18D /* StoryActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9026DB768B2FB618F4F51D3 /* StoryActions.swift */; };
@@ -389,6 +390,7 @@
 		A31390352664649563409CC4 /* LoadingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingOverlay.swift; sourceTree = "<group>"; };
 		A4673D5D4BF3758D53AD9C4D /* BusPricesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusPricesService.swift; sourceTree = "<group>"; };
 		A5A18BF050D2634EC4EE2764 /* PlacesSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesSection.swift; sourceTree = "<group>"; };
+		B457FCEF374AA8B96550DD11 /* LuggageBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LuggageBanner.swift; sourceTree = "<group>"; };
 		B57F8797E9C40E8221EE1AC3 /* TravelCity+Event.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TravelCity+Event.swift"; sourceTree = "<group>"; };
 		B70A144AB9F7016638B58AAA /* StaysAnchor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaysAnchor.swift; sourceTree = "<group>"; };
 		B7810FB5E890A5E181388777 /* CityEventsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityEventsSection.swift; sourceTree = "<group>"; };
@@ -621,6 +623,7 @@
 				66D8A263AEBFEF8440C7E0EB /* FlightScoring.swift */,
 				40772C13D951012865BD0096 /* FlightTimeline.swift */,
 				53DAB5BAC3A48A1258C4CB63 /* FlightTimelineSkeleton.swift */,
+				B457FCEF374AA8B96550DD11 /* LuggageBanner.swift */,
 				18B96DC041ACB25C8EF41626 /* MapAppPickerSheet.swift */,
 				5180F10F5EFC633481668D9A /* PartnerBanner.swift */,
 				4EFCCEBF56025539D2E1E590 /* PartnerBannerSection.swift */,
@@ -1074,6 +1077,7 @@
 				445842E80ADEB75D8DCEC9DF /* InAppBrowserView.swift in Sources */,
 				88C79E0FD59DBDF0B2369EF7 /* InstallID.swift in Sources */,
 				D828417310A3109AF1D893E7 /* LoadingOverlay.swift in Sources */,
+				5A70F0DAF5893ECC5DB00AA6 /* LuggageBanner.swift in Sources */,
 				DBD6230E0E6F6FA7C7DA9056 /* MapAppPickerSheet.swift in Sources */,
 				D6A799AF2C571B00063DD451 /* MapCameraController.swift in Sources */,
 				447CB9B6E33F985A796FD83B /* MapCategory.swift in Sources */,

@@ -3,7 +3,7 @@ import {sendCheckout, CheckoutReport} from '../analytics/meta';
 
 export const metaRoutes = new Hono<{ Bindings: Env }>();
 
-const KINDS = new Set(['flight', 'bus', 'place', 'event', 'stay', 'banner', 'car', 'partner']);
+const KINDS = new Set(['city', 'event', 'place', 'story', 'flight', 'bus', 'stay', 'banner', 'car', 'luggage', 'partner']);
 const EXTINFO_FIELDS = 16;
 
 interface RawBody {

@@ -156,6 +156,7 @@ h3 { font-size: var(--t-row); font-family: var(--serif); font-weight: 400; lette
 .plans h2 { font-size: var(--t-display); }
 .plans .lead { margin: 16px auto 30px; max-width: 46ch; }
 .plans .label { display: block; color: var(--invert-45); margin-bottom: 14px; }
+.mosaic-wrap { position: relative; }
 .mosaic { display: flex; align-items: flex-end; justify-content: center; gap: clamp(10px, 1.4vw, 20px); margin-top: clamp(48px, 7vw, 84px); width: max-content; margin-inline: auto; }
 .mcard { background: #fff; border-radius: 20px; padding: 14px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
 .mcard h4 { font: 600 0.6875rem/1 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-45); }

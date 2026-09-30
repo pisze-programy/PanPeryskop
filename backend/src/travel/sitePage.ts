@@ -263,8 +263,10 @@ ${features}
       <h2>${t.plansTitle}</h2>
       <p class="lead">${t.plansLead}</p>
       <a class="btn btn-quiet" href="/tanie-loty">${t.plansCta}</a>
-      <div class="mosaic" data-slider>
+      <div class="mosaic-wrap">
         <button type="button" class="ctrl ctrl--float" data-slide-prev aria-label="${t.prev}">‹</button>
+        <button type="button" class="ctrl ctrl--float ctrl--right" data-slide-next aria-label="${t.next}">›</button>
+        <div class="mosaic" data-slider>
         <button type="button" class="ctrl ctrl--float ctrl--right" data-slide-next aria-label="${t.next}">›</button>
         <div class="mcard mcard--w1">
           <h4>${t.mosaicMap}</h4>

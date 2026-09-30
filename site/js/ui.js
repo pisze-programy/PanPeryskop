@@ -36,7 +36,7 @@ document.addEventListener('keydown', (event) => {
 
 // Only an element that sits below the fold at load is armed. Anything already on
 // screen stays visible, so a failed observer can never leave a blank page.
-const reveals = document.querySelectorAll('.reveal');
+const reveals = document.querySelectorAll('.reveal, .statement');
 if (reveals.length && 'IntersectionObserver' in window) {
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
@@ -53,73 +53,61 @@ if (reveals.length && 'IntersectionObserver' in window) {
   });
 }
 
-const slides = document.getElementById('slides');
-if (slides) {
-  const dots = Array.from(document.querySelectorAll('.dots button'));
-  const panels = Array.from(slides.children);
+// Hero: stala rama. Prev, pause, next i kropki zmieniaja tylko przyklad
+// i zdjecie, wiec uklad nie skacze.
+const hero = document.getElementById('hero');
+const media = document.getElementById('hero-media');
+if (hero && media) {
+  const images = Array.from(media.querySelectorAll('img'));
+  const dots = Array.from(hero.querySelectorAll('.dots button'));
+  const example = document.getElementById('example');
+  const examples = JSON.parse(media.dataset.examples ?? '[]');
   const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let index = 0;
   let timer;
 
-  const goTo = (index) => panels[index]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  const activeIndex = () => Math.max(0, dots.findIndex((dot) => dot.getAttribute('aria-selected') === 'true'));
+  const show = (next) => {
+    index = (next + images.length) % images.length;
+    images.forEach((image, i) => image.classList.toggle('is-active', i === index));
+    dots.forEach((dot, i) => dot.setAttribute('aria-selected', String(i === index)));
+    if (!example || !examples.length) return;
+    const text = examples[index % examples.length];
+    if (calm.matches) { example.textContent = text; return; }
+    example.classList.add('is-swap');
+    window.setTimeout(() => { example.textContent = text; example.classList.remove('is-swap'); }, 200);
+  };
   const stop = () => { if (timer) clearInterval(timer); timer = undefined; };
-  const start = () => { if (calm.matches || dots.length < 2) return; stop(); timer = setInterval(() => goTo((activeIndex() + 1) % dots.length), 7000); };
+  const start = () => { if (calm.matches || images.length < 2) return; stop(); timer = setInterval(() => show(index + 1), 7000); };
   const hold = () => { stop(); window.setTimeout(start, 12000); };
 
-  const sync = () => {
-    const middle = slides.scrollLeft + slides.clientWidth / 2;
-    let active = 0;
-    panels.forEach((panel, index) => {
-      const centre = panel.offsetLeft + panel.offsetWidth / 2;
-      if (Math.abs(centre - middle) < panel.offsetWidth / 2) active = index;
-    });
-    dots.forEach((dot, index) => dot.setAttribute('aria-selected', String(index === active)));
-  };
-
-  dots.forEach((dot, index) => dot.addEventListener('click', () => { goTo(index); hold(); }));
-  slides.addEventListener('scroll', sync, { passive: true });
-  slides.addEventListener('pointerdown', hold);
-  slides.addEventListener('focusin', stop);
+  dots.forEach((dot, i) => dot.addEventListener('click', () => { show(i); hold(); }));
+  hero.querySelectorAll('[data-slide-prev]').forEach((button) => button.addEventListener('click', () => { show(index - 1); hold(); }));
+  hero.querySelectorAll('[data-slide-next]').forEach((button) => button.addEventListener('click', () => { show(index + 1); hold(); }));
+  hero.querySelectorAll('[data-slide-pause]').forEach((button) => button.addEventListener('click', () => {
+    const playLabel = button.dataset.labelPlay ?? '';
+    const pauseLabel = button.getAttribute('aria-label') ?? '';
+    if (timer) { stop(); button.textContent = '▶'; button.setAttribute('aria-label', playLabel); }
+    else { start(); button.textContent = 'II'; button.setAttribute('aria-label', pauseLabel); }
+  }));
+  hero.addEventListener('focusin', stop);
+  media.addEventListener('pointerdown', hold);
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
-  sync();
   start();
 }
 
-// Slider: slajdy, kropki, prev/next/pause i animowany przyklad. Ta sama
-// mechanika obsluguje hero i mozaike planow.
-document.querySelectorAll('.slides, [data-slider]').forEach((strip) => {
-  const panels = Array.from(strip.children).filter((el) => !el.classList.contains('ctrl'));
-  const root = strip.closest('section') ?? document;
-  const dots = Array.from(root.querySelectorAll('.dots button'));
-  const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const example = root.querySelector('#example');
-  const examples = JSON.parse(strip.dataset.examples ?? '[]');
-  let timer;
-  let index = 0;
-
-  const goTo = (next) => {
-    index = (next + panels.length) % panels.length;
-    panels[index]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    if (dots.length) dots.forEach((dot, i) => dot.setAttribute('aria-selected', String(i === index)));
-    if (example && examples.length && !calm.matches) {
-      example.classList.add('is-swap');
-      window.setTimeout(() => { example.textContent = examples[index % examples.length]; example.classList.remove('is-swap'); }, 200);
-    }
-  };
-  const stop = () => { if (timer) clearInterval(timer); timer = undefined; };
-  const start = () => { if (calm.matches || panels.length < 2) return; stop(); timer = setInterval(() => goTo(index + 1), 7000); };
-  const hold = () => { stop(); window.setTimeout(start, 12000); };
-
-  root.querySelectorAll('.dots button').forEach((dot, i) => dot.addEventListener('click', () => { goTo(i); hold(); }));
-  root.querySelectorAll('[data-slide-prev]').forEach((b) => b.addEventListener('click', () => { goTo(index - 1); hold(); }));
-  root.querySelectorAll('[data-slide-next]').forEach((b) => b.addEventListener('click', () => { goTo(index + 1); hold(); }));
-  root.querySelectorAll('[data-slide-pause]').forEach((b) => b.addEventListener('click', () => {
-    const running = Boolean(timer);
-    const playLabel = b.dataset.labelPlay ?? '';
-    const pauseLabel = b.getAttribute('aria-label') ?? '';
-    if (running) { stop(); b.textContent = '▶'; b.setAttribute('aria-label', playLabel); }
-    else { start(); b.textContent = 'II'; b.setAttribute('aria-label', pauseLabel); }
-  }));
-  strip.addEventListener('pointerdown', hold);
-  start();
-});
+// Canvas: karty ida lekko za mysza, kazda o swoim wspolczynniku.
+const canvas = document.querySelector('.canvas');
+if (canvas && window.matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').matches) {
+  const cards = Array.from(canvas.querySelectorAll('.mcard'));
+  canvas.addEventListener('pointermove', (event) => {
+    const box = canvas.getBoundingClientRect();
+    const dx = (event.clientX - box.left) / box.width - 0.5;
+    const dy = (event.clientY - box.top) / box.height - 0.5;
+    cards.forEach((card, index) => {
+      const depth = (index - (cards.length - 1) / 2) * 6;
+      card.style.setProperty('--dx', `${(-dx * depth).toFixed(1)}px`);
+      card.style.setProperty('--dy', `${(-dy * 10).toFixed(1)}px`);
+    });
+  });
+  canvas.addEventListener('pointerleave', () => cards.forEach((card) => { card.style.setProperty('--dx', '0px'); card.style.setProperty('--dy', '0px'); }));
+}

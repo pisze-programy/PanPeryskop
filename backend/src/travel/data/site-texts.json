@@ -78,8 +78,6 @@
         "tile": "panel"
       }
     ],
-    "bandTitle": "Cała mapa w jednej aplikacji",
-    "bandLead": "Darmowa, bez reklam, po polsku. Logowanie przez Sign in with Apple.",
     "faqTitle": "Pytania i odpowiedzi",
     "faq": [
       {
@@ -107,7 +105,6 @@
         "a": "Tak, logowanie przez Sign in with Apple jest wymagane przy starcie aplikacji"
       }
     ],
-    "footTitle": "Tanie loty z polskich lotnisk",
     "footLinks": [
       {
         "label": "Jak to działa",
@@ -134,12 +131,7 @@
     "footRights": "© 2026 Pan Peryskop",
     "footAi": "Dla AI",
     "footSitemap": "Mapa strony",
-    "slide2Title": "Tanie loty z 12 lotnisk",
-    "slide2Lead": "Zestawienie dla każdego lotniska wylotu: kierunki, terminy i ceny za osobę.",
     "statement": "Pan Peryskop {mark} łączy wydarzenia w Twoim mieście z tanimi lotami na mecz albo bieg {band} w Europie — i pokazuje je na jednej mapie.",
-    "plansLabel": "2026 / 2027",
-    "plansTitle": "Nad czym pracujemy",
-    "plansLead": "Kolejne miasta, kolejne kierunki i jedna mapa, która pokazuje wszystko: wydarzenie, lot, hotel i bilet.",
     "plansCta": "Zobacz, co jest teraz",
     "mosaicMap": "Mapa",
     "mosaicEvents": "Wydarzenia",
@@ -161,7 +153,30 @@
     "play": "Odtwórz",
     "footApp": "Aplikacja na iOS",
     "footFree": "Darmowa · bez reklam",
-    "footStore": "App Store"
+    "footStore": "App Store",
+    "aboutLabel": "O nas",
+    "aboutTitle": "Jedna mapa na cały kraj",
+    "aboutBody": "Pan Peryskop zbiera wydarzenia z zaufanych źródeł i pokazuje je tam, gdzie się dzieją. Do tego lot, hotel i bilet na mecz albo bieg w Europie. Aplikacja jest darmowa, bez reklam, po polsku.",
+    "aboutMark": "Jedna mapa",
+    "howTitle": "Jak to działa",
+    "howLead": "Trzy kroki, bez zakładania kont na innych stronach.",
+    "howSteps": [
+      {
+        "title": "Otwórz mapę",
+        "body": "Widzisz, co dzieje się w Twojej okolicy — koncerty, kino, teatr, sport."
+      },
+      {
+        "title": "Wybierz kierunek",
+        "body": "Mecz albo bieg w Europie? Sprawdź lot, hotel i termin w jednym miejscu."
+      },
+      {
+        "title": "Jedź albo zostań",
+        "body": "Bez wydarzenia też jest plan: sam lot i hotel, na weekend."
+      }
+    ],
+    "upcomingLabel": "W przygotowaniu",
+    "upcomingTitle": "Co dostaniecie dalej",
+    "upcomingLead": "Kolejne miasta, kolejne kierunki, jedna mapa."
   },
   "en": {
     "lang": "en",
@@ -242,8 +257,6 @@
         "tile": "panel"
       }
     ],
-    "bandTitle": "The whole map in one app",
-    "bandLead": "Free, no ads, in Polish. Sign in with Apple.",
     "faqTitle": "Questions and answers",
     "faq": [
       {
@@ -271,7 +284,6 @@
         "a": "Yes, signing in with Apple is required when you start the app"
       }
     ],
-    "footTitle": "Cheap flights from Polish airports",
     "footLinks": [
       {
         "label": "How it works",
@@ -298,12 +310,7 @@
     "footRights": "© 2026 Pan Peryskop",
     "footAi": "For AI",
     "footSitemap": "Sitemap",
-    "slide2Title": "Cheap flights from 12 airports",
-    "slide2Lead": "A list for every departure airport: destinations, dates and prices per person.",
     "statement": "Pan Peryskop {mark} brings the events in your city together with cheap flights to a match or a race {band} in Europe — on one map.",
-    "plansLabel": "2026 / 2027",
-    "plansTitle": "What we are working on",
-    "plansLead": "More cities, more destinations, and one map that shows everything: the event, the flight, the hotel and the ticket.",
     "plansCta": "See what exists now",
     "mosaicMap": "Map",
     "mosaicEvents": "Events",
@@ -325,6 +332,29 @@
     "play": "Play",
     "footApp": "App for iOS",
     "footFree": "Free · no ads",
-    "footStore": "App Store"
+    "footStore": "App Store",
+    "aboutLabel": "About",
+    "aboutTitle": "One map for the whole country",
+    "aboutBody": "Pan Peryskop gathers events from trusted sources and shows them where they happen. Plus a flight, a hotel and a ticket for a match or a race in Europe. The app is free, has no ads and speaks Polish.",
+    "aboutMark": "One map",
+    "howTitle": "How it works",
+    "howLead": "Three steps, and no account on other sites.",
+    "howSteps": [
+      {
+        "title": "Open the map",
+        "body": "See what is happening near you: concerts, cinema, theatre, sport."
+      },
+      {
+        "title": "Pick a destination",
+        "body": "A match or a race in Europe? Check the flight, the hotel and the date in one place."
+      },
+      {
+        "title": "Travel, or stay",
+        "body": "No event needed: just a flight and a hotel for the weekend."
+      }
+    ],
+    "upcomingLabel": "Upcoming",
+    "upcomingTitle": "What comes next",
+    "upcomingLead": "More cities, more destinations, one map."
   }
 }

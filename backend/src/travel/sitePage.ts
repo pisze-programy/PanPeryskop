@@ -47,17 +47,9 @@ export interface SiteText {
   heroAlt: string;
 
   features: Feature[];
-  bandTitle: string;
-  bandLead: string;
   faqTitle: string;
   faq: FaqItem[];
-  footTitle: string;
-  slide2Title: string;
-  slide2Lead: string;
   statement: string;
-  plansLabel: string;
-  plansTitle: string;
-  plansLead: string;
   plansCta: string;
   mosaicMap: string;
   mosaicEvents: string;
@@ -65,6 +57,16 @@ export interface SiteText {
   mosaicStay: string;
   mosaicPriceLabel: string;
   mosaicCta: string;
+  aboutLabel: string;
+  aboutTitle: string;
+  aboutBody: string;
+  aboutMark: string;
+  howTitle: string;
+  howLead: string;
+  howSteps: { title: string; body: string }[];
+  upcomingLabel: string;
+  upcomingTitle: string;
+  upcomingLead: string;
   tilePanelTitle: string;
   tilePanelMeta: string;
   examples: string[];
@@ -89,7 +91,11 @@ const APP_STORE = 'https://apps.apple.com/pl/app/pan-peryskop/id6803138750';
 const OG_IMAGE = `${PUBLIC_BASE}/assets/og-image.png`;
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=2000&h=1250&fit=crop&auto=format&q=80';
 const SLIDE_IMAGE = 'https://images.unsplash.com/photo-1577133192629-5140c5371590?w=2000&h=1250&fit=crop&auto=format&q=80';
+const HERO_IMAGE_3 = 'https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=2000&h=1250&fit=crop&auto=format&q=80';
 const BAND_IMAGE = 'https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=780&h=1690&fit=crop&auto=format&q=80';
+
+const LAUREL =
+  '<svg viewBox="0 0 30 76" aria-hidden="true"><path d="M22 4c-6 10-9 20-9 30 0 12 3 24 9 38" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13 22c-4-2-7-1-9 2 3 3 6 3 9 1z" fill="currentColor"/><path d="M12 40c-4-2-7-1-9 2 3 3 6 3 9 1z" fill="currentColor"/><path d="M13 58c-4-2-7-1-9 2 3 3 6 3 9 1z" fill="currentColor"/></svg>';
 
 const APPLE_ICON =
   '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>';
@@ -129,10 +135,14 @@ export function renderSite(lang: SiteLang): string {
   }, null, 2);
 
   const statementHtml = t.statement
-    .replace('{mark}', '<span class="mark" aria-hidden="true"></span>')
-    .replace('{band}', '<span class="mark mark--band" aria-hidden="true"></span>');
+    .split(' ')
+    .filter(Boolean)
+    .map((word, index) => `<span class="word" style="--i:${index}">${word
+      .replace('{mark}', '<span class="mark" aria-hidden="true"></span>')
+      .replace('{band}', '<span class="mark mark--band" aria-hidden="true"></span>')}</span>`)
+    .join(' ');
 
-  const features = t.features.map((feature) => `      <section class="feature reveal"${feature.id === 'jak-to-dziala' ? ' id="jak-to-dziala"' : ''}>
+  const features = t.features.map((feature) => `      <section class="feature reveal">
         <div class="feature-media">
           ${feature.tile === 'panel'
             ? `<div class="tile-panel"><span class="label">${t.tilePanelTitle}</span><strong>${t.tilePanelMeta}</strong></div>`
@@ -210,44 +220,24 @@ ${schema}
 
   <main id="main">
     <section class="hero" id="hero">
-      <div class="slides" id="slides" data-examples='${JSON.stringify(t.examples).replace(/'/g, "&#39;")}'>
-        <article class="slide">
-          <h1>${t.heroTitle}</h1>
-          <p class="lead">${t.heroLead}</p>
-          <form class="hero-control" aria-label="${t.heroLead}">
-            <span class="example" id="example" aria-live="polite">${t.examples[0]}</span>
-            <div class="slider-controls">
-              <button type="button" class="ctrl" data-slide-prev aria-label="${t.prev}">‹</button>
-              <button type="button" class="ctrl" data-slide-pause data-label-play="${t.play}" aria-label="${t.pause}">II</button>
-              <button type="button" class="ctrl" data-slide-next aria-label="${t.next}">›</button>
-            </div>
-          </form>
-          <p class="hero-actions">
-            <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
-            <a class="link-arrow" href="/tanie-loty">${t.flightsLink}</a>
-          </p>
-          <div class="hero-media">
-            <img src="${HERO_IMAGE}" alt="${t.heroAlt}" width="2000" height="1250" fetchpriority="high" decoding="async" />
-          </div>
-        </article>
-        <article class="slide">
-          <p class="statement">${statementHtml}</p>
-        </article>
-        <article class="slide">
-          <h1>${t.slide2Title}</h1>
-          <p class="lead">${t.slide2Lead}</p>
-          <div class="hero-control">
-            <span class="example" aria-hidden="true">${t.examples[1]}</span>
-            <div class="slider-controls">
-              <button type="button" class="ctrl" data-slide-prev aria-label="${t.prev}">‹</button>
-              <button type="button" class="ctrl" data-slide-pause aria-label="${t.pause}">II</button>
-              <button type="button" class="ctrl" data-slide-next aria-label="${t.next}">›</button>
-            </div>
-          </div>
-          <div class="hero-media">
-            <img src="${SLIDE_IMAGE}" alt="" width="2000" height="1250" loading="lazy" decoding="async" />
-          </div>
-        </article>
+      <h1>${t.heroTitle}</h1>
+      <p class="lead">${t.heroLead}</p>
+      <form class="hero-control" aria-label="${t.heroLead}">
+        <span class="example" id="example" aria-live="polite">${t.examples[0]}</span>
+        <div class="slider-controls">
+          <button type="button" class="ctrl" data-slide-prev aria-label="${t.prev}">‹</button>
+          <button type="button" class="ctrl" data-slide-pause data-label-play="${t.play}" aria-label="${t.pause}">II</button>
+          <button type="button" class="ctrl" data-slide-next aria-label="${t.next}">›</button>
+        </div>
+      </form>
+      <p class="hero-actions">
+        <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
+        <a class="link-arrow" href="/tanie-loty">${t.flightsLink}</a>
+      </p>
+      <div class="hero-media" id="hero-media" data-examples='${JSON.stringify(t.examples).replace(/'/g, "&#39;")}'>
+        <img class="is-active" src="${HERO_IMAGE}" alt="${t.heroAlt}" width="2000" height="1250" fetchpriority="high" decoding="async" />
+        <img src="${SLIDE_IMAGE}" alt="" width="2000" height="1250" loading="lazy" decoding="async" />
+        <img src="${HERO_IMAGE_3}" alt="" width="2000" height="1250" loading="lazy" decoding="async" />
       </div>
       <div class="dots" role="tablist" aria-label="${t.heroTitle}">
         <button type="button" role="tab" aria-selected="true"></button>
@@ -256,42 +246,53 @@ ${schema}
       </div>
     </section>
 
-${features}
+    ${features}
 
-    <section class="plans dark">
-      <p class="label">${t.plansLabel}</p>
-      <h2>${t.plansTitle}</h2>
-      <p class="lead">${t.plansLead}</p>
-      <a class="btn btn-quiet" href="/tanie-loty">${t.plansCta}</a>
-      <div class="mosaic-wrap">
-        <button type="button" class="ctrl ctrl--float" data-slide-prev aria-label="${t.prev}">‹</button>
-        <button type="button" class="ctrl ctrl--float ctrl--right" data-slide-next aria-label="${t.next}">›</button>
-        <div class="mosaic" data-slider>
-        <button type="button" class="ctrl ctrl--float ctrl--right" data-slide-next aria-label="${t.next}">›</button>
-        <div class="mcard mcard--w1">
+    <section class="about" id="o-nas">
+      <span class="label">${t.aboutLabel}</span>
+      <h2>${t.aboutTitle}</h2>
+      <p class="statement">${statementHtml}</p>
+      <p class="about-body">${t.aboutBody}</p>
+    </section>
+
+    <section class="how" id="jak-to-dziala">
+      <h2>${t.howTitle}</h2>
+      <p class="lead">${t.howLead}</p>
+      <ol>
+${t.howSteps.map((step, index) => `        <li class="reveal"><span>${index + 1}</span><h3>${step.title}</h3><p>${step.body}</p></li>`).join('\n')}
+      </ol>
+    </section>
+
+    <section class="upcoming dark" id="w-przygotowaniu">
+      <p class="label">${t.upcomingLabel}</p>
+      <h2>${t.upcomingTitle}</h2>
+      <p class="lead">${t.upcomingLead}</p>
+      <div class="canvas">
+        <div class="mcard mcard--w1 reveal" style="--i:0">
           <h4>${t.mosaicMap}</h4>
           <div class="mmap"><i style="left:26%;top:30%"></i><i style="left:62%;top:22%"></i><i style="left:44%;top:64%"></i></div>
         </div>
-        <div class="mcard mcard--w2">
+        <div class="mcard mcard--w2 reveal" style="--i:1">
           <h4>${t.mosaicEvents}</h4>
           <div class="mrow"><s></s><u></u><u></u></div>
           <div class="mrow"><s></s><u></u><u></u></div>
           <div class="mrow"><s></s><u></u><u></u></div>
           <div class="mrow"><s></s><u></u><u></u></div>
         </div>
-        <div class="mcard mcard--w3">
+        <div class="mcard mcard--w3 reveal" style="--i:2">
           <h4>${t.mosaicFlight}</h4>
           <div class="mphoto mphoto--wide"></div>
           <p class="label">${t.mosaicPriceLabel}</p>
           <div class="mrow"><s></s><u></u></div>
           <span class="mpill">${t.mosaicCta}</span>
         </div>
-        <div class="mcard mcard--w4">
+        <div class="mcard mcard--w4 reveal" style="--i:3">
           <h4>${t.mosaicStay}</h4>
           <div class="mphoto mphoto--tall"></div>
           <div class="mrow"><s></s><u></u></div>
         </div>
       </div>
+      <a class="btn btn-quiet" href="/tanie-loty">${t.plansCta}</a>
     </section>
 
     <section class="faq" id="faq">
@@ -307,6 +308,11 @@ ${faq}
     <p class="label" style="margin-top:48px;text-align:center">${t.footAirportsLabel}</p>
     <div class="foot-airports">
 ${ORIGIN_PAGES.map((origin) => `      <a href="/${origin.slug}">${airportLabel(origin)}</a>`).join('\n')}
+    </div>
+    <div class="marks-pair">
+      <span class="laurel is-mirror">${LAUREL}</span>
+      <p>${t.aboutMark}</p>
+      <span class="laurel">${LAUREL}</span>
     </div>
     <p class="foot-wordmark">Pan Peryskop</p>
     <div class="foot-marks">

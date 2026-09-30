@@ -1,6 +1,10 @@
 // The landing page, one template for every language. Texts live in
-// data/site-texts.json, the flight links come from ORIGIN_PAGES, and the Worker
+// data/site-texts.json, the airport links come from ORIGIN_PAGES, and the Worker
 // renders the page, so a copy change never touches two files again.
+//
+// The composition follows america.gov: a greeting hero with one big rounded
+// media, four repeating feature rows, one dark band, then a footer of large
+// serif links over a giant wordmark.
 
 import { ORIGIN_PAGES, PUBLIC_BASE } from './webpage';
 import texts from './data/site-texts.json';
@@ -14,9 +18,20 @@ interface FaqItem {
   a: string;
 }
 
-interface Step {
+interface Feature {
+  id: string;
+  label: string;
   title: string;
   body: string;
+  link: string;
+  href: string;
+  image: string;
+  alt: string;
+}
+
+interface FootLink {
+  label: string;
+  href: string;
 }
 
 export interface SiteText {
@@ -28,71 +43,48 @@ export interface SiteText {
   ogTitle: string;
   ogDescription: string;
   schemaDescription: string;
+  official: string;
   download: string;
-  skip: string;
-  menuLabel: string;
-  menuOpen: string;
+  menu: string;
+  close: string;
   languageLabel: string;
-  heroPill: string;
-  heroLine: string;
-  heroRotator: string[];
-  heroSub: string[];
-  brandSub: string[];
-  badges: string[];
-  steps: Step[];
+  heroTitle: string;
+  heroLead: string;
+  flightsLink: string;
+  heroAlt: string;
+
+  features: Feature[];
+  bandTitle: string;
+  bandLead: string;
   faqTitle: string;
   faq: FaqItem[];
-  statement: string[];
-  flightsTitle: string;
-  flightsLead: string;
-  flightsLabel: string;
-  flightsAll: string;
-  flightFrom: string;
-  footerLegalLabel: string;
-  footerPrivacy: string;
-  footerTerms: string;
-  footerSupport: string;
-  footerFlightsLabel: string;
-  footerFlightsAll: string;
-  footerEventsLabel: string;
-  footerEventsLink: string;
-  footerSitemap: string;
-  footerAi: string;
-  footerRights: string;
+  footTitle: string;
+  footLinks: FootLink[];
+  footAirportsLabel: string;
+  footRights: string;
+  footAi: string;
+  footSitemap: string;
+  footPrivacy: string;
+  footTerms: string;
 }
 
 const TEXTS = texts as Record<SiteLang, SiteText>;
 const APP_STORE = 'https://apps.apple.com/pl/app/pan-peryskop/id6803138750';
 const OG_IMAGE = `${PUBLIC_BASE}/assets/og-image.png`;
-
-const MARQUEE = [
-  ['Poznań', 'Warszawa', 'Kraków', 'Gdańsk', 'Wrocław', 'Łódź', 'Katowice'],
-  ['Szczecin', 'Bydgoszcz', 'Lublin', 'Białystok', 'Gdynia', 'Sopot', 'Toruń'],
-  ['Rzeszów', 'Kielce', 'Olsztyn', 'Częstochowa', 'Bielsko-Biała', 'Koszalin', 'Zielona Góra'],
-];
-
-const MARQUEE_SPEEDS = ['', 'slow reverse', 'slower'];
+const HERO_IMAGE = 'https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=2000&h=1250&fit=crop&auto=format&q=80';
+const BAND_IMAGE = 'https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=780&h=1690&fit=crop&auto=format&q=80';
 
 const APPLE_ICON =
-  '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>';
+  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>';
 
 export function siteText(lang: SiteLang): SiteText {
   return TEXTS[lang];
 }
 
-/** The landing for one language. */
 export function renderSite(lang: SiteLang): string {
   const t = siteText(lang);
-  const other: SiteLang = lang === 'pl' ? 'en' : 'pl';
   const url = `${PUBLIC_BASE}${t.path === '/' ? '/' : t.path}`;
-  const flightFrom = (origin: typeof ORIGIN_PAGES[number]) =>
-    lang === 'pl' ? `${t.flightFrom} ${origin.genitive}` : `${t.flightFrom} ${origin.name}`;
-  const flightLinks = ORIGIN_PAGES
-    .map((origin) => `<li><a href="/${origin.slug}">${flightFrom(origin)}</a></li>`)
-    .join('\n      ');
-  const footerFlights = ORIGIN_PAGES
-    .map((origin) => `<a href="/${origin.slug}">${lang === 'pl' ? origin.genitive : origin.name}</a>`)
-    .join('\n      ');
+  const airportLabel = (origin: typeof ORIGIN_PAGES[number]) => (lang === 'pl' ? origin.genitive : origin.name);
   const schema = JSON.stringify({
     '@context': 'https://schema.org',
     '@graph': [
@@ -119,26 +111,34 @@ export function renderSite(lang: SiteLang): string {
     ],
   }, null, 2);
 
-  const marquee = MARQUEE.map((cities, index) => {
-    const row = cities.map((city, position) => `${position === 0 ? '<span class="hl">' : '<span>'}${city}</span>${position < cities.length - 1 ? '<span>·</span>' : ''}`).join('');
-    return `      <div class="marquee">
-        <div class="marquee-track ${MARQUEE_SPEEDS[index]}" aria-hidden="true">
-          ${row}
-          ${row}
+  const features = t.features.map((feature) => `      <section class="feature reveal"${feature.id === 'jak-to-dziala' ? ' id="jak-to-dziala"' : ''}>
+        <div class="feature-media">
+          <img src="${feature.image}" alt="${feature.alt}" width="1600" height="1200" loading="lazy" decoding="async" />
         </div>
-      </div>`;
-  }).join('\n');
+        <div>
+          <span class="label">${feature.label}</span>
+          <h3>${feature.title}</h3>
+          <p class="muted">${feature.body}</p>
+          <a class="link-arrow" href="${feature.href}"${feature.href.startsWith('http') ? ' rel="noopener"' : ''}>${feature.link}</a>
+        </div>
+      </section>`).join('\n');
 
-  const steps = t.steps.map((step, index) => `        <div class="step-item">
-          <span class="num">0${index + 1}</span>
-          <h4>${step.title}</h4>
-          <p>${step.body}</p>
-        </div>`).join('\n');
-
-  const faq = t.faq.map((item) => `        <details class="accordion">
-          <summary>${item.q} <span class="plus">+</span></summary>
+  const faq = t.faq.map((item) => `        <details>
+          <summary>${item.q}</summary>
           <div class="a-body">${item.a}</div>
         </details>`).join('\n');
+
+  const footLinks = t.footLinks
+    .map((link) => `<a href="${link.href}">${link.label}</a>`)
+    .join('\n        ');
+
+  const sheetLinks = t.footLinks
+    .map((link) => `<a class="sheet-link" href="${link.href}">${link.label}</a>`)
+    .join('\n      ');
+
+  const langSwitch = () => SITE_LANGS
+    .map((code) => `<a href="${siteText(code).path}" data-lang="${code}"${code === lang ? ' aria-current="page"' : ''}>${code.toUpperCase()}</a>`)
+    .join('<span> / </span>');
 
   return `<!doctype html>
 <html lang="${t.lang}">
@@ -151,6 +151,7 @@ export function renderSite(lang: SiteLang): string {
 <link rel="canonical" href="${url}" />
 ${SITE_LANGS.map((code) => `<link rel="alternate" hreflang="${code}" href="${PUBLIC_BASE}${siteText(code).path}" />`).join('\n')}
 <link rel="icon" type="image/png" href="/icon.png" />
+<meta name="theme-color" content="#eff1f4" />
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="${t.locale}" />
 <meta property="og:title" content="${t.ogTitle}" />
@@ -161,188 +162,85 @@ ${SITE_LANGS.map((code) => `<link rel="alternate" hreflang="${code}" href="${PUB
 <script type="application/ld+json">
 ${schema}
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/design.css" />
-<link rel="stylesheet" href="/css/ui.css" />
-<link rel="stylesheet" href="/css/animations.css" />
-<link rel="stylesheet" href="/css/hero.css" />
-<link rel="stylesheet" href="/css/sections.css" />
+<link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/assets/fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/site.css" />
 </head>
 <body>
+<a class="sr-only" href="#main">${t.heroTitle}</a>
 
-<a class="skip" href="#main">${t.skip}</a>
+<div class="frame">
+  <p class="official">${t.official}</p>
 
-<header class="nav" id="nav">
-  <div class="container nav-inner">
+  <header class="nav" id="nav">
     <a class="brand" href="/">
-      <img src="/icon.png" alt="" width="30" height="30" />
-      <span>Pan<span class="grad-text">Peryskop</span></span>
+      <img src="/icon.png" alt="" width="26" height="26" />
+      <span>Pan Peryskop</span>
     </a>
-    <nav class="nav-links" id="nav-links" aria-label="${t.menuLabel}">
-      <a href="#map">${lang === 'pl' ? 'Mapa' : 'Map'}</a>
-      <a href="#jak-to-dziala">${lang === 'pl' ? 'Jak to działa' : 'How it works'}</a>
-      <a href="/tanie-loty">${lang === 'pl' ? 'Tanie loty' : 'Cheap flights'}</a>
-      <a href="#faq">FAQ</a>
-    </nav>
     <div class="nav-actions">
-      <div class="lang" aria-label="${t.languageLabel}">
-        <a href="/" data-lang="pl"${lang === 'pl' ? ' aria-current="page" class="is-active"' : ''}>PL</a>
-        <span>/</span>
-        <a href="/en" data-lang="en"${lang === 'en' ? ' aria-current="page" class="is-active"' : ''}>EN</a>
-      </div>
-      <a class="btn btn-sm btn-white" href="#start">${lang === 'pl' ? 'Pobierz' : 'Download'}</a>
-      <button class="nav-burger" id="nav-burger" aria-label="${t.menuOpen}" aria-expanded="false">
-        <span></span><span></span><span></span>
+      <div class="lang" aria-label="${t.languageLabel}">${langSwitch()}</div>
+      <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${t.download}</a>
+      <button class="btn btn-quiet menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">
+        ${t.menu}
       </button>
     </div>
-  </div>
-</header>
+  </header>
 
-<main id="main">
-
-  <section class="hero dark" id="map">
-    <div class="hero-content container">
-      <span class="pill">${t.heroPill}</span>
-      <h1 class="display display-lg">${t.heroLine}<br />
-        <span class="rotator">
-${t.heroRotator.map((word) => `          <span class="w grad-text">${word}</span>`).join('\n')}
-        </span>
-      </h1>
-      <p class="sub">
-        ${t.heroSub[0]}<br />
-        ${t.heroSub[1]}
-      </p>
+  <main id="main">
+    <section class="hero">
+      <h1>${t.heroTitle}</h1>
+      <p class="lead">${t.heroLead}</p>
       <div class="hero-cta">
-        <a class="btn btn-lg btn-white" href="${APP_STORE}" rel="noopener">
-          ${APPLE_ICON}
-          ${t.download}
-        </a>
+        <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
+        <a class="link-arrow" href="/tanie-loty">${t.flightsLink}</a>
       </div>
-    </div>
+      <div class="hero-media">
+        <img src="${HERO_IMAGE}" alt="${t.heroAlt}" width="2000" height="1250" fetchpriority="high" decoding="async" />
+      </div>
+    </section>
 
-    <div class="phone-rack container">
-      <div class="phone-item a">
-        <div class="iphone">
-          <span class="side-btn" aria-hidden="true"></span>
-          <div class="iphone-screen">
-            <video class="ph-video" src="/assets/hero-a.mp4" muted autoplay loop playsinline preload="auto"></video>
-            <span class="story-home" aria-hidden="true"></span>
-          </div>
-        </div>
-      </div>
-      <div class="phone-item b">
-        <div class="iphone">
-          <span class="side-btn" aria-hidden="true"></span>
-          <div class="iphone-screen">
-            <video class="ph-video" src="/assets/hero-b.mp4" muted autoplay loop playsinline preload="auto"></video>
-            <span class="story-home" aria-hidden="true"></span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+${features}
 
-  <section class="marquee-band section" aria-label="${lang === 'pl' ? 'Miasta' : 'Cities'}">
-    <div class="container">
-${marquee}
-    </div>
-  </section>
+    <section class="band-dark dark">
+      <h2 class="display">${t.bandTitle}</h2>
+      <p class="lead">${t.bandLead}</p>
+      <a class="btn btn-quiet" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
+      <div class="band-media hero-media">
+        <img src="${BAND_IMAGE}" alt="" width="780" height="1690" loading="lazy" decoding="async" />
+      </div>
+    </section>
 
-  <section class="section brand" id="brand">
-    <div class="container brand-inner">
-      <div class="brand-logo">
-        <img src="/assets/logo.png" alt="${lang === 'pl' ? 'Logo Pan Peryskop' : 'Pan Peryskop logo'}" width="120" height="120" />
-      </div>
-      <h2 class="display display-md grad-text">Pan Peryskop</h2>
-      <p class="sub">${t.brandSub[0]}<br />${t.brandSub[1]}</p>
-    </div>
-  </section>
-
-  <section class="section" id="jak-to-dziala">
-    <div class="container">
-      <div class="brand-badges">
-${t.badges.map((badge) => `        <span class="pill">${badge}</span>`).join('\n')}
-      </div>
-      <div class="steps-grid stagger">
-${steps}
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="faq">
-    <div class="container">
-      <div class="sec-head reveal">
-        <span class="pill">FAQ</span>
-        <h2 class="display display-md">${t.faqTitle}</h2>
-      </div>
-      <div class="faq-wrap stagger">
+    <section class="faq" id="faq">
+      <h2>${t.faqTitle}</h2>
 ${faq}
-      </div>
-    </div>
-  </section>
+    </section>
+  </main>
 
-  <section class="statement dark" id="start">
-    <div class="container statement-inner">
-      <span class="display display-xl reveal"><span class="grad-text">${t.statement[0]}</span><br /><span class="grad-text">${t.statement[1]}</span></span>
-      <div class="reveal">
-        <a class="btn btn-lg btn-white" href="${APP_STORE}" rel="noopener">
-          ${APPLE_ICON}
-          ${t.download}
-        </a>
-      </div>
+  <footer class="foot">
+    <nav class="foot-links">
+        ${footLinks}
+    </nav>
+    <p class="label" style="margin-top:48px">${t.footAirportsLabel}</p>
+    <ul class="rows" style="margin-top:8px">
+${ORIGIN_PAGES.map((origin) => `      <li><a href="/${origin.slug}">${airportLabel(origin)}</a></li>`).join('\n')}
+    </ul>
+    <p class="foot-wordmark">Pan Peryskop</p>
+    <div class="foot-meta">
+      <span>${t.footRights}</span>
+      <span><a href="/sitemap.xml">${t.footSitemap}</a> · <a href="/llms.txt">${t.footAi}</a></span>
+      <span>${langSwitch()}</span>
     </div>
-  </section>
+  </footer>
+</div>
 
-  <section class="section" id="tanie-loty-section" aria-labelledby="tanie-loty-title">
-    <div class="container">
-      <h2 id="tanie-loty-title">${t.flightsTitle}</h2>
-      <p>${t.flightsLead}</p>
-      <p>${t.flightsLabel}</p>
-      <ul>
-      ${flightLinks}
-      </ul>
-      <p><a href="/tanie-loty">${t.flightsAll}</a></p>
-    </div>
-  </section>
-
-</main>
-
-<footer class="footer dark">
-  <div class="container footer-row">
-    <span class="brand">
-      <img src="/icon.png" alt="" width="26" height="26" />
-      <span>Pan<span class="grad-text">Peryskop</span></span>
-    </span>
-    <nav class="footer-legal" aria-label="${t.footerLegalLabel}">
-      <a href="/privacy">${t.footerPrivacy}</a>
-      <a href="/terms">${t.footerTerms}</a>
-      <a href="/support">${t.footerSupport}</a>
-    </nav>
-    <nav class="footer-legal" aria-label="${t.footerFlightsLabel}">
-      <span class="footer-label">${t.footerFlightsLabel}</span>
-      <a href="/tanie-loty">${t.footerFlightsAll}</a>
-      ${footerFlights}
-    </nav>
-    <nav class="footer-legal" aria-label="${t.footerEventsLabel}">
-      <span class="footer-label">${t.footerEventsLabel}</span>
-      <a href="/tanie-loty">${t.footerEventsLink}</a>
-    </nav>
-    <nav class="footer-legal" aria-label="Info">
-      <a href="/sitemap.xml">${t.footerSitemap}</a>
-      <a href="/llms.txt">${t.footerAi}</a>
-    </nav>
-    <div class="footer-meta">
-      <span>${t.footerRights}</span>
-      <div class="lang">
-        <a href="/" data-lang="pl"${lang === 'pl' ? ' aria-current="page" class="is-active"' : ''}>PL</a>
-        <span>/</span>
-        <a href="/en" data-lang="en"${lang === 'en' ? ' aria-current="page" class="is-active"' : ''}>EN</a>
-      </div>
-    </div>
+<div class="sheet" id="menu-sheet" role="dialog" aria-modal="true" aria-label="${t.menu}" hidden>
+  <div class="sheet-top">
+    <span class="brand">Pan Peryskop</span>
+    <button class="btn btn-quiet" id="menu-close">${t.close}</button>
   </div>
-</footer>
+  ${sheetLinks}
+  <div class="lang" aria-label="${t.languageLabel}" style="margin-top:26px">${langSwitch()}</div>
+</div>
 
 <script defer src="/js/ui.js"></script>
 </body>

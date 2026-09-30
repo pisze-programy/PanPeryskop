@@ -25,13 +25,13 @@ test('the language switcher marks the page it is on', () => {
   assert.match(renderSite('en'), /href="\/en" data-lang="en" aria-current="page"/);
 });
 
-test('the flight links come from the origin data', () => {
+test('the airport links come from the origin data', () => {
   const pl = renderSite('pl');
   const en = renderSite('en');
   for (const origin of ORIGIN_PAGES) {
     assert.ok(pl.includes(`href="/${origin.slug}"`), `${origin.slug} is missing`);
-    assert.ok(pl.includes(`Tanie loty z ${origin.genitive}`), `the Polish label is missing for ${origin.slug}`);
-    assert.ok(en.includes(`Cheap flights from ${origin.name}`), `the English label is missing for ${origin.slug}`);
+    assert.ok(pl.includes(`>${origin.genitive}</a>`), `the Polish label is missing for ${origin.slug}`);
+    assert.ok(en.includes(`>${origin.name}</a>`), `the English label is missing for ${origin.slug}`);
   }
 });
 

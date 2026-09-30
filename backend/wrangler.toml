@@ -128,6 +128,10 @@ pattern = "panperyskop.app/robots.txt"
 zone_name = "panperyskop.app"
 
 [[routes]]
+pattern = "panperyskop.app/llms-full.txt"
+zone_name = "panperyskop.app"
+
+[[routes]]
 pattern = "panperyskop.app/llms.txt"
 zone_name = "panperyskop.app"
 

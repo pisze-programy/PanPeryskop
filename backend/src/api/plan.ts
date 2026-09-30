@@ -56,6 +56,10 @@ contentRoutes.get('/coverage.json', async (c) => {
   return c.json(await coverageReport(c.env));
 });
 
+// The file was removed. Pages still serves the old copy from an earlier
+// deployment, so the Worker answers first and points readers at the live one.
+contentRoutes.get('/llms-full.txt', (c) => c.redirect('/llms.txt', 301));
+
 contentRoutes.get('/llms.txt', async (c) => {
   c.header('Content-Type', 'text/plain; charset=utf-8');
   c.header('Cache-Control', 'no-cache');

@@ -248,6 +248,44 @@ export async function llmsTxt(env: Env): Promise<string> {
   const rows = await docs(env);
   const origins = rows.filter((row) => row.kind === 'origin').map((row) => `- ${PUBLIC_BASE}/${row.slug}`);
   const sample = rows.filter((row) => row.kind === 'destination').slice(0, 60).map((row) => `- ${PUBLIC_BASE}/${row.slug}`);
-  return `# Pan Peryskop - tanie loty i weekendy\n\n> Agregator najtańszych weekendów z polskich lotnisk. Loty, hotele i wydarzenia.\n\n## Lotniska\n${origins.join('\n')}\n\n## Kierunki (przykład)\n${sample.join('\n')}\n\n## Dane maszynowe\n- JSON: ${PUBLIC_BASE}/plan/json/{miasto}\n- Sitemap: ${PUBLIC_BASE}/sitemap.xml\n`;
+  return `# Pan Peryskop
+
+> Mapa lokalnych wydarzeń w Polsce oraz planer wyjazdów: lot, hotel i wydarzenie w jednym miejscu. Aplikacja na iOS; treść dostępna także na stronie, po polsku i po angielsku.
+
+## Trzy rzeczy, które robi
+
+- Lokalne wydarzenia: koncerty, kino, teatr, stand-up, sport i wydarzenia darmowe — na mapie, w Twojej okolicy.
+- Wyjazd na wydarzenie w Europie: mecz albo bieg, do tego lot, hotel i bilet.
+- City-break bez wydarzeń: sam lot i hotel, gdy chcesz odpocząć.
+
+## Aplikacja
+
+- iOS/iPadOS 18.0+, kategoria Rozrywka, po polsku, bez reklam i bez opłat.
+- Logowanie przez Sign in with Apple jest wymagane.
+- 21 miast w Polsce; mapa działa na całym świecie.
+- Kontakt: kontakt@panperyskop.app
+
+## Strony
+
+- Strona główna: ${PUBLIC_BASE}/
+- Strona główna (EN): ${PUBLIC_BASE}/index.en.html
+- Polityka prywatności: ${PUBLIC_BASE}/privacy
+- Regulamin: ${PUBLIC_BASE}/terms
+- Wsparcie: ${PUBLIC_BASE}/support
+- App Store: https://apps.apple.com/pl/app/pan-peryskop/id6803138750
+
+## Tanie loty z polskich lotnisk
+
+${origins.join('\n')}
+
+## Kierunki i terminy (przykład)
+
+${sample.join('\n')}
+
+## Dane maszynowe
+
+- Sitemap: ${PUBLIC_BASE}/sitemap.xml
+- Zasięg i liczniki: ${PUBLIC_BASE}/coverage.json
+`;
 }
 

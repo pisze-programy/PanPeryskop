@@ -115,11 +115,19 @@
     "footRights": "© 2026 Pan Peryskop",
     "footAi": "Dla AI",
     "footSitemap": "Mapa strony",
-    "cardMap": "Mapa",
-    "cardEvents": "Wydarzenia",
-    "cardFlight": "Lot",
-    "cardCta": "Zobacz",
-    "cardPriceLabel": "cena za osobę"
+    "slide2Title": "Tanie loty z 12 lotnisk",
+    "slide2Lead": "Zestawienie dla każdego lotniska wylotu: kierunki, terminy i ceny za osobę.",
+    "statement": "Pan Peryskop {mark} łączy wydarzenia w Twoim mieście z tanimi lotami na mecz albo bieg {band} w Europie — i pokazuje je na jednej mapie.",
+    "plansLabel": "2026 / 2027",
+    "plansTitle": "Nad czym pracujemy",
+    "plansLead": "Kolejne miasta, kolejne kierunki i jedna mapa, która pokazuje wszystko: wydarzenie, lot, hotel i bilet.",
+    "plansCta": "Zobacz, co jest teraz",
+    "mosaicMap": "Mapa",
+    "mosaicEvents": "Wydarzenia",
+    "mosaicFlight": "Lot",
+    "mosaicStay": "Nocleg",
+    "mosaicPriceLabel": "cena za osobę",
+    "mosaicCta": "Zobacz"
   },
   "en": {
     "lang": "en",
@@ -237,10 +245,18 @@
     "footRights": "© 2026 Pan Peryskop",
     "footAi": "For AI",
     "footSitemap": "Sitemap",
-    "cardMap": "Map",
-    "cardEvents": "Events",
-    "cardFlight": "Flight",
-    "cardCta": "See",
-    "cardPriceLabel": "price per person"
+    "slide2Title": "Cheap flights from 12 airports",
+    "slide2Lead": "A list for every departure airport: destinations, dates and prices per person.",
+    "statement": "Pan Peryskop {mark} brings the events in your city together with cheap flights to a match or a race {band} in Europe — on one map.",
+    "plansLabel": "2026 / 2027",
+    "plansTitle": "What we are working on",
+    "plansLead": "More cities, more destinations, and one map that shows everything: the event, the flight, the hotel and the ticket.",
+    "plansCta": "See what exists now",
+    "mosaicMap": "Map",
+    "mosaicEvents": "Events",
+    "mosaicFlight": "Flight",
+    "mosaicStay": "Stay",
+    "mosaicPriceLabel": "price per person",
+    "mosaicCta": "See"
   }
 }

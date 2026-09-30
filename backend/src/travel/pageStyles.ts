@@ -1,7 +1,4 @@
-// The generated pages carry their own CSS: they must stand alone, because the
-// marketing stylesheet lives on a different deploy. The values mirror
-// site/css/design.css, so the two look like one product.
-
+// These pages stand alone: their own deploy, the same design tokens.
 export const SITE_CSS = `:root{--paper:#f7f7f7;--ink:#1d1d16;--ink-soft:#0c0c09;--muted:rgba(0,0,0,.55);--muted-strong:rgba(0,0,0,.68);--line:rgba(0,0,0,.08);--dark:#050505;--accent:#7a5cf0;--accent-deep:#4b2fb3;--link:#0a84ff;--brand-grad:linear-gradient(135deg,#2980a6,#332ba6,#9c29a6);--pill:999px;--radius:14px;--ease:cubic-bezier(.16,1,.3,1);--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;overflow-x:hidden}

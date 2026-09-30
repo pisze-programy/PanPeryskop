@@ -1,5 +1,4 @@
-/* Pan Peryskop — jeden arkusz, jeden system. Typografia, promienie i odstępy
-   pochodzą z america.gov (wyliczone w przeglądarce), akcent jest nasz. */
+/* Type scale, radii and spacing come from america.gov, measured in a browser. */
 @font-face {
   font-family: "Inter";
   font-style: normal;
@@ -138,7 +137,6 @@ h3 { font-size: var(--t-row); font-family: var(--serif); font-weight: 400; lette
 
 .hero { padding: var(--y-hero) var(--gutter) 0; text-align: center; }
 .hero .lead { margin: 20px auto 0; max-width: 44ch; }
-/* Szeroka, domknieta kontrolka w hero — odpowiednik ich paska wyszukiwania. */
 .hero-control { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 18px 24px; margin: 30px auto 0; padding: 14px 22px; max-width: 560px; border-radius: var(--r-6); background: #fff; box-shadow: 0 10px 40px rgba(1, 14, 36, 0.10); }
 .hero-media { margin: clamp(40px, 6vw, 72px) auto 0; max-width: 1120px; border-radius: var(--r-media); overflow: hidden; box-shadow: var(--shadow-media); background: var(--surface); }
 .hero-media img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
@@ -154,21 +152,31 @@ h3 { font-size: var(--t-row); font-family: var(--serif); font-weight: 400; lette
 .feature .label { display: block; margin-bottom: 14px; }
 .feature .link-arrow { margin-top: 22px; }
 
-.band-dark { padding: var(--y-band) var(--gutter); text-align: center; }
-.band-dark .display { font-size: var(--t-display); }
-.band-dark .lead { margin: 16px auto 30px; max-width: 46ch; }
-.band-cards { display: flex; justify-content: center; align-items: flex-end; gap: clamp(12px, 1.6vw, 22px); margin-top: clamp(44px, 7vw, 80px); padding-inline: var(--gutter); }
-.bcard { flex: 1 1 0; max-width: 330px; background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); aspect-ratio: 3 / 4; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
-.bcard--tall { aspect-ratio: 3 / 4.6; }
-.bcard h4 { font: 600 0.75rem/1 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-45); }
+.plans { padding: var(--y-band) 0; text-align: center; overflow: hidden; }
+.plans h2 { font-size: var(--t-display); }
+.plans .lead { margin: 16px auto 30px; max-width: 46ch; }
+.plans .label { display: block; color: var(--invert-45); margin-bottom: 14px; }
+.mosaic { display: flex; align-items: flex-end; justify-content: center; gap: clamp(10px, 1.4vw, 20px); margin-top: clamp(48px, 7vw, 84px); width: max-content; margin-inline: auto; }
+.mcard { background: #fff; border-radius: 20px; padding: 14px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.mcard h4 { font: 600 0.6875rem/1 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-45); }
+.mcard--w1 { width: clamp(150px, 15vw, 220px); aspect-ratio: 3 / 4; }
+.mcard--w2 { width: clamp(150px, 15vw, 220px); aspect-ratio: 3 / 4.4; }
+.mcard--w3 { width: clamp(170px, 17vw, 250px); aspect-ratio: 3 / 3.4; }
+.mcard--w4 { width: clamp(150px, 15vw, 220px); aspect-ratio: 3 / 4; }
+.mmap { position: relative; flex: 1; border-radius: 14px; background: linear-gradient(160deg, #eef1f4, #e2e7ec); }
+.mmap i { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(122, 92, 240, 0.25); }
+.mrow { display: flex; align-items: center; gap: 10px; }
+.mrow s { width: 34px; height: 34px; border-radius: 9px; background: #eef1f4; flex: none; }
+.mrow u { flex: 1; height: 9px; border-radius: 999px; background: #eceff3; }
+.mrow u + u { max-width: 40%; }
+.mphoto { border-radius: 14px; background: linear-gradient(160deg, #dbe3ea, #c8d3dc); }
+.mphoto--tall { flex: 1; }
+.mphoto--wide { height: 96px; }
+.mprice { font: 600 1.25rem/1 var(--sans); letter-spacing: -0.03em; color: var(--ink); }
+.mpill { align-self: flex-start; margin-top: auto; height: 30px; padding: 0 13px; border-radius: 40px; background: var(--navy); color: #fff; font: 500 0.75rem/30px var(--sans); }
 .bmap { position: relative; flex: 1; border-radius: 14px; background: linear-gradient(160deg, #eef1f4, #e2e7ec); }
-.bmap i { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(122, 92, 240, 0.25); }
 .brow { display: flex; align-items: center; gap: 10px; }
-.brow s { width: 34px; height: 34px; border-radius: 9px; background: #eef1f4; flex: none; }
-.brow u { flex: 1; height: 9px; border-radius: 999px; background: #eceff3; }
-.brow u + u { max-width: 40%; }
 .bprice { font: 600 1.375rem/1 var(--sans); letter-spacing: -0.03em; color: var(--ink); }
-.bpill { align-self: flex-start; margin-top: auto; height: 32px; padding: 0 14px; border-radius: 40px; background: var(--navy); color: #fff; font: 500 0.8125rem/32px var(--sans); }
 
 .faq { padding: var(--y-band) var(--gutter); }
 .faq h2 { margin-bottom: 28px; }
@@ -226,4 +234,19 @@ h3 { font-size: var(--t-row); font-family: var(--serif); font-weight: 400; lette
   .rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (min-width: 1000px) {
+}
+
+.slides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; }
+.slides::-webkit-scrollbar { display: none; }
+.slide { flex: 0 0 100%; scroll-snap-align: center; padding: 0 var(--gutter); display: grid; align-content: center; }
+.slide[hidden] { display: block; }
+.statement { font-family: var(--serif); font-size: clamp(1.75rem, 1.05rem + 3.8vw, 4rem); line-height: 1.14; letter-spacing: -0.035em; max-width: 22ch; margin: 0 auto; text-wrap: balance; }
+.statement .mark { display: inline-block; width: 0.8em; height: 0.8em; margin: 0 0.08em; border-radius: 50%; vertical-align: -0.05em; background: var(--accent); }
+.statement .mark--band { border-radius: 26%; background: linear-gradient(135deg, #2980a6, #332ba6, #9c29a6); }
+.dots { display: flex; justify-content: center; gap: 9px; margin-top: 32px; }
+.dots button { width: 11px; height: 11px; padding: 0; border: 0; border-radius: 50%; background: color-mix(in srgb, var(--ink) 16%, transparent); cursor: pointer; transition: background-color .15s var(--ease-standard), transform .15s var(--ease-standard); }
+.dots button[aria-selected="true"] { background: var(--ink); transform: scale(1.18); }
+.dots button:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) {
+  .slide .hero-media, .slide .statement { animation: rise var(--dur-enter) var(--ease) both; }
 }

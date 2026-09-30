@@ -1,11 +1,3 @@
-// The landing page, one template for every language. Texts live in
-// data/site-texts.json, the airport links come from ORIGIN_PAGES, and the Worker
-// renders the page, so a copy change never touches two files again.
-//
-// The composition follows america.gov: a greeting hero with one big rounded
-// media, four repeating feature rows, one dark band, then a footer of large
-// serif links over a giant wordmark.
-
 import { ORIGIN_PAGES, PUBLIC_BASE } from './webpage';
 import texts from './data/site-texts.json';
 
@@ -59,11 +51,19 @@ export interface SiteText {
   faqTitle: string;
   faq: FaqItem[];
   footTitle: string;
-  cardMap: string;
-  cardEvents: string;
-  cardFlight: string;
-  cardCta: string;
-  cardPriceLabel: string;
+  slide2Title: string;
+  slide2Lead: string;
+  statement: string;
+  plansLabel: string;
+  plansTitle: string;
+  plansLead: string;
+  plansCta: string;
+  mosaicMap: string;
+  mosaicEvents: string;
+  mosaicFlight: string;
+  mosaicStay: string;
+  mosaicPriceLabel: string;
+  mosaicCta: string;
   footLinks: FootLink[];
   footAirportsLabel: string;
   footRights: string;
@@ -77,6 +77,7 @@ const TEXTS = texts as Record<SiteLang, SiteText>;
 const APP_STORE = 'https://apps.apple.com/pl/app/pan-peryskop/id6803138750';
 const OG_IMAGE = `${PUBLIC_BASE}/assets/og-image.png`;
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=2000&h=1250&fit=crop&auto=format&q=80';
+const SLIDE_IMAGE = 'https://images.unsplash.com/photo-1577133192629-5140c5371590?w=2000&h=1250&fit=crop&auto=format&q=80';
 const BAND_IMAGE = 'https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=780&h=1690&fit=crop&auto=format&q=80';
 
 const APPLE_ICON =
@@ -115,6 +116,10 @@ export function renderSite(lang: SiteLang): string {
       },
     ],
   }, null, 2);
+
+  const statementHtml = t.statement
+    .replace('{mark}', '<span class="mark" aria-hidden="true"></span>')
+    .replace('{band}', '<span class="mark mark--band" aria-hidden="true"></span>');
 
   const features = t.features.map((feature) => `      <section class="feature reveal"${feature.id === 'jak-to-dziala' ? ' id="jak-to-dziala"' : ''}>
         <div class="feature-media">
@@ -191,45 +196,71 @@ ${schema}
   </header>
 
   <main id="main">
-    <section class="hero">
-      <h1>${t.heroTitle}</h1>
-      <p class="lead">${t.heroLead}</p>
-      <div class="hero-control">
-        <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
-        <a class="link-arrow" href="/tanie-loty">${t.flightsLink}</a>
+    <section class="hero" id="hero">
+      <div class="slides" id="slides">
+        <article class="slide">
+          <h1>${t.heroTitle}</h1>
+          <p class="lead">${t.heroLead}</p>
+          <div class="hero-control">
+            <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
+            <a class="link-arrow" href="/tanie-loty">${t.flightsLink}</a>
+          </div>
+          <div class="hero-media">
+            <img src="${HERO_IMAGE}" alt="${t.heroAlt}" width="2000" height="1250" fetchpriority="high" decoding="async" />
+          </div>
+        </article>
+        <article class="slide">
+          <p class="statement">${statementHtml}</p>
+        </article>
+        <article class="slide">
+          <h1>${t.slide2Title}</h1>
+          <p class="lead">${t.slide2Lead}</p>
+          <div class="hero-control">
+            <a class="btn btn-primary" href="/tanie-loty">${t.flightsLink}</a>
+            <a class="link-arrow" href="${APP_STORE}" rel="noopener">${t.download}</a>
+          </div>
+          <div class="hero-media">
+            <img src="${SLIDE_IMAGE}" alt="" width="2000" height="1250" loading="lazy" decoding="async" />
+          </div>
+        </article>
       </div>
-      <div class="hero-media">
-        <img src="${HERO_IMAGE}" alt="${t.heroAlt}" width="2000" height="1250" fetchpriority="high" decoding="async" />
+      <div class="dots" role="tablist" aria-label="${t.heroTitle}">
+        <button type="button" role="tab" aria-selected="true"></button>
+        <button type="button" role="tab" aria-selected="false"></button>
+        <button type="button" role="tab" aria-selected="false"></button>
       </div>
     </section>
 
 ${features}
 
-    <section class="band-dark dark">
-      <h2 class="display">${t.bandTitle}</h2>
-      <p class="lead">${t.bandLead}</p>
-      <a class="btn btn-quiet" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
-      <div class="band-cards">
-        <div class="bcard">
-          <h4>${t.cardMap}</h4>
-          <div class="bmap">
-            <i style="left:24%;top:32%"></i><i style="left:58%;top:20%"></i>
-            <i style="left:42%;top:64%"></i><i style="left:74%;top:52%"></i>
-          </div>
+    <section class="plans dark">
+      <p class="label">${t.plansLabel}</p>
+      <h2>${t.plansTitle}</h2>
+      <p class="lead">${t.plansLead}</p>
+      <a class="btn btn-quiet" href="/tanie-loty">${t.plansCta}</a>
+      <div class="mosaic">
+        <div class="mcard mcard--w1">
+          <h4>${t.mosaicMap}</h4>
+          <div class="mmap"><i style="left:26%;top:30%"></i><i style="left:62%;top:22%"></i><i style="left:44%;top:64%"></i></div>
         </div>
-        <div class="bcard bcard--tall">
-          <h4>${t.cardEvents}</h4>
-          <div class="brow"><s></s><u></u><u></u></div>
-          <div class="brow"><s></s><u></u><u></u></div>
-          <div class="brow"><s></s><u></u><u></u></div>
-          <div class="brow"><s></s><u></u><u></u></div>
+        <div class="mcard mcard--w2">
+          <h4>${t.mosaicEvents}</h4>
+          <div class="mrow"><s></s><u></u><u></u></div>
+          <div class="mrow"><s></s><u></u><u></u></div>
+          <div class="mrow"><s></s><u></u><u></u></div>
+          <div class="mrow"><s></s><u></u><u></u></div>
         </div>
-        <div class="bcard">
-          <h4>${t.cardFlight}</h4>
-          <div class="brow"><s></s><u></u></div>
-          <div class="brow"><s></s><u></u></div>
-          <p class="label">${t.cardPriceLabel}</p>
-          <span class="bpill">${t.cardCta}</span>
+        <div class="mcard mcard--w3">
+          <h4>${t.mosaicFlight}</h4>
+          <div class="mphoto mphoto--wide"></div>
+          <p class="label">${t.mosaicPriceLabel}</p>
+          <div class="mrow"><s></s><u></u></div>
+          <span class="mpill">${t.mosaicCta}</span>
+        </div>
+        <div class="mcard mcard--w4">
+          <h4>${t.mosaicStay}</h4>
+          <div class="mphoto mphoto--tall"></div>
+          <div class="mrow"><s></s><u></u></div>
         </div>
       </div>
     </section>

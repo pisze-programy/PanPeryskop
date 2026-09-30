@@ -369,9 +369,6 @@ travelRoutes.get('/car-link', async (c) => {
   return c.json({ url, price: carRentalPrice(iata) });
 });
 
-// Luggage storage next to the event or the city. A small town has no storage,
-// so the city that owns the airport we fly into takes over. An event with a run
-// or a match starts at the airport, because that is where the bag arrives.
 travelRoutes.get('/luggage-link', async (c) => {
   const q = c.req.query();
   const cityId = cityIdFor(q.city ?? '');

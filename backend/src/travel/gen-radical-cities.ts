@@ -1,8 +1,5 @@
-// Resolve each city to a Radical Storage slug. The site answers 200 for a slug
-// it does not know, so the check is a storage point in the page, not the status.
-// The sitemap is not a source: it misses cities that do have a page.
-//
 // Run: npx tsx src/travel/gen-radical-cities.ts
+// The site answers 200 for a slug it does not know, so the check is a real point in the page.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +11,6 @@ const BASE = 'https://radicalstorage.com/pl/storage-list';
 const AGENT = 'PanPeryskop/1.0 (luggage banner; contact: dev@panperyskop.app)';
 const PAUSE_MS = 60;
 
-// Our name and their slug disagree for a few cities.
 const ALIASES: Record<string, string> = {
   frankfurt: 'frankfurt-main',
   cluj: 'cluj-napoca',
@@ -42,9 +38,6 @@ function normalize(value: string): string {
     .replace(/^-|-$/g, '');
 }
 
-// The /pl/ site serves a translated slug: london is 404, londyn is 200. The
-// Polish name goes first, and the English one stays as a fallback for the
-// cities that answer to both.
 function candidates(city: City): string[] {
   const names = [city.namePl ? normalize(city.namePl) : '', normalize(city.name)];
   const slugs = names.flatMap((name) => [name, ALIASES[name] ?? '']);

@@ -1,5 +1,4 @@
-// Pan Peryskop — trzy zachowania: stan paska, arkusze menu, wejścia przy scrollu.
-// Bez tego pliku strona działa: klasa .js włącza dopiero stan początkowy animacji.
+// The .js class arms the entrance states, so a failed script still shows the page.
 document.documentElement.classList.add('js');
 
 const nav = document.getElementById('nav');
@@ -52,4 +51,36 @@ if (reveals.length && 'IntersectionObserver' in window) {
       observer.observe(element);
     }
   });
+}
+
+const slides = document.getElementById('slides');
+if (slides) {
+  const dots = Array.from(document.querySelectorAll('.dots button'));
+  const panels = Array.from(slides.children);
+  const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let timer;
+
+  const goTo = (index) => panels[index]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  const activeIndex = () => Math.max(0, dots.findIndex((dot) => dot.getAttribute('aria-selected') === 'true'));
+  const stop = () => { if (timer) clearInterval(timer); timer = undefined; };
+  const start = () => { if (calm.matches || dots.length < 2) return; stop(); timer = setInterval(() => goTo((activeIndex() + 1) % dots.length), 7000); };
+  const hold = () => { stop(); window.setTimeout(start, 12000); };
+
+  const sync = () => {
+    const middle = slides.scrollLeft + slides.clientWidth / 2;
+    let active = 0;
+    panels.forEach((panel, index) => {
+      const centre = panel.offsetLeft + panel.offsetWidth / 2;
+      if (Math.abs(centre - middle) < panel.offsetWidth / 2) active = index;
+    });
+    dots.forEach((dot, index) => dot.setAttribute('aria-selected', String(index === active)));
+  };
+
+  dots.forEach((dot, index) => dot.addEventListener('click', () => { goTo(index); hold(); }));
+  slides.addEventListener('scroll', sync, { passive: true });
+  slides.addEventListener('pointerdown', hold);
+  slides.addEventListener('focusin', stop);
+  document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+  sync();
+  start();
 }

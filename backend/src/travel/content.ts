@@ -30,8 +30,6 @@ async function putHtml(env: Env, slug: string, html: string): Promise<{ bytes: n
   return { bytes: html.length, hash };
 }
 
-/** The machine copy of a page. It is written here, with the page, because
- *  rebuilding it on demand takes a minute and a half. */
 export async function putOriginJson(env: Env, originId: string, json: string): Promise<void> {
   await env.MEDIA.put(originJsonKey(originId), json, {
     httpMetadata: { contentType: 'application/json; charset=utf-8' },

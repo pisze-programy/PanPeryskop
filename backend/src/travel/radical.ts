@@ -27,7 +27,6 @@ for (const city of cities as CityEntry[]) {
   }
 }
 
-/** The app knows the city by name and the city sheet by id. */
 export function cityIdFor(value: string): string | null {
   const key = value.trim().toLowerCase();
   if (!key) return null;
@@ -44,9 +43,6 @@ for (const city of cities as CityEntry[]) {
   for (const iata of city.airports) if (!BY_IATA[iata]) BY_IATA[iata] = city.id;
 }
 
-/** The city that serves an airport. A small town event points at the airport
- *  city, which is where the traveller lands and where the storage is. The
- *  carrier catalogue names the airport city, so it wins over a reachable list. */
 export function cityForAirport(iata: string): string | null {
   return BY_IATA[iata.toUpperCase()] ?? null;
 }
@@ -59,9 +55,6 @@ export function luggagePrice(cityId: string): number {
   return PRICES[cityId] ?? PRICES.default ?? CONFIG.travel.luggage.defaultPrice;
 }
 
-/** The link the app opens. The /pl/ site wants the Polish slug, a place hint
- *  and a date pair; the dates travel in the Warsaw offset, as the site writes
- *  them. Without a slug the city page is gone, so the home page keeps the dates. */
 export function luggageUrl(
   cityId: string | null,
   from: string | undefined,
@@ -91,7 +84,6 @@ function tpMedia(target: string): string {
   return url.toString();
 }
 
-/** Europe/Warsaw is +01:00 or +02:00 depending on the day. */
 function warsawOffset(day: string): string {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/Warsaw',

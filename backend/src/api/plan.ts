@@ -34,8 +34,6 @@ function robotsTxt(): string {
   return `User-agent: *\nAllow: /\n\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Bingbot\nAllow: /\n\nUser-agent: OAI-SearchBot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nSitemap: ${PUBLIC_BASE}/sitemap.xml\n`;
 }
 
-// The landing, one template, one texts file. The Worker answers these paths
-// itself, so an old copy in the Pages deployment can never win.
 contentRoutes.get('/', (c) => c.html(renderSite('pl')));
 contentRoutes.get('/pl', (c) => c.html(renderSite('pl')));
 contentRoutes.get('/pl/*', (c) => c.html(renderSite('pl')));

@@ -250,3 +250,12 @@ h3 { font-size: var(--t-row); font-family: var(--serif); font-weight: 400; lette
 @media (prefers-reduced-motion: no-preference) {
   .slide .hero-media, .slide .statement { animation: rise var(--dur-enter) var(--ease) both; }
 }
+
+/* Kafel jak w oryginale: mozaika zdjęć albo granatowy panel, nie jedno zdjęcie. */
+.collage { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.collage img { aspect-ratio: 1; object-fit: cover; width: 100%; border-radius: 0; }
+.feature-media .collage { border-radius: var(--r-media); overflow: hidden; background: var(--surface); }
+.tile-panel { display: grid; align-content: center; gap: 10px; aspect-ratio: 1; padding: clamp(24px, 4vw, 44px); background: var(--ink); color: var(--invert); border-radius: var(--r-media); }
+.tile-panel .label { color: var(--invert-45); }
+.tile-panel strong { font-family: var(--serif); font-size: clamp(1.75rem, 3vw, 2.75rem); font-weight: 400; letter-spacing: -0.03em; }
+@media (max-width: 699px) { h1 { letter-spacing: -0.06em; } }

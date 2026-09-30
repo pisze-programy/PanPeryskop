@@ -25,8 +25,14 @@
         "body": "Koncerty, kino, teatr, stand-up i sport na jednej mapie. 21 miast w Polsce, filtry po dniu i kategorii.",
         "link": "Pobierz aplikację",
         "href": "https://apps.apple.com/pl/app/pan-peryskop/id6803138750",
-        "image": "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=1600&h=1200&fit=crop&auto=format&q=80",
-        "alt": "Kraków wieczorem"
+        "alt": "Kraków wieczorem",
+        "images": [
+          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1626368373312-07ac5d210915?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1520425534612-33819d8f3b81?w=800&h=800&fit=crop&auto=format&q=75"
+        ],
+        "tile": "collage"
       },
       {
         "id": "wyjazd",
@@ -35,8 +41,14 @@
         "body": "Wybrany termin, najtańszy lot i nocleg obok wydarzenia. W jednym miejscu, bez przeklikiwania.",
         "link": "Zobacz kierunki",
         "href": "/tanie-loty",
-        "image": "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=1600&h=1200&fit=crop&auto=format&q=80",
-        "alt": "Barcelona"
+        "alt": "Barcelona",
+        "images": [
+          "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1558102400-72da9fdbecae?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=800&h=800&fit=crop&auto=format&q=75"
+        ],
+        "tile": "collage"
       },
       {
         "id": "city-break",
@@ -45,8 +57,14 @@
         "body": "Sam lot i hotel, gdy chcesz po prostu odpocząć. Ceny za osobę, terminy na najbliższe miesiące.",
         "link": "Zobacz kierunki",
         "href": "/tanie-loty",
-        "image": "https://images.unsplash.com/photo-1558102400-72da9fdbecae?w=1600&h=1200&fit=crop&auto=format&q=80",
-        "alt": "Lizbona"
+        "alt": "Lizbona",
+        "images": [
+          "https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1577133192629-5140c5371590?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1647893626048-4fedd733114d?w=800&h=800&fit=crop&auto=format&q=75"
+        ],
+        "tile": "collage"
       },
       {
         "id": "loty",
@@ -55,8 +73,9 @@
         "body": "Zestawienie dla każdego lotniska wylotu: kierunki, terminy i ceny za osobę.",
         "link": "Wszystkie lotniska i kierunki",
         "href": "/tanie-loty",
-        "image": "https://images.unsplash.com/photo-1577133192629-5140c5371590?w=1600&h=1200&fit=crop&auto=format&q=80",
-        "alt": "Warszawa"
+        "alt": "Warszawa",
+        "images": [],
+        "tile": "panel"
       }
     ],
     "bandTitle": "Cała mapa w jednej aplikacji",
@@ -127,7 +146,9 @@
     "mosaicFlight": "Lot",
     "mosaicStay": "Nocleg",
     "mosaicPriceLabel": "cena za osobę",
-    "mosaicCta": "Zobacz"
+    "mosaicCta": "Zobacz",
+    "tilePanelTitle": "Trasa",
+    "tilePanelMeta": "12 lotnisk wylotu"
   },
   "en": {
     "lang": "en",
@@ -155,8 +176,14 @@
         "body": "Concerts, cinema, theatre, stand-up and sport on one map. 21 cities across Poland, filtered by day and category.",
         "link": "Download the app",
         "href": "https://apps.apple.com/pl/app/pan-peryskop/id6803138750",
-        "image": "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=1600&h=1200&fit=crop&auto=format&q=80",
-        "alt": "Kraków at night"
+        "alt": "Kraków at night",
+        "images": [
+          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1626368373312-07ac5d210915?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1520425534612-33819d8f3b81?w=800&h=800&fit=crop&auto=format&q=75"
+        ],
+        "tile": "collage"
       },
       {
         "id": "wyjazd",
@@ -165,8 +192,14 @@
         "body": "The dates you pick, the cheapest flight, and a bed next to the event. In one place, without switching tabs.",
         "link": "See destinations",
         "href": "/tanie-loty",
-        "image": "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=1600&h=1200&fit=crop&auto=format&q=80",
-        "alt": "Barcelona"
+        "alt": "Barcelona",
+        "images": [
+          "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1558102400-72da9fdbecae?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=800&h=800&fit=crop&auto=format&q=75"
+        ],
+        "tile": "collage"
       },
       {
         "id": "city-break",
@@ -175,8 +208,14 @@
         "body": "Just a flight and a hotel, when you want a rest. Prices per person, dates for the coming months.",
         "link": "See destinations",
         "href": "/tanie-loty",
-        "image": "https://images.unsplash.com/photo-1558102400-72da9fdbecae?w=1600&h=1200&fit=crop&auto=format&q=80",
-        "alt": "Lisbon"
+        "alt": "Lisbon",
+        "images": [
+          "https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1577133192629-5140c5371590?w=800&h=800&fit=crop&auto=format&q=75",
+          "https://images.unsplash.com/photo-1647893626048-4fedd733114d?w=800&h=800&fit=crop&auto=format&q=75"
+        ],
+        "tile": "collage"
       },
       {
         "id": "loty",
@@ -185,8 +224,9 @@
         "body": "A list for every departure airport: destinations, dates and prices per person.",
         "link": "All airports and destinations",
         "href": "/tanie-loty",
-        "image": "https://images.unsplash.com/photo-1577133192629-5140c5371590?w=1600&h=1200&fit=crop&auto=format&q=80",
-        "alt": "Warsaw"
+        "alt": "Warsaw",
+        "images": [],
+        "tile": "panel"
       }
     ],
     "bandTitle": "The whole map in one app",
@@ -257,6 +297,8 @@
     "mosaicFlight": "Flight",
     "mosaicStay": "Stay",
     "mosaicPriceLabel": "price per person",
-    "mosaicCta": "See"
+    "mosaicCta": "See",
+    "tilePanelTitle": "Route",
+    "tilePanelMeta": "12 departure airports"
   }
 }

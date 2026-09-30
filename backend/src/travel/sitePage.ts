@@ -17,7 +17,8 @@ interface Feature {
   body: string;
   link: string;
   href: string;
-  image: string;
+  images: string[];
+  tile: 'collage' | 'panel';
   alt: string;
 }
 
@@ -64,6 +65,8 @@ export interface SiteText {
   mosaicStay: string;
   mosaicPriceLabel: string;
   mosaicCta: string;
+  tilePanelTitle: string;
+  tilePanelMeta: string;
   footLinks: FootLink[];
   footAirportsLabel: string;
   footRights: string;
@@ -123,7 +126,9 @@ export function renderSite(lang: SiteLang): string {
 
   const features = t.features.map((feature) => `      <section class="feature reveal"${feature.id === 'jak-to-dziala' ? ' id="jak-to-dziala"' : ''}>
         <div class="feature-media">
-          <img src="${feature.image}" alt="${feature.alt}" width="1600" height="1200" loading="lazy" decoding="async" />
+          ${feature.tile === 'panel'
+            ? `<div class="tile-panel"><span class="label">${t.tilePanelTitle}</span><strong>${t.tilePanelMeta}</strong></div>`
+            : `<div class="collage">${feature.images.map((src) => `<img src="${src}" alt="${feature.alt}" width="800" height="800" loading="lazy" decoding="async" />`).join('')}</div>`}
         </div>
         <div>
           <span class="label">${feature.label}</span>

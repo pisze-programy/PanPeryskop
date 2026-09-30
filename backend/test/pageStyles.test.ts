@@ -5,8 +5,9 @@ import { HUB_CSS, ORIGIN_CSS, SITE_CSS } from '../src/travel/pageStyles';
 
 test('the hub page carries the shared styles', () => {
   const html = renderIndexPage('2026-09-30');
-  assert.match(html, /--accent:#7a5cf0/);
-  assert.match(html, /font-family:var\(--mono\)/);
+  assert.match(html, /--ink:#000c1f/);
+  assert.match(html, /font-family:var\(--sans\)/);
+  assert.match(html, /assets\/fonts\/inter-latin\.woff2/);
   assert.match(html, /class="hub"/);
   assert.match(html, /rel="canonical"/);
   assert.match(html, /property="og:title"/);

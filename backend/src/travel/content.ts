@@ -282,7 +282,7 @@ export async function llmsTxt(env: Env): Promise<string> {
 ## Strony
 
 - Strona główna: ${PUBLIC_BASE}/
-- Strona główna (EN): ${PUBLIC_BASE}/index.en.html
+- Strona główna (EN): ${PUBLIC_BASE}/en
 - Polityka prywatności: ${PUBLIC_BASE}/privacy
 - Regulamin: ${PUBLIC_BASE}/terms
 - Wsparcie: ${PUBLIC_BASE}/support

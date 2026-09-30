@@ -3,13 +3,14 @@ import {
   ORIGIN_PAGES, PUBLIC_BASE, originById, originBySlug, originData, originPage, renderJson,
 } from '../travel/webpage';
 import { coverageReport, docEntries, llmsTxt, originJsonKey, putOriginJson, readStoredPageMeta } from '../travel/content';
+import { renderSite } from '../travel/sitePage';
 
 export const planRoutes = new Hono<{ Bindings: Env }>();
 export const contentRoutes = new Hono<{ Bindings: Env }>();
 
 const STATIC_URLS = [
   'https://panperyskop.app/',
-  'https://panperyskop.app/index.en.html',
+  'https://panperyskop.app/en',
   'https://panperyskop.app/privacy',
   'https://panperyskop.app/terms',
   'https://panperyskop.app/support',
@@ -32,6 +33,17 @@ async function sitemapXml(env: Env): Promise<{ body: string; etag: string }> {
 function robotsTxt(): string {
   return `User-agent: *\nAllow: /\n\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Bingbot\nAllow: /\n\nUser-agent: OAI-SearchBot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nSitemap: ${PUBLIC_BASE}/sitemap.xml\n`;
 }
+
+// The landing, one template, one texts file. The Worker answers these paths
+// itself, so an old copy in the Pages deployment can never win.
+contentRoutes.get('/', (c) => c.html(renderSite('pl')));
+contentRoutes.get('/pl', (c) => c.html(renderSite('pl')));
+contentRoutes.get('/pl/*', (c) => c.html(renderSite('pl')));
+contentRoutes.get('/en', (c) => c.html(renderSite('en')));
+contentRoutes.get('/en/*', (c) => c.html(renderSite('en')));
+contentRoutes.get('/index.html', (c) => c.redirect('/', 301));
+contentRoutes.get('/index.en', (c) => c.redirect('/en', 301));
+contentRoutes.get('/index.en.html', (c) => c.redirect('/en', 301));
 
 contentRoutes.get('/sitemap.xml', async (c) => {
   const { body, etag } = await sitemapXml(c.env);

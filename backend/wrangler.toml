@@ -128,6 +128,38 @@ pattern = "panperyskop.app/robots.txt"
 zone_name = "panperyskop.app"
 
 [[routes]]
+pattern = "panperyskop.app/"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/index.html"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/index.en.html"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/index.en"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/pl"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/pl/*"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/en"
+zone_name = "panperyskop.app"
+
+[[routes]]
+pattern = "panperyskop.app/en/*"
+zone_name = "panperyskop.app"
+
+[[routes]]
 pattern = "panperyskop.app/llms-full.txt"
 zone_name = "panperyskop.app"
 

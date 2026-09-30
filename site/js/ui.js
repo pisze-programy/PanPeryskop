@@ -35,6 +35,8 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && sheet && !sheet.hidden) setSheet(false);
 });
 
+// Only an element that sits below the fold at load is armed. Anything already on
+// screen stays visible, so a failed observer can never leave a blank page.
 const reveals = document.querySelectorAll('.reveal');
 if (reveals.length && 'IntersectionObserver' in window) {
   const observer = new IntersectionObserver((entries) => {
@@ -44,5 +46,10 @@ if (reveals.length && 'IntersectionObserver' in window) {
       observer.unobserve(entry.target);
     });
   }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
-  reveals.forEach((element) => observer.observe(element));
+  reveals.forEach((element) => {
+    if (element.getBoundingClientRect().top > window.innerHeight) {
+      element.classList.add('is-armed');
+      observer.observe(element);
+    }
+  });
 }

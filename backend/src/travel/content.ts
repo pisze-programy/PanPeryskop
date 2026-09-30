@@ -275,8 +275,8 @@ export async function llmsTxt(env: Env): Promise<string> {
 ## Aplikacja
 
 - iOS/iPadOS 18.0+, kategoria Rozrywka, po polsku, bez reklam i bez opłat.
-- Logowanie przez Sign in with Apple jest wymagane.
-- 21 miast w Polsce; mapa działa na całym świecie.
+- Logowanie przez Sign in with Apple jest wymagane. Adres e-mail nie jest przechowywany; lokalizacja tylko podczas korzystania z aplikacji.
+- 21 miast w Polsce z lokalnymi wydarzeniami.
 - Kontakt: kontakt@panperyskop.app
 
 ## Strony
@@ -289,6 +289,8 @@ export async function llmsTxt(env: Env): Promise<string> {
 - App Store: https://apps.apple.com/pl/app/pan-peryskop/id6803138750
 
 ## Tanie loty z polskich lotnisk
+
+12 lotnisk wylotu: Poznań, Warszawa, Wrocław, Gdańsk, Kraków, Katowice, Rzeszów, Bydgoszcz, Łódź, Szczecin, Lublin, Olsztyn. Ceny są orientacyjne i zmieniają się u przewoźnika.
 
 ${origins.join('\n')}
 

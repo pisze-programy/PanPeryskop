@@ -561,7 +561,7 @@ function renderOption(offer: Offer, flags: OptionFlags | undefined, originIata: 
             ${badge}
             <div class="opt__head"><a class="opt__date" href="${esc(offer.flightUrl)}" rel="nofollow sponsored noopener" target="_blank" aria-label="${escapeHtml(full)}">${renderCalendar(offer.start, offer.end)}<span class="sr-only">${escapeHtml(full)}</span></a><span class="opt__right"><span class="opt__total">${headline}</span><span class="opt__nights">${nightsLabel(offer.nights)}, za osobę</span></span></div>
             <div class="opt__detail">${flightRow}${hotelRow}</div>
-            <div class="opt__actions"><a href="${esc(offer.flightUrl)}" rel="nofollow sponsored noopener" target="_blank">Bilety lotnicze</a><a href="${esc(offer.stayUrl)}" rel="nofollow sponsored noopener" target="_blank">Noclegi (${nightsLabel(offer.nights)})</a><a href="${esc(offer.carUrl)}" rel="nofollow sponsored noopener" target="_blank">Auto od 49 zł</a></div>
+            <div class="opt__actions"><a href="${esc(offer.flightUrl)}" rel="nofollow sponsored noopener" target="_blank">Bilety lotnicze</a><a href="${esc(offer.stayUrl)}" rel="nofollow sponsored noopener" target="_blank">Noclegi (${nightsLabel(offer.nights)})</a><a href="${esc(offer.carUrl)}" rel="nofollow sponsored noopener" target="_blank">Auto od 49 zł/dzień</a></div>
           </li>`;
 }
 
@@ -1012,14 +1012,14 @@ export function renderIndexPage(generatedAt: string): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tanie loty i weekendy z polskich lotnisk | Pan Peryskop</title>
-<meta name="description" content="Najtańsze weekendy z polskich lotnisk. Loty, hotele i wydarzenia. Wybierz miasto wylotu.">
+<title>Tanie loty i weekendy z 12 polskich lotnisk | Pan Peryskop</title>
+<meta name="description" content="Najtańsze weekendy z 12 polskich lotnisk. Lot, hotel i wydarzenia. Wybierz miasto wylotu.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="${url}">
 </head>
 <body style="font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;max-width:760px;margin:0 auto;padding:24px 16px">
 <h1>Tanie loty i weekendy z polskich lotnisk</h1>
-<p>Wybierz miasto wylotu, aby zobaczyć najtańsze kierunki i terminy.</p>
+<p>12 lotnisk wylotu w Polsce. Wybierz swoje i zobacz najtańsze kierunki oraz terminy.</p>
 <ul class="plain">${links}</ul>
 <p style="color:rgba(0,0,0,.55);font-size:13px"><a href="/sitemap.xml">Mapa strony</a> - <a href="/llms.txt">Dla AI</a></p>
 <p style="color:rgba(0,0,0,.55);font-size:12px">Wygenerowano ${escapeHtml(generatedAt)}.</p>
@@ -1092,7 +1092,7 @@ function renderFooter(): string {
     .join('');
   return `  <footer class="site-foot">
     <nav class="origins" aria-label="Lotniska"><ul class="plain origins">${links}</ul></nav>
-    <p class="foot-links"><a href="/tanie-loty">Wszystkie lotniska</a> - <a href="/sitemap.xml">Mapa strony</a> - <a href="/llms.txt">Dla LLM</a></p>
+    <p class="foot-links"><a href="/tanie-loty">Wszystkie lotniska</a> - <a href="/sitemap.xml">Mapa strony</a> - <a href="/llms.txt">Dla AI</a></p>
   </footer>`;
 }
 
@@ -1109,11 +1109,11 @@ export function faqFor(origin: OriginPage): { q: string; a: string }[] {
   return [
     {
       q: `Kiedy loty z ${origin.genitive} są najtańsze?`,
-      a: 'Najtaniej wypadają wtorki, środy i soboty oraz terminy poza sezonem. Lista powyżej pokazuje najtańsze weekendy.',
+      a: 'Lista pokazuje najtańsze weekendy w najbliższych miesiącach. Poza sezonem jest zwykle taniej.',
     },
     {
-      q: `Jak kupić tani bilet z ${origin.genitive}?`,
-      a: 'Wybierz termin z listy, kliknij "Wybierz lot" i zarezerwuj u przewoźnika. Ceny są za osobę w obie strony.',
+      q: `Jak zarezerwować lot z ${origin.genitive}?`,
+      a: 'Wybierz termin z listy i kliknij "Bilety lotnicze". Bilet kupujesz u przewoźnika. Ceny są za osobę, w obie strony.',
     },
     {
       q: 'Czy cena zawiera nocleg?',
@@ -1175,9 +1175,9 @@ function buildJsonLd(origin: OriginPage, sections: WindowSection[], places: Plac
 }
 
 const TIPS = [
-  'Bądź elastyczny: wybieraj środek tygodnia i terminy poza sezonem.',
+  'Sprawdź kilka weekendów, nie tylko jeden. Ceny zmieniają się z dnia na dzień.',
   'Sprawdzaj cały miesiąc, nie jeden dzień.',
-  'Rezerwuj wcześniej w sezonie, ale miej oczy otwarte na last minute.',
+  'Poza sezonem jest zwykle taniej niż w wakacje i ferie.',
   'Z bagażem podręcznym sprawdź limity przewoźnika przed zakupem.',
 ];
 
@@ -1240,7 +1240,7 @@ export function renderPage(data: OriginData): string {
   const places = groupPlaces(sections);
   const dealByCity = new Map(featured.map((deal) => [foldCity(deal.offer.city), deal]));
   const title = `Tanie loty z ${origin.genitive}`;
-  const description = `Tanie loty z ${origin.genitive}. Najtańsze weekendy, ceny lotów, hotele i wydarzenia (biegi, mecze). Sprawdź terminy i rezerwuj.`;
+  const description = `Tanie loty z ${origin.genitive}. Najtańsze weekendy, ceny lotów, hotele i wydarzenia (biegi, mecze). Sprawdź terminy i ceny.`;
   const url = `${PUBLIC_BASE}/${origin.slug}`;
   const heroImage = places.find((place) => place.imageLargeUrl)?.imageLargeUrl;
   const cards = places.map((place) => renderPlace(origin, place, dealByCity.get(foldCity(place.city)), places)).join('\n');

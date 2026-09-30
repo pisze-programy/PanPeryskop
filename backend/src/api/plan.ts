@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono';
 import {
   ORIGIN_PAGES, PUBLIC_BASE, originById, originBySlug, originData, originPage, renderJson,
 } from '../travel/webpage';
-import { coverageReport, docEntries, llmsTxt, readStoredPageMeta } from '../travel/content';
+import { coverageReport, docEntries, llmsTxt, originJsonKey, putOriginJson, readStoredPageMeta } from '../travel/content';
 
 export const planRoutes = new Hono<{ Bindings: Env }>();
 export const contentRoutes = new Hono<{ Bindings: Env }>();
@@ -122,10 +122,19 @@ planRoutes.get('/coverage.json', async (c) => {
 });
 
 planRoutes.get('/json/:originId', async (c) => {
-  const data = await originData(c.env, c.req.param('originId'));
+  const originId = c.req.param('originId');
+  const stored = await c.env.MEDIA.get(originJsonKey(originId)).catch(() => null);
+  if (stored) {
+    c.header('Cache-Control', 'public, max-age=900');
+    c.header('Content-Type', 'application/json; charset=utf-8');
+    return c.body(await stored.text());
+  }
+  const data = await originData(c.env, originId);
   if (!data) return c.notFound();
-  c.header('Cache-Control', 'no-cache');
-  return c.json(JSON.parse(renderJson(data)));
+  const json = renderJson(data);
+  await putOriginJson(c.env, originId, json);
+  c.header('Cache-Control', 'public, max-age=900');
+  return c.json(JSON.parse(json));
 });
 
 planRoutes.get('/', (c) => c.redirect('/tanie-loty', 301));

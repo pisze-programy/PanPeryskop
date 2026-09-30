@@ -1,7 +1,7 @@
 import {
   ORIGIN_PAGES, PUBLIC_BASE, dealSlug, destinationSlug, groupPlaces, monthOptions, monthParts,
   originData, renderConnectionsPage, renderDealPage, renderDestinationPage,
-  renderIndexPage, renderMonthPage, renderPage, type OriginPage,
+  renderIndexPage, renderJson, renderMonthPage, renderPage, type OriginPage,
 } from './webpage';
 import { foldCity } from './airports';
 import { submitIndexNow } from './indexnow';
@@ -28,6 +28,19 @@ async function putHtml(env: Env, slug: string, html: string): Promise<{ bytes: n
     customMetadata: { v: String(Date.now()), h: hash },
   });
   return { bytes: html.length, hash };
+}
+
+/** The machine copy of a page. It is written here, with the page, because
+ *  rebuilding it on demand takes a minute and a half. */
+export async function putOriginJson(env: Env, originId: string, json: string): Promise<void> {
+  await env.MEDIA.put(originJsonKey(originId), json, {
+    httpMetadata: { contentType: 'application/json; charset=utf-8' },
+    customMetadata: { v: String(Date.now()) },
+  });
+}
+
+export function originJsonKey(originId: string): string {
+  return `plan/json/${originId}.json`;
 }
 
 async function upsertDoc(env: Env, slug: string, originId: string, kind: string, bytes: number, hash: string): Promise<void> {
@@ -84,6 +97,7 @@ export async function storeOriginBundle(env: Env, origin: OriginPage): Promise<B
   const originPut = await putHtml(env, origin.slug, renderPage(data));
   await upsertDoc(env, origin.slug, origin.id, 'origin', originPut.bytes, originPut.hash);
   urls.push(`${PUBLIC_BASE}/${origin.slug}`);
+  await putOriginJson(env, origin.id, renderJson(data));
 
   const dealByCity = new Map(data.featured.map((deal) => [foldCity(deal.offer.city), deal]));
   let destinations = 0;

@@ -59,6 +59,11 @@ export interface SiteText {
   faqTitle: string;
   faq: FaqItem[];
   footTitle: string;
+  cardMap: string;
+  cardEvents: string;
+  cardFlight: string;
+  cardCta: string;
+  cardPriceLabel: string;
   footLinks: FootLink[];
   footAirportsLabel: string;
   footRights: string;
@@ -178,7 +183,6 @@ ${schema}
       <span>Pan Peryskop</span>
     </a>
     <div class="nav-actions">
-      <div class="lang" aria-label="${t.languageLabel}">${langSwitch()}</div>
       <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${t.download}</a>
       <button class="btn btn-quiet menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">
         ${t.menu}
@@ -190,7 +194,7 @@ ${schema}
     <section class="hero">
       <h1>${t.heroTitle}</h1>
       <p class="lead">${t.heroLead}</p>
-      <div class="hero-cta">
+      <div class="hero-control">
         <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
         <a class="link-arrow" href="/tanie-loty">${t.flightsLink}</a>
       </div>
@@ -205,8 +209,28 @@ ${features}
       <h2 class="display">${t.bandTitle}</h2>
       <p class="lead">${t.bandLead}</p>
       <a class="btn btn-quiet" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
-      <div class="band-media hero-media">
-        <img src="${BAND_IMAGE}" alt="" width="780" height="1690" loading="lazy" decoding="async" />
+      <div class="band-cards">
+        <div class="bcard">
+          <h4>${t.cardMap}</h4>
+          <div class="bmap">
+            <i style="left:24%;top:32%"></i><i style="left:58%;top:20%"></i>
+            <i style="left:42%;top:64%"></i><i style="left:74%;top:52%"></i>
+          </div>
+        </div>
+        <div class="bcard bcard--tall">
+          <h4>${t.cardEvents}</h4>
+          <div class="brow"><s></s><u></u><u></u></div>
+          <div class="brow"><s></s><u></u><u></u></div>
+          <div class="brow"><s></s><u></u><u></u></div>
+          <div class="brow"><s></s><u></u><u></u></div>
+        </div>
+        <div class="bcard">
+          <h4>${t.cardFlight}</h4>
+          <div class="brow"><s></s><u></u></div>
+          <div class="brow"><s></s><u></u></div>
+          <p class="label">${t.cardPriceLabel}</p>
+          <span class="bpill">${t.cardCta}</span>
+        </div>
       </div>
     </section>
 
@@ -220,15 +244,15 @@ ${faq}
     <nav class="foot-links">
         ${footLinks}
     </nav>
-    <p class="label" style="margin-top:48px">${t.footAirportsLabel}</p>
-    <ul class="rows" style="margin-top:8px">
-${ORIGIN_PAGES.map((origin) => `      <li><a href="/${origin.slug}">${airportLabel(origin)}</a></li>`).join('\n')}
-    </ul>
+    <p class="label" style="margin-top:48px;text-align:center">${t.footAirportsLabel}</p>
+    <div class="foot-airports">
+${ORIGIN_PAGES.map((origin) => `      <a href="/${origin.slug}">${airportLabel(origin)}</a>`).join('\n')}
+    </div>
     <p class="foot-wordmark">Pan Peryskop</p>
     <div class="foot-meta">
       <span>${t.footRights}</span>
-      <span><a href="/sitemap.xml">${t.footSitemap}</a> · <a href="/llms.txt">${t.footAi}</a></span>
-      <span>${langSwitch()}</span>
+      <span><a href="/sitemap.xml">${t.footSitemap}</a> · <a href="/llms.txt">${t.footAi}</a> · <a href="/privacy">${t.footLinks[2].label}</a> · <a href="/terms">${t.footLinks[3].label}</a></span>
+      <span class="lang" aria-label="${t.languageLabel}">${langSwitch()}</span>
     </div>
   </footer>
 </div>

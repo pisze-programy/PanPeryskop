@@ -114,7 +114,12 @@
     "footAirportsLabel": "Lotniska wylotu",
     "footRights": "© 2026 Pan Peryskop",
     "footAi": "Dla AI",
-    "footSitemap": "Mapa strony"
+    "footSitemap": "Mapa strony",
+    "cardMap": "Mapa",
+    "cardEvents": "Wydarzenia",
+    "cardFlight": "Lot",
+    "cardCta": "Zobacz",
+    "cardPriceLabel": "cena za osobę"
   },
   "en": {
     "lang": "en",
@@ -231,6 +236,11 @@
     "footAirportsLabel": "Departure airports",
     "footRights": "© 2026 Pan Peryskop",
     "footAi": "For AI",
-    "footSitemap": "Sitemap"
+    "footSitemap": "Sitemap",
+    "cardMap": "Map",
+    "cardEvents": "Events",
+    "cardFlight": "Flight",
+    "cardCta": "See",
+    "cardPriceLabel": "price per person"
   }
 }

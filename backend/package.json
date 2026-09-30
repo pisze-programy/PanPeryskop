@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "wrangler dev --config wrangler.toml",
     "deploy": "bash scripts/deploy.sh",
-    "test": "tsx --test test/seed*.test.ts test/meta.test.ts test/metaRoute.test.ts test/cityImageRatio.test.ts test/luggage.test.ts",
+    "test": "tsx --test test/seed*.test.ts test/meta.test.ts test/metaRoute.test.ts test/cityImageRatio.test.ts test/luggage.test.ts test/pageStyles.test.ts",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "gen:templates": "tsx scripts/gen-templates.ts",
     "gen:catalogue": "tsx src/travel/gen-catalogue.ts",

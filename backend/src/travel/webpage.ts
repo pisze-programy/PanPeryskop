@@ -9,6 +9,7 @@ import {
   type Attraction, type CityPhoto, type EventOffer, type HotelOffer, type Point,
 } from './citybreak';
 import { mintRedirect } from '../analytics/redirect';
+import { HUB_CSS, ORIGIN_CSS, SITE_CSS } from './pageStyles';
 
 export interface OriginPage {
   id: string;
@@ -448,8 +449,8 @@ export function formatRange(start: string, end: string, nights: number): string 
 
 const MONTHS_ABBR = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
 const MONTH_COLORS = [
-  '#D0E0E3', '#F699CD', '#007F4A', '#C4D1FF', '#F224A4', '#FFDE59',
-  '#008BC3', '#FF914D', '#58624E', '#F36E3C', '#795C46', '#0B213A',
+  '#2F6E78', '#A33C7C', '#007F4A', '#3B4EA8', '#C41E85', '#8A6A00',
+  '#00719E', '#A24E17', '#58624E', '#B23A12', '#795C46', '#0B213A',
 ];
 export function monthColor(monthIndex: number): string {
   return MONTH_COLORS[((monthIndex % 12) + 12) % 12];
@@ -603,8 +604,9 @@ function fallbackPanel(name: string): string {
 function renderPlace(origin: OriginPage, place: Place, deal: FeaturedDeal | undefined, siblings: Place[]): string {
   const name = place.cityPl ?? place.city;
   const best = place.options[0];
+  const source = place.imageCredit?.photoUrl.includes('wikimedia') ? 'Wikimedia Commons' : 'Unsplash';
   const credit = place.imageCredit?.author
-    ? `<span class="credit">${escapeHtml(place.imageCredit.author)} / Unsplash</span>`
+    ? `<span class="credit">${escapeHtml(place.imageCredit.author)} / ${source}</span>`
     : '';
   const image = place.imageUrl
     ? `<img src="${esc(place.imageUrl)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" width="240" height="200">`
@@ -745,68 +747,7 @@ export function renderDestinationPage(
 <meta property="og:locale" content="pl_PL">
 ${heroImage ? `<meta property="og:image" content="${heroImage}">` : ''}
 <script type="application/ld+json">${jsonLd}</script>
-<style>
-*{box-sizing:border-box}
-body{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#1d1d16;margin:0 auto;padding:0 16px 48px;max-width:880px}
-.site{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid rgba(0,0,0,.08);margin-bottom:8px;flex-wrap:wrap}
-.brand{font-weight:800;font-size:18px;color:#1d1d16;text-decoration:none}
-.origins{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
-.origins a{color:#7a5cf0;text-decoration:none;font-weight:600}
-h1{font-size:28px;margin:16px 0 4px}
-.lead{color:rgba(0,0,0,.55);margin:0 0 16px}
-.hero{width:100%;height:260px;object-fit:cover;border-radius:12px;display:block;margin:8px 0 16px}
-h2{font-size:19px;margin-top:30px;border-bottom:1px solid rgba(0,0,0,.08);padding-bottom:6px}
-.opt{border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:12px;margin:10px 0}
-.opt__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.opt__date{color:#1d1d16;text-decoration:none;font-weight:600;font-size:15px}
-.opt__total{font-weight:700;white-space:nowrap;font-size:15px}
-.acard{margin:8px 0}
-.acard a{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:8px}
-.acard__img{width:72px;height:72px;flex:none;border-radius:8px;overflow:hidden;background:rgba(0,0,0,.06)}
-.acard__img img{width:100%;height:100%;object-fit:cover;display:block}
-.acard__body{display:flex;flex-direction:column;gap:2px}
-.acard__name{font-weight:600;font-size:14px;color:#1d1d16}
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.opt__date{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:600;font-size:15px}
-.cal{display:inline-flex;flex-direction:column;width:52px;flex:none;border:1px solid rgba(0,0,0,.12);border-radius:8px;overflow:hidden;text-align:center}
-.cal__top{background:#7a5cf0;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 0}
-.cal__day{font-size:20px;font-weight:800;line-height:1.35;color:#1d1d16;background:#fff}
-.cal__meta{display:flex;flex-direction:column;gap:2px}
-.cal__range{font-size:13px;font-weight:600;color:#1d1d16}
-.cal__day{font-size:16px;font-weight:800;line-height:1.5;color:#1d1d16;background:#fff}
-.cal__arrow{font-weight:700;color:rgba(0,0,0,.55);margin:0 6px}
-.opt__right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-.opt__nights{font-size:12px;color:rgba(0,0,0,.55)}
-.opt__badges{margin-top:6px}
-.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px}
-.badge--cheap{background:#e7f6ec;color:#12693a;border:1px solid #9ad1a8}
-.badge--reco{background:#eef7ef;color:#2f6b45;border:1px solid #b7dcc3}
-.opt--best{border-color:#9ad1a8;background:#f7fcf8}
-.opt{position:relative}
-.opt__badge{position:absolute;top:-9px;right:10px;background:#12693a;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
-.place__avg{font-size:12px;font-weight:400;color:rgba(0,0,0,.55);margin-left:8px}
-.opt__detail{margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06);font-size:13px}
-.opt__line{display:flex;align-items:center;gap:8px;padding:3px 0;color:#1d1d16}
-.opt__ico{width:18px;flex:none;font-size:14px}
-.opt__lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1d1d16;text-decoration:none;font-weight:500}
-.opt__lbl:hover{text-decoration:underline}
-.opt__val{white-space:nowrap;font-weight:700;color:#1d1d16}
-.opt__hotelmeta{margin-left:26px;font-size:12px;color:rgba(0,0,0,.55)}
-.hrow{display:flex;align-items:center;gap:8px;border:0}
-.hrrow-meta{margin-left:26px;font-size:12px;border:0;padding:0 0 6px}
-.opt__actions{margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.06)}
-.opt__actions a{display:inline-block;margin-right:16px;padding:4px 0;color:#7a5cf0;text-decoration:none;font-weight:600;font-size:13px}
-.plain{list-style:none;padding:0;margin:0;font-size:14px}
-.plain li{padding:6px 0;border-bottom:1px solid rgba(0,0,0,.06)}
-.directions a{display:inline-block;margin:2px 12px 2px 0;color:#7a5cf0;text-decoration:none;font-weight:600;font-size:13px}
-.faq__q{font-size:15px;margin:16px 0 2px}
-.faq__a{margin:0 0 10px;color:rgba(0,0,0,.55);font-size:14px}
-.muted{color:rgba(0,0,0,.55)}
-.foot{margin-top:34px;color:rgba(0,0,0,.55);font-size:12px}
-.site-foot{border-top:1px solid rgba(0,0,0,.08);margin-top:34px;padding-top:14px}
-.foot-links{margin:10px 0 0;font-size:13px}
-.foot-links a{color:#7a5cf0;text-decoration:none;font-weight:600}
-</style>
+<style>${SITE_CSS}${ORIGIN_CSS}</style>
 </head>
 <body>
 ${renderHeader(origin)}
@@ -832,54 +773,6 @@ ${renderFooter()}
 </html>`;
 }
 
-const DOC_CSS = `*{box-sizing:border-box}
-body{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#1d1d16;margin:0 auto;padding:0 16px 48px;max-width:880px}
-.site{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid rgba(0,0,0,.08);margin-bottom:8px;flex-wrap:wrap}
-.brand{font-weight:800;font-size:18px;color:#1d1d16;text-decoration:none}
-.origins{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
-.origins a{color:#7a5cf0;text-decoration:none;font-weight:600}
-h1{font-size:27px;margin:16px 0 8px}
-h2{font-size:19px;margin-top:30px;border-bottom:1px solid rgba(0,0,0,.08);padding-bottom:6px}
-.plain{list-style:none;padding:0;margin:0;font-size:15px}
-.plain li{padding:6px 0;border-bottom:1px solid rgba(0,0,0,.06)}
-.opt{border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:12px;margin:10px 0}
-.opt--best{border-color:#9ad1a8;background:#f7fcf8}
-.opt{position:relative}
-.opt__badge{position:absolute;top:-9px;right:10px;background:#12693a;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
-.opt__head{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.opt__date{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
-.cal{display:inline-flex;flex-direction:column;width:52px;flex:none;border:1px solid rgba(0,0,0,.12);border-radius:8px;overflow:hidden;text-align:center}
-.cal__top{background:#7a5cf0;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 0}
-.cal__day{font-size:16px;font-weight:800;line-height:1.5;background:#fff}
-.cal__arrow{font-weight:700;color:rgba(0,0,0,.55);margin:0 6px}
-.opt__right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-.opt__total{font-weight:700;white-space:nowrap;font-size:15px}
-.opt__nights{font-size:12px;color:rgba(0,0,0,.55)}
-.opt__badges{margin-top:6px}
-.opt__detail{margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06);font-size:13px}
-.opt__line{display:flex;align-items:center;gap:8px;padding:3px 0;color:#1d1d16}
-.opt__ico{width:18px;flex:none;font-size:14px}
-.opt__lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1d1d16;text-decoration:none;font-weight:500}
-.opt__lbl:hover{text-decoration:underline}
-.opt__val{white-space:nowrap;font-weight:700;color:#1d1d16}
-.opt__hotelmeta{margin-left:26px;font-size:12px;color:rgba(0,0,0,.55)}
-.hrow{display:flex;align-items:center;gap:8px;border:0}
-.hrrow-meta{margin-left:26px;font-size:12px;border:0;padding:0 0 6px}
-.opt__actions{margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.06)}
-.opt__actions a{display:inline-block;margin-right:16px;padding:4px 0;color:#7a5cf0;text-decoration:none;font-weight:600;font-size:13px}
-.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px}
-.badge--cheap{background:#e7f6ec;color:#12693a;border:1px solid #9ad1a8}
-.badge--reco{background:#eef7ef;color:#2f6b45;border:1px solid #b7dcc3}
-.muted{color:rgba(0,0,0,.55)}
-.site-foot{border-top:1px solid rgba(0,0,0,.08);margin-top:34px;padding-top:14px}
-.foot-links a{color:#7a5cf0;text-decoration:none;font-weight:600}
-.acard{margin:8px 0}
-.acard a{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:8px}
-.acard__img{width:72px;height:72px;flex:none;border-radius:8px;overflow:hidden;background:rgba(0,0,0,.06)}
-.acard__img img{width:100%;height:100%;object-fit:cover;display:block}
-.acard__body{display:flex;flex-direction:column;gap:2px}
-.acard__name{font-weight:600;font-size:14px;color:#1d1d16}
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}`;
 
 function docHead(title: string, description: string, url: string, image: string | null, jsonLd: string, noindex = false): string {
   const robots = noindex ? 'noindex,follow' : 'index,follow,max-image-preview:large';
@@ -900,7 +793,7 @@ function docHead(title: string, description: string, url: string, image: string 
 <meta name="twitter:card" content="summary_large_image">
 ${image ? `<meta property="og:image" content="${esc(image)}">` : ''}
 <script type="application/ld+json">${jsonLd}</script>
-<style>${DOC_CSS}</style>
+<style>${SITE_CSS}${ORIGIN_CSS}</style>
 </head>
 <body>`;
 }
@@ -932,7 +825,7 @@ ${renderHeader(origin)}
 <h1>${escapeHtml(title)}</h1>
 <p class="muted">Najtańsze kierunki w tym miesiącu. Ceny za osobę.</p>
 <h2>Kierunki</h2>
-<ul class="plain">
+<ul class="plain rows">
 ${rows}
 </ul>
 ${eventsHtml}
@@ -992,7 +885,7 @@ export function renderConnectionsPage(origin: OriginPage, places: Place[], gener
 ${renderHeader(origin)}
 <h1>${escapeHtml(title)}</h1>
 <p class="muted">Wszystkie kierunki i najtańsze ceny lotów za osobę.</p>
-<ul class="plain">
+<ul class="plain rows">
 ${rows}
 ${extras}
 </ul>
@@ -1014,15 +907,28 @@ export function renderIndexPage(generatedAt: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tanie loty i weekendy z 12 polskich lotnisk | Pan Peryskop</title>
 <meta name="description" content="Najtańsze weekendy z 12 polskich lotnisk. Lot, hotel i wydarzenia. Wybierz miasto wylotu.">
-<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow,max-image-preview:large">
 <link rel="canonical" href="${url}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Tanie loty i weekendy z polskich lotnisk">
+<meta property="og:description" content="Wybierz miasto wylotu. Najtańsze kierunki, terminy, noclegi i wydarzenia.">
+<meta property="og:url" content="${url}">
+<meta property="og:locale" content="pl_PL">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="https://panperyskop.app/icon.png">
+<style>${SITE_CSS}${HUB_CSS}</style>
 </head>
-<body style="font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;max-width:760px;margin:0 auto;padding:24px 16px">
+<body>
+  <header class="site">
+    <a class="brand" href="/">Pan<span class="grad-text">Peryskop</span></a>
+    <a class="crumb" href="/">Strona główna</a>
+    <a class="btn" href="https://apps.apple.com/pl/app/pan-peryskop/id6803138750" rel="noopener">Pobierz</a>
+  </header>
 <h1>Tanie loty i weekendy z polskich lotnisk</h1>
-<p>12 lotnisk wylotu w Polsce. Wybierz swoje i zobacz najtańsze kierunki oraz terminy.</p>
-<ul class="plain">${links}</ul>
-<p style="color:rgba(0,0,0,.55);font-size:13px"><a href="/sitemap.xml">Mapa strony</a> - <a href="/llms.txt">Dla AI</a></p>
-<p style="color:rgba(0,0,0,.55);font-size:12px">Wygenerowano ${escapeHtml(generatedAt)}.</p>
+<p class="lead">12 lotnisk wylotu w Polsce. Wybierz swoje i zobacz najtańsze kierunki oraz terminy.</p>
+<div class="hub"><ul class="plain">${links}</ul></div>
+${renderFooter()}
+<p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne.</p>
 </body>
 </html>`;
 }
@@ -1081,7 +987,9 @@ function renderHeader(origin: OriginPage): string {
     .map((page) => `<li><a href="/${page.slug}">${escapeHtml(page.name)}</a></li>`)
     .join('');
   return `  <header class="site">
-    <a class="brand" href="/tanie-loty">Tanie loty</a>
+    <a class="brand" href="/">Pan<span class="grad-text">Peryskop</span></a>
+    <a class="crumb" href="/tanie-loty">Tanie loty</a>
+    <a class="btn" href="https://apps.apple.com/pl/app/pan-peryskop/id6803138750" rel="noopener">Pobierz</a>
     <nav class="origins" aria-label="Loty z innych miast"><span class="origins__label">Loty z:</span><ul class="plain origins">${links}</ul></nav>
   </header>`;
 }
@@ -1204,7 +1112,7 @@ function renderPopular(origin: OriginPage, places: Place[]): string {
   }).join('');
   return `  <section class="editorial">
     <h2>Popularne kierunki z ${escapeHtml(origin.genitive)}</h2>
-    <ul class="plain">${items}</ul>
+    <ul class="plain rows">${items}</ul>
   </section>`;
 }
 
@@ -1270,89 +1178,7 @@ ${heroImage ? `<meta property="og:image" content="${heroImage}">` : ''}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="https://panperyskop.app/icon.png">
 <script type="application/ld+json">${buildJsonLd(origin, sections, places)}</script>
-<style>
-*{box-sizing:border-box}
-body{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#1d1d16;margin:0 auto;padding:0 16px 48px;max-width:880px}
-a:focus-visible{outline:3px solid #7a5cf0;outline-offset:2px}
-.site{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid rgba(0,0,0,.08);margin-bottom:8px;flex-wrap:wrap}
-.brand{font-weight:800;font-size:18px;color:#1d1d16;text-decoration:none}
-.origins{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
-.origins__label{color:#888}
-.origins a{color:#7a5cf0;text-decoration:none;font-weight:600}
-h1{font-size:28px;margin:16px 0 4px}
-.lead{color:rgba(0,0,0,.55);margin:0 0 20px}
-h2{font-size:19px;margin-top:34px;border-bottom:1px solid rgba(0,0,0,.08);padding-bottom:6px}
-.place{display:grid;grid-template-columns:240px 1fr;gap:0;border:1px solid rgba(0,0,0,.08);border-radius:12px;overflow:hidden;margin:16px 0;align-items:stretch}
-.place__img{position:relative;display:block;height:100%;min-height:200px;overflow:hidden;background:rgba(0,0,0,.06);text-decoration:none}
-.place__img img{width:100%;height:100%;object-fit:cover;display:block}
-.place__ph{display:flex;align-items:center;justify-content:center;height:100%;min-height:200px;padding:16px;text-align:center;font-size:20px;font-weight:700;color:#fff}
-.credit{position:absolute;right:6px;bottom:4px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:1px 5px;border-radius:4px}
-.place__body{padding:16px 18px 18px}
-.place__body h3{margin:0 0 2px;font-size:21px}
-.place__body h3 a{color:#1d1d16;text-decoration:none}
-.place__price{margin:0 0 14px;font-size:22px;font-weight:800;color:#1d1d16}
-.place__note{font-size:13px;font-weight:400;color:rgba(0,0,0,.55)}
-.place__body h4{margin:22px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:rgba(0,0,0,.55);border:0}
-.options{list-style:none;padding:0;margin:0}
-.opt{border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:12px;margin:10px 0}
-.opt__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.opt__date{color:#1d1d16;text-decoration:none;font-weight:600;font-size:15px}
-.opt__total{font-weight:700;white-space:nowrap;font-size:15px}
-.acard{margin:8px 0}
-.acard a{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:8px}
-.acard__img{width:72px;height:72px;flex:none;border-radius:8px;overflow:hidden;background:rgba(0,0,0,.06)}
-.acard__img img{width:100%;height:100%;object-fit:cover;display:block}
-.acard__body{display:flex;flex-direction:column;gap:2px}
-.acard__name{font-weight:600;font-size:14px;color:#1d1d16}
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.opt__date{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:inherit;font-weight:600;font-size:15px}
-.cal{display:inline-flex;flex-direction:column;width:52px;flex:none;border:1px solid rgba(0,0,0,.12);border-radius:8px;overflow:hidden;text-align:center}
-.cal__top{background:#7a5cf0;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 0}
-.cal__day{font-size:20px;font-weight:800;line-height:1.35;color:#1d1d16;background:#fff}
-.cal__meta{display:flex;flex-direction:column;gap:2px}
-.cal__range{font-size:13px;font-weight:600;color:#1d1d16}
-.cal__day{font-size:16px;font-weight:800;line-height:1.5;color:#1d1d16;background:#fff}
-.cal__arrow{font-weight:700;color:rgba(0,0,0,.55);margin:0 6px}
-.opt__right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-.opt__nights{font-size:12px;color:rgba(0,0,0,.55)}
-.opt__badges{margin-top:6px}
-.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px}
-.badge--cheap{background:#e7f6ec;color:#12693a;border:1px solid #9ad1a8}
-.badge--reco{background:#eef7ef;color:#2f6b45;border:1px solid #b7dcc3}
-.opt--best{border-color:#9ad1a8;background:#f7fcf8}
-.opt{position:relative}
-.opt__badge{position:absolute;top:-9px;right:10px;background:#12693a;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
-.place__avg{font-size:12px;font-weight:400;color:rgba(0,0,0,.55);margin-left:8px}
-.opt__detail{margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06);font-size:13px}
-.opt__line{display:flex;align-items:center;gap:8px;padding:3px 0;color:#1d1d16}
-.opt__ico{width:18px;flex:none;font-size:14px}
-.opt__lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1d1d16;text-decoration:none;font-weight:500}
-.opt__lbl:hover{text-decoration:underline}
-.opt__val{white-space:nowrap;font-weight:700;color:#1d1d16}
-.opt__hotelmeta{margin-left:26px;font-size:12px;color:rgba(0,0,0,.55)}
-.hrow{display:flex;align-items:center;gap:8px;border:0}
-.hrrow-meta{margin-left:26px;font-size:12px;border:0;padding:0 0 6px}
-.opt__actions{margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.06)}
-.opt__actions a{display:inline-block;margin-right:16px;padding:4px 0;color:#7a5cf0;text-decoration:none;font-weight:600;font-size:13px}
-.editorial{max-width:760px}
-.plain{list-style:none;padding:0;margin:0;font-size:14px}
-.plain li{padding:4px 0;border-bottom:1px solid rgba(0,0,0,.06)}
-.faq__q{font-size:15px;margin:16px 0 2px;color:#1d1d16}
-.faq__a{margin:0 0 10px;color:rgba(0,0,0,.55);font-size:14px}
-.directions a{display:inline-block;margin:2px 12px 2px 0;color:#7a5cf0;text-decoration:none;font-weight:600;font-size:13px}
-.muted{color:rgba(0,0,0,.55)}
-.pcard{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;margin:8px 0;text-decoration:none;color:#1d1d16}
-.pcard__logo{width:40px;height:40px;flex:none;border-radius:9px;background:#fff;object-fit:contain;padding:5px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.pcard__body{flex:1;display:flex;flex-direction:column}
-.pcard__title{font-weight:600;font-size:15px}
-.pcard__sub{font-size:12px;opacity:.75}
-.pcard__chev{font-size:20px;font-weight:700}
-.foot{margin-top:34px;color:rgba(0,0,0,.55);font-size:12px}
-.site-foot{border-top:1px solid rgba(0,0,0,.08);margin-top:34px;padding-top:14px}
-.foot-links{margin:10px 0 0;font-size:13px}
-.foot-links a{color:#7a5cf0;text-decoration:none;font-weight:600}
-@media(max-width:640px){.place{grid-template-columns:1fr}}
-</style>
+<style>${SITE_CSS}${ORIGIN_CSS}</style>
 </head>
 <body>
 ${renderHeader(origin)}

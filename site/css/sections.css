@@ -6,7 +6,7 @@
 .upcoming-inner { position: relative; }
 .upcoming-head { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 0 var(--gutter); text-align: center; }
 .upcoming-head h2 { font-size: 64px; line-height: 68px; letter-spacing: -3.125px; }
-.upcoming-artwork { position: relative; margin-top: 44px; width: 100%; aspect-ratio: 1728 / 1284; max-width: 1728px; margin-inline: auto; transform: translateX(-50%); left: 50%; container-type: inline-size; }
+.upcoming-artwork { position: relative; margin: 44px auto 0; width: 100%; aspect-ratio: 1728 / 1284; max-width: 1728px; container-type: inline-size; }
 .upcoming-canvas { position: absolute; top: 0; left: 50%; width: 3385px; height: 1284px; transform: translateX(-50%) scale(calc(100cqw / 1728px)); transform-origin: top center; }
 @media (max-width: 699px) {
   .upcoming-artwork { aspect-ratio: auto; height: 320px; }

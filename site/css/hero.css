@@ -2,7 +2,7 @@
 
 .hero { position: relative; margin: 0 32px; padding: 144px 32px 48px; text-align: center; border-radius: 48px; background: linear-gradient(180deg, #f0f4f6, #f7f7f8); }
 .hero-inner { max-width: 687.5px; margin: 0 auto; }
-.hero .lead { font-size: 24px; line-height: 32px; letter-spacing: normal; margin: 20px auto 64px; max-width: 44ch; }
+.hero .lead { font-size: 24px; line-height: 32px; letter-spacing: normal; margin: 20px auto 12px; max-width: 44ch; }
 .hero-control { position: absolute; top: 16px; left: 16px; right: 16px; z-index: 1; display: flex; align-items: center; height: 96px; max-width: 655.5px; margin: 0 auto; padding: 23px 23px 23px 40px; border-radius: 48px; background: #fff; filter: drop-shadow(0 10px 20px rgba(1, 14, 36, 0.08)); text-align: left; }
 .example { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; font-size: 21px; line-height: 31.5px; color: var(--ink-65); }
 .example-word { display: inline-block; }

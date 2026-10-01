@@ -6,16 +6,15 @@
   place-items: center;
   background: #fff;
   pointer-events: none;
-  animation: splash-away 260ms cubic-bezier(0.4, 0, 0.2, 1) 700ms forwards;
+  opacity: 0;
+  visibility: hidden;
+  animation: splash-away 260ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .splash-logo {
   width: clamp(120px, 22vw, 220px);
   height: auto;
-  opacity: 0;
-  filter: blur(16px);
-  transform: scale(0.84);
-  animation: splash-logo 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: splash-logo 900ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes splash-logo {
@@ -24,14 +23,21 @@
 }
 
 @keyframes splash-away {
-  from { opacity: 1; }
-  to { opacity: 0; visibility: hidden; }
+  0% { opacity: 1; visibility: visible; }
+  99% { opacity: 0; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
 }
 
-.js .splash.is-out {
-  animation: splash-away 260ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+.splash.is-live {
+  opacity: 1;
+  visibility: visible;
+  animation: splash-away 260ms cubic-bezier(0.4, 0, 0.2, 1) 700ms forwards;
+}
+
+.splash.is-live .splash-logo {
+  animation: splash-logo 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .splash { animation: none; display: none; }
+  .splash { display: none; }
 }

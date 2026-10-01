@@ -3,11 +3,9 @@ document.documentElement.classList.add('js');
 
 const splash = document.querySelector('.splash');
 
-if (splash) {
-  const logo = splash.querySelector('.splash-logo');
-  logo?.classList.add('is-in');
-  window.addEventListener('load', () => splash.classList.add('is-out'), { once: true });
-  window.setTimeout(() => splash.classList.add('is-out'), 1200);
+if (splash && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  window.requestAnimationFrame(() => splash.classList.add('is-live'));
+  window.setTimeout(() => splash.classList.remove('is-live'), 1400);
 }
 
 const nav = document.getElementById('nav');

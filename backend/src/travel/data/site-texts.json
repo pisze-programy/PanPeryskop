@@ -3,112 +3,112 @@
     "lang": "pl",
     "locale": "pl_PL",
     "path": "/",
-    "title": "Pan Peryskop — wydarzenia w Twoim mieście i tanie loty z Polski",
-    "description": "Koncerty, kino, teatr i stand-up w 21 miastach Polski. Tanie loty, hotele i bilety na mecz albo bieg w Europie. Darmowa aplikacja na iOS.",
-    "ogTitle": "Pan Peryskop — wydarzenia w Twoim mieście i tanie loty z Polski",
-    "ogDescription": "Wydarzenia w Twoim mieście, wyjazdy na mecz albo bieg i city-break. Tanie loty i hotele z 12 lotnisk w Polsce. Pobierz aplikację.",
-    "schemaDescription": "Lokalne wydarzenia w 21 miastach Polski — koncerty, kino, teatr, stand-up, sport i wydarzenia darmowe na mapie. Do tego tanie loty i hotele na mecz albo bieg w Europie i city-break.",
+    "title": "Pan Peryskop: wydarzenia w 11 miastach Polski i loty z 12 lotnisk",
+    "description": "Wydarzenia w 11 miastach Polski: koncerty, kino, teatr, stand-up i sport. Loty z 12 lotnisk do 304 kierunków w Europie. Aplikacja na iOS, darmowa, bez reklam.",
+    "ogTitle": "Pan Peryskop: wydarzenia w 11 miastach Polski i loty z 12 lotnisk",
+    "ogDescription": "Wydarzenia w 11 miastach Polski. Loty z 12 lotnisk i hotele na wyjazd na mecz albo bieg. Aplikacja darmowa, bez reklam.",
+    "schemaDescription": "Wydarzenia w 11 miastach Polski na mapie: koncerty, kino, teatr, stand-up i sport. Loty z 12 lotnisk do 304 kierunków w Europie. Lot, hotel i bilet na mecz albo bieg w jednej aplikacji.",
     "official": "Oficjalna strona aplikacji Pan Peryskop",
     "download": "Pobierz z App Store",
     "menu": "Menu",
     "close": "Zamknij",
     "languageLabel": "Język",
     "heroTitle": "Cześć, Polsko",
-    "heroLead": "Koncerty, kino, teatr i mecz — w 21 miastach. Lot, hotel i bilet w jednej aplikacji.",
-    "flightsLink": "Tanie loty",
+    "heroLead": "Koncerty, kino, teatr i sport w **11 miastach Polski**. Loty z **12 lotnisk** do **304 kierunków** w Europie, w tym na **mecze i biegi**. Lot, hotel i bilet w jednej aplikacji.",
     "heroAlt": "Wieczorne miasto z lotu ptaka",
     "features": [
       {
-        "id": "jak-to-dziala",
+        "id": "events",
         "label": "Wydarzenia",
-        "title": "Wszystko, co dzieje się w Twoim mieście",
-        "body": "Koncerty, kino, teatr, stand-up i sport na jednej mapie. 21 miast w Polsce, filtry po dniu i kategorii.",
+        "title": "Co się dzieje w 11 miastach Polski",
+        "body": "Koncerty, kino, teatr, stand-up i sport na mapie. Filtry po dniu i kategorii.",
         "link": "Pobierz aplikację",
         "href": "https://apps.apple.com/pl/app/pan-peryskop/id6803138750",
+        "tile": "image",
         "alt": "Kraków wieczorem",
         "images": [
-          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1626368373312-07ac5d210915?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1520425534612-33819d8f3b81?w=800&h=800&fit=crop&auto=format&q=75"
-        ],
-        "tile": "collage"
+          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75"
+        ]
       },
       {
-        "id": "wyjazd",
-        "label": "Wyjazd",
-        "title": "Mecz albo bieg — lot, hotel i bilet",
-        "body": "Wybrany termin, najtańszy lot i nocleg obok wydarzenia. W jednym miejscu, bez przeklikiwania.",
+        "id": "flights",
+        "label": "Loty",
+        "title": "Loty z 12 lotnisk w Polsce",
+        "body": "Wyloty z 12 lotnisk w Polsce do 304 kierunków w Europie. 11 miast to zasięg mapy wydarzeń, a 12 lotnisk to lista miejsc startu. Cena za osobę.",
         "link": "Zobacz kierunki",
         "href": "/tanie-loty",
-        "alt": "Barcelona",
+        "tile": "image",
+        "alt": "Samolot nad chmurami",
         "images": [
-          "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1558102400-72da9fdbecae?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=800&h=800&fit=crop&auto=format&q=75"
-        ],
-        "tile": "collage"
+          "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&h=800&fit=crop&auto=format&q=75"
+        ]
       },
       {
-        "id": "city-break",
-        "label": "City-break",
-        "title": "Weekend bez wydarzenia też znajdziemy",
-        "body": "Sam lot i hotel, gdy chcesz po prostu odpocząć. Ceny za osobę, terminy na najbliższe miesiące.",
-        "link": "Wszystkie połączenia",
+        "id": "match",
+        "label": "Mecz albo bieg",
+        "title": "Mecz albo bieg: lot, hotel i bilet",
+        "body": "Wybierz mecz albo bieg w Europie i termin. Aplikacja pokaże lot, hotel i bilet. Zakup kończysz u organizatora.",
+        "link": "Kierunki z Warszawy",
+        "href": "/tanie-loty-z-warszawy",
+        "tile": "image",
+        "alt": "Piłka na linii boiska",
+        "images": [
+          "https://images.unsplash.com/photo-1650327987377-90bf6c9789fd?w=800&h=800&fit=crop&auto=format&q=75"
+        ]
+      },
+      {
+        "id": "weekend",
+        "label": "City break",
+        "title": "City break: sam lot i hotel",
+        "body": "Wskaż termin i miasto. Aplikacja pokaże lot i hotel. Bilet nie jest potrzebny.",
+        "link": "Połączenia z Poznania",
         "href": "/tanie-loty-z-poznania/polaczenia",
-        "alt": "Lizbona",
+        "tile": "image",
+        "alt": "Tower Bridge w Londynie",
         "images": [
-          "https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1577133192629-5140c5371590?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1647893626048-4fedd733114d?w=800&h=800&fit=crop&auto=format&q=75"
-        ],
-        "tile": "collage"
-      },
-      {
-        "id": "loty",
-        "label": "Loty",
-        "title": "Tanie loty z 12 lotnisk w Polsce",
-        "body": "Zestawienie dla każdego lotniska wylotu: kierunki, terminy i ceny za osobę.",
-        "link": "Wszystkie lotniska",
-        "href": "/tanie-loty",
-        "alt": "Warszawa",
-        "images": [],
-        "tile": "panel"
+          "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=800&h=800&fit=crop&auto=format&q=75"
+        ]
       }
     ],
     "faqTitle": "Pytania i odpowiedzi",
     "faq": [
       {
         "q": "Czy aplikacja jest darmowa",
-        "a": "Tak, jest darmowa i nie zawiera reklam"
-      },
-      {
-        "q": "Czy kupię bilet na wydarzenie w aplikacji",
-        "a": "Przy każdym wydarzeniu jest link do biletów u organizatora"
-      },
-      {
-        "q": "Skąd pochodzą wydarzenia",
-        "a": "Agregujemy wydarzenia z zewnętrznych źródeł i pokazujemy je na mapie"
-      },
-      {
-        "q": "W których miastach działa",
-        "a": "W 21 miastach w Polsce"
-      },
-      {
-        "q": "Skąd są ceny lotów",
-        "a": "Ceny pochodzą od przewoźników i są orientacyjne. Przed rezerwacją sprawdź je u przewoźnika"
+        "a": "Tak. Aplikacja jest darmowa. Nie ma reklam ani dodatkowych opłat."
       },
       {
         "q": "Czy potrzebuję konta",
-        "a": "Tak, logowanie przez Sign in with Apple jest wymagane przy starcie aplikacji"
+        "a": "Tak. Logowanie przez Sign in with Apple jest wymagane. Nie przechowujemy Twojego adresu e-mail. Lokalizacja działa tylko wtedy, gdy korzystasz z aplikacji. Szczegóły są w polityce prywatności na stronie /privacy."
+      },
+      {
+        "q": "W których miastach działają wydarzenia",
+        "a": "W 11 największych miastach Polski: Warszawie, Poznaniu, Gdańsku, Krakowie, Łodzi, Wrocławiu, Szczecinie, Bydgoszczy, Lublinie, Katowicach i Białymstoku. Kolejne miasta dodajemy stopniowo."
+      },
+      {
+        "q": "Skąd pochodzą wydarzenia",
+        "a": "Z repertuarów kin i teatrów, list koncertów, terminarzy meczów i kalendarzy biegów. Ten sam wpis z kilku źródeł pokazujemy raz."
+      },
+      {
+        "q": "Czy ceny lotów są ostateczne",
+        "a": "Nie. Ceny są orientacyjne i pochodzą od przewoźników. Mogą się zmienić. Bilet kupujesz u przewoźnika. Aplikacja prowadzi do jego strony."
+      },
+      {
+        "q": "Czy kupię bilet w aplikacji",
+        "a": "Nie. Przy każdym wydarzeniu i locie jest link do organizatora albo przewoźnika. Zakup kończysz na jego stronie."
+      },
+      {
+        "q": "Co zrobić, gdy wydarzenie jest błędne albo go brakuje",
+        "a": "Napisz na kontakt@panperyskop.app. Podaj nazwę i datę wydarzenia. Poprawimy wpis albo dodamy brakujące wydarzenie."
+      },
+      {
+        "q": "Na czym działa aplikacja",
+        "a": "Aplikacja działa na iPhonie i iPadzie. Jest po polsku."
       }
     ],
     "footLinks": [
       {
         "label": "Jak to działa",
-        "href": "#jak-to-dziala"
+        "href": "#how-it-works"
       },
       {
         "label": "Tanie loty",
@@ -131,8 +131,8 @@
     "footRights": "© 2026 Pan Peryskop",
     "footAi": "Dla AI",
     "footSitemap": "Mapa strony",
-    "statement": "Pan Peryskop {mark} łączy wydarzenia w Twoim mieście z tanimi lotami na mecz albo bieg {band} w Europie — i pokazuje je na jednej mapie.",
-    "plansCta": "Zobacz, co jest teraz",
+    "statement": "Pan Peryskop {mark} łączy **lot**, **hotel** i **bilet** na **mecz** {ball} albo **bieg** {run}. Do tego mapa wydarzeń w 11 miastach Polski i wyloty z 12 lotnisk do 304 kierunków w Europie.",
+    "plansCta": "Pobierz aplikację",
     "mosaicMap": "Mapa",
     "mosaicEvents": "Wydarzenia",
     "mosaicFlight": "Lot",
@@ -143,151 +143,137 @@
     "tilePanelMeta": "12 lotnisk wylotu",
     "examples": [
       "Koncert dziś wieczorem w Poznaniu",
-      "Mecz w Barcelonie — lot 218 zł",
+      "Mecz w Barcelonie w listopadzie",
       "Bieg w Lizbonie w listopadzie",
-      "Weekend w Gdańsku bez wydarzenia"
+      "City break w Gdańsku"
     ],
     "prev": "Poprzedni",
     "next": "Następny",
     "pause": "Zatrzymaj",
     "play": "Odtwórz",
     "footApp": "Aplikacja na iOS",
-    "footFree": "Darmowa · bez reklam",
     "footStore": "App Store",
     "aboutLabel": "O nas",
-    "aboutTitle": "Jedna mapa na cały kraj",
-    "aboutBody": "Pan Peryskop zbiera wydarzenia z zaufanych źródeł i pokazuje je tam, gdzie się dzieją. Do tego lot, hotel i bilet na mecz albo bieg w Europie. Aplikacja jest darmowa, bez reklam, po polsku.",
     "aboutMark": "Jedna mapa",
     "howTitle": "Jak to działa",
-    "howLead": "Trzy kroki, bez zakładania kont na innych stronach.",
-    "howSteps": [
-      {
-        "title": "Otwórz mapę",
-        "body": "Widzisz, co dzieje się w Twojej okolicy — koncerty, kino, teatr, sport."
-      },
-      {
-        "title": "Wybierz kierunek",
-        "body": "Mecz albo bieg w Europie? Sprawdź lot, hotel i termin w jednym miejscu."
-      },
-      {
-        "title": "Jedź albo zostań",
-        "body": "Bez wydarzenia też jest plan: sam lot i hotel, na weekend."
-      }
-    ],
     "upcomingLabel": "W przygotowaniu",
-    "upcomingTitle": "Co dostaniecie dalej",
-    "upcomingLead": "Kolejne miasta, kolejne kierunki, jedna mapa."
+    "upcomingTitle": "Plany 2026/2027",
+    "upcomingLead": "Pracujemy nad kolejnymi miastami i kierunkami.",
+    "featuresLead": "Wydarzenia z 11 miast Polski widzisz na mapie. Gdy chcesz jechać na mecz albo bieg, aplikacja pokaże lot, hotel i bilet. Jest darmowa i po polsku.",
+    "statementMarkLogo": "/icon.png",
+    "statementMarkBall": "https://images.unsplash.com/photo-1650327987377-90bf6c9789fd?w=200&h=200&fit=crop&auto=format&q=70",
+    "statementMarkRun": "https://images.unsplash.com/photo-1596460658047-1826d5921c56?w=200&h=200&fit=crop&auto=format&q=70"
   },
   "en": {
     "lang": "en",
     "locale": "en_US",
     "path": "/en",
-    "title": "Pan Peryskop — events in your city and cheap flights from Poland",
-    "description": "Concerts, cinema, theatre and stand-up in 21 Polish cities. Plus cheap flights, hotels and tickets for a match or a race in Europe. Free iOS app.",
-    "ogTitle": "Pan Peryskop — events in your city and cheap flights from Poland",
-    "ogDescription": "Local events in your city and trips to matches and races across Europe — flights, hotels and tickets. Download the Pan Peryskop app.",
-    "schemaDescription": "An aggregator of local events and tickets across Poland — concerts, cinema, theatre, stand-up, sport and free events in your city — plus trips to matches and races in Europe with flights, hotels and tickets.",
+    "title": "Pan Peryskop: events in 11 cities in Poland and flights from 12 airports",
+    "description": "Events in 11 cities in Poland: concerts, cinema, theatre, stand-up and sport. Flights from 12 airports to 304 destinations in Europe. A free iOS app with no ads.",
+    "ogTitle": "Pan Peryskop: events in 11 cities in Poland and flights from 12 airports",
+    "ogDescription": "Events in 11 cities in Poland. Flights from 12 airports and hotels for a trip to a match or a race. A free app with no ads.",
+    "schemaDescription": "Events in 11 cities in Poland on one map: concerts, cinema, theatre, stand-up and sport. Flights from 12 airports to 304 destinations in Europe. A flight, a hotel and a ticket for a match or a race in one app.",
     "official": "The official site of the Pan Peryskop app",
     "download": "Download on the App Store",
     "menu": "Menu",
     "close": "Close",
     "languageLabel": "Language",
     "heroTitle": "Hello, Poland",
-    "heroLead": "Concerts, cinema, theatre and a match — in 21 cities. Flight, hotel and ticket in one app.",
-    "flightsLink": "Cheap flights",
+    "heroLead": "Concerts, cinema, theatre and sport in **11 cities in Poland**. Flights from **12 airports** to **304 destinations** in Europe, including **matches and races**. A flight, a hotel and a ticket in one app.",
     "heroAlt": "A city at night from above",
     "features": [
       {
-        "id": "jak-to-dziala",
+        "id": "events",
         "label": "Events",
-        "title": "Everything happening in your city",
-        "body": "Concerts, cinema, theatre, stand-up and sport on one map. 21 cities across Poland, filtered by day and category.",
+        "title": "What is on in 11 cities in Poland",
+        "body": "Concerts, cinema, theatre, stand-up and sport on a map. Filters by day and category.",
         "link": "Download the app",
         "href": "https://apps.apple.com/pl/app/pan-peryskop/id6803138750",
-        "alt": "Kraków at night",
+        "tile": "image",
+        "alt": "Kraków in the evening",
         "images": [
-          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1626368373312-07ac5d210915?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1520425534612-33819d8f3b81?w=800&h=800&fit=crop&auto=format&q=75"
-        ],
-        "tile": "collage"
+          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75"
+        ]
       },
       {
-        "id": "wyjazd",
-        "label": "A trip",
-        "title": "A match or a race — flight, hotel and ticket",
-        "body": "The dates you pick, the cheapest flight, and a bed next to the event. In one place, without switching tabs.",
+        "id": "flights",
+        "label": "Flights",
+        "title": "Flights from 12 airports in Poland",
+        "body": "Departures from 12 airports in Poland to 304 destinations in Europe. The 11 cities are the reach of the event map, and the 12 airports are the list of departure points. Prices per person.",
         "link": "See destinations",
         "href": "/tanie-loty",
-        "alt": "Barcelona",
+        "tile": "image",
+        "alt": "A plane above the clouds",
         "images": [
-          "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1558102400-72da9fdbecae?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=800&h=800&fit=crop&auto=format&q=75"
-        ],
-        "tile": "collage"
+          "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&h=800&fit=crop&auto=format&q=75"
+        ]
       },
       {
-        "id": "city-break",
+        "id": "match",
+        "label": "A match or a race",
+        "title": "A match or a race: flight, hotel and ticket",
+        "body": "Pick a match or a race in Europe and a date. The app shows the flight, the hotel and the ticket. You finish the purchase with the organiser.",
+        "link": "Destinations from Warszawa",
+        "href": "/tanie-loty-z-warszawy",
+        "tile": "image",
+        "alt": "A ball on the halfway line",
+        "images": [
+          "https://images.unsplash.com/photo-1650327987377-90bf6c9789fd?w=800&h=800&fit=crop&auto=format&q=75"
+        ]
+      },
+      {
+        "id": "weekend",
         "label": "City break",
-        "title": "A weekend with no event at all",
-        "body": "Just a flight and a hotel, when you want a rest. Prices per person, dates for the coming months.",
-        "link": "All connections",
+        "title": "City break: just a flight and a hotel",
+        "body": "Pick a date and a city. The app shows the flight and the hotel. No ticket needed.",
+        "link": "Connections from Poznań",
         "href": "/tanie-loty-z-poznania/polaczenia",
-        "alt": "Lisbon",
+        "tile": "image",
+        "alt": "Tower Bridge in London",
         "images": [
-          "https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1577133192629-5140c5371590?w=800&h=800&fit=crop&auto=format&q=75",
-          "https://images.unsplash.com/photo-1647893626048-4fedd733114d?w=800&h=800&fit=crop&auto=format&q=75"
-        ],
-        "tile": "collage"
-      },
-      {
-        "id": "loty",
-        "label": "Flights",
-        "title": "Cheap flights from 12 Polish airports",
-        "body": "A list for every departure airport: destinations, dates and prices per person.",
-        "link": "All airports",
-        "href": "/tanie-loty",
-        "alt": "Warsaw",
-        "images": [],
-        "tile": "panel"
+          "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=800&h=800&fit=crop&auto=format&q=75"
+        ]
       }
     ],
     "faqTitle": "Questions and answers",
     "faq": [
       {
         "q": "Is the app free",
-        "a": "Yes, it is free and has no ads"
-      },
-      {
-        "q": "Can I buy event tickets in the app",
-        "a": "Each event has a link to the organiser's ticket page"
-      },
-      {
-        "q": "Where do the events come from",
-        "a": "We aggregate events from external sources and show them on a map"
-      },
-      {
-        "q": "Which cities does it cover",
-        "a": "21 cities across Poland"
-      },
-      {
-        "q": "Where do the flight prices come from",
-        "a": "From the carriers. They are indicative and change, so check the price before you book"
+        "a": "Yes. The app is free. There are no ads and no extra fees."
       },
       {
         "q": "Do I need an account",
-        "a": "Yes, signing in with Apple is required when you start the app"
+        "a": "Yes. Signing in with Apple is required. We do not store your e-mail address. Location works only while you use the app. The privacy policy at /privacy has the details."
+      },
+      {
+        "q": "Which cities have local events",
+        "a": "In the 11 biggest cities in Poland: Warszawa, Poznań, Gdańsk, Kraków, Łódź, Wrocław, Szczecin, Bydgoszcz, Lublin, Katowice and Białystok. We add more cities over time."
+      },
+      {
+        "q": "Where do the events come from",
+        "a": "From cinema showings, theatres and cultural venues, concert and club listings, match fixtures and other sport events, and running calendars. When the same event is in more than one source, we show it once."
+      },
+      {
+        "q": "Are the flight prices final",
+        "a": "No. The prices are indicative and come from the carriers. They can change. You buy the ticket from the carrier — the app links to their site."
+      },
+      {
+        "q": "Can I buy a ticket in the app",
+        "a": "No. Every event and flight links to the organiser or the carrier. You finish the purchase on their site."
+      },
+      {
+        "q": "What if an event is wrong or missing",
+        "a": "Write to kontakt@panperyskop.app. Give the name and the date of the event. We will fix the entry or add the missing event."
+      },
+      {
+        "q": "What does the app run on",
+        "a": "The app runs on iPhone and iPad. It is in Polish."
       }
     ],
     "footLinks": [
       {
         "label": "How it works",
-        "href": "#jak-to-dziala"
+        "href": "#how-it-works"
       },
       {
         "label": "Cheap flights",
@@ -310,8 +296,8 @@
     "footRights": "© 2026 Pan Peryskop",
     "footAi": "For AI",
     "footSitemap": "Sitemap",
-    "statement": "Pan Peryskop {mark} brings the events in your city together with cheap flights to a match or a race {band} in Europe — on one map.",
-    "plansCta": "See what exists now",
+    "statement": "Pan Peryskop {mark} brings together a **flight**, a **hotel** and a **ticket** for a **match** {ball} or a **race** {run}. Plus a map of events in 11 cities in Poland and flights from 12 airports to 304 destinations in Europe.",
+    "plansCta": "Download the app",
     "mosaicMap": "Map",
     "mosaicEvents": "Events",
     "mosaicFlight": "Flight",
@@ -322,39 +308,25 @@
     "tilePanelMeta": "12 departure airports",
     "examples": [
       "A concert tonight in Poznań",
-      "A match in Barcelona — flight 218 zł",
+      "A match in Barcelona in November",
       "A race in Lisbon in November",
-      "A weekend in Gdańsk, no event"
+      "A city break in Gdańsk"
     ],
     "prev": "Previous",
     "next": "Next",
     "pause": "Pause",
     "play": "Play",
     "footApp": "App for iOS",
-    "footFree": "Free · no ads",
     "footStore": "App Store",
     "aboutLabel": "About",
-    "aboutTitle": "One map for the whole country",
-    "aboutBody": "Pan Peryskop gathers events from trusted sources and shows them where they happen. Plus a flight, a hotel and a ticket for a match or a race in Europe. The app is free, has no ads and speaks Polish.",
     "aboutMark": "One map",
     "howTitle": "How it works",
-    "howLead": "Three steps, and no account on other sites.",
-    "howSteps": [
-      {
-        "title": "Open the map",
-        "body": "See what is happening near you: concerts, cinema, theatre, sport."
-      },
-      {
-        "title": "Pick a destination",
-        "body": "A match or a race in Europe? Check the flight, the hotel and the date in one place."
-      },
-      {
-        "title": "Travel, or stay",
-        "body": "No event needed: just a flight and a hotel for the weekend."
-      }
-    ],
     "upcomingLabel": "Upcoming",
-    "upcomingTitle": "What comes next",
-    "upcomingLead": "More cities, more destinations, one map."
+    "upcomingTitle": "Plans 2026/2027",
+    "upcomingLead": "We are working on more cities and destinations.",
+    "featuresLead": "You see events from 11 cities in Poland on a map. When you want to travel to a match or a race, the app shows the flight, the hotel and the ticket. It is free and in Polish.",
+    "statementMarkLogo": "/icon.png",
+    "statementMarkBall": "https://images.unsplash.com/photo-1650327987377-90bf6c9789fd?w=200&h=200&fit=crop&auto=format&q=70",
+    "statementMarkRun": "https://images.unsplash.com/photo-1596460658047-1826d5921c56?w=200&h=200&fit=crop&auto=format&q=70"
   }
 }

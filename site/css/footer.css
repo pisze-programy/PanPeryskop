@@ -1,0 +1,27 @@
+/* Pan Peryskop: footer module. Values measured against the reference. */
+
+.brand { view-transition-name: site-nav-logo; }
+.menu-trigger { border-radius: 40px; background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(1, 14, 36, 0.10); }
+.nav { position: static; display: flex; align-items: center; gap: 16px; padding: 24px var(--gutter); background: transparent; }
+@media (max-width: 699px) { .nav { padding: 12px var(--gutter); } }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--serif); font-size: 1.375rem; letter-spacing: -0.03em; }
+.brand span { white-space: nowrap; }
+.nav .btn, .menu-trigger { white-space: nowrap; }
+.brand img { width: 26px; height: 26px; border-radius: 7px; }
+.nav-links { display: none; gap: 26px; margin-left: 30px; font-size: 0.9375rem; color: var(--ink-70); }
+.nav-links a:hover { text-decoration: underline; }
+.nav-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.foot { padding: 224px 0 120px; background: #fbfbfb; }
+.foot-wordmark { margin: clamp(40px, 6vw, 72px) 0 clamp(24px, 4vw, 40px); font-family: var(--serif); font-size: 337.7px; line-height: 0.9; letter-spacing: -0.05em; text-align: center; white-space: nowrap; }
+.foot-links { display: grid; gap: 4px; justify-items: center; text-align: center; }
+.foot-links a { font-family: var(--serif); font-size: 64px; letter-spacing: -3.125px; line-height: 68px; color: #000; }
+.foot-links a:hover { text-decoration: underline; }
+.foot-airports { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin-top: 12px; font-size: 0.75rem; color: var(--ink-45); }
+.foot-airports a { color: var(--ink-65); }
+.foot-airports a:hover { text-decoration: underline; }
+.foot-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 22px; text-align: center; padding-top: 22px; border-top: 1px solid var(--line); font-size: 0.8125rem; color: var(--ink-45); }
+.foot-marks { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 28px; margin-top: 44px; font-size: 0.8125rem; color: var(--ink-65); }
+.foot-marks span, .foot-marks a { display: inline-flex; align-items: center; gap: 8px; }
+.foot-marks img, .foot-marks svg { width: 22px; height: 22px; border-radius: 6px; }
+.laurel { display: inline-block; flex: none; width: 30.3px; height: 82px; background: currentColor; -webkit-mask: url('/assets/laurel.svg') center / contain no-repeat; mask: url('/assets/laurel.svg') center / contain no-repeat; }
+.laurel.is-mirror { transform: scaleX(-1); }

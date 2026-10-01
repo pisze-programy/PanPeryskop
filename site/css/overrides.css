@@ -1,0 +1,102 @@
+/* Pan Peryskop: overrides module. Values measured against the reference. */
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(site-nav-logo), ::view-transition-group(site-nav-menu) { animation-duration: 0s; }
+}
+@media (prefers-reduced-motion: reduce) { .hero-media img { transition: none; } }
+@media (prefers-reduced-motion: no-preference) { .sheet { animation: drawer 480ms cubic-bezier(0.22, 0, 0.2, 1); } }
+@media (prefers-reduced-motion: no-preference) {
+  .js .reveal.is-armed { translate: 0 4px; transition: opacity .15s ease, translate .15s ease; }
+  .js .reveal.is-armed.is-in { opacity: 1; translate: 0 0; }
+  .js .hero { opacity: 0; animation: heroFade .85s ease forwards; }
+  .js .hero > * { opacity: 0; animation: rise var(--dur-enter) var(--ease) forwards; }
+  .js .hero > *:nth-child(2) { animation-delay: .06s; }
+  .js .hero > *:nth-child(3) { animation-delay: .22s; }
+  .js .hero > *:nth-child(4) { animation-delay: .32s; }
+  .js .hero > *:nth-child(5) { animation-delay: .4s; }
+  .js .hero > *:nth-child(6) { animation-delay: .56s; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal, .js .reveal.is-armed, .js .statement, .js .hero, .js .hero > * { opacity: 1; translate: none; transform: none; animation: none; transition: none; }
+  html { scroll-behavior: auto; }
+}
+@media (min-width: 760px) {
+  .rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .js .statement.is-armed .word { transition: opacity .6s var(--ease), filter .6s var(--ease), transform .6s var(--ease); transition-delay: calc(var(--i, 0) * 26ms); }
+  .js .statement.is-armed.is-in .word { opacity: 1; filter: blur(0); transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .js .statement.is-armed .word { opacity: 1; filter: none; transform: none; }
+}
+@media (min-width: 860px) {
+  .how ol { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: clamp(20px, 3vw, 40px); }
+  .how li { border-bottom: 0; padding: 28px 0 0; }
+}
+@media (hover: hover) {
+  .canvas .mcard:hover { box-shadow: 0 16.667px 36.806px rgba(0, 0, 0, 0.08); }
+  .canvas .mcard:hover .mcard-box::after { opacity: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .js .canvas .mcard.reveal.is-armed { translate: 0 22px; transition-delay: calc(var(--i, 0) * 80ms); }
+  .js .canvas .mcard.reveal.is-armed.is-in { translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) { .canvas .mcard { transform: none; } }
+@media (max-width: 699px) {
+  :root { --gutter: 24px; }
+  .upcoming { padding: 72px 0 0; }
+  .upcoming-artwork { height: 520px; margin-top: 40px; }
+  .canvas { gap: 14px; transform: none; }
+  .canvas .mcard { border-radius: 28px; padding: 10px; }
+  .canvas .mcard:nth-child(1) { width: 190px; height: 240px; margin-top: 20px; }
+  .canvas .mcard:nth-child(2) { width: 230px; height: 200px; margin-top: 0; }
+  .canvas .mcard:nth-child(3) { width: 190px; height: 270px; margin-top: 16px; }
+  .canvas .mcard:nth-child(4) { width: 230px; height: 230px; margin-top: 48px; }
+  .canvas .mcard:nth-child(5) { width: 190px; height: 220px; margin-top: 8px; }
+  .canvas .mcard:nth-child(6) { width: 210px; height: 280px; margin-top: 32px; }
+  .canvas .mcard:nth-child(7) { width: 190px; height: 230px; margin-top: 14px; }
+  .canvas .mcard:nth-child(8) { width: 230px; height: 240px; margin-top: 44px; }
+  .canvas .mcard figcaption { font-size: 12px; }
+  h1 { font-size: 46.8px; line-height: 56px; letter-spacing: -3px; }
+  .statement { font-size: 48px; line-height: 56px; }
+  h3 { font-size: 28px; }
+  .frame { border-radius: 40px; }
+  .hero { border-radius: 40px; }
+  .hero-media { border-radius: calc(40px * var(--corner-scale)); }
+  .feature-media, .tile-panel { border-radius: calc(40px * var(--corner-scale)); }
+  .foot-links a { font-size: 40px; line-height: 46px; }
+}
+/* The reference keeps the tablet scale until the desktop scale starts above 1144px. */
+@media (min-width: 700px) and (max-width: 1144px) {
+  :root { --gutter: 48px; }
+  h1 { font-size: 48px; line-height: 56px; letter-spacing: -3px; }
+  .statement { font-size: 68.5184px; line-height: 71.9443px; letter-spacing: -3.71736px; max-width: 738px; }
+  .foot-links a { font-size: 40px; line-height: 46px; letter-spacing: -1.95px; }
+  .foot-wordmark { font-size: 185px; }
+  .frame { max-width: 834px; }
+  .feature, .features .feature { grid-template-columns: minmax(0, 1fr); max-width: 437.3px; }
+  .hero { margin-inline: 32px; padding: 96px 32px 0; }
+  .nav { padding: 24px var(--gutter); }
+  .foot { padding: 96px 0 96px; }
+  .upcoming { padding: 96px 0 0; }
+  .upcoming-artwork { height: 706px; }
+  .official { padding: 12px var(--gutter); }
+}
+@media (max-width: 699px) {
+  :root { --gutter: 24px; }
+  .official { padding: 12px var(--gutter); }
+  .foot { padding: 96px 0 96px; }
+  .hero { margin-inline: 0; padding: 64px 16px 0; }
+  .foot-wordmark { font-size: 86px; }
+  .nav { padding: 12px var(--gutter); }
+  .upcoming { padding: 120px 0 0; }
+  .upcoming-artwork { height: 975px; }
+  .statement { max-width: 338px; line-height: 48px; letter-spacing: -2px; }
+}
+@media (min-width: 1145px) {
+  .canvas { transform: translateX(-720px); }
+  .upcoming { padding: 174px 0 0; }
+  .upcoming-artwork { height: 1070px; }
+  .statement { max-width: 1034px; }
+}

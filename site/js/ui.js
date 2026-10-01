@@ -53,45 +53,115 @@ if (reveals.length && 'IntersectionObserver' in window) {
   });
 }
 
-// Hero: stala rama. Prev, pause, next i kropki zmieniaja tylko przyklad
-// i zdjecie, wiec uklad nie skacze.
 const hero = document.getElementById('hero');
 const media = document.getElementById('hero-media');
 if (hero && media) {
-  const images = Array.from(media.querySelectorAll('img'));
-  const dots = Array.from(hero.querySelectorAll('.dots button'));
+  const track = media.querySelector('.hero-track');
+  const slides = Array.from(media.querySelectorAll('.hero-slide'));
   const example = document.getElementById('example');
   const examples = JSON.parse(media.dataset.examples ?? '[]');
   const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const WAVE_OUT_MS = 131;
   let index = 0;
   let timer;
+  let paused = false;
+
+  const wordSpan = (word, i) => {
+    const span = document.createElement('span');
+    span.className = 'example-word is-entering';
+    span.textContent = word;
+    span.style.setProperty('--i', String(i));
+    return span;
+  };
+
+  const enterWords = (text) => {
+    const fragment = document.createDocumentFragment();
+    text.split(/\s+/).filter(Boolean).forEach((word, i) => {
+      fragment.append(wordSpan(word, i));
+      fragment.append(document.createTextNode(' '));
+    });
+    example.replaceChildren(fragment);
+    void example.offsetWidth;
+    example.querySelectorAll('.example-word').forEach((word) => word.classList.remove('is-entering'));
+  };
+
+  const leaveWords = (text) => {
+    example.querySelectorAll('.example-word').forEach((word) => word.classList.add('is-leaving'));
+    window.setTimeout(() => enterWords(text), WAVE_OUT_MS);
+  };
+
+  const setExample = (text) => {
+    if (!example) return;
+    if (calm.matches) { example.textContent = text; return; }
+    if (example.querySelector('.example-word')) leaveWords(text);
+    else enterWords(text);
+  };
 
   const show = (next) => {
-    index = (next + images.length) % images.length;
-    images.forEach((image, i) => image.classList.toggle('is-active', i === index));
-    dots.forEach((dot, i) => dot.setAttribute('aria-selected', String(i === index)));
-    if (!example || !examples.length) return;
-    const text = examples[index % examples.length];
-    if (calm.matches) { example.textContent = text; return; }
-    example.classList.add('is-swap');
-    window.setTimeout(() => { example.textContent = text; example.classList.remove('is-swap'); }, 200);
+    if (!slides.length) return;
+    index = Math.min(Math.max(next, 0), slides.length - 1);
+    if (track) track.style.transform = `translateX(${-index * 100}%)`;
+    if (examples.length) setExample(examples[index % examples.length]);
   };
-  const stop = () => { if (timer) clearInterval(timer); timer = undefined; };
-  const start = () => { if (calm.matches || images.length < 2) return; stop(); timer = setInterval(() => show(index + 1), 7000); };
-  const hold = () => { stop(); window.setTimeout(start, 12000); };
 
-  dots.forEach((dot, i) => dot.addEventListener('click', () => { show(i); hold(); }));
-  hero.querySelectorAll('[data-slide-prev]').forEach((button) => button.addEventListener('click', () => { show(index - 1); hold(); }));
-  hero.querySelectorAll('[data-slide-next]').forEach((button) => button.addEventListener('click', () => { show(index + 1); hold(); }));
-  hero.querySelectorAll('[data-slide-pause]').forEach((button) => button.addEventListener('click', () => {
+  const stop = () => { if (timer) window.clearInterval(timer); timer = undefined; };
+  const start = () => {
+    if (paused || slides.length < 2 || index >= slides.length - 1) return;
+    stop();
+    timer = window.setInterval(() => {
+      if (index >= slides.length - 1) { stop(); return; }
+      show(index + 1);
+    }, 4000);
+  };
+
+  hero.querySelectorAll('[data-slide-prev]').forEach((button) => button.addEventListener('click', () => { paused = true; stop(); show(index - 1); }));
+  hero.querySelectorAll('[data-slide-next]').forEach((button) => button.addEventListener('click', () => { paused = true; stop(); show(index + 1); }));
+
+  let dragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+
+  const endDrag = (clientX) => {
+    if (!dragging) return;
+    dragging = false;
+    const shift = clientX - dragStartX;
+    if (Math.abs(shift) < 40) return;
+    paused = true;
+    stop();
+    show(shift < 0 ? index + 1 : index - 1);
+  };
+
+  media.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    dragging = true;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+  });
+  window.addEventListener('pointerup', (event) => endDrag(event.clientX));
+  window.addEventListener('pointercancel', () => { dragging = false; });
+
+  media.addEventListener('touchstart', (event) => {
+    dragStartX = event.touches[0].clientX;
+    dragStartY = event.touches[0].clientY;
+    dragging = true;
+  }, { passive: true });
+  media.addEventListener('touchend', (event) => {
+    const touch = event.changedTouches[0];
+    const horizontal = Math.abs(touch.clientX - dragStartX) > Math.abs(touch.clientY - dragStartY);
+    if (!horizontal) { dragging = false; return; }
+    endDrag(touch.clientX);
+  }, { passive: true });
+  hero.querySelectorAll('[data-slide-pause]').forEach((button) => {
     const playLabel = button.dataset.labelPlay ?? '';
     const pauseLabel = button.getAttribute('aria-label') ?? '';
-    if (timer) { stop(); button.textContent = '▶'; button.setAttribute('aria-label', playLabel); }
-    else { start(); button.textContent = 'II'; button.setAttribute('aria-label', pauseLabel); }
-  }));
-  hero.addEventListener('focusin', stop);
-  media.addEventListener('pointerdown', hold);
+    button.addEventListener('click', () => {
+      paused = !paused;
+      if (paused) { stop(); button.textContent = '▶'; button.setAttribute('aria-label', playLabel); }
+      else { start(); button.textContent = 'II'; button.setAttribute('aria-label', pauseLabel); }
+    });
+  });
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+  show(0);
   start();
 }
 

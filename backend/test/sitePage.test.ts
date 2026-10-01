@@ -41,3 +41,21 @@ test('the schema repeats every visible question', () => {
     assert.ok(html.includes(item.q), `${item.q} is in the FAQ but not in the schema`);
   }
 });
+
+test('a quote and a bracket in a text value are escaped', () => {
+  const text = siteText('pl');
+  const originalTitle = text.heroTitle;
+  const originalSchema = text.schemaDescription;
+  text.heroTitle = 'Cześć "Polsko" <b>';
+  text.schemaDescription = 'Koniec </script><script>alert(1)</script>';
+  try {
+    const html = renderSite('pl');
+    assert.ok(html.includes('&quot;Polsko&quot; &lt;b&gt;'), 'the quote and the bracket are escaped');
+    assert.ok(!html.includes('<b>'), 'the value cannot open a tag');
+    assert.ok(html.includes('\\u003c/script>'), 'the schema escapes the bracket');
+    assert.ok(!html.includes('</script><script>alert(1)'), 'the schema cannot close its own script');
+  } finally {
+    text.heroTitle = originalTitle;
+    text.schemaDescription = originalSchema;
+  }
+});

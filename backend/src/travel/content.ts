@@ -274,7 +274,7 @@ export async function llmsTxt(env: Env): Promise<string> {
 
 - iOS/iPadOS 18.0+, kategoria Rozrywka, po polsku, bez reklam i bez opłat.
 - Logowanie przez Sign in with Apple jest wymagane. Adres e-mail nie jest przechowywany; lokalizacja tylko podczas korzystania z aplikacji.
-- 21 miast w Polsce z lokalnymi wydarzeniami.
+- 11 miast w Polsce z lokalnymi wydarzeniami.
 - Kontakt: kontakt@panperyskop.app
 
 ## Strony

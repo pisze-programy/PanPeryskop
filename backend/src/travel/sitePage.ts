@@ -18,7 +18,7 @@ interface Feature {
   link: string;
   href: string;
   images: string[];
-  tile: 'collage' | 'panel';
+  tile: 'image' | 'panel';
   alt: string;
 }
 
@@ -43,13 +43,16 @@ export interface SiteText {
   languageLabel: string;
   heroTitle: string;
   heroLead: string;
-  flightsLink: string;
   heroAlt: string;
 
   features: Feature[];
+  featuresLead: string;
   faqTitle: string;
   faq: FaqItem[];
   statement: string;
+  statementMarkLogo: string;
+  statementMarkBall: string;
+  statementMarkRun: string;
   plansCta: string;
   mosaicMap: string;
   mosaicEvents: string;
@@ -58,12 +61,8 @@ export interface SiteText {
   mosaicPriceLabel: string;
   mosaicCta: string;
   aboutLabel: string;
-  aboutTitle: string;
-  aboutBody: string;
   aboutMark: string;
   howTitle: string;
-  howLead: string;
-  howSteps: { title: string; body: string }[];
   upcomingLabel: string;
   upcomingTitle: string;
   upcomingLead: string;
@@ -75,15 +74,12 @@ export interface SiteText {
   pause: string;
   play: string;
   footApp: string;
-  footFree: string;
   footStore: string;
   footLinks: FootLink[];
   footAirportsLabel: string;
   footRights: string;
   footAi: string;
   footSitemap: string;
-  footPrivacy: string;
-  footTerms: string;
 }
 
 const TEXTS = texts as Record<SiteLang, SiteText>;
@@ -94,11 +90,20 @@ const SLIDE_IMAGE = 'https://images.unsplash.com/photo-1577133192629-5140c537159
 const HERO_IMAGE_3 = 'https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=2000&h=1250&fit=crop&auto=format&q=80';
 const BAND_IMAGE = 'https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=780&h=1690&fit=crop&auto=format&q=80';
 
-const LAUREL =
-  '<svg viewBox="0 0 30 76" aria-hidden="true"><path d="M22 4c-6 10-9 20-9 30 0 12 3 24 9 38" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13 22c-4-2-7-1-9 2 3 3 6 3 9 1z" fill="currentColor"/><path d="M12 40c-4-2-7-1-9 2 3 3 6 3 9 1z" fill="currentColor"/><path d="M13 58c-4-2-7-1-9 2 3 3 6 3 9 1z" fill="currentColor"/></svg>';
-
 const APPLE_ICON =
   '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>';
+
+const HTML_ENTITIES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => HTML_ENTITIES[char]);
+}
 
 export function siteText(lang: SiteLang): SiteText {
   return TEXTS[lang];
@@ -132,171 +137,176 @@ export function renderSite(lang: SiteLang): string {
         })),
       },
     ],
-  }, null, 2);
+  }, null, 2).replace(/</g, '\\u003c');
 
   const statementHtml = t.statement
     .split(' ')
     .filter(Boolean)
-    .map((word, index) => `<span class="word" style="--i:${index}">${word
-      .replace('{mark}', '<span class="mark" aria-hidden="true"></span>')
-      .replace('{band}', '<span class="mark mark--band" aria-hidden="true"></span>')}</span>`)
+    .map((word, index) => `<span class="word" style="--i:${index}">${escapeHtml(word)
+      .replace('{mark}', `<span class="mark mark--logo"><img src="${escapeHtml(t.statementMarkLogo)}" alt="" /></span>`)
+      .replace('{ball}', `<span class="mark mark--ball"><img src="${escapeHtml(t.statementMarkBall)}" alt="" /></span>`)
+      .replace('{run}', `<span class="mark mark--run"><img src="${escapeHtml(t.statementMarkRun)}" alt="" /></span>`)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      }</span>`)
     .join(' ');
 
   const features = t.features.map((feature) => `      <section class="feature reveal">
         <div class="feature-media">
           ${feature.tile === 'panel'
-            ? `<div class="tile-panel"><span class="label">${t.tilePanelTitle}</span><strong>${t.tilePanelMeta}</strong></div>`
-            : `<div class="collage">${feature.images.map((src) => `<img src="${src}" alt="${feature.alt}" width="800" height="800" loading="lazy" decoding="async" />`).join('')}</div>`}
+            ? `<div class="tile-panel"><span class="label">${escapeHtml(t.tilePanelTitle)}</span><strong>${escapeHtml(t.tilePanelMeta)}</strong></div>`
+            : `<img src="${escapeHtml(feature.images[0])}" alt="${escapeHtml(feature.alt)}" width="800" height="800" loading="lazy" decoding="async" />`}
         </div>
         <div>
-          <span class="label">${feature.label}</span>
-          <h3>${feature.title}</h3>
-          <p class="muted">${feature.body}</p>
-          <a class="link-arrow" href="${feature.href}"${feature.href.startsWith('http') ? ' rel="noopener"' : ''}>${feature.link}</a>
+          <h3>${escapeHtml(feature.title)}</h3>
+          <p class="muted">${escapeHtml(feature.body)}</p>
+          <a class="link-arrow" href="${escapeHtml(feature.href)}"${feature.href.startsWith('http') ? ' rel="noopener"' : ''}>${escapeHtml(feature.link)}</a>
         </div>
       </section>`).join('\n');
 
+  const strong = (text: string) => escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  const leadLines = (text: string) => text
+    .split(/(?<=[.!?])\s+/)
+    .filter(Boolean)
+    .map((line) => `<span class="lead-line">${strong(line)}</span>`)
+    .join('');
+
   const faq = t.faq.map((item) => `        <details>
-          <summary>${item.q}</summary>
-          <div class="a-body">${item.a}</div>
+          <summary>${escapeHtml(item.q)}</summary>
+          <div class="a-body">${escapeHtml(item.a)}</div>
         </details>`).join('\n');
 
   const footLinks = t.footLinks
-    .map((link) => `<a href="${link.href}">${link.label}</a>`)
+    .map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`)
     .join('\n        ');
 
   const sheetLinks = t.footLinks
-    .map((link) => `<a class="sheet-link" href="${link.href}">${link.label}</a>`)
+    .map((link) => `<a class="sheet-link" href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`)
     .join('\n      ');
 
+  const screens: Array<{ title: string; src: string; width: number; height: number }> = [
+    { title: t.mosaicMap, src: '/assets/app-events-map.webp', width: 464, height: 972 },
+    { title: t.mosaicEvents, src: '/assets/app-europe-map.webp', width: 364, height: 908 },
+    { title: t.mosaicFlight, src: '/assets/app-match.webp', width: 408, height: 928 },
+    { title: t.mosaicStay, src: '/assets/app-race.webp', width: 440, height: 942 },
+    { title: t.mosaicMap, src: '/assets/app-city.webp', width: 750, height: 1334 },
+    { title: t.mosaicEvents, src: '/assets/app-events-map.webp', width: 464, height: 972 },
+    { title: t.mosaicFlight, src: '/assets/app-europe-map.webp', width: 364, height: 908 },
+    { title: t.mosaicStay, src: '/assets/app-match.webp', width: 408, height: 928 },
+  ];
+
+  const upcomingCards = screens.map((screen, index) => `          <figure class="mcard reveal" style="--i:${index}">
+            <figcaption>${escapeHtml(screen.title)}</figcaption>
+            <span class="mcard-box"><img src="${escapeHtml(screen.src)}" alt="" width="${screen.width}" height="${screen.height}" loading="lazy" decoding="async" /></span>
+          </figure>`).join('\n');
+
+  const upcomingList = screens
+    .map((screen) => `          <li>${escapeHtml(screen.title)}</li>`)
+    .join('\n');
+
   const langSwitch = () => SITE_LANGS
-    .map((code) => `<a href="${siteText(code).path}" data-lang="${code}"${code === lang ? ' aria-current="page"' : ''}>${code.toUpperCase()}</a>`)
+    .map((code) => `<a href="${escapeHtml(siteText(code).path)}" data-lang="${escapeHtml(code)}"${code === lang ? ' aria-current="page"' : ''}>${escapeHtml(code.toUpperCase())}</a>`)
     .join('<span> / </span>');
 
   return `<!doctype html>
-<html lang="${t.lang}">
+<html lang="${escapeHtml(t.lang)}">
 <head>
 <meta charset="utf-8" />
 <meta name="msvalidate.01" content="B960379F0FB764066126C93E7C5D4086" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${t.title}</title>
-<meta name="description" content="${t.description}" />
-<link rel="canonical" href="${url}" />
-${SITE_LANGS.map((code) => `<link rel="alternate" hreflang="${code}" href="${PUBLIC_BASE}${siteText(code).path}" />`).join('\n')}
+<title>${escapeHtml(t.title)}</title>
+<meta name="description" content="${escapeHtml(t.description)}" />
+<link rel="canonical" href="${escapeHtml(url)}" />
+${SITE_LANGS.map((code) => `<link rel="alternate" hreflang="${escapeHtml(code)}" href="${escapeHtml(`${PUBLIC_BASE}${siteText(code).path}`)}" />`).join('\n')}
 <link rel="icon" type="image/png" href="/icon.png" />
 <meta name="theme-color" content="#eff1f4" />
 <meta property="og:type" content="website" />
-<meta property="og:locale" content="${t.locale}" />
-<meta property="og:title" content="${t.ogTitle}" />
-<meta property="og:description" content="${t.ogDescription}" />
-<meta property="og:url" content="${url}" />
-<meta property="og:image" content="${OG_IMAGE}" />
+<meta property="og:locale" content="${escapeHtml(t.locale)}" />
+<meta property="og:title" content="${escapeHtml(t.ogTitle)}" />
+<meta property="og:description" content="${escapeHtml(t.ogDescription)}" />
+<meta property="og:url" content="${escapeHtml(url)}" />
+<meta property="og:image" content="${escapeHtml(OG_IMAGE)}" />
 <meta name="twitter:card" content="summary_large_image" />
 <script type="application/ld+json">
 ${schema}
 </script>
 <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/assets/fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="/site.css" />
+<link rel="stylesheet" href="/css/tokens.css" />
+<link rel="stylesheet" href="/css/sections.css" />
+<link rel="stylesheet" href="/css/footer.css" />
+<link rel="stylesheet" href="/css/hero.css" />
+<link rel="stylesheet" href="/css/overrides.css" />
 </head>
 <body>
-<a class="sr-only" href="#main">${t.heroTitle}</a>
+<a class="sr-only" href="#main">${escapeHtml(t.heroTitle)}</a>
 
 <div class="frame">
-  <p class="official">${t.official}</p>
-
-  <header class="nav" id="nav">
-    <a class="brand" href="/">
-      <img src="/icon.png" alt="" width="26" height="26" />
-      <span>Pan Peryskop</span>
-    </a>
-    <div class="nav-actions">
-      <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${t.download}</a>
-      <button class="btn btn-quiet menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">
-        ${t.menu}
-      </button>
-    </div>
-  </header>
+  <p class="official">${escapeHtml(t.official)}</p>
 
   <main id="main">
     <section class="hero" id="hero">
-      <h1>${t.heroTitle}</h1>
-      <p class="lead">${t.heroLead}</p>
-      <form class="hero-control" aria-label="${t.heroLead}">
-        <span class="example" id="example" aria-live="polite">${t.examples[0]}</span>
-        <div class="slider-controls">
-          <button type="button" class="ctrl" data-slide-prev aria-label="${t.prev}">‹</button>
-          <button type="button" class="ctrl" data-slide-pause data-label-play="${t.play}" aria-label="${t.pause}">II</button>
-          <button type="button" class="ctrl" data-slide-next aria-label="${t.next}">›</button>
-        </div>
-      </form>
-      <p class="hero-actions">
-        <a class="btn btn-primary" href="${APP_STORE}" rel="noopener">${APPLE_ICON}${t.download}</a>
-        <a class="link-arrow" href="/tanie-loty">${t.flightsLink}</a>
-      </p>
-      <div class="hero-media" id="hero-media" data-examples='${JSON.stringify(t.examples).replace(/'/g, "&#39;")}'>
-        <img class="is-active" src="${HERO_IMAGE}" alt="${t.heroAlt}" width="2000" height="1250" fetchpriority="high" decoding="async" />
-        <img src="${SLIDE_IMAGE}" alt="" width="2000" height="1250" loading="lazy" decoding="async" />
-        <img src="${HERO_IMAGE_3}" alt="" width="2000" height="1250" loading="lazy" decoding="async" />
+      <header class="nav" id="nav">
+        <button class="btn btn-primary menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(t.menu)}</button>
+        <a class="brand" href="/">
+          <img src="/icon.png" alt="" width="26" height="26" />
+          <span>Pan Peryskop</span>
+        </a>
+      </header>
+      <div class="hero-inner">
+        <h1>${escapeHtml(t.heroTitle)}</h1>
+        <p class="lead">${leadLines(t.heroLead)}</p>
+        <a class="btn btn-primary btn-store" href="${escapeHtml(APP_STORE)}" rel="noopener">${APPLE_ICON}${escapeHtml(t.download)}</a>
       </div>
-      <div class="dots" role="tablist" aria-label="${t.heroTitle}">
-        <button type="button" role="tab" aria-selected="true"></button>
-        <button type="button" role="tab" aria-selected="false"></button>
-        <button type="button" role="tab" aria-selected="false"></button>
+      <div class="hero-media" id="hero-media" data-examples='${escapeHtml(JSON.stringify(t.examples))}'>
+        <form class="hero-control" aria-label="${escapeHtml(t.heroLead)}">
+          <span class="example" id="example" aria-live="polite">${escapeHtml(t.examples[0])}</span>
+        </form>
+        <div class="hero-track" id="hero-track">
+          <div class="hero-slide"><img draggable="false" src="${escapeHtml(HERO_IMAGE)}" alt="${escapeHtml(t.heroAlt)}" width="2000" height="1250" fetchpriority="high" decoding="async" /></div>
+          <div class="hero-slide"><img draggable="false" src="${escapeHtml(SLIDE_IMAGE)}" alt="" width="2000" height="1250" loading="lazy" decoding="async" /></div>
+          <div class="hero-slide"><img draggable="false" src="${escapeHtml(HERO_IMAGE_3)}" alt="" width="2000" height="1250" loading="lazy" decoding="async" /></div>
+        </div>
+      </div>
+      <div class="slider-controls">
+        <button type="button" class="ctrl" data-slide-prev aria-label="${escapeHtml(t.prev)}">‹</button>
+        <button type="button" class="ctrl" data-slide-pause data-label-play="${escapeHtml(t.play)}" aria-label="${escapeHtml(t.pause)}">II</button>
+        <button type="button" class="ctrl" data-slide-next aria-label="${escapeHtml(t.next)}">›</button>
       </div>
     </section>
 
-    ${features}
-
-    <section class="about" id="o-nas">
-      <span class="label">${t.aboutLabel}</span>
-      <h2>${t.aboutTitle}</h2>
+    <section class="about" id="about">
+      <span class="label">${escapeHtml(t.aboutLabel)}</span>
       <p class="statement">${statementHtml}</p>
-      <p class="about-body">${t.aboutBody}</p>
     </section>
 
-    <section class="how" id="jak-to-dziala">
-      <h2>${t.howTitle}</h2>
-      <p class="lead">${t.howLead}</p>
-      <ol>
-${t.howSteps.map((step, index) => `        <li class="reveal"><span>${index + 1}</span><h3>${step.title}</h3><p>${step.body}</p></li>`).join('\n')}
-      </ol>
+    <section class="features" id="how-it-works">
+${features}
     </section>
 
-    <section class="upcoming dark" id="w-przygotowaniu">
-      <p class="label">${t.upcomingLabel}</p>
-      <h2>${t.upcomingTitle}</h2>
-      <p class="lead">${t.upcomingLead}</p>
-      <div class="canvas">
-        <div class="mcard mcard--w1 reveal" style="--i:0">
-          <h4>${t.mosaicMap}</h4>
-          <div class="mmap"><i style="left:26%;top:30%"></i><i style="left:62%;top:22%"></i><i style="left:44%;top:64%"></i></div>
+    <section class="upcoming" id="upcoming-features" aria-labelledby="coming-in-2027">
+      <div class="upcoming-inner">
+        <div class="upcoming-head">
+          <p class="label">${escapeHtml(t.upcomingLabel)}</p>
+          <h2 id="coming-in-2027">${escapeHtml(t.upcomingTitle)}</h2>
+          <p class="lead">${escapeHtml(t.upcomingLead)}</p>
+          <a class="btn btn-dark" href="${escapeHtml(APP_STORE)}" rel="noopener">${escapeHtml(t.plansCta)}</a>
         </div>
-        <div class="mcard mcard--w2 reveal" style="--i:1">
-          <h4>${t.mosaicEvents}</h4>
-          <div class="mrow"><s></s><u></u><u></u></div>
-          <div class="mrow"><s></s><u></u><u></u></div>
-          <div class="mrow"><s></s><u></u><u></u></div>
-          <div class="mrow"><s></s><u></u><u></u></div>
-        </div>
-        <div class="mcard mcard--w3 reveal" style="--i:2">
-          <h4>${t.mosaicFlight}</h4>
-          <div class="mphoto mphoto--wide"></div>
-          <p class="label">${t.mosaicPriceLabel}</p>
-          <div class="mrow"><s></s><u></u></div>
-          <span class="mpill">${t.mosaicCta}</span>
-        </div>
-        <div class="mcard mcard--w4 reveal" style="--i:3">
-          <h4>${t.mosaicStay}</h4>
-          <div class="mphoto mphoto--tall"></div>
-          <div class="mrow"><s></s><u></u></div>
+        <ul role="list" class="sr-only" aria-label="${escapeHtml(t.upcomingTitle)}">
+${upcomingList}
+        </ul>
+        <div class="upcoming-artwork" data-scroll-container="document">
+          <div class="upcoming-layer">
+            <div class="canvas" aria-hidden="true">
+${upcomingCards}
+            </div>
+          </div>
         </div>
       </div>
-      <a class="btn btn-quiet" href="/tanie-loty">${t.plansCta}</a>
     </section>
 
     <section class="faq" id="faq">
-      <h2>${t.faqTitle}</h2>
+      <h2>${escapeHtml(t.faqTitle)}</h2>
 ${faq}
     </section>
   </main>
@@ -305,36 +315,35 @@ ${faq}
     <nav class="foot-links">
         ${footLinks}
     </nav>
-    <p class="label" style="margin-top:48px;text-align:center">${t.footAirportsLabel}</p>
+    <p class="label" style="margin-top:48px;text-align:center">${escapeHtml(t.footAirportsLabel)}</p>
     <div class="foot-airports">
-${ORIGIN_PAGES.map((origin) => `      <a href="/${origin.slug}">${airportLabel(origin)}</a>`).join('\n')}
-    </div>
-    <div class="marks-pair">
-      <span class="laurel is-mirror">${LAUREL}</span>
-      <p>${t.aboutMark}</p>
-      <span class="laurel">${LAUREL}</span>
+${ORIGIN_PAGES.map((origin) => `      <a href="/${escapeHtml(origin.slug)}">${escapeHtml(airportLabel(origin))}</a>`).join('\n')}
     </div>
     <p class="foot-wordmark">Pan Peryskop</p>
+    <div class="marks-pair">
+      <span class="laurel is-mirror" aria-hidden="true"></span>
+      <p>${escapeHtml(t.aboutMark)}</p>
+      <span class="laurel" aria-hidden="true"></span>
+    </div>
     <div class="foot-marks">
-      <span><img src="/icon.png" alt="" width="26" height="26" /> ${t.footApp}</span>
-      <span>${t.footFree}</span>
-      <a href="${APP_STORE}" rel="noopener">${APPLE_ICON} ${t.footStore}</a>
+      <span><img src="/icon.png" alt="" width="26" height="26" /> ${escapeHtml(t.footApp)}</span>
+      <a href="${escapeHtml(APP_STORE)}" rel="noopener">${APPLE_ICON} ${escapeHtml(t.footStore)}</a>
     </div>
     <div class="foot-meta">
-      <span>${t.footRights}</span>
-      <span><a href="/sitemap.xml">${t.footSitemap}</a> · <a href="/llms.txt">${t.footAi}</a> · <a href="/privacy">${t.footLinks[2].label}</a> · <a href="/terms">${t.footLinks[3].label}</a></span>
-      <span class="lang" aria-label="${t.languageLabel}">${langSwitch()}</span>
+      <span>${escapeHtml(t.footRights)}</span>
+      <span><a href="/sitemap.xml">${escapeHtml(t.footSitemap)}</a> · <a href="/llms.txt">${escapeHtml(t.footAi)}</a> · <a href="/privacy">${escapeHtml(t.footLinks[2].label)}</a> · <a href="/terms">${escapeHtml(t.footLinks[3].label)}</a></span>
+      <span class="lang" aria-label="${escapeHtml(t.languageLabel)}">${langSwitch()}</span>
     </div>
   </footer>
 </div>
 
-<div class="sheet" id="menu-sheet" role="dialog" aria-modal="true" aria-label="${t.menu}" hidden>
+<div class="sheet" id="menu-sheet" role="dialog" aria-modal="true" aria-label="${escapeHtml(t.menu)}" hidden>
   <div class="sheet-top">
     <span class="brand">Pan Peryskop</span>
-    <button class="btn btn-quiet" id="menu-close">${t.close}</button>
+    <button class="btn btn-quiet" id="menu-close">${escapeHtml(t.close)}</button>
   </div>
   ${sheetLinks}
-  <div class="lang" aria-label="${t.languageLabel}" style="margin-top:26px">${langSwitch()}</div>
+  <div class="lang" aria-label="${escapeHtml(t.languageLabel)}" style="margin-top:26px">${langSwitch()}</div>
 </div>
 
 <script defer src="/js/ui.js"></script>

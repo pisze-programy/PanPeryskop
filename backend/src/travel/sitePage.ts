@@ -164,22 +164,23 @@ export function renderSite(lang: SiteLang): string {
     .map((link) => `<a class="sheet-link" href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`)
     .join('\n      ');
 
-  const screens: Array<{ title: string; src: string; width: number; height: number }> = [
-    { title: t.mosaicMap, src: '/assets/app-events-map.webp', width: 464, height: 972 },
-    { title: t.mosaicEvents, src: '/assets/app-europe-map.webp', width: 364, height: 908 },
-    { title: t.mosaicFlight, src: '/assets/app-match.webp', width: 408, height: 928 },
-    { title: t.mosaicStay, src: '/assets/app-race.webp', width: 440, height: 942 },
-    { title: t.mosaicMap, src: '/assets/app-city.webp', width: 750, height: 1334 },
-    { title: t.mosaicEvents, src: '/assets/app-events-map.webp', width: 464, height: 972 },
-    { title: t.mosaicFlight, src: '/assets/app-europe-map.webp', width: 364, height: 908 },
-    { title: t.mosaicStay, src: '/assets/app-match.webp', width: 408, height: 928 },
-    { title: t.mosaicMap, src: '/assets/app-city.webp', width: 750, height: 1334 },
-    { title: t.mosaicFlight, src: '/assets/app-race.webp', width: 440, height: 942 },
+  const screens: Array<{ title: string; src: string }> = [
+    { title: t.mosaicMap, src: '/assets/app-events-map.webp' },
+    { title: t.mosaicEvents, src: '/assets/app-europe-map.webp' },
+    { title: t.mosaicFlight, src: '/assets/app-match.webp' },
+    { title: t.mosaicStay, src: '/assets/app-race.webp' },
+    { title: t.mosaicMap, src: '/assets/app-city.webp' },
+    { title: t.mosaicEvents, src: '/assets/app-events-map.webp' },
+    { title: t.mosaicFlight, src: '/assets/app-europe-map.webp' },
+    { title: t.mosaicStay, src: '/assets/app-match.webp' },
+    { title: t.mosaicMap, src: '/assets/app-city.webp' },
+    { title: t.mosaicFlight, src: '/assets/app-race.webp' },
+    { title: t.mosaicStay, src: '/assets/app-city.webp' },
   ];
 
   const upcomingCards = screens.map((screen, index) => `              <figure class="mcard reveal" style="--i:${index}">
                 <figcaption>${escapeHtml(screen.title)}</figcaption>
-                <span class="mcard-box"><img src="${escapeHtml(screen.src)}" alt="" width="${screen.width}" height="${screen.height}" loading="lazy" decoding="async" /></span>
+                <span class="mcard-box"><img src="${escapeHtml(screen.src)}" alt="" loading="lazy" decoding="async" /></span>
               </figure>`).join('\n');
 
   const upcomingList = screens

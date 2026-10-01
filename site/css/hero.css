@@ -1,5 +1,3 @@
-/* Pan Peryskop: hero module. Values measured against the reference. */
-
 .hero { position: relative; margin: 0 32px; padding: 144px 32px 48px; text-align: center; border-radius: 48px; background: linear-gradient(180deg, #f0f4f6, #f7f7f8); }
 .hero-inner { max-width: 687.5px; margin: 0 auto; }
 .hero .lead { font-size: 24px; line-height: 32px; letter-spacing: normal; margin: 20px auto 12px; max-width: 44ch; }

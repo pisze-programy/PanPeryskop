@@ -1,5 +1,3 @@
-/* Pan Peryskop: overrides module. Values measured against the reference. */
-
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(site-nav-logo), ::view-transition-group(site-nav-menu) { animation-duration: 0s; }
 }

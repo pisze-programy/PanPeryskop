@@ -42,9 +42,6 @@
   .splash { display: none; }
 }
 
-/* tokens */
-/* Pan Peryskop: tokens module. Values measured against the reference. */
-
 @font-face {
   font-family: "Inter";
   font-style: normal;
@@ -187,9 +184,6 @@ h3 { font-family: var(--sans); font-size: 40px; font-weight: 500; letter-spacing
 .legal a:hover { text-decoration: underline; }
 .legal strong { color: var(--ink); font-weight: 600; }
 
-/* sections */
-/* Pan Peryskop: sections module. Values measured against the reference. */
-
 .upcoming { position: relative; width: 100vw; margin-left: calc(50% - 50vw); padding: 174px 0 0; overflow: hidden; background: #f7f7f7; color: var(--ink); }
 .upcoming-inner { position: relative; }
 .upcoming-head { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 0 var(--gutter); text-align: center; }
@@ -225,8 +219,33 @@ h3 { font-family: var(--sans); font-size: 40px; font-weight: 500; letter-spacing
   .plans-list p { font-size: 19px; line-height: 28px; }
 }
 
-/* footer */
-/* Pan Peryskop: footer module. Values measured against the reference. */
+.plans-list li.reveal.is-armed { translate: 0 18px; transition-delay: calc(var(--i, 0) * 90ms); }
+.plans-list li.reveal.is-armed.is-in { translate: 0 0; }
+.rows { display: grid; gap: 0 40px; }
+.rows a { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; border-bottom: 1px solid var(--line); font-size: 1rem; }
+.rows a::after { content: none; }
+.rows a:hover { text-decoration: underline; }
+
+@media (max-width: 699px) {
+  .plans-list { grid-template-columns: minmax(0, 1fr); }
+  .plans-list li { grid-template-columns: 84px minmax(0, 1fr); gap: 16px; padding: 24px 0; }
+  .plans-year { font-size: 24px; }
+  .plans-list p { font-size: 19px; line-height: 28px; }
+}
+
+.plans-list li.reveal.is-armed { translate: 0 18px; transition-delay: calc(var(--i, 0) * 90ms); }
+.plans-list li.reveal.is-armed.is-in { translate: 0 0; }
+.rows { display: grid; gap: 0 40px; }
+.rows a { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; border-bottom: 1px solid var(--line); font-size: 1rem; }
+.rows a::after { content: none; }
+.rows a:hover { text-decoration: underline; }
+
+@media (max-width: 699px) {
+  .plans-list { grid-template-columns: minmax(0, 1fr); }
+  .plans-list li { grid-template-columns: 84px minmax(0, 1fr); gap: 16px; padding: 24px 0; }
+  .plans-year { font-size: 24px; }
+  .plans-list p { font-size: 19px; line-height: 28px; }
+}
 
 .brand { view-transition-name: site-nav-logo; }
 .menu-trigger { border-radius: 40px; background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(1, 14, 36, 0.10); }
@@ -253,9 +272,6 @@ h3 { font-family: var(--sans); font-size: 40px; font-weight: 500; letter-spacing
 .foot-marks img, .foot-marks svg { width: 22px; height: 22px; border-radius: 6px; }
 .laurel { display: inline-block; flex: none; width: 30.3px; height: 82px; background: currentColor; -webkit-mask: url('/assets/laurel.svg') center / contain no-repeat; mask: url('/assets/laurel.svg') center / contain no-repeat; }
 .laurel.is-mirror { transform: scaleX(-1); }
-
-/* hero */
-/* Pan Peryskop: hero module. Values measured against the reference. */
 
 .hero { position: relative; margin: 0 32px; padding: 144px 32px 48px; text-align: center; border-radius: 48px; background: linear-gradient(180deg, #f0f4f6, #f7f7f8); }
 .hero-inner { max-width: 687.5px; margin: 0 auto; }
@@ -307,9 +323,6 @@ h3 { font-family: var(--sans); font-size: 40px; font-weight: 500; letter-spacing
 .hero-slide img { pointer-events: none; -webkit-user-drag: none; }
 
 .hero .lead-line { display: block; }
-
-/* overrides */
-/* Pan Peryskop: overrides module. Values measured against the reference. */
 
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(site-nav-logo), ::view-transition-group(site-nav-menu) { animation-duration: 0s; }
@@ -365,8 +378,7 @@ h3 { font-family: var(--sans); font-size: 40px; font-weight: 500; letter-spacing
   .frame { border-radius: 40px; }
   .hero { border-radius: 40px; }
   .hero-media { border-radius: calc(40px * var(--corner-scale)); }
-  .feature-media, .tile-panel { border-radius: calc(40px * var(--corner-scale)); }
-  .foot-links a { font-size: 40px; line-height: 46px; }
+    .foot-links a { font-size: 40px; line-height: 46px; }
 }
 /* The reference keeps the tablet scale until the desktop scale starts above 1144px. */
 @media (min-width: 700px) and (max-width: 1144px) {
@@ -376,9 +388,7 @@ h3 { font-family: var(--sans); font-size: 40px; font-weight: 500; letter-spacing
   .foot-links a { font-size: 40px; line-height: 46px; letter-spacing: -1.95px; }
   .foot-wordmark { font-size: 185px; }
   .frame { max-width: 834px; }
-  .feature, .features .feature { grid-template-columns: minmax(0, 1fr); max-width: 437.3px; }
-  .hero { margin-inline: 32px; padding: 96px 32px 48px; }
-  .nav { padding: 24px 32px; }
+    .nav { padding: 24px 32px; }
   .nav { padding: 24px var(--gutter); }
   .foot { padding: 96px 0 96px; }
   .upcoming { padding: 96px 0 0; }
@@ -386,9 +396,7 @@ h3 { font-family: var(--sans); font-size: 40px; font-weight: 500; letter-spacing
 }
 @media (max-width: 699px) {
   :root { --gutter: 24px; }
-  .features { padding-left: var(--gutter); padding-right: var(--gutter); }
-  .feature { padding-inline: 0; }
-  .faq { padding-left: var(--gutter); padding-right: var(--gutter); }
+      .faq { padding-left: var(--gutter); padding-right: var(--gutter); }
   .about { padding-left: var(--gutter); padding-right: var(--gutter); }
   .official { padding: 12px var(--gutter); }
   .foot { padding: 96px 0 96px; }

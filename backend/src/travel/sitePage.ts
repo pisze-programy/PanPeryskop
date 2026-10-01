@@ -156,7 +156,7 @@ export function renderSite(lang: SiteLang): string {
     .map((line) => `<span class="lead-line">${strong(line)}</span>`)
     .join(' ');
 
-  const plansList = t.plans.map((item) => `          <li>
+  const plansList = t.plans.map((item, index) => `          <li class="reveal" style="--i:${index}">
             <span class="plans-year">${escapeHtml(item.year)}</span>
             <p>${strong(item.body)}</p>
           </li>`).join('\n');

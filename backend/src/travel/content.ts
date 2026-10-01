@@ -6,8 +6,8 @@ import {
 import { foldCity } from './airports';
 import { submitIndexNow } from './indexnow';
 
-const PAGE_TTL_MS = 15 * 60_000;
-const TEMPLATE_VERSION = 2;
+const PAGE_TTL_MS = 24 * 3_600_000;
+export const TEMPLATE_VERSION = 2;
 
 export function pageKey(slug: string): string {
   return `plan/${slug}.html`;
@@ -26,7 +26,7 @@ async function putHtml(env: Env, slug: string, html: string): Promise<{ bytes: n
   const hash = contentHash(html);
   await env.MEDIA.put(pageKey(slug), html, {
     httpMetadata: { contentType: 'text/html; charset=utf-8' },
-    customMetadata: { v: String(Date.now()), h: hash },
+    customMetadata: { v: String(Date.now()), h: hash, tv: String(TEMPLATE_VERSION) },
   });
   return { bytes: html.length, hash };
 }
@@ -183,9 +183,14 @@ export async function docs(env: Env): Promise<ContentDoc[]> {
 
 export async function buildNextStale(env: Env): Promise<OriginPage | null> {
   const done = await originDoneAt(env);
-  const stale = ORIGIN_PAGES
-    .filter((origin) => Date.now() - (done.get(origin.id) ?? 0) >= PAGE_TTL_MS)
-    .sort((a, b) => (done.get(a.id) ?? 0) - (done.get(b.id) ?? 0));
+  const stale: OriginPage[] = [];
+  for (const origin of ORIGIN_PAGES) {
+    const stored = await env.MEDIA.head(pageKey(origin.slug));
+    const version = stored?.customMetadata?.tv;
+    const aged = Date.now() - (done.get(origin.id) ?? 0) >= PAGE_TTL_MS;
+    if (version !== String(TEMPLATE_VERSION) || aged) stale.push(origin);
+  }
+  stale.sort((a, b) => (done.get(a.id) ?? 0) - (done.get(b.id) ?? 0));
   const next = stale[0];
   if (!next) return null;
   await storeOriginBundle(env, next);

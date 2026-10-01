@@ -53,10 +53,6 @@
     ],
     "footLinks": [
       {
-        "label": "Jak to działa",
-        "href": "#plans"
-      },
-      {
         "label": "Tanie loty",
         "href": "/tanie-loty"
       },
@@ -112,41 +108,45 @@
     "plans": [
       {
         "year": "2026",
-        "body": "**Wakacje.** Wycieczki all inclusive: lot, hotel i atrakcje w jednej cenie."
+        "body": "**Wakacje** — wycieczki all inclusive"
       },
       {
         "year": "2026",
-        "body": "**AI.** Automatyzacja planowania — loty, hotele, atrakcje i wydarzenia dobierane za Ciebie."
+        "body": "**AI** — automatyzacja planowania: loty, hotele, atrakcje i wydarzenia"
       },
       {
         "year": "2027",
-        "body": "**Rebranding na angielski.** Marka i treści po angielsku."
+        "body": "**Rebranding na angielski** — marka i treści po angielsku, **Mr. Periscope** dla EU i US"
       },
       {
         "year": "2027",
-        "body": "**Europa.** Wydarzenia i wyjazdy w każdym kraju, nie tylko w Polsce."
+        "body": "**Europa** — lotniska i wydarzenia w każdym kraju!"
       },
       {
         "year": "mid 2027",
-        "body": "**Stany Zjednoczone.** Osobna aplikacja na rynek amerykański."
+        "body": "**Stany Zjednoczone** — osobna aplikacja na rynek amerykański"
       }
     ],
     "slides": [
       {
         "label": "Miasto",
-        "credit": "https://unsplash.com/photos/airplane-over-clouds-during-golden-hour-1DkWtLz8fBA"
+        "author": "Astra Liu",
+        "photoUrl": "https://unsplash.com/photos/airplane-over-clouds-during-golden-hour-pEZ9uGCEdF4"
       },
       {
         "label": "Koncert",
-        "credit": "https://unsplash.com/photos/stage-light-front-of-audience-1J4xc2hFcGA"
+        "author": "Yvette de Wit",
+        "photoUrl": "https://unsplash.com/photos/stage-light-front-of-audience-NYrVisodQ2M"
       },
       {
         "label": "Stadion",
-        "credit": "https://unsplash.com/photos/high-angle-photography-of-football-stadium-2F3N0sB6eKc"
+        "author": "Mario Klassen",
+        "photoUrl": "https://unsplash.com/photos/high-angel-photography-of-football-stadium-70YxSTWa2Zw"
       },
       {
         "label": "Bieg",
-        "credit": "https://unsplash.com/photos/people-running-on-gray-asphalt-road-during-daytime-9Q0jP1h9XVU"
+        "author": "",
+        "photoUrl": ""
       }
     ]
   },
@@ -204,10 +204,6 @@
     ],
     "footLinks": [
       {
-        "label": "How it works",
-        "href": "#plans"
-      },
-      {
         "label": "Cheap flights",
         "href": "/tanie-loty"
       },
@@ -263,41 +259,45 @@
     "plans": [
       {
         "year": "2026",
-        "body": "**Holidays.** All inclusive trips: flight, hotel and attractions in one price."
+        "body": "**Holidays** — all inclusive trips"
       },
       {
         "year": "2026",
-        "body": "**AI.** Planning on autopilot — flights, hotels, attractions and events chosen for you."
+        "body": "**AI** — planning on autopilot: flights, hotels, attractions and events"
       },
       {
         "year": "2027",
-        "body": "**Rebrand to English.** The brand and the content in English."
+        "body": "**Rebrand to English** — the brand and the content in English, **Mr. Periscope** for the EU and the US"
       },
       {
         "year": "2027",
-        "body": "**Europe.** Events and trips in every country, not only in Poland."
+        "body": "**Europe** — airports and events in every country!"
       },
       {
         "year": "mid 2027",
-        "body": "**The United States.** A separate app for the American market."
+        "body": "**The United States** — a separate app for the American market"
       }
     ],
     "slides": [
       {
         "label": "City",
-        "credit": "https://unsplash.com/photos/airplane-over-clouds-during-golden-hour-1DkWtLz8fBA"
+        "author": "Astra Liu",
+        "photoUrl": "https://unsplash.com/photos/airplane-over-clouds-during-golden-hour-pEZ9uGCEdF4"
       },
       {
         "label": "Concert",
-        "credit": "https://unsplash.com/photos/stage-light-front-of-audience-1J4xc2hFcGA"
+        "author": "Yvette de Wit",
+        "photoUrl": "https://unsplash.com/photos/stage-light-front-of-audience-NYrVisodQ2M"
       },
       {
         "label": "Stadium",
-        "credit": "https://unsplash.com/photos/high-angle-photography-of-football-stadium-2F3N0sB6eKc"
+        "author": "Mario Klassen",
+        "photoUrl": "https://unsplash.com/photos/high-angel-photography-of-football-stadium-70YxSTWa2Zw"
       },
       {
         "label": "Race",
-        "credit": "https://unsplash.com/photos/people-running-on-gray-asphalt-road-during-daytime-9Q0jP1h9XVU"
+        "author": "",
+        "photoUrl": ""
       }
     ]
   }

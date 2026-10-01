@@ -57,7 +57,7 @@ export interface SiteText {
   cardMatch: string;
   cardRace: string;
   plans: { year: string; body: string }[];
-  slides: { label: string; credit: string }[];
+  slides: { label: string; author: string; photoUrl: string }[];
   prev: string;
   next: string;
   pause: string;
@@ -106,6 +106,61 @@ export const SITE_MODULES = ['app'];
 
 export function stylesheetLinks(): string {
   return SITE_MODULES.map((name) => `<link rel="stylesheet" href="/css/${name}.css" />`).join('\n');
+}
+
+
+function langSwitch(lang: SiteLang): string {
+  return SITE_LANGS
+    .map((code) => `<a href="${siteText(code).path}" data-lang="${code}"${code === lang ? ' aria-current="page"' : ''}>${code.toUpperCase()}</a>`)
+    .join('<span> / </span>');
+}
+
+export function siteOfficial(lang: SiteLang): string {
+  return `<p class="official">${escapeHtml(siteText(lang).official)}</p>`;
+}
+
+export function siteNav(lang: SiteLang): string {
+  const t = siteText(lang);
+  return `<header class="nav" id="nav">
+      <a class="brand" href="/">
+        <img src="/icon.png" alt="" width="26" height="26" />
+        <span>Pan Peryskop</span>
+      </a>
+      <button class="btn btn-primary menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(t.menu)}</button>
+    </header>`;
+}
+
+export function siteFooter(lang: SiteLang): string {
+  const t = siteText(lang);
+  const footLabel = (href: string) => t.footLinks.find((link) => link.href === href)?.label ?? href;
+  const links = t.footLinks.map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`).join('\n        ');
+  const airports = ORIGIN_PAGES
+    .map((origin) => `<a href="/${escapeHtml(origin.slug)}">${escapeHtml(lang === 'pl' ? origin.genitive : origin.name)}</a>`)
+    .join('\n      ');
+  return `<footer class="foot">
+    <nav class="foot-links">
+        ${links}
+    </nav>
+    <p class="label" style="margin-top:48px;text-align:center">${escapeHtml(t.footAirportsLabel)}</p>
+    <div class="foot-airports">
+      ${airports}
+    </div>
+    <p class="foot-wordmark">Pan Peryskop</p>
+    <div class="marks-pair">
+      <span class="laurel is-mirror" aria-hidden="true"></span>
+      <p>${escapeHtml(t.aboutMark)}</p>
+      <span class="laurel" aria-hidden="true"></span>
+    </div>
+    <div class="foot-marks">
+      <span><img src="/icon.png" alt="" width="26" height="26" /> ${escapeHtml(t.footApp)}</span>
+      <a href="${escapeHtml(APP_STORE)}" rel="noopener">${APPLE_ICON} ${escapeHtml(t.footStore)}</a>
+    </div>
+    <div class="foot-meta">
+      <span>${escapeHtml(t.footRights)}</span>
+      <span><a href="/sitemap.xml">${escapeHtml(t.footSitemap)}</a> · <a href="/llms.txt">${escapeHtml(t.footAi)}</a> · <a href="/privacy">${escapeHtml(footLabel('/privacy'))}</a> · <a href="/terms">${escapeHtml(footLabel('/terms'))}</a></span>
+      <span class="lang" aria-label="${escapeHtml(t.languageLabel)}">${langSwitch(lang)}</span>
+    </div>
+  </footer>`;
 }
 
 export function renderSite(lang: SiteLang): string {
@@ -167,6 +222,8 @@ export function renderSite(lang: SiteLang): string {
           <div class="a-body">${escapeHtml(item.a)}</div>
         </details>`).join('\n');
 
+  const footLabel = (href: string) => t.footLinks.find((link) => link.href === href)?.label ?? href;
+
   const footLinks = t.footLinks
     .map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`)
     .join('\n        ');
@@ -175,9 +232,6 @@ export function renderSite(lang: SiteLang): string {
     .map((link) => `<a class="sheet-link" href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`)
     .join('\n      ');
 
-  const langSwitch = () => SITE_LANGS
-    .map((code) => `<a href="${escapeHtml(siteText(code).path)}" data-lang="${escapeHtml(code)}"${code === lang ? ' aria-current="page"' : ''}>${escapeHtml(code.toUpperCase())}</a>`)
-    .join('<span> / </span>');
 
   return `<!doctype html>
 <html lang="${escapeHtml(t.lang)}">
@@ -214,17 +268,11 @@ ${stylesheetLinks()}
 </div>
 
 <div class="frame page">
-  <p class="official">${escapeHtml(t.official)}</p>
+  ${siteOfficial(lang)}
 
   <main id="main">
     <section class="hero" id="hero">
-      <header class="nav" id="nav">
-        <a class="brand" href="/">
-          <img src="/icon.png" alt="" width="26" height="26" />
-          <span>Pan Peryskop</span>
-        </a>
-        <button class="btn btn-primary menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(t.menu)}</button>
-      </header>
+      ${siteNav(lang)}
       <div class="hero-inner">
         <h1>${escapeHtml(t.heroTitle)}</h1>
         <p class="lead">${leadLines(t.heroLead)}</p>
@@ -237,19 +285,19 @@ ${stylesheetLinks()}
         <div class="hero-track" id="hero-track">
           <div class="hero-slide">
             <img draggable="false" src="/assets/slide-city.webp" alt="${escapeHtml(t.slides[0].label)}" width="1600" height="400" decoding="async" />
-            <a class="slide-credit" href="${escapeHtml(t.slides[0].credit)}" target="_blank" rel="noopener nofollow">${escapeHtml(t.slides[0].label)} · Unsplash</a>
+            ${t.slides[0].author ? `<a class="slide-credit" href="${escapeHtml(t.slides[0].photoUrl)}" target="_blank" rel="noopener nofollow">Photo by ${escapeHtml(t.slides[0].author)} via Unsplash</a>` : ''}
           </div>
           <div class="hero-slide">
             <img draggable="false" src="/assets/slide-concert.webp" alt="${escapeHtml(t.slides[1].label)}" width="1600" height="400" loading="lazy" decoding="async" />
-            <a class="slide-credit" href="${escapeHtml(t.slides[1].credit)}" target="_blank" rel="noopener nofollow">${escapeHtml(t.slides[1].label)} · Unsplash</a>
+            ${t.slides[1].author ? `<a class="slide-credit" href="${escapeHtml(t.slides[1].photoUrl)}" target="_blank" rel="noopener nofollow">Photo by ${escapeHtml(t.slides[1].author)} via Unsplash</a>` : ''}
           </div>
           <div class="hero-slide">
             <img draggable="false" src="/assets/slide-match.webp" alt="${escapeHtml(t.slides[2].label)}" width="1600" height="400" loading="lazy" decoding="async" />
-            <a class="slide-credit" href="${escapeHtml(t.slides[2].credit)}" target="_blank" rel="noopener nofollow">${escapeHtml(t.slides[2].label)} · Unsplash</a>
+            ${t.slides[2].author ? `<a class="slide-credit" href="${escapeHtml(t.slides[2].photoUrl)}" target="_blank" rel="noopener nofollow">Photo by ${escapeHtml(t.slides[2].author)} via Unsplash</a>` : ''}
           </div>
           <div class="hero-slide">
             <img draggable="false" src="/assets/slide-race.webp" alt="${escapeHtml(t.slides[3].label)}" width="1600" height="400" loading="lazy" decoding="async" />
-            <a class="slide-credit" href="${escapeHtml(t.slides[3].credit)}" target="_blank" rel="noopener nofollow">${escapeHtml(t.slides[3].label)} · Unsplash</a>
+            ${t.slides[3].author ? `<a class="slide-credit" href="${escapeHtml(t.slides[3].photoUrl)}" target="_blank" rel="noopener nofollow">Photo by ${escapeHtml(t.slides[3].author)} via Unsplash</a>` : ''}
           </div>
         </div>
       </div>
@@ -304,8 +352,8 @@ ${ORIGIN_PAGES.map((origin) => `      <a href="/${escapeHtml(origin.slug)}">${es
     </div>
     <div class="foot-meta">
       <span>${escapeHtml(t.footRights)}</span>
-      <span><a href="/sitemap.xml">${escapeHtml(t.footSitemap)}</a> · <a href="/llms.txt">${escapeHtml(t.footAi)}</a> · <a href="/privacy">${escapeHtml(t.footLinks[2].label)}</a> · <a href="/terms">${escapeHtml(t.footLinks[3].label)}</a></span>
-      <span class="lang" aria-label="${escapeHtml(t.languageLabel)}">${langSwitch()}</span>
+      <span><a href="/sitemap.xml">${escapeHtml(t.footSitemap)}</a> · <a href="/llms.txt">${escapeHtml(t.footAi)}</a> · <a href="/privacy">${escapeHtml(footLabel('/privacy'))}</a> · <a href="/terms">${escapeHtml(footLabel('/terms'))}</a></span>
+      <span class="lang" aria-label="${escapeHtml(t.languageLabel)}">${langSwitch(lang)}</span>
     </div>
   </footer>
 </div>
@@ -316,7 +364,7 @@ ${ORIGIN_PAGES.map((origin) => `      <a href="/${escapeHtml(origin.slug)}">${es
     <button class="btn btn-quiet" id="menu-close">${escapeHtml(t.close)}</button>
   </div>
   ${sheetLinks}
-  <div class="lang" aria-label="${escapeHtml(t.languageLabel)}" style="margin-top:26px">${langSwitch()}</div>
+  <div class="lang" aria-label="${escapeHtml(t.languageLabel)}" style="margin-top:26px">${langSwitch(lang)}</div>
 </div>
 
 <script defer src="/js/ui.js"></script>

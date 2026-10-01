@@ -10,7 +10,7 @@ import {
 } from './citybreak';
 import { mintRedirect } from '../analytics/redirect';
 import { HUB_CSS, ORIGIN_CSS, SITE_CSS } from './pageStyles';
-import { stylesheetLinks, siteText } from './sitePage';
+import { siteFooter, siteNav, siteOfficial, stylesheetLinks, siteText } from './sitePage';
 
 export interface OriginPage {
   id: string;
@@ -751,7 +751,7 @@ ${heroImage ? `<meta property="og:image" content="${heroImage}">` : ''}
 ${generatedHeadLinks()}
 <style>${SITE_CSS}${ORIGIN_CSS}</style>
 </head>
-<body class="inner">
+<body>
 <div class="frame">
 ${generatedOfficial('pl')}
 ${renderHeader(origin)}
@@ -801,7 +801,7 @@ ${image ? `<meta property="og:image" content="${esc(image)}">` : ''}
 ${generatedHeadLinks()}
 <style>${SITE_CSS}${ORIGIN_CSS}</style>
 </head>
-<body class="inner">
+<body>
 <div class="frame">
 ${generatedOfficial('pl')}`;
 }
@@ -931,15 +931,10 @@ export function renderIndexPage(generatedAt: string): string {
 ${generatedHeadLinks()}
 <style>${SITE_CSS}${HUB_CSS}</style>
 </head>
-<body class="inner">
+<body>
 <div class="frame">
 ${generatedOfficial('pl')}
-  <header class="nav">
-    <button class="btn btn-primary menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(t.menu)}</button>
-    <a class="brand" href="/"><img src="/icon.png" alt="" width="26" height="26" /><span>Pan Peryskop</span></a>
-    <a class="crumb" href="/">Strona główna</a>
-    <a class="btn" href="${APP_STORE_URL}" rel="noopener">Pobierz</a>
-  </header>
+${siteNav('pl')}
 <h1>Tanie loty i weekendy z polskich lotnisk</h1>
 <p class="lead">12 lotnisk wylotu w Polsce. Wybierz swoje i zobacz najtańsze kierunki oraz terminy.</p>
 <div class="hub"><ul class="plain">${links}</ul></div>
@@ -1001,42 +996,19 @@ function renderCarCard(place: Place | undefined): string {
 const APP_STORE_URL = 'https://apps.apple.com/pl/app/pan-peryskop/id6803138750';
 
 function generatedHeadLinks(): string {
-  return `${stylesheetLinks()}
-<link rel="stylesheet" href="/css/shell.css" />`;
+  return stylesheetLinks();
 }
 
 function generatedOfficial(lang: 'pl' | 'en'): string {
-  return `  <p class="official">${escapeHtml(siteText(lang).official)}</p>`;
+  return siteOfficial(lang);
 }
 
 function renderHeader(origin: OriginPage): string {
-  const links = ORIGIN_PAGES
-    .filter((page) => page.id !== origin.id)
-    .map((page) => `<li><a href="/${page.slug}">${escapeHtml(page.name)}</a></li>`)
-    .join('');
-  const t = siteText('pl');
-  return `  <header class="nav">
-    <button class="btn btn-primary menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(t.menu)}</button>
-    <a class="brand" href="/"><img src="/icon.png" alt="" width="26" height="26" /><span>Pan Peryskop</span></a>
-    <a class="crumb" href="/tanie-loty">Tanie loty</a>
-    <a class="btn" href="${APP_STORE_URL}" rel="noopener">Pobierz</a>
-    <nav class="origins" aria-label="Loty z innych miast"><span class="origins__label">Loty z:</span><ul class="plain origins">${links}</ul></nav>
-  </header>`;
+  return siteNav('pl');
 }
 
 function renderFooter(): string {
-  const links = ORIGIN_PAGES
-    .map((origin) => `<li><a href="/${origin.slug}">${escapeHtml(origin.name)}</a></li>`)
-    .join('');
-  const t = siteText('pl');
-  return `  <footer class="foot">
-    <nav class="origins" aria-label="Lotniska"><ul class="plain origins">${links}</ul></nav>
-    <p class="foot-links"><a href="/tanie-loty">Wszystkie lotniska</a> - <a href="/sitemap.xml">Mapa strony</a> - <a href="/llms.txt">Dla AI</a></p>
-    <div class="foot-meta">
-      <span>${escapeHtml(t.footRights)}</span>
-      <span><a href="/sitemap.xml">${escapeHtml(t.footSitemap)}</a> · <a href="/llms.txt">${escapeHtml(t.footAi)}</a></span>
-    </div>
-  </footer>`;
+  return siteFooter('pl');
 }
 
 function renderPartners(places: Place[]): string {
@@ -1216,7 +1188,7 @@ ${heroImage ? `<meta property="og:image" content="${heroImage}">` : ''}
 ${generatedHeadLinks()}
 <style>${SITE_CSS}${ORIGIN_CSS}</style>
 </head>
-<body class="inner">
+<body>
 <div class="frame">
 ${generatedOfficial('pl')}
 ${renderHeader(origin)}

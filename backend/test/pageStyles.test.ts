@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderIndexPage } from '../src/travel/webpage';
+import { renderSite } from '../src/travel/sitePage';
 import { HUB_CSS, ORIGIN_CSS, SITE_CSS } from '../src/travel/pageStyles';
 import { SITE_MODULES } from '../src/travel/sitePage';
 
@@ -11,22 +12,20 @@ test('the hub page links the landing stylesheet modules', () => {
   for (const name of SITE_MODULES) {
     assert.match(html, new RegExp(`/css/${name}\\.css`), `${name}.css is not linked`);
   }
-  assert.match(html, /\/css\/shell\.css/);
-  assert.equal(moduleLinks(html), SITE_MODULES.length + 1);
+  assert.doesNotMatch(html, /shell\.css/, 'generated pages carry no stylesheet of their own');
+  assert.equal(moduleLinks(html), SITE_MODULES.length);
   assert.match(html, /class="hub"/);
   assert.match(html, /rel="canonical"/);
   assert.match(html, /property="og:title"/);
 });
 
-test('the landing shell classes are on the hub header and footer', () => {
+test('the hub carries the landing navigation and footer, character for character', () => {
   const html = renderIndexPage('2026-09-30');
-  assert.match(html, /<header class="nav">/);
+  const landing = renderSite('pl');
+  const pick = (source: string, pattern: RegExp) => ((source.match(pattern) ?? [''])[0]).replace(/\s+/g, '');
+  assert.equal(pick(html, /<header class="nav"[\s\S]*?<\/header>/), pick(landing, /<header class="nav"[\s\S]*?<\/header>/));
+  assert.equal(pick(html, /<footer class="foot">[\s\S]*?<\/footer>/), pick(landing, /<footer class="foot">[\s\S]*?<\/footer>/));
   assert.match(html, /class="official"/);
-  assert.match(html, /class="brand"/);
-  assert.match(html, /menu-trigger/);
-  assert.match(html, /<footer class="foot">/);
-  assert.match(html, /class="foot-links"/);
-  assert.match(html, /class="foot-meta"/);
 });
 
 test('the generated pages carry the linked modules, not the full inline stylesheet', () => {

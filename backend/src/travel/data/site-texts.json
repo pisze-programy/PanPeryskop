@@ -112,19 +112,41 @@
     "plans": [
       {
         "year": "2026",
-        "body": "**AI planuje wszystko.** Loty, hotele, atrakcje, wydarzenia i wycieczki all inclusive — jedno narzędzie zamiast dziesięciu."
+        "body": "**Wakacje.** Wycieczki all inclusive: lot, hotel i atrakcje w jednej cenie."
+      },
+      {
+        "year": "2026",
+        "body": "**AI.** Automatyzacja planowania — loty, hotele, atrakcje i wydarzenia dobierane za Ciebie."
       },
       {
         "year": "2027",
-        "body": "**Cała Europa.** Wychodzimy poza Polskę: wydarzenia i wyjazdy w każdym kraju."
+        "body": "**Rebranding na angielski.** Marka i treści po angielsku."
       },
       {
         "year": "2027",
+        "body": "**Europa.** Wydarzenia i wyjazdy w każdym kraju, nie tylko w Polsce."
+      },
+      {
+        "year": "mid 2027",
         "body": "**Stany Zjednoczone.** Osobna aplikacja na rynek amerykański."
+      }
+    ],
+    "slides": [
+      {
+        "label": "Miasto",
+        "credit": "https://unsplash.com/photos/airplane-over-clouds-during-golden-hour-1DkWtLz8fBA"
       },
       {
-        "year": "2027",
-        "body": "**Mr. Periscope.** Nowa nazwa dla Europy i USA, gdy wchodzimy na oba rynki."
+        "label": "Koncert",
+        "credit": "https://unsplash.com/photos/stage-light-front-of-audience-1J4xc2hFcGA"
+      },
+      {
+        "label": "Stadion",
+        "credit": "https://unsplash.com/photos/high-angle-photography-of-football-stadium-2F3N0sB6eKc"
+      },
+      {
+        "label": "Bieg",
+        "credit": "https://unsplash.com/photos/people-running-on-gray-asphalt-road-during-daytime-9Q0jP1h9XVU"
       }
     ]
   },
@@ -241,19 +263,41 @@
     "plans": [
       {
         "year": "2026",
-        "body": "**AI plans everything.** Flights, hotels, attractions, events and all inclusive trips — one tool instead of ten."
+        "body": "**Holidays.** All inclusive trips: flight, hotel and attractions in one price."
+      },
+      {
+        "year": "2026",
+        "body": "**AI.** Planning on autopilot — flights, hotels, attractions and events chosen for you."
       },
       {
         "year": "2027",
-        "body": "**All of Europe.** We leave Poland behind: events and trips in every country."
+        "body": "**Rebrand to English.** The brand and the content in English."
       },
       {
         "year": "2027",
+        "body": "**Europe.** Events and trips in every country, not only in Poland."
+      },
+      {
+        "year": "mid 2027",
         "body": "**The United States.** A separate app for the American market."
+      }
+    ],
+    "slides": [
+      {
+        "label": "City",
+        "credit": "https://unsplash.com/photos/airplane-over-clouds-during-golden-hour-1DkWtLz8fBA"
       },
       {
-        "year": "2027",
-        "body": "**Mr. Periscope.** A new name for Europe and the US as we enter both markets."
+        "label": "Concert",
+        "credit": "https://unsplash.com/photos/stage-light-front-of-audience-1J4xc2hFcGA"
+      },
+      {
+        "label": "Stadium",
+        "credit": "https://unsplash.com/photos/high-angle-photography-of-football-stadium-2F3N0sB6eKc"
+      },
+      {
+        "label": "Race",
+        "credit": "https://unsplash.com/photos/people-running-on-gray-asphalt-road-during-daytime-9Q0jP1h9XVU"
       }
     ]
   }

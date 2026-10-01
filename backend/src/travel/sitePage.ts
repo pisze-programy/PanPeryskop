@@ -57,6 +57,7 @@ export interface SiteText {
   cardMatch: string;
   cardRace: string;
   plans: { year: string; body: string }[];
+  slides: { label: string; credit: string }[];
   prev: string;
   next: string;
   pause: string;
@@ -234,7 +235,23 @@ ${stylesheetLinks()}
           <span class="example" id="example" aria-live="polite">${escapeHtml(t.examples[0])}</span>
         </form>
         <div class="hero-track" id="hero-track">
-          <div class="hero-slide"><img draggable="false" src="/assets/card-city.webp" alt="${escapeHtml(t.cardCity)}" width="720" height="720" fetchpriority="high" decoding="async" /></div>
+          <div class="hero-slide">
+            <img draggable="false" src="/assets/slide-city.webp" alt="${escapeHtml(t.slides[0].label)}" width="1600" height="400" decoding="async" />
+            <a class="slide-credit" href="${escapeHtml(t.slides[0].credit)}" target="_blank" rel="noopener nofollow">${escapeHtml(t.slides[0].label)} · Unsplash</a>
+          </div>
+          <div class="hero-slide">
+            <img draggable="false" src="/assets/slide-concert.webp" alt="${escapeHtml(t.slides[1].label)}" width="1600" height="400" loading="lazy" decoding="async" />
+            <a class="slide-credit" href="${escapeHtml(t.slides[1].credit)}" target="_blank" rel="noopener nofollow">${escapeHtml(t.slides[1].label)} · Unsplash</a>
+          </div>
+          <div class="hero-slide">
+            <img draggable="false" src="/assets/slide-match.webp" alt="${escapeHtml(t.slides[2].label)}" width="1600" height="400" loading="lazy" decoding="async" />
+            <a class="slide-credit" href="${escapeHtml(t.slides[2].credit)}" target="_blank" rel="noopener nofollow">${escapeHtml(t.slides[2].label)} · Unsplash</a>
+          </div>
+          <div class="hero-slide">
+            <img draggable="false" src="/assets/slide-race.webp" alt="${escapeHtml(t.slides[3].label)}" width="1600" height="400" loading="lazy" decoding="async" />
+            <a class="slide-credit" href="${escapeHtml(t.slides[3].credit)}" target="_blank" rel="noopener nofollow">${escapeHtml(t.slides[3].label)} · Unsplash</a>
+          </div>
+        </div>
           <div class="hero-slide"><img draggable="false" src="/assets/card-concert.webp" alt="${escapeHtml(t.cardConcert)}" width="720" height="720" loading="lazy" decoding="async" /></div>
           <div class="hero-slide"><img draggable="false" src="/assets/card-match.webp" alt="${escapeHtml(t.cardMatch)}" width="720" height="720" loading="lazy" decoding="async" /></div>
           <div class="hero-slide"><img draggable="false" src="/assets/card-race.webp" alt="${escapeHtml(t.cardRace)}" width="720" height="720" loading="lazy" decoding="async" /></div>

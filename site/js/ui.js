@@ -120,8 +120,18 @@ if (hero && media) {
     timer = window.setInterval(() => show(index + 1), 4000);
   };
 
-  hero.querySelectorAll('[data-slide-prev]').forEach((button) => button.addEventListener('click', () => { paused = true; stop(); show(index - 1); }));
-  hero.querySelectorAll('[data-slide-next]').forEach((button) => button.addEventListener('click', () => { paused = true; stop(); show(index + 1); }));
+  const pauseButton = hero.querySelector('[data-slide-pause]');
+
+  const syncPauseButton = () => {
+    if (!pauseButton) return;
+    const playLabel = pauseButton.dataset.labelPlay ?? '';
+    const pauseLabel = pauseButton.dataset.labelPause ?? '';
+    pauseButton.textContent = paused ? '▶' : 'II';
+    pauseButton.setAttribute('aria-label', paused ? playLabel : pauseLabel);
+  };
+
+  hero.querySelectorAll('[data-slide-prev]').forEach((button) => button.addEventListener('click', () => { paused = true; stop(); syncPauseButton(); show(index - 1); }));
+  hero.querySelectorAll('[data-slide-next]').forEach((button) => button.addEventListener('click', () => { paused = true; stop(); syncPauseButton(); show(index + 1); }));
 
   let dragging = false;
   let dragStartX = 0;
@@ -157,14 +167,10 @@ if (hero && media) {
     if (!horizontal) { dragging = false; return; }
     endDrag(touch.clientX);
   }, { passive: true });
-  hero.querySelectorAll('[data-slide-pause]').forEach((button) => {
-    const playLabel = button.dataset.labelPlay ?? '';
-    const pauseLabel = button.getAttribute('aria-label') ?? '';
-    button.addEventListener('click', () => {
-      paused = !paused;
-      if (paused) { stop(); button.textContent = '▶'; button.setAttribute('aria-label', playLabel); }
-      else { start(); button.textContent = 'II'; button.setAttribute('aria-label', pauseLabel); }
-    });
+  pauseButton?.addEventListener('click', () => {
+    paused = !paused;
+    if (paused) stop(); else start();
+    syncPauseButton();
   });
   document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
   show(0);

@@ -52,6 +52,10 @@ export interface SiteText {
   upcomingLabel: string;
   upcomingTitle: string;
   examples: string[];
+  cardCity: string;
+  cardConcert: string;
+  cardMatch: string;
+  cardRace: string;
   prev: string;
   next: string;
   pause: string;
@@ -165,17 +169,17 @@ export function renderSite(lang: SiteLang): string {
     .join('\n      ');
 
   const screens: Array<{ title: string; src: string }> = [
-    { title: t.mosaicMap, src: '/assets/app-events-map.webp' },
-    { title: t.mosaicEvents, src: '/assets/app-europe-map.webp' },
-    { title: t.mosaicFlight, src: '/assets/app-match.webp' },
-    { title: t.mosaicStay, src: '/assets/app-race.webp' },
-    { title: t.mosaicMap, src: '/assets/app-city.webp' },
-    { title: t.mosaicEvents, src: '/assets/app-events-map.webp' },
-    { title: t.mosaicFlight, src: '/assets/app-europe-map.webp' },
-    { title: t.mosaicStay, src: '/assets/app-match.webp' },
-    { title: t.mosaicMap, src: '/assets/app-city.webp' },
-    { title: t.mosaicFlight, src: '/assets/app-race.webp' },
-    { title: t.mosaicStay, src: '/assets/app-city.webp' },
+    { title: t.cardCity, src: '/assets/app-city.webp' },
+    { title: t.cardConcert, src: '/assets/app-events-map.webp' },
+    { title: t.cardMatch, src: '/assets/app-match.webp' },
+    { title: t.cardRace, src: '/assets/app-race.webp' },
+    { title: t.cardCity, src: '/assets/app-europe-map.webp' },
+    { title: t.cardConcert, src: '/assets/app-match.webp' },
+    { title: t.cardMatch, src: '/assets/app-events-map.webp' },
+    { title: t.cardRace, src: '/assets/app-city.webp' },
+    { title: t.cardCity, src: '/assets/app-race.webp' },
+    { title: t.cardConcert, src: '/assets/app-city.webp' },
+    { title: t.cardMatch, src: '/assets/app-europe-map.webp' },
   ];
 
   const upcomingCards = screens.map((screen, index) => `              <figure class="mcard reveal" style="--i:${index}">
@@ -254,7 +258,7 @@ ${stylesheetLinks()}
       </div>
       <div class="slider-controls">
         <button type="button" class="ctrl" data-slide-prev aria-label="${escapeHtml(t.prev)}">‹</button>
-        <button type="button" class="ctrl" data-slide-pause data-label-play="${escapeHtml(t.play)}" aria-label="${escapeHtml(t.pause)}">II</button>
+        <button type="button" class="ctrl" data-slide-pause data-label-play="${escapeHtml(t.play)}" data-label-pause="${escapeHtml(t.pause)}" aria-label="${escapeHtml(t.pause)}">II</button>
         <button type="button" class="ctrl" data-slide-next aria-label="${escapeHtml(t.next)}">›</button>
       </div>
     </section>

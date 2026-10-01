@@ -86,10 +86,10 @@
     "mosaicPriceLabel": "cena za osobę",
     "mosaicCta": "Zobacz",
     "examples": [
+      "City Break - wycieczki weekendowe samolotem",
       "Koncert dziś wieczorem w Poznaniu",
       "Mecz w Barcelonie w listopadzie",
-      "Bieg w Lizbonie w listopadzie",
-      "City break w Gdańsku"
+      "Bieg w Lizbonie w listopadzie"
     ],
     "prev": "Poprzedni",
     "next": "Następny",
@@ -104,7 +104,11 @@
     "upcomingTitle": "Plany 2026/2027",
     "statementMarkLogo": "/icon.png",
     "statementMarkBall": "https://plus.unsplash.com/premium_photo-1733306475730-af26c0826aa2?w=200&h=200&fit=crop&auto=format&q=70",
-    "statementMarkRun": "https://plus.unsplash.com/premium_photo-1679938885972-180ed418f466?w=200&h=200&fit=crop&auto=format&q=70"
+    "statementMarkRun": "https://plus.unsplash.com/premium_photo-1679938885972-180ed418f466?w=200&h=200&fit=crop&auto=format&q=70",
+    "cardCity": "City Break",
+    "cardConcert": "Koncert",
+    "cardMatch": "Mecz",
+    "cardRace": "Bieg"
   },
   "en": {
     "lang": "en",
@@ -193,10 +197,10 @@
     "mosaicPriceLabel": "price per person",
     "mosaicCta": "See",
     "examples": [
+      "City Break - weekend trips by plane",
       "A concert tonight in Poznań",
       "A match in Barcelona in November",
-      "A race in Lisbon in November",
-      "A city break in Gdańsk"
+      "A race in Lisbon in November"
     ],
     "prev": "Previous",
     "next": "Next",
@@ -211,6 +215,10 @@
     "upcomingTitle": "Plans 2026/2027",
     "statementMarkLogo": "/icon.png",
     "statementMarkBall": "https://plus.unsplash.com/premium_photo-1733306475730-af26c0826aa2?w=200&h=200&fit=crop&auto=format&q=70",
-    "statementMarkRun": "https://plus.unsplash.com/premium_photo-1679938885972-180ed418f466?w=200&h=200&fit=crop&auto=format&q=70"
+    "statementMarkRun": "https://plus.unsplash.com/premium_photo-1679938885972-180ed418f466?w=200&h=200&fit=crop&auto=format&q=70",
+    "cardCity": "City Break",
+    "cardConcert": "Concert",
+    "cardMatch": "Match",
+    "cardRace": "Race"
   }
 }

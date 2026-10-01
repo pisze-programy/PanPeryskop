@@ -39,11 +39,10 @@
   .hero-track { transition: none; }
 }
 
-.hero .store-badge { display: inline-block; margin-top: 32px; }
-.hero .store-badge + * { margin-top: 0; }
+.hero .store-badge { display: inline-block; margin: 32px 0; }
 .hero .store-badge img { display: block; width: 120px; height: 40px; }
 @media (max-width: 699px) {
-  .hero .store-badge { margin-top: 22px; }
+  .hero .store-badge { margin: 22px 0; }
 }
 
 .hero-media { touch-action: pan-y; user-select: none; cursor: grab; }

@@ -8,6 +8,10 @@
 .upcoming-head h2 { font-size: 64px; line-height: 68px; letter-spacing: -3.125px; }
 .upcoming-artwork { position: relative; margin-top: 44px; width: 100%; aspect-ratio: 1728 / 1284; max-width: 1728px; margin-inline: auto; transform: translateX(-50%); left: 50%; container-type: inline-size; }
 .upcoming-canvas { position: absolute; top: 0; left: 50%; width: 3385px; height: 1284px; transform: translateX(-50%) scale(calc(100cqw / 1728px)); transform-origin: top center; }
+@media (max-width: 699px) {
+  .upcoming-artwork { aspect-ratio: auto; height: 320px; }
+  .upcoming-canvas { height: 1284px; transform: translateX(-50%) scale(calc(100cqw / 620px)); }
+}
 .mcard { position: absolute; display: block; padding: 0; margin: 0; }
 .mcard figcaption { margin-bottom: 8px; font: 500 14px/1.2 var(--sans); color: var(--ink); text-align: left; }
 .mcard-box { display: block; height: 100%; overflow: hidden; background: #fff; box-shadow: 0 10px 40px rgba(1, 14, 36, 0.08); border-radius: calc(40px * var(--corner-scale)); corner-shape: superellipse(1.3); }

@@ -23,3 +23,5 @@
 .foot-marks img, .foot-marks svg { width: 22px; height: 22px; border-radius: 6px; }
 .laurel { display: inline-block; flex: none; width: 30.3px; height: 82px; background: currentColor; -webkit-mask: url('/assets/laurel.svg') center / contain no-repeat; mask: url('/assets/laurel.svg') center / contain no-repeat; }
 .laurel.is-mirror { transform: scaleX(-1); }
+
+.page-head { position: relative; padding-top: 144px; }

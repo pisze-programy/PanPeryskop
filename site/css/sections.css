@@ -21,10 +21,6 @@
 .faq details[open] summary::after { transform: rotate(45deg); }
 .faq .a-body { padding-bottom: 20px; color: var(--ink-65); max-width: var(--w-text); }
 
-.rows { display: grid; gap: 0 40px; }
-.rows a { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; border-bottom: 1px solid var(--line); font-size: 1rem; }
-.rows a::after { content: none; }
-.rows a:hover { text-decoration: underline; }
 
 @media (max-width: 699px) {
   .plans-list { grid-template-columns: minmax(0, 1fr); }

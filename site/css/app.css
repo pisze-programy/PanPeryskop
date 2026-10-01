@@ -136,7 +136,6 @@ h1, h2, h3, p { margin: 0; }
 h1 { font-size: 96px; letter-spacing: -5.20834px; line-height: 96px; }
 h2 { font-size: 64px; letter-spacing: -3.125px; line-height: 68px; }
 h3 { font-family: var(--sans); font-size: 40px; font-weight: 500; letter-spacing: -1.2px; line-height: 42px; }
-.lead { font-size: 28px; line-height: 36px; letter-spacing: -0.2px; color: var(--ink-65); text-wrap: pretty; }
 .label { font-size: 12px; font-weight: 400; letter-spacing: normal; color: var(--ink); }
 .muted { color: var(--ink-65); }
 .frame { max-width: none; margin: 0 auto; background: #ffffff; border-radius: 48px; }
@@ -209,10 +208,6 @@ h3 { font-family: var(--sans); font-size: 40px; font-weight: 500; letter-spacing
 .faq details[open] summary::after { transform: rotate(45deg); }
 .faq .a-body { padding-bottom: 20px; color: var(--ink-65); max-width: var(--w-text); }
 
-.rows { display: grid; gap: 0 40px; }
-.rows a { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; border-bottom: 1px solid var(--line); font-size: 1rem; }
-.rows a::after { content: none; }
-.rows a:hover { text-decoration: underline; }
 
 @media (max-width: 699px) {
   .plans-list { grid-template-columns: minmax(0, 1fr); }
@@ -251,10 +246,12 @@ h3 { font-family: var(--sans); font-size: 40px; font-weight: 500; letter-spacing
 .laurel { display: inline-block; flex: none; width: 30.3px; height: 82px; background: currentColor; -webkit-mask: url('/assets/laurel.svg') center / contain no-repeat; mask: url('/assets/laurel.svg') center / contain no-repeat; }
 .laurel.is-mirror { transform: scaleX(-1); }
 
+.page-head { position: relative; padding-top: 144px; }
+
 /* hero */
 .hero { position: relative; margin: 0 32px; padding: 144px 32px 48px; text-align: center; border-radius: 48px; background: linear-gradient(180deg, #f0f4f6, #f7f7f8); }
 .hero-inner { max-width: 687.5px; margin: 0 auto; }
-.hero .lead { font-size: 24px; line-height: 32px; letter-spacing: normal; margin: 20px auto 12px; max-width: 44ch; }
+.lead { font-size: 24px; line-height: 32px; letter-spacing: normal; max-width: 44ch; }
 .hero-control { position: absolute; top: 16px; left: 16px; right: 16px; z-index: 1; display: flex; align-items: center; height: 96px; max-width: 655.5px; margin: 0 auto; padding: 23px 23px 23px 40px; border-radius: 48px; background: #fff; filter: drop-shadow(0 10px 20px rgba(1, 14, 36, 0.08)); text-align: left; }
 .example { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; font-size: 21px; line-height: 31.5px; color: var(--ink-65); }
 .example-word { display: inline-block; }

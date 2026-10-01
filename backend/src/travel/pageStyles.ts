@@ -1,8 +1,9 @@
 // Generated pages load the landing stylesheet modules and keep only rules the
 // landing modules do not define. Body width, fonts and the shell come from them.
-export const SITE_CSS = `:root{--muted:rgba(0,0,0,.55);--muted-strong:rgba(0,0,0,.68);--accent-deep:#4b2fb3;--link:#0a84ff;--brand-grad:linear-gradient(135deg,#2980a6,#332ba6,#9c29a6);--pill:999px}
-.muted{color:var(--muted-strong)}
-.lead{color:var(--muted-strong);margin:0 0 20px;max-width:64ch}
+export const SITE_CSS = `.muted{color:rgba(0,0,0,.68)}
+
+
+
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .grad-text{background:var(--brand-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .plain{font-size:15px}
@@ -11,7 +12,7 @@ export const SITE_CSS = `:root{--muted:rgba(0,0,0,.55);--muted-strong:rgba(0,0,0
 .plain a{font-weight:600;text-decoration:underline;text-decoration-color:rgba(0,0,0,.25);text-underline-offset:3px}
 .plain a:hover{color:var(--accent-deep);text-decoration-color:currentColor}
 .rows li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 14px;align-items:baseline;padding:11px 0}
-.rows .muted{text-align:right}
+.rows 
 .origins{display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-size:13px}
 .origins li{padding:0;border:0}
 .origins a{display:inline-flex;align-items:center;min-height:32px;padding:0 11px;border-radius:var(--pill);background:rgba(0,0,0,.05);font-weight:500;text-decoration:none}
@@ -36,7 +37,7 @@ export const SITE_CSS = `:root{--muted:rgba(0,0,0,.55);--muted-strong:rgba(0,0,0
 .opt__ico{display:none}
 .opt__lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;text-decoration:underline;text-decoration-color:rgba(0,0,0,.25);text-underline-offset:3px}
 .opt__lbl:hover{color:var(--accent-deep);text-decoration-color:currentColor}
-.opt__lbl.muted{text-decoration:none}
+.opt__lbl
 .opt__val{font-weight:700;white-space:nowrap;font-size:14px}
 .opt__hotelmeta{margin:2px 0 0;font-size:12px;color:var(--muted-strong)}
 .opt__actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
@@ -66,9 +67,11 @@ export const SITE_CSS = `:root{--muted:rgba(0,0,0,.55);--muted-strong:rgba(0,0,0
   .opt--best{margin:0 -8px;padding-left:8px;padding-right:8px}
   .opt__right{align-items:flex-start}
   .rows li{grid-template-columns:1fr}
-  .rows .muted{text-align:left}
+  .rows 
 }
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}}`;
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}}.page-media{display:block;width:100%;height:auto;margin:0 0 24px;border-radius:24px}
+.page-note{margin:32px 0 0;font-size:13px;color:rgba(0,0,0,.45)}
+`;
 
 export const ORIGIN_CSS = `.place{display:grid;grid-template-columns:240px minmax(0,1fr);align-items:stretch;margin:16px 0;background:#fff;border:1px solid var(--line);border-radius:var(--r-4);overflow:hidden}
 .place__img{position:relative;display:block;height:100%;min-height:200px;overflow:hidden;background:rgba(0,0,0,.05)}

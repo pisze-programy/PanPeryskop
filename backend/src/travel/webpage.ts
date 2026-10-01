@@ -757,7 +757,7 @@ ${generatedOfficial('pl')}
 ${renderHeader(origin)}
 <h1>${escapeHtml(title)}</h1>
 <p class="lead">Kierunek ${escapeHtml(name)}: najtańsze weekendy z ${escapeHtml(origin.genitive)}. Od ${headline} zł/os. Cena za osobę; lot w obie strony, a nocleg gdy podany.</p>
-${heroImage ? `<img class="hero" src="${esc(heroImage)}" alt="${escapeHtml(name)}" fetchpriority="high" decoding="async" width="1000" height="500">` : ''}
+${heroImage ? `<img class="page-media" src="${esc(heroImage)}" alt="${escapeHtml(name)}" fetchpriority="high" decoding="async" width="1000" height="500">` : ''}
 <h2>Terminy i ceny</h2>
 <p class="muted">Średnia cena lotu: ${avg} zł/os.</p>
 <ul class="options">
@@ -772,7 +772,7 @@ ${faqHtml}
 ${monthLinks ? `<h2>Terminy miesięczne</h2><ul class="plain origins">${monthLinks}</ul>` : ''}
 ${links ? `<h2>Inne kierunki z ${escapeHtml(origin.genitive)}</h2><ul class="plain origins">${links}</ul>` : ''}
 ${renderFooter()}
-<p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne. Serwis korzysta z linków partnerskich.</p>
+<p class="page-note">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne. Serwis korzysta z linków partnerskich.</p>
 </div>
 </body>
 </html>`;
@@ -934,12 +934,12 @@ ${generatedHeadLinks()}
 <body>
 <div class="frame">
 ${generatedOfficial('pl')}
-${siteNav('pl')}
+${renderHeaderHub()}
 <h1>Tanie loty i weekendy z polskich lotnisk</h1>
 <p class="lead">12 lotnisk wylotu w Polsce. Wybierz swoje i zobacz najtańsze kierunki oraz terminy.</p>
 <div class="hub"><ul class="plain">${links}</ul></div>
 ${renderFooter()}
-<p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne.</p>
+<p class="page-note">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne.</p>
 </div>
 </body>
 </html>`;
@@ -1003,8 +1003,12 @@ function generatedOfficial(lang: 'pl' | 'en'): string {
   return siteOfficial(lang);
 }
 
+function renderHeaderHub(): string {
+  return `<div class="page-head">${siteNav('pl')}</div>`;
+}
+
 function renderHeader(origin: OriginPage): string {
-  return siteNav('pl');
+  return `<div class="page-head">${siteNav('pl')}</div>`;
 }
 
 function renderFooter(): string {
@@ -1201,7 +1205,7 @@ ${renderPartners(places)}
 <section class="editorial"><h2>Miesięczne zestawienia</h2><ul class="plain origins">${monthLinks}</ul><p class="foot-links"><a href="/${origin.slug}/polaczenia">Wszystkie połączenia z ${escapeHtml(origin.genitive)}</a></p></section>
 <section class="editorial"><h2>Tanie loty z innych miast</h2><ul class="plain origins">${others}</ul></section>
 ${renderFooter()}
-<p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne i mogą się zmienić u przewoźnika lub w hotelu. Serwis korzysta z linków partnerskich.</p>
+<p class="page-note">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne i mogą się zmienić u przewoźnika lub w hotelu. Serwis korzysta z linków partnerskich.</p>
 </div>
 </body>
 </html>`;

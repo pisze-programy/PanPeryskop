@@ -10,18 +10,6 @@ interface FaqItem {
   a: string;
 }
 
-interface Feature {
-  id: string;
-  label: string;
-  title: string;
-  body: string;
-  link: string;
-  href: string;
-  images: string[];
-  tile: 'image' | 'panel';
-  alt: string;
-}
-
 interface FootLink {
   label: string;
   href: string;
@@ -45,7 +33,6 @@ export interface SiteText {
   heroLead: string;
   heroAlt: string;
 
-  features: Feature[];
   faqTitle: string;
   faq: FaqItem[];
   statement: string;
@@ -64,8 +51,6 @@ export interface SiteText {
   howTitle: string;
   upcomingLabel: string;
   upcomingTitle: string;
-  tilePanelTitle: string;
-  tilePanelMeta: string;
   examples: string[];
   prev: string;
   next: string;
@@ -158,19 +143,6 @@ export function renderSite(lang: SiteLang): string {
       }</span>`)
     .join(' ');
 
-  const features = t.features.map((feature) => `      <section class="feature reveal">
-        <div class="feature-media">
-          ${feature.tile === 'panel'
-            ? `<div class="tile-panel"><span class="label">${escapeHtml(t.tilePanelTitle)}</span><strong>${escapeHtml(t.tilePanelMeta)}</strong></div>`
-            : `<img src="${escapeHtml(feature.images[0])}" alt="${escapeHtml(feature.alt)}" width="800" height="800" loading="lazy" decoding="async" />`}
-        </div>
-        <div>
-          <h3>${escapeHtml(feature.title)}</h3>
-          <p class="muted">${escapeHtml(feature.body)}</p>
-          <a class="link-arrow" href="${escapeHtml(feature.href)}"${feature.href.startsWith('http') ? ' rel="noopener"' : ''}>${escapeHtml(feature.link)}</a>
-        </div>
-      </section>`).join('\n');
-
   const strong = (text: string) => escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
   const leadLines = (text: string) => text
@@ -201,12 +173,14 @@ export function renderSite(lang: SiteLang): string {
     { title: t.mosaicEvents, src: '/assets/app-events-map.webp', width: 464, height: 972 },
     { title: t.mosaicFlight, src: '/assets/app-europe-map.webp', width: 364, height: 908 },
     { title: t.mosaicStay, src: '/assets/app-match.webp', width: 408, height: 928 },
+    { title: t.mosaicMap, src: '/assets/app-city.webp', width: 750, height: 1334 },
+    { title: t.mosaicFlight, src: '/assets/app-race.webp', width: 440, height: 942 },
   ];
 
-  const upcomingCards = screens.map((screen, index) => `          <figure class="mcard reveal" style="--i:${index}">
-            <figcaption>${escapeHtml(screen.title)}</figcaption>
-            <span class="mcard-box"><img src="${escapeHtml(screen.src)}" alt="" width="${screen.width}" height="${screen.height}" loading="lazy" decoding="async" /></span>
-          </figure>`).join('\n');
+  const upcomingCards = screens.map((screen, index) => `              <figure class="mcard reveal" style="--i:${index}">
+                <figcaption>${escapeHtml(screen.title)}</figcaption>
+                <span class="mcard-box"><img src="${escapeHtml(screen.src)}" alt="" width="${screen.width}" height="${screen.height}" loading="lazy" decoding="async" /></span>
+              </figure>`).join('\n');
 
   const upcomingList = screens
     .map((screen) => `          <li>${escapeHtml(screen.title)}</li>`)
@@ -289,14 +263,9 @@ ${stylesheetLinks()}
       <p class="statement">${statementHtml}</p>
     </section>
 
-    <section class="features" id="how-it-works">
-${features}
-    </section>
-
     <section class="upcoming" id="upcoming-features" aria-labelledby="coming-in-2027">
       <div class="upcoming-inner">
         <div class="upcoming-head">
-          <p class="label">${escapeHtml(t.upcomingLabel)}</p>
           <h2 id="coming-in-2027">${escapeHtml(t.upcomingTitle)}</h2>
           <a class="store-badge" href="${escapeHtml(APP_STORE)}" rel="noopener"><img src="${STORE_BADGE}" alt="${escapeHtml(t.download)}" width="120" height="40" /></a>
         </div>
@@ -304,10 +273,8 @@ ${features}
 ${upcomingList}
         </ul>
         <div class="upcoming-artwork" data-scroll-container="document">
-          <div class="upcoming-layer">
-            <div class="canvas" aria-hidden="true">
+          <div class="upcoming-canvas" aria-hidden="true">
 ${upcomingCards}
-            </div>
           </div>
         </div>
       </div>

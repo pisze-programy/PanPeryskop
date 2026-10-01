@@ -1,41 +1,20 @@
 /* Pan Peryskop: sections module. Values measured against the reference. */
 
-.features { padding: 96px 0 var(--y-band); }
-.features h2, .features > .lead { padding-inline: var(--gutter); }
-.features > .lead { margin-top: 18px; max-width: 52ch; }
-.feature { display: grid; grid-template-columns: 437.3px 437.3px; column-gap: 15.4px; row-gap: 24px; align-items: center; max-width: 890px; margin: clamp(64px, 9vw, 120px) auto 0; }
-.feature-media { max-width: 437.3px; border-radius: calc(var(--r-media) * var(--corner-scale)); corner-shape: superellipse(1.3); overflow: hidden; background: var(--surface); box-shadow: var(--shadow-media); }
-.feature-media img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
-.feature h3 { max-width: 18ch; }
-.feature p { font-size: 16px; line-height: 24px; letter-spacing: normal; margin-top: 14px; max-width: 42ch; }
-.feature .label { display: block; margin-bottom: 14px; }
-.feature .link-arrow { margin-top: 22px; }
 /* overrides.css forces an even-row flip and narrower columns; these two hold the measured row */
-.features .feature { grid-template-columns: 437.3px 437.3px; gap: 15.4px; }
-.features > .feature:nth-of-type(even) .feature-media { order: 0; }
-.upcoming { width: 100vw; margin-left: calc(50% - 50vw); position: relative; overflow: hidden; background: #f7f7f7; color: var(--ink); padding: 174px 0 0; text-align: center; }
+/* Referencja: kanwa 3385x1284 skalowana tan(atan2(100cqw, 1728px)) i wysrodkowana. */
+.upcoming { position: relative; width: 100vw; margin-left: calc(50% - 50vw); padding: 174px 0 0; overflow: hidden; background: #f7f7f7; color: var(--ink); }
 .upcoming-inner { position: relative; }
-.upcoming-head { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 0 var(--gutter); }
-.upcoming .label { color: var(--ink-65); }
-.upcoming .lead { max-width: 46ch; color: var(--ink-70); }
-.upcoming .btn-dark { margin-top: 8px; background: #000; color: #fff; height: 56px; padding: 0 23.705px; font-weight: 700; border-radius: var(--r-pill); }
-.upcoming .btn-dark:hover { background: rgba(0, 0, 0, 0.85); }
-.upcoming-artwork { position: relative; margin-top: clamp(48px, 7vw, 84px); }
-.upcoming-layer { position: static; }
-.canvas { position: relative; display: flex; flex-wrap: wrap; align-content: flex-start; align-items: flex-start; gap: 20px; width: min(100%, 1432px); margin-inline: auto; }
-.mcard { position: relative; flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; overflow: visible; }
-.mcard figcaption { font: 500 14px/1.2 var(--sans); letter-spacing: -0.1px; color: var(--ink); text-align: left; }
-.mcard-box { position: relative; flex: 1; min-height: 0; padding: 14px; background: #fff; border-radius: 47.76px; corner-shape: superellipse(1.3); box-shadow: 0 10px 40px rgba(1, 14, 36, 0.08); overflow: hidden; }
-.mcard-box img { width: 100%; height: 100%; border-radius: calc(47.76px - 14px); object-fit: cover; object-position: top center; }
-.mcard-box::after { content: ""; position: absolute; inset: 14px; border-radius: calc(47.76px - 14px); opacity: 0; backdrop-filter: blur(2.5px); transition: opacity 0.3s var(--ease); }
-.canvas .mcard:nth-child(1) { width: 300px; height: 340px; margin-top: 40px; --dur: 0.4s; }
-.canvas .mcard:nth-child(2) { width: 380px; height: 300px; margin-top: 0px; --dur: 0.4s; }
-.canvas .mcard:nth-child(3) { width: 300px; height: 400px; margin-top: 30px; --dur: 0.34s; }
-.canvas .mcard:nth-child(4) { width: 380px; height: 360px; margin-top: 90px; --dur: 0.18s; }
-.canvas .mcard:nth-child(5) { width: 300px; height: 320px; margin-top: 10px; --dur: 0.24s; }
-.canvas .mcard:nth-child(6) { width: 340px; height: 420px; margin-top: 60px; --dur: 0.36s; }
-.canvas .mcard:nth-child(7) { width: 300px; height: 340px; margin-top: 24px; --dur: 0.22s; }
-.canvas .mcard:nth-child(8) { width: 380px; height: 360px; margin-top: 84px; --dur: 0.28s; }
+.upcoming-head { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 0 var(--gutter); text-align: center; }
+.upcoming-head h2 { font-size: 64px; line-height: 68px; letter-spacing: -3.125px; }
+.upcoming-artwork { position: relative; margin-top: 44px; width: 100%; aspect-ratio: 1728 / 1284; max-width: 1728px; margin-inline: auto; transform: translateX(-50%); left: 50%; container-type: inline-size; }
+.upcoming-canvas { position: absolute; top: 0; left: 50%; width: 3385px; height: 1284px; transform: translateX(-50%) scale(calc(100cqw / 1728px)); transform-origin: top center; }
+.mcard { position: absolute; display: block; padding: 0; margin: 0; }
+.mcard figcaption { margin-bottom: 8px; font: 500 14px/1.2 var(--sans); color: var(--ink); text-align: left; }
+.mcard-box { display: block; overflow: hidden; background: #fff; box-shadow: 0 10px 40px rgba(1, 14, 36, 0.08); border-radius: calc(40px * var(--corner-scale)); corner-shape: superellipse(1.3); }
+.mcard-box img { display: block; width: 100%; height: auto; }
+.mcard-box::after { content: ""; position: absolute; inset: 0; opacity: 0; background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(2.5px); transition: opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.mcard:hover .mcard-box::after { opacity: 1; }
+.mcard { translate: 0 calc(var(--scroll-damp, 0px) * var(--drag, 0.6)); transition: translate calc(var(--drag, 0.6) * 0.4s) cubic-bezier(0.22, 1, 0.36, 1); }
 .faq { padding: var(--y-band) var(--gutter); }
 .faq h2 { margin-bottom: 28px; }
 .faq details { border-bottom: 1px solid var(--line); }
@@ -51,14 +30,14 @@
 .tile-panel { display: grid; align-content: center; gap: 10px; aspect-ratio: 1; padding: clamp(24px, 4vw, 44px); background: var(--ink); color: var(--invert); border-radius: calc(var(--r-media) * var(--corner-scale)); corner-shape: superellipse(1.3); }
 .tile-panel .label { color: var(--invert-45); }
 .tile-panel strong { font-family: var(--serif); font-size: clamp(1.75rem, 3vw, 2.75rem); font-weight: 400; letter-spacing: -0.03em; }
-.canvas .mcard { transform: translate3d(calc(var(--dx, 0px) + var(--sx, 0px)), calc(var(--dy, 0px) + var(--lift, 0px)), 0); transition: transform var(--dur, 0.4s) var(--ease), box-shadow 0.18s var(--ease); will-change: transform; }
+.upcoming-canvas .mcard { transform: translate3d(calc(var(--dx, 0px) + var(--sx, 0px)), calc(var(--dy, 0px) + var(--lift, 0px)), 0); transition: transform var(--dur, 0.4s) var(--ease), box-shadow 0.18s var(--ease); will-change: transform; }
 
 /* overrides.css puts a hover shadow on .mcard, which is now a transparent box. */
-.upcoming-inner .upcoming-artwork .canvas .mcard:hover { --lift: -6px; box-shadow: none; }
-.upcoming-inner .upcoming-artwork .canvas .mcard:hover .mcard-box { box-shadow: 0 16.667px 36.806px rgba(0, 0, 0, 0.08); }
-.upcoming-inner .upcoming-artwork .canvas .mcard:hover .mcard-box::after { opacity: 1; }
+.upcoming-inner .upcoming-artwork .upcoming-canvas .mcard:hover { --lift: -6px; box-shadow: none; }
+.upcoming-inner .upcoming-artwork .upcoming-canvas .mcard:hover .mcard-box { box-shadow: 0 16.667px 36.806px rgba(0, 0, 0, 0.08); }
+.upcoming-inner .upcoming-artwork .upcoming-canvas .mcard:hover .mcard-box::after { opacity: 1; }
 /* overrides.css replaces the .mcard transition, which removes the eased transform. */
-.upcoming-inner .upcoming-artwork .canvas .mcard { transition: opacity 0.15s ease, translate 0.15s ease, transform var(--dur, 0.4s) var(--ease), box-shadow 0.18s var(--ease); }
+.upcoming-inner .upcoming-artwork .upcoming-canvas .mcard { transition: opacity 0.15s ease, translate 0.15s ease, transform var(--dur, 0.4s) var(--ease), box-shadow 0.18s var(--ease); }
 /* overrides.css pins the band to fixed heights and shifts .canvas by a fixed -720px.
    The band must flow, so every card stays inside it and no card is clipped. */
 .upcoming-inner .upcoming-artwork { height: auto; }
@@ -66,13 +45,22 @@
 .upcoming-inner .upcoming-artwork .canvas { position: relative; left: auto; transform: none; display: flex; flex-wrap: wrap; width: min(100%, 1408px); margin-inline: auto; }
 
 @media (max-width: 699px) {
-  .feature { grid-template-columns: minmax(0, 1fr); max-width: 437.3px; }
-  .features .feature { grid-template-columns: minmax(0, 1fr); }
-  .upcoming-inner .upcoming-artwork .canvas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; width: auto; }
-  .upcoming-inner .upcoming-artwork .canvas .mcard { width: auto; margin-top: 0; }
-  .upcoming-inner .upcoming-artwork .canvas .mcard figcaption { font-size: 14px; }
+      .upcoming-inner .upcoming-artwork .canvas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; width: auto; }
+  .upcoming-inner .upcoming-artwork .upcoming-canvas .mcard { width: auto; margin-top: 0; }
+  .upcoming-inner .upcoming-artwork .upcoming-canvas .mcard figcaption { font-size: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .upcoming-inner .upcoming-artwork .canvas .mcard { transform: none; transition: none; }
+  .upcoming-inner .upcoming-artwork .upcoming-canvas .mcard { transform: none; transition: none; }
 }
+
+.upcoming-canvas .mcard:nth-child(1) { left: 288px; top: 312px; width: 400px; --drag: 1.0; }
+.upcoming-canvas .mcard:nth-child(2) { left: 2652px; top: 33px; width: 350px; --drag: 1.0; }
+.upcoming-canvas .mcard:nth-child(3) { left: 0px; top: 168px; width: 460px; --drag: 0.85; }
+.upcoming-canvas .mcard:nth-child(4) { left: 760px; top: 36px; width: 460px; --drag: 0.45; }
+.upcoming-canvas .mcard:nth-child(5) { left: 0px; top: 620px; width: 410px; --drag: 0.75; }
+.upcoming-canvas .mcard:nth-child(6) { left: 430px; top: 610px; width: 360px; --drag: 0.6; }
+.upcoming-canvas .mcard:nth-child(7) { left: 1030px; top: 610px; width: 258px; --drag: 0.5; }
+.upcoming-canvas .mcard:nth-child(8) { left: 1240px; top: 830px; width: 143px; --drag: 0.65; }
+.upcoming-canvas .mcard:nth-child(9) { left: 1390px; top: 0px; width: 370px; --drag: 0.8; }
+.upcoming-canvas .mcard:nth-child(10) { left: 930px; top: 470px; width: 370px; --drag: 0.9; }

@@ -2,20 +2,12 @@
 document.documentElement.classList.add('js');
 
 const splash = document.querySelector('.splash');
-const page = document.querySelector('.page');
 
-if (splash && page && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+if (splash) {
   const logo = splash.querySelector('.splash-logo');
-  window.requestAnimationFrame(() => logo?.classList.add('is-in'));
-  const finish = () => {
-    splash.classList.add('is-out');
-    page.classList.add('is-in');
-  };
-  const ready = document.readyState === 'complete'
-    ? Promise.resolve()
-    : new Promise((resolve) => window.addEventListener('load', resolve, { once: true }));
-  Promise.race([ready, new Promise((resolve) => window.setTimeout(resolve, 1400))])
-    .then(() => window.setTimeout(finish, 300));
+  logo?.classList.add('is-in');
+  window.addEventListener('load', () => splash.classList.add('is-out'), { once: true });
+  window.setTimeout(() => splash.classList.add('is-out'), 1200);
 }
 
 const nav = document.getElementById('nav');
@@ -116,21 +108,16 @@ if (hero && media) {
 
   const show = (next) => {
     if (!slides.length) return;
-    index = Math.min(Math.max(next, 0), slides.length - 1);
+    index = ((next % slides.length) + slides.length) % slides.length;
     if (track) track.style.transform = `translateX(${-index * 100}%)`;
-    if (examples.length) setExample(examples[Math.min(index, examples.length - 1)]);
-    hero.querySelectorAll('[data-slide-prev]').forEach((button) => button.disabled = index === 0);
-    hero.querySelectorAll('[data-slide-next]').forEach((button) => button.disabled = index === slides.length - 1);
+    if (examples.length) setExample(examples[index % examples.length]);
   };
 
   const stop = () => { if (timer) window.clearInterval(timer); timer = undefined; };
   const start = () => {
-    if (paused || slides.length < 2 || index >= slides.length - 1) return;
+    if (paused || slides.length < 2) return;
     stop();
-    timer = window.setInterval(() => {
-      if (index >= slides.length - 1) { stop(); return; }
-      show(index + 1);
-    }, 4000);
+    timer = window.setInterval(() => show(index + 1), 4000);
   };
 
   hero.querySelectorAll('[data-slide-prev]').forEach((button) => button.addEventListener('click', () => { paused = true; stop(); show(index - 1); }));

@@ -16,60 +16,6 @@
     "heroTitle": "Cześć, Polsko",
     "heroLead": "Jedna mapa. Wiele powodów na wyjście lub wyjazd.",
     "heroAlt": "Wieczorne miasto z lotu ptaka",
-    "features": [
-      {
-        "id": "events",
-        "label": "Wydarzenia",
-        "title": "Co się dzieje w 11 miastach Polski",
-        "body": "Koncerty, kino, teatr, stand-up i sport na mapie. Filtry po dniu i kategorii.",
-        "link": "Pobierz aplikację",
-        "href": "https://apps.apple.com/pl/app/pan-peryskop/id6803138750",
-        "tile": "image",
-        "alt": "Kraków wieczorem",
-        "images": [
-          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75"
-        ]
-      },
-      {
-        "id": "flights",
-        "label": "Loty",
-        "title": "Loty z 12 lotnisk w Polsce",
-        "body": "Wyloty z 12 lotnisk w Polsce do 304 kierunków w Europie. 11 miast to zasięg mapy wydarzeń, a 12 lotnisk to lista miejsc startu. Cena za osobę.",
-        "link": "Zobacz kierunki",
-        "href": "/tanie-loty",
-        "tile": "image",
-        "alt": "Samolot nad chmurami",
-        "images": [
-          "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&h=800&fit=crop&auto=format&q=75"
-        ]
-      },
-      {
-        "id": "match",
-        "label": "Mecz albo bieg",
-        "title": "Mecz albo bieg: lot, hotel i bilet",
-        "body": "Wybierz mecz albo bieg w Europie i termin. Aplikacja pokaże lot, hotel i bilet. Zakup kończysz u organizatora.",
-        "link": "Kierunki z Warszawy",
-        "href": "/tanie-loty-z-warszawy",
-        "tile": "image",
-        "alt": "Piłka na linii boiska",
-        "images": [
-          "https://plus.unsplash.com/premium_photo-1733306475730-af26c0826aa2?w=800&h=800&fit=crop&auto=format&q=75"
-        ]
-      },
-      {
-        "id": "weekend",
-        "label": "City break",
-        "title": "City break: sam lot i hotel",
-        "body": "Wskaż termin i miasto. Aplikacja pokaże lot i hotel. Bilet nie jest potrzebny.",
-        "link": "Połączenia z Poznania",
-        "href": "/tanie-loty-z-poznania/polaczenia",
-        "tile": "image",
-        "alt": "Tower Bridge w Londynie",
-        "images": [
-          "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=800&h=800&fit=crop&auto=format&q=75"
-        ]
-      }
-    ],
     "faqTitle": "Pytania i odpowiedzi",
     "faq": [
       {
@@ -139,8 +85,6 @@
     "mosaicStay": "Nocleg",
     "mosaicPriceLabel": "cena za osobę",
     "mosaicCta": "Zobacz",
-    "tilePanelTitle": "Trasa",
-    "tilePanelMeta": "12 lotnisk wylotu",
     "examples": [
       "Koncert dziś wieczorem w Poznaniu",
       "Mecz w Barcelonie w listopadzie",
@@ -179,60 +123,6 @@
     "heroTitle": "Hello, Poland",
     "heroLead": "One map. Many reasons to go out or get away.",
     "heroAlt": "A city at night from above",
-    "features": [
-      {
-        "id": "events",
-        "label": "Events",
-        "title": "What is on in 11 cities in Poland",
-        "body": "Concerts, cinema, theatre, stand-up and sport on a map. Filters by day and category.",
-        "link": "Download the app",
-        "href": "https://apps.apple.com/pl/app/pan-peryskop/id6803138750",
-        "tile": "image",
-        "alt": "Kraków in the evening",
-        "images": [
-          "https://images.unsplash.com/photo-1562050380-55da3bae840c?w=800&h=800&fit=crop&auto=format&q=75"
-        ]
-      },
-      {
-        "id": "flights",
-        "label": "Flights",
-        "title": "Flights from 12 airports in Poland",
-        "body": "Departures from 12 airports in Poland to 304 destinations in Europe. The 11 cities are the reach of the event map, and the 12 airports are the list of departure points. Prices per person.",
-        "link": "See destinations",
-        "href": "/tanie-loty",
-        "tile": "image",
-        "alt": "A plane above the clouds",
-        "images": [
-          "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&h=800&fit=crop&auto=format&q=75"
-        ]
-      },
-      {
-        "id": "match",
-        "label": "A match or a race",
-        "title": "A match or a race: flight, hotel and ticket",
-        "body": "Pick a match or a race in Europe and a date. The app shows the flight, the hotel and the ticket. You finish the purchase with the organiser.",
-        "link": "Destinations from Warszawa",
-        "href": "/tanie-loty-z-warszawy",
-        "tile": "image",
-        "alt": "A ball on the halfway line",
-        "images": [
-          "https://plus.unsplash.com/premium_photo-1733306475730-af26c0826aa2?w=800&h=800&fit=crop&auto=format&q=75"
-        ]
-      },
-      {
-        "id": "weekend",
-        "label": "City break",
-        "title": "City break: just a flight and a hotel",
-        "body": "Pick a date and a city. The app shows the flight and the hotel. No ticket needed.",
-        "link": "Connections from Poznań",
-        "href": "/tanie-loty-z-poznania/polaczenia",
-        "tile": "image",
-        "alt": "Tower Bridge in London",
-        "images": [
-          "https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=800&h=800&fit=crop&auto=format&q=75"
-        ]
-      }
-    ],
     "faqTitle": "Questions and answers",
     "faq": [
       {
@@ -302,8 +192,6 @@
     "mosaicStay": "Stay",
     "mosaicPriceLabel": "price per person",
     "mosaicCta": "See",
-    "tilePanelTitle": "Route",
-    "tilePanelMeta": "12 departure airports",
     "examples": [
       "A concert tonight in Poznań",
       "A match in Barcelona in November",

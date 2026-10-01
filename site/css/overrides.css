@@ -54,8 +54,7 @@
   .frame { border-radius: 40px; }
   .hero { border-radius: 40px; }
   .hero-media { border-radius: calc(40px * var(--corner-scale)); }
-  .feature-media, .tile-panel { border-radius: calc(40px * var(--corner-scale)); }
-  .foot-links a { font-size: 40px; line-height: 46px; }
+    .foot-links a { font-size: 40px; line-height: 46px; }
 }
 /* The reference keeps the tablet scale until the desktop scale starts above 1144px. */
 @media (min-width: 700px) and (max-width: 1144px) {
@@ -65,9 +64,7 @@
   .foot-links a { font-size: 40px; line-height: 46px; letter-spacing: -1.95px; }
   .foot-wordmark { font-size: 185px; }
   .frame { max-width: 834px; }
-  .feature, .features .feature { grid-template-columns: minmax(0, 1fr); max-width: 437.3px; }
-  .hero { margin-inline: 32px; padding: 96px 32px 48px; }
-  .nav { padding: 24px 32px; }
+    .nav { padding: 24px 32px; }
   .nav { padding: 24px var(--gutter); }
   .foot { padding: 96px 0 96px; }
   .upcoming { padding: 96px 0 0; }
@@ -75,9 +72,7 @@
 }
 @media (max-width: 699px) {
   :root { --gutter: 24px; }
-  .features { padding-left: var(--gutter); padding-right: var(--gutter); }
-  .feature { padding-inline: 0; }
-  .faq { padding-left: var(--gutter); padding-right: var(--gutter); }
+      .faq { padding-left: var(--gutter); padding-right: var(--gutter); }
   .about { padding-left: var(--gutter); padding-right: var(--gutter); }
   .official { padding: 12px var(--gutter); }
   .foot { padding: 96px 0 96px; }

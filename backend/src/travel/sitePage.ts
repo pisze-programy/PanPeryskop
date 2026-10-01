@@ -169,17 +169,17 @@ export function renderSite(lang: SiteLang): string {
     .join('\n      ');
 
   const screens: Array<{ title: string; src: string }> = [
-    { title: t.cardCity, src: '/assets/card-city.webp' },
-    { title: t.cardConcert, src: '/assets/app-events-map.webp' },
-    { title: t.cardMatch, src: '/assets/card-match.webp' },
-    { title: t.cardRace, src: '/assets/card-race.webp' },
-    { title: t.cardCity, src: '/assets/app-city.webp' },
-    { title: t.cardConcert, src: '/assets/app-europe-map.webp' },
-    { title: t.cardMatch, src: '/assets/app-match.webp' },
-    { title: t.cardRace, src: '/assets/app-race.webp' },
-    { title: t.cardCity, src: '/assets/card-city.webp' },
-    { title: t.cardConcert, src: '/assets/app-city.webp' },
-    { title: t.cardMatch, src: '/assets/card-match.webp' },
+    { title: t.mosaicMap, src: '/assets/app-events-map.webp' },
+    { title: t.mosaicEvents, src: '/assets/app-europe-map.webp' },
+    { title: t.mosaicFlight, src: '/assets/app-match.webp' },
+    { title: t.mosaicStay, src: '/assets/app-race.webp' },
+    { title: t.mosaicMap, src: '/assets/app-city.webp' },
+    { title: t.mosaicEvents, src: '/assets/app-events-map.webp' },
+    { title: t.mosaicFlight, src: '/assets/app-europe-map.webp' },
+    { title: t.mosaicStay, src: '/assets/app-match.webp' },
+    { title: t.mosaicMap, src: '/assets/app-city.webp' },
+    { title: t.mosaicEvents, src: '/assets/app-race.webp' },
+    { title: t.mosaicFlight, src: '/assets/app-events-map.webp' },
   ];
 
   const upcomingCards = screens.map((screen, index) => `              <figure class="mcard reveal" style="--i:${index}">
@@ -251,9 +251,10 @@ ${stylesheetLinks()}
           <span class="example" id="example" aria-live="polite">${escapeHtml(t.examples[0])}</span>
         </form>
         <div class="hero-track" id="hero-track">
-          <div class="hero-slide"><img draggable="false" src="${escapeHtml(HERO_IMAGE)}" alt="${escapeHtml(t.heroAlt)}" width="2000" height="1250" fetchpriority="high" decoding="async" /></div>
-          <div class="hero-slide"><img draggable="false" src="${escapeHtml(SLIDE_IMAGE)}" alt="" width="2000" height="1250" loading="lazy" decoding="async" /></div>
-          <div class="hero-slide"><img draggable="false" src="${escapeHtml(HERO_IMAGE_3)}" alt="" width="2000" height="1250" loading="lazy" decoding="async" /></div>
+          <div class="hero-slide"><img draggable="false" src="/assets/card-city.webp" alt="${escapeHtml(t.cardCity)}" width="720" height="720" fetchpriority="high" decoding="async" /></div>
+          <div class="hero-slide"><img draggable="false" src="/assets/card-concert.webp" alt="${escapeHtml(t.cardConcert)}" width="720" height="720" loading="lazy" decoding="async" /></div>
+          <div class="hero-slide"><img draggable="false" src="/assets/card-match.webp" alt="${escapeHtml(t.cardMatch)}" width="720" height="720" loading="lazy" decoding="async" /></div>
+          <div class="hero-slide"><img draggable="false" src="/assets/card-race.webp" alt="${escapeHtml(t.cardRace)}" width="720" height="720" loading="lazy" decoding="async" /></div>
         </div>
       </div>
       <div class="slider-controls">

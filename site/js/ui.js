@@ -130,8 +130,14 @@ if (hero && media) {
     pauseButton.setAttribute('aria-label', paused ? playLabel : pauseLabel);
   };
 
-  hero.querySelectorAll('[data-slide-prev]').forEach((button) => button.addEventListener('click', () => { paused = true; stop(); syncPauseButton(); show(index - 1); }));
-  hero.querySelectorAll('[data-slide-next]').forEach((button) => button.addEventListener('click', () => { paused = true; stop(); syncPauseButton(); show(index + 1); }));
+  const stopAutoplay = () => {
+    paused = true;
+    stop();
+    syncPauseButton();
+  };
+
+  hero.querySelectorAll('[data-slide-prev]').forEach((button) => button.addEventListener('click', () => { stopAutoplay(); show(index - 1); }));
+  hero.querySelectorAll('[data-slide-next]').forEach((button) => button.addEventListener('click', () => { stopAutoplay(); show(index + 1); }));
 
   let dragging = false;
   let dragStartX = 0;
@@ -142,8 +148,7 @@ if (hero && media) {
     dragging = false;
     const shift = clientX - dragStartX;
     if (Math.abs(shift) < 40) return;
-    paused = true;
-    stop();
+    stopAutoplay();
     show(shift < 0 ? index + 1 : index - 1);
   };
 

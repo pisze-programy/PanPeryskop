@@ -169,17 +169,17 @@ export function renderSite(lang: SiteLang): string {
     .join('\n      ');
 
   const screens: Array<{ title: string; src: string }> = [
-    { title: t.cardCity, src: '/assets/app-city.webp' },
+    { title: t.cardCity, src: '/assets/card-city.webp' },
     { title: t.cardConcert, src: '/assets/app-events-map.webp' },
+    { title: t.cardMatch, src: '/assets/card-match.webp' },
+    { title: t.cardRace, src: '/assets/card-race.webp' },
+    { title: t.cardCity, src: '/assets/app-city.webp' },
+    { title: t.cardConcert, src: '/assets/app-europe-map.webp' },
     { title: t.cardMatch, src: '/assets/app-match.webp' },
     { title: t.cardRace, src: '/assets/app-race.webp' },
-    { title: t.cardCity, src: '/assets/app-europe-map.webp' },
-    { title: t.cardConcert, src: '/assets/app-match.webp' },
-    { title: t.cardMatch, src: '/assets/app-events-map.webp' },
-    { title: t.cardRace, src: '/assets/app-city.webp' },
-    { title: t.cardCity, src: '/assets/app-race.webp' },
+    { title: t.cardCity, src: '/assets/card-city.webp' },
     { title: t.cardConcert, src: '/assets/app-city.webp' },
-    { title: t.cardMatch, src: '/assets/app-europe-map.webp' },
+    { title: t.cardMatch, src: '/assets/card-match.webp' },
   ];
 
   const upcomingCards = screens.map((screen, index) => `              <figure class="mcard reveal" style="--i:${index}">

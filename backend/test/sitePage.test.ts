@@ -30,7 +30,7 @@ test('the airport links come from the origin data', () => {
   const en = renderSite('en');
   for (const origin of ORIGIN_PAGES) {
     assert.ok(pl.includes(`href="/${origin.slug}"`), `${origin.slug} is missing`);
-    assert.ok(pl.includes(`>${origin.genitive}</a>`), `the Polish label is missing for ${origin.slug}`);
+    assert.ok(pl.includes(`>${origin.name}</a>`), `the Polish label is missing for ${origin.slug}`);
     assert.ok(en.includes(`>${origin.name}</a>`), `the English label is missing for ${origin.slug}`);
   }
 });

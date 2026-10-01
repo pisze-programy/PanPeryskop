@@ -135,7 +135,7 @@ export function siteFooter(lang: SiteLang): string {
   const footLabel = (href: string) => t.footLinks.find((link) => link.href === href)?.label ?? href;
   const links = t.footLinks.map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`).join('\n        ');
   const airports = ORIGIN_PAGES
-    .map((origin) => `<a href="/${escapeHtml(origin.slug)}">${escapeHtml(lang === 'pl' ? origin.genitive : origin.name)}</a>`)
+    .map((origin) => `<a href="/${escapeHtml(origin.slug)}">${escapeHtml(origin.name)}</a>`)
     .join('\n      ');
   return `<footer class="foot">
     <nav class="foot-links">
@@ -166,7 +166,6 @@ export function siteFooter(lang: SiteLang): string {
 export function renderSite(lang: SiteLang): string {
   const t = siteText(lang);
   const url = `${PUBLIC_BASE}${t.path === '/' ? '/' : t.path}`;
-  const airportLabel = (origin: typeof ORIGIN_PAGES[number]) => (lang === 'pl' ? origin.genitive : origin.name);
   const schema = JSON.stringify({
     '@context': 'https://schema.org',
     '@graph': [
@@ -332,30 +331,7 @@ ${faq}
     </section>
   </main>
 
-  <footer class="foot">
-    <nav class="foot-links">
-        ${footLinks}
-    </nav>
-    <p class="label" style="margin-top:48px;text-align:center">${escapeHtml(t.footAirportsLabel)}</p>
-    <div class="foot-airports">
-${ORIGIN_PAGES.map((origin) => `      <a href="/${escapeHtml(origin.slug)}">${escapeHtml(airportLabel(origin))}</a>`).join('\n')}
-    </div>
-    <p class="foot-wordmark">Pan Peryskop</p>
-    <div class="marks-pair">
-      <span class="laurel is-mirror" aria-hidden="true"></span>
-      <p>${escapeHtml(t.aboutMark)}</p>
-      <span class="laurel" aria-hidden="true"></span>
-    </div>
-    <div class="foot-marks">
-      <span><img src="/icon.png" alt="" width="26" height="26" /> ${escapeHtml(t.footApp)}</span>
-      <a href="${escapeHtml(APP_STORE)}" rel="noopener">${APPLE_ICON} ${escapeHtml(t.footStore)}</a>
-    </div>
-    <div class="foot-meta">
-      <span>${escapeHtml(t.footRights)}</span>
-      <span><a href="/sitemap.xml">${escapeHtml(t.footSitemap)}</a> · <a href="/llms.txt">${escapeHtml(t.footAi)}</a> · <a href="/privacy">${escapeHtml(footLabel('/privacy'))}</a> · <a href="/terms">${escapeHtml(footLabel('/terms'))}</a></span>
-      <span class="lang" aria-label="${escapeHtml(t.languageLabel)}">${langSwitch(lang)}</span>
-    </div>
-  </footer>
+  ${siteFooter(lang)}
 </div>
 
 <div class="sheet" id="menu-sheet" role="dialog" aria-modal="true" aria-label="${escapeHtml(t.menu)}" hidden>

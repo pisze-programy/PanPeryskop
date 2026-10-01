@@ -49,5 +49,5 @@
 
 .hero .lead-line { display: block; }
 
-.slide-credit { position: absolute; right: 14px; bottom: 12px; padding: 4px 10px; border-radius: 9999px; background: rgba(0, 12, 31, 0.42); color: rgba(255, 255, 255, 0.82); font: 400 11px/1.4 var(--sans); letter-spacing: 0.01em; text-decoration: none; backdrop-filter: blur(6px); }
+.slide-credit { position: absolute; right: 0; bottom: 0; padding: 4px 50px 4px 12px; border-radius: 9999px; background: rgba(0, 12, 31, 0.42); color: rgba(255, 255, 255, 0.82); font: 400 11px/1.4 var(--sans); letter-spacing: 0.01em; text-decoration: none; backdrop-filter: blur(6px); }
 .slide-credit:hover { background: rgba(0, 12, 31, 0.62); color: #fff; }

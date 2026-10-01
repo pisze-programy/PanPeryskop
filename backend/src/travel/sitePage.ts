@@ -263,10 +263,10 @@ ${stylesheetLinks()}
       <p class="statement">${statementHtml}</p>
     </section>
 
-    <section class="upcoming" id="upcoming-features" aria-labelledby="coming-in-2027">
+    <section class="upcoming" id="plans" aria-labelledby="plans-heading">
       <div class="upcoming-inner">
         <div class="upcoming-head">
-          <h2 id="coming-in-2027">${escapeHtml(t.upcomingTitle)}</h2>
+          <h2 id="plans-heading">${escapeHtml(t.upcomingTitle)}</h2>
           <a class="store-badge" href="${escapeHtml(APP_STORE)}" rel="noopener"><img src="${STORE_BADGE}" alt="${escapeHtml(t.download)}" width="120" height="40" /></a>
         </div>
         <ul role="list" class="sr-only" aria-label="${escapeHtml(t.upcomingTitle)}">

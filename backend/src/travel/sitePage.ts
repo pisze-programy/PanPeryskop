@@ -252,10 +252,6 @@ ${stylesheetLinks()}
             <a class="slide-credit" href="${escapeHtml(t.slides[3].credit)}" target="_blank" rel="noopener nofollow">${escapeHtml(t.slides[3].label)} · Unsplash</a>
           </div>
         </div>
-          <div class="hero-slide"><img draggable="false" src="/assets/card-concert.webp" alt="${escapeHtml(t.cardConcert)}" width="720" height="720" loading="lazy" decoding="async" /></div>
-          <div class="hero-slide"><img draggable="false" src="/assets/card-match.webp" alt="${escapeHtml(t.cardMatch)}" width="720" height="720" loading="lazy" decoding="async" /></div>
-          <div class="hero-slide"><img draggable="false" src="/assets/card-race.webp" alt="${escapeHtml(t.cardRace)}" width="720" height="720" loading="lazy" decoding="async" /></div>
-        </div>
       </div>
       <div class="slider-controls">
         <button type="button" class="ctrl" data-slide-prev aria-label="${escapeHtml(t.prev)}">‹</button>

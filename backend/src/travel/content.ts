@@ -6,7 +6,8 @@ import {
 import { foldCity } from './airports';
 import { submitIndexNow } from './indexnow';
 
-const PAGE_TTL_MS = 24 * 3_600_000;
+const PAGE_TTL_MS = 15 * 60_000;
+const TEMPLATE_VERSION = 2;
 
 export function pageKey(slug: string): string {
   return `plan/${slug}.html`;
@@ -183,7 +184,7 @@ export async function docs(env: Env): Promise<ContentDoc[]> {
 export async function buildNextStale(env: Env): Promise<OriginPage | null> {
   const done = await originDoneAt(env);
   const stale = ORIGIN_PAGES
-    .filter((origin) => Date.now() - (done.get(origin.id) ?? 0) > PAGE_TTL_MS)
+    .filter((origin) => Date.now() - (done.get(origin.id) ?? 0) >= PAGE_TTL_MS)
     .sort((a, b) => (done.get(a.id) ?? 0) - (done.get(b.id) ?? 0));
   const next = stale[0];
   if (!next) return null;

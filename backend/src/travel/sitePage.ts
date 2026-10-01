@@ -56,6 +56,7 @@ export interface SiteText {
   cardConcert: string;
   cardMatch: string;
   cardRace: string;
+  plans: { year: string; body: string }[];
   prev: string;
   next: string;
   pause: string;
@@ -155,6 +156,11 @@ export function renderSite(lang: SiteLang): string {
     .map((line) => `<span class="lead-line">${strong(line)}</span>`)
     .join(' ');
 
+  const plansList = t.plans.map((item) => `          <li>
+            <span class="plans-year">${escapeHtml(item.year)}</span>
+            <p>${strong(item.body)}</p>
+          </li>`).join('\n');
+
   const faq = t.faq.map((item) => `        <details>
           <summary>${escapeHtml(item.q)}</summary>
           <div class="a-body">${escapeHtml(item.a)}</div>
@@ -167,29 +173,6 @@ export function renderSite(lang: SiteLang): string {
   const sheetLinks = t.footLinks
     .map((link) => `<a class="sheet-link" href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`)
     .join('\n      ');
-
-  const screens: Array<{ title: string; src: string }> = [
-    { title: t.mosaicMap, src: '/assets/app-events-map.webp' },
-    { title: t.mosaicEvents, src: '/assets/app-europe-map.webp' },
-    { title: t.mosaicFlight, src: '/assets/app-match.webp' },
-    { title: t.mosaicStay, src: '/assets/app-race.webp' },
-    { title: t.mosaicMap, src: '/assets/app-city.webp' },
-    { title: t.mosaicEvents, src: '/assets/app-events-map.webp' },
-    { title: t.mosaicFlight, src: '/assets/app-europe-map.webp' },
-    { title: t.mosaicStay, src: '/assets/app-match.webp' },
-    { title: t.mosaicMap, src: '/assets/app-city.webp' },
-    { title: t.mosaicEvents, src: '/assets/app-race.webp' },
-    { title: t.mosaicFlight, src: '/assets/app-events-map.webp' },
-  ];
-
-  const upcomingCards = screens.map((screen, index) => `              <figure class="mcard reveal" style="--i:${index}">
-                <figcaption>${escapeHtml(screen.title)}</figcaption>
-                <span class="mcard-box"><img src="${escapeHtml(screen.src)}" alt="" loading="lazy" decoding="async" /></span>
-              </figure>`).join('\n');
-
-  const upcomingList = screens
-    .map((screen) => `          <li>${escapeHtml(screen.title)}</li>`)
-    .join('\n');
 
   const langSwitch = () => SITE_LANGS
     .map((code) => `<a href="${escapeHtml(siteText(code).path)}" data-lang="${escapeHtml(code)}"${code === lang ? ' aria-current="page"' : ''}>${escapeHtml(code.toUpperCase())}</a>`)
@@ -272,17 +255,13 @@ ${stylesheetLinks()}
     <section class="upcoming" id="plans" aria-labelledby="plans-heading">
       <div class="upcoming-inner">
         <div class="upcoming-head">
+          <p class="label">${escapeHtml(t.upcomingLabel)}</p>
           <h2 id="plans-heading">${escapeHtml(t.upcomingTitle)}</h2>
           <a class="store-badge" href="${escapeHtml(APP_STORE)}" rel="noopener"><img src="${STORE_BADGE}" alt="${escapeHtml(t.download)}" width="120" height="40" /></a>
         </div>
-        <ul role="list" class="sr-only" aria-label="${escapeHtml(t.upcomingTitle)}">
-${upcomingList}
+        <ul class="plans-list">
+${plansList}
         </ul>
-        <div class="upcoming-artwork" data-scroll-container="document">
-          <div class="upcoming-canvas" aria-hidden="true">
-${upcomingCards}
-          </div>
-        </div>
       </div>
     </section>
 

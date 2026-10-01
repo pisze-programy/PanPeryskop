@@ -1,6 +1,23 @@
 // The .js class arms the entrance states, so a failed script still shows the page.
 document.documentElement.classList.add('js');
 
+const splash = document.querySelector('.splash');
+const page = document.querySelector('.page');
+
+if (splash && page && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const logo = splash.querySelector('.splash-logo');
+  window.requestAnimationFrame(() => logo?.classList.add('is-in'));
+  const finish = () => {
+    splash.classList.add('is-out');
+    page.classList.add('is-in');
+  };
+  const ready = document.readyState === 'complete'
+    ? Promise.resolve()
+    : new Promise((resolve) => window.addEventListener('load', resolve, { once: true }));
+  Promise.race([ready, new Promise((resolve) => window.setTimeout(resolve, 1400))])
+    .then(() => window.setTimeout(finish, 300));
+}
+
 const nav = document.getElementById('nav');
 if (nav) {
   const onScroll = () => nav.classList.toggle('is-stuck', window.scrollY > 8);
@@ -101,7 +118,9 @@ if (hero && media) {
     if (!slides.length) return;
     index = Math.min(Math.max(next, 0), slides.length - 1);
     if (track) track.style.transform = `translateX(${-index * 100}%)`;
-    if (examples.length) setExample(examples[index % examples.length]);
+    if (examples.length) setExample(examples[Math.min(index, examples.length - 1)]);
+    hero.querySelectorAll('[data-slide-prev]').forEach((button) => button.disabled = index === 0);
+    hero.querySelectorAll('[data-slide-next]').forEach((button) => button.disabled = index === slides.length - 1);
   };
 
   const stop = () => { if (timer) window.clearInterval(timer); timer = undefined; };
@@ -165,7 +184,6 @@ if (hero && media) {
   start();
 }
 
-// Canvas: karty ida lekko za mysza, kazda o swoim wspolczynniku.
 const canvas = document.querySelector('.canvas');
 if (canvas && window.matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').matches) {
   const cards = Array.from(canvas.querySelectorAll('.mcard'));
@@ -180,4 +198,41 @@ if (canvas && window.matchMedia('(hover: hover) and (prefers-reduced-motion: no-
     });
   });
   canvas.addEventListener('pointerleave', () => cards.forEach((card) => { card.style.setProperty('--dx', '0px'); card.style.setProperty('--dy', '0px'); }));
+}
+
+// Canvas: two rows slide apart on scroll. The rows are clipped by the band, so the
+// motion is horizontal only. It is a transform, so the section box never changes.
+const artwork = document.querySelector('.upcoming-artwork');
+const rowsRoot = document.querySelector('.canvas');
+if (artwork && rowsRoot && window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+  const rowCards = Array.from(rowsRoot.querySelectorAll('.mcard'));
+  const ROW_BREAK = 4;
+  const AMPLITUDE = 16;
+  const rowsFit = () => window.matchMedia('(min-width: 700px)').matches;
+
+  const setRowShift = () => {
+    if (!rowsFit()) {
+      rowCards.forEach((card) => card.style.removeProperty('--sx'));
+      return;
+    }
+    const box = artwork.getBoundingClientRect();
+    const span = window.innerHeight + box.height;
+    const progress = span > 0 ? (window.innerHeight - box.top) / span : 0;
+    const closeness = Math.min(Math.max(progress, 0), 1) - 0.5;
+    const shift = closeness * 2 * AMPLITUDE;
+    rowCards.forEach((card, index) => {
+      const direction = index < ROW_BREAK ? -1 : 1;
+      card.style.setProperty('--sx', `${(shift * direction).toFixed(1)}px`);
+    });
+  };
+
+  let ticking = false;
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(() => { ticking = false; setRowShift(); });
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
+  setRowShift();
 }

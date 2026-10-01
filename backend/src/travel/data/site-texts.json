@@ -4,7 +4,7 @@
     "locale": "pl_PL",
     "path": "/",
     "title": "Pan Peryskop: wydarzenia w 11 miastach Polski i loty z 12 lotnisk",
-    "description": "Wydarzenia w 11 miastach Polski: koncerty, kino, teatr, stand-up i sport. Loty z 12 lotnisk do 304 kierunków w Europie. Aplikacja na iOS, darmowa, bez reklam.",
+    "description": "Wydarzenia w 11 miastach Polski, loty z 12 lotnisk do 304 kierunków w Europie. Aplikacja darmowa, po polsku.",
     "ogTitle": "Pan Peryskop: wydarzenia w 11 miastach Polski i loty z 12 lotnisk",
     "ogDescription": "Wydarzenia w 11 miastach Polski. Loty z 12 lotnisk i hotele na wyjazd na mecz albo bieg. Aplikacja darmowa, bez reklam.",
     "schemaDescription": "Wydarzenia w 11 miastach Polski na mapie: koncerty, kino, teatr, stand-up i sport. Loty z 12 lotnisk do 304 kierunków w Europie. Lot, hotel i bilet na mecz albo bieg w jednej aplikacji.",
@@ -14,7 +14,7 @@
     "close": "Zamknij",
     "languageLabel": "Język",
     "heroTitle": "Cześć, Polsko",
-    "heroLead": "Koncerty, kino, teatr i sport w **11 miastach Polski**. Loty z **12 lotnisk** do **304 kierunków** w Europie, w tym na **mecze i biegi**. Lot, hotel i bilet w jednej aplikacji.",
+    "heroLead": "Jedna mapa. Wiele powodów na wyjście lub wyjazd.",
     "heroAlt": "Wieczorne miasto z lotu ptaka",
     "features": [
       {
@@ -53,7 +53,7 @@
         "tile": "image",
         "alt": "Piłka na linii boiska",
         "images": [
-          "https://images.unsplash.com/photo-1650327987377-90bf6c9789fd?w=800&h=800&fit=crop&auto=format&q=75"
+          "https://plus.unsplash.com/premium_photo-1733306475730-af26c0826aa2?w=800&h=800&fit=crop&auto=format&q=75"
         ]
       },
       {
@@ -132,7 +132,7 @@
     "footAi": "Dla AI",
     "footSitemap": "Mapa strony",
     "statement": "Pan Peryskop {mark} łączy **lot**, **hotel** i **bilet** na **mecz** {ball} albo **bieg** {run}. Do tego mapa wydarzeń w 11 miastach Polski i wyloty z 12 lotnisk do 304 kierunków w Europie.",
-    "plansCta": "Pobierz aplikację",
+    "plansCta": "Pobierz z App Store",
     "mosaicMap": "Mapa",
     "mosaicEvents": "Wydarzenia",
     "mosaicFlight": "Lot",
@@ -158,18 +158,16 @@
     "howTitle": "Jak to działa",
     "upcomingLabel": "W przygotowaniu",
     "upcomingTitle": "Plany 2026/2027",
-    "upcomingLead": "Pracujemy nad kolejnymi miastami i kierunkami.",
-    "featuresLead": "Wydarzenia z 11 miast Polski widzisz na mapie. Gdy chcesz jechać na mecz albo bieg, aplikacja pokaże lot, hotel i bilet. Jest darmowa i po polsku.",
     "statementMarkLogo": "/icon.png",
-    "statementMarkBall": "https://images.unsplash.com/photo-1650327987377-90bf6c9789fd?w=200&h=200&fit=crop&auto=format&q=70",
-    "statementMarkRun": "https://images.unsplash.com/photo-1596460658047-1826d5921c56?w=200&h=200&fit=crop&auto=format&q=70"
+    "statementMarkBall": "https://plus.unsplash.com/premium_photo-1733306475730-af26c0826aa2?w=200&h=200&fit=crop&auto=format&q=70",
+    "statementMarkRun": "https://plus.unsplash.com/premium_photo-1679938885972-180ed418f466?w=200&h=200&fit=crop&auto=format&q=70"
   },
   "en": {
     "lang": "en",
     "locale": "en_US",
     "path": "/en",
     "title": "Pan Peryskop: events in 11 cities in Poland and flights from 12 airports",
-    "description": "Events in 11 cities in Poland: concerts, cinema, theatre, stand-up and sport. Flights from 12 airports to 304 destinations in Europe. A free iOS app with no ads.",
+    "description": "Events in 11 cities in Poland, flights from 12 airports to 304 destinations in Europe. A free app, in Polish.",
     "ogTitle": "Pan Peryskop: events in 11 cities in Poland and flights from 12 airports",
     "ogDescription": "Events in 11 cities in Poland. Flights from 12 airports and hotels for a trip to a match or a race. A free app with no ads.",
     "schemaDescription": "Events in 11 cities in Poland on one map: concerts, cinema, theatre, stand-up and sport. Flights from 12 airports to 304 destinations in Europe. A flight, a hotel and a ticket for a match or a race in one app.",
@@ -179,7 +177,7 @@
     "close": "Close",
     "languageLabel": "Language",
     "heroTitle": "Hello, Poland",
-    "heroLead": "Concerts, cinema, theatre and sport in **11 cities in Poland**. Flights from **12 airports** to **304 destinations** in Europe, including **matches and races**. A flight, a hotel and a ticket in one app.",
+    "heroLead": "One map. Many reasons to go out or get away.",
     "heroAlt": "A city at night from above",
     "features": [
       {
@@ -218,7 +216,7 @@
         "tile": "image",
         "alt": "A ball on the halfway line",
         "images": [
-          "https://images.unsplash.com/photo-1650327987377-90bf6c9789fd?w=800&h=800&fit=crop&auto=format&q=75"
+          "https://plus.unsplash.com/premium_photo-1733306475730-af26c0826aa2?w=800&h=800&fit=crop&auto=format&q=75"
         ]
       },
       {
@@ -297,7 +295,7 @@
     "footAi": "For AI",
     "footSitemap": "Sitemap",
     "statement": "Pan Peryskop {mark} brings together a **flight**, a **hotel** and a **ticket** for a **match** {ball} or a **race** {run}. Plus a map of events in 11 cities in Poland and flights from 12 airports to 304 destinations in Europe.",
-    "plansCta": "Download the app",
+    "plansCta": "Download on the App Store",
     "mosaicMap": "Map",
     "mosaicEvents": "Events",
     "mosaicFlight": "Flight",
@@ -323,10 +321,8 @@
     "howTitle": "How it works",
     "upcomingLabel": "Upcoming",
     "upcomingTitle": "Plans 2026/2027",
-    "upcomingLead": "We are working on more cities and destinations.",
-    "featuresLead": "You see events from 11 cities in Poland on a map. When you want to travel to a match or a race, the app shows the flight, the hotel and the ticket. It is free and in Polish.",
     "statementMarkLogo": "/icon.png",
-    "statementMarkBall": "https://images.unsplash.com/photo-1650327987377-90bf6c9789fd?w=200&h=200&fit=crop&auto=format&q=70",
-    "statementMarkRun": "https://images.unsplash.com/photo-1596460658047-1826d5921c56?w=200&h=200&fit=crop&auto=format&q=70"
+    "statementMarkBall": "https://plus.unsplash.com/premium_photo-1733306475730-af26c0826aa2?w=200&h=200&fit=crop&auto=format&q=70",
+    "statementMarkRun": "https://plus.unsplash.com/premium_photo-1679938885972-180ed418f466?w=200&h=200&fit=crop&auto=format&q=70"
   }
 }

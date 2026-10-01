@@ -46,7 +46,6 @@ export interface SiteText {
   heroAlt: string;
 
   features: Feature[];
-  featuresLead: string;
   faqTitle: string;
   faq: FaqItem[];
   statement: string;
@@ -65,7 +64,6 @@ export interface SiteText {
   howTitle: string;
   upcomingLabel: string;
   upcomingTitle: string;
-  upcomingLead: string;
   tilePanelTitle: string;
   tilePanelMeta: string;
   examples: string[];
@@ -84,7 +82,11 @@ export interface SiteText {
 
 const TEXTS = texts as Record<SiteLang, SiteText>;
 const APP_STORE = 'https://apps.apple.com/pl/app/pan-peryskop/id6803138750';
-const OG_IMAGE = `${PUBLIC_BASE}/assets/og-image.png`;
+const STORE_BADGE = '/assets/app-store-badge.svg';
+// Lazy so this module can be imported by webpage without a top-level cycle.
+function ogImage(): string {
+  return `${PUBLIC_BASE}/assets/og-image.png`;
+}
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1574060603747-421196bce3f4?w=2000&h=1250&fit=crop&auto=format&q=80';
 const SLIDE_IMAGE = 'https://images.unsplash.com/photo-1577133192629-5140c5371590?w=2000&h=1250&fit=crop&auto=format&q=80';
 const HERO_IMAGE_3 = 'https://images.unsplash.com/photo-1577958194277-7b3bc213b03c?w=2000&h=1250&fit=crop&auto=format&q=80';
@@ -107,6 +109,12 @@ function escapeHtml(value: string): string {
 
 export function siteText(lang: SiteLang): SiteText {
   return TEXTS[lang];
+}
+
+export const SITE_MODULES = ['app'];
+
+export function stylesheetLinks(): string {
+  return SITE_MODULES.map((name) => `<link rel="stylesheet" href="/css/${name}.css" />`).join('\n');
 }
 
 export function renderSite(lang: SiteLang): string {
@@ -169,7 +177,7 @@ export function renderSite(lang: SiteLang): string {
     .split(/(?<=[.!?])\s+/)
     .filter(Boolean)
     .map((line) => `<span class="lead-line">${strong(line)}</span>`)
-    .join('');
+    .join(' ');
 
   const faq = t.faq.map((item) => `        <details>
           <summary>${escapeHtml(item.q)}</summary>
@@ -219,44 +227,45 @@ export function renderSite(lang: SiteLang): string {
 <link rel="canonical" href="${escapeHtml(url)}" />
 ${SITE_LANGS.map((code) => `<link rel="alternate" hreflang="${escapeHtml(code)}" href="${escapeHtml(`${PUBLIC_BASE}${siteText(code).path}`)}" />`).join('\n')}
 <link rel="icon" type="image/png" href="/icon.png" />
-<meta name="theme-color" content="#eff1f4" />
+<meta name="theme-color" content="#ffffff" />
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="${escapeHtml(t.locale)}" />
 <meta property="og:title" content="${escapeHtml(t.ogTitle)}" />
 <meta property="og:description" content="${escapeHtml(t.ogDescription)}" />
 <meta property="og:url" content="${escapeHtml(url)}" />
-<meta property="og:image" content="${escapeHtml(OG_IMAGE)}" />
+<meta property="og:image" content="${escapeHtml(ogImage())}" />
 <meta name="twitter:card" content="summary_large_image" />
 <script type="application/ld+json">
 ${schema}
 </script>
+<link rel="preload" href="/css/app.css" as="style" />
 <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/assets/fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="/css/tokens.css" />
-<link rel="stylesheet" href="/css/sections.css" />
-<link rel="stylesheet" href="/css/footer.css" />
-<link rel="stylesheet" href="/css/hero.css" />
-<link rel="stylesheet" href="/css/overrides.css" />
+${stylesheetLinks()}
 </head>
 <body>
 <a class="sr-only" href="#main">${escapeHtml(t.heroTitle)}</a>
 
-<div class="frame">
+<div class="splash" aria-hidden="true">
+  <img class="splash-logo" src="/icon.png" alt="" width="220" height="220" />
+</div>
+
+<div class="frame page">
   <p class="official">${escapeHtml(t.official)}</p>
 
   <main id="main">
     <section class="hero" id="hero">
       <header class="nav" id="nav">
-        <button class="btn btn-primary menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(t.menu)}</button>
         <a class="brand" href="/">
           <img src="/icon.png" alt="" width="26" height="26" />
           <span>Pan Peryskop</span>
         </a>
+        <button class="btn btn-primary menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(t.menu)}</button>
       </header>
       <div class="hero-inner">
         <h1>${escapeHtml(t.heroTitle)}</h1>
         <p class="lead">${leadLines(t.heroLead)}</p>
-        <a class="btn btn-primary btn-store" href="${escapeHtml(APP_STORE)}" rel="noopener">${APPLE_ICON}${escapeHtml(t.download)}</a>
+        <a class="store-badge" href="${escapeHtml(APP_STORE)}" rel="noopener"><img src="${STORE_BADGE}" alt="${escapeHtml(t.download)}" width="120" height="40" /></a>
       </div>
       <div class="hero-media" id="hero-media" data-examples='${escapeHtml(JSON.stringify(t.examples))}'>
         <form class="hero-control" aria-label="${escapeHtml(t.heroLead)}">
@@ -289,8 +298,7 @@ ${features}
         <div class="upcoming-head">
           <p class="label">${escapeHtml(t.upcomingLabel)}</p>
           <h2 id="coming-in-2027">${escapeHtml(t.upcomingTitle)}</h2>
-          <p class="lead">${escapeHtml(t.upcomingLead)}</p>
-          <a class="btn btn-dark" href="${escapeHtml(APP_STORE)}" rel="noopener">${escapeHtml(t.plansCta)}</a>
+          <a class="store-badge" href="${escapeHtml(APP_STORE)}" rel="noopener"><img src="${STORE_BADGE}" alt="${escapeHtml(t.download)}" width="120" height="40" /></a>
         </div>
         <ul role="list" class="sr-only" aria-label="${escapeHtml(t.upcomingTitle)}">
 ${upcomingList}

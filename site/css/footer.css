@@ -2,7 +2,7 @@
 
 .brand { view-transition-name: site-nav-logo; }
 .menu-trigger { border-radius: 40px; background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(1, 14, 36, 0.10); }
-.nav { position: static; display: flex; align-items: center; gap: 16px; padding: 24px var(--gutter); background: transparent; }
+.nav { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px; background: transparent; }
 @media (max-width: 699px) { .nav { padding: 12px var(--gutter); } }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--serif); font-size: 1.375rem; letter-spacing: -0.03em; }
 .brand span { white-space: nowrap; }

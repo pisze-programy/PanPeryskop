@@ -1,6 +1,6 @@
 /* Pan Peryskop: hero module. Values measured against the reference. */
 
-.hero { margin: 0 32px; padding: 144px var(--gutter) 0; text-align: center; border-radius: 48px; background: linear-gradient(180deg, #f0f4f6, #f7f7f8); }
+.hero { position: relative; margin: 0 32px; padding: 144px 32px 48px; text-align: center; border-radius: 48px; background: linear-gradient(180deg, #f0f4f6, #f7f7f8); }
 .hero-inner { max-width: 687.5px; margin: 0 auto; }
 .hero .lead { font-size: 24px; line-height: 32px; letter-spacing: normal; margin: 20px auto 64px; max-width: 44ch; }
 .hero-control { position: absolute; top: 16px; left: 16px; right: 16px; z-index: 1; display: flex; align-items: center; height: 96px; max-width: 655.5px; margin: 0 auto; padding: 23px 23px 23px 40px; border-radius: 48px; background: #fff; filter: drop-shadow(0 10px 20px rgba(1, 14, 36, 0.08)); text-align: left; }
@@ -39,11 +39,15 @@
   .hero-track { transition: none; }
 }
 
-.hero .btn-store { margin-top: 28px; }
+.hero .store-badge { display: inline-block; margin-top: 32px; }
+.hero .store-badge + * { margin-top: 0; }
+.hero .store-badge img { display: block; width: 120px; height: 40px; }
 @media (max-width: 699px) {
-  .hero .btn-store { margin-top: 22px; width: 100%; }
+  .hero .store-badge { margin-top: 22px; }
 }
 
 .hero-media { touch-action: pan-y; user-select: none; cursor: grab; }
 .hero-media:active { cursor: grabbing; }
 .hero-slide img { pointer-events: none; -webkit-user-drag: none; }
+
+.hero .lead-line { display: block; }

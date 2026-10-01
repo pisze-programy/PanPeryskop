@@ -10,6 +10,7 @@ import {
 } from './citybreak';
 import { mintRedirect } from '../analytics/redirect';
 import { HUB_CSS, ORIGIN_CSS, SITE_CSS } from './pageStyles';
+import { stylesheetLinks, siteText } from './sitePage';
 
 export interface OriginPage {
   id: string;
@@ -747,9 +748,12 @@ export function renderDestinationPage(
 <meta property="og:locale" content="pl_PL">
 ${heroImage ? `<meta property="og:image" content="${heroImage}">` : ''}
 <script type="application/ld+json">${jsonLd}</script>
+${generatedHeadLinks()}
 <style>${SITE_CSS}${ORIGIN_CSS}</style>
 </head>
-<body>
+<body class="inner">
+<div class="frame">
+${generatedOfficial('pl')}
 ${renderHeader(origin)}
 <h1>${escapeHtml(title)}</h1>
 <p class="lead">Kierunek ${escapeHtml(name)}: najtańsze weekendy z ${escapeHtml(origin.genitive)}. Od ${headline} zł/os. Cena za osobę; lot w obie strony, a nocleg gdy podany.</p>
@@ -769,6 +773,7 @@ ${monthLinks ? `<h2>Terminy miesięczne</h2><ul class="plain origins">${monthLin
 ${links ? `<h2>Inne kierunki z ${escapeHtml(origin.genitive)}</h2><ul class="plain origins">${links}</ul>` : ''}
 ${renderFooter()}
 <p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne. Serwis korzysta z linków partnerskich.</p>
+</div>
 </body>
 </html>`;
 }
@@ -793,9 +798,12 @@ function docHead(title: string, description: string, url: string, image: string 
 <meta name="twitter:card" content="summary_large_image">
 ${image ? `<meta property="og:image" content="${esc(image)}">` : ''}
 <script type="application/ld+json">${jsonLd}</script>
+${generatedHeadLinks()}
 <style>${SITE_CSS}${ORIGIN_CSS}</style>
 </head>
-<body>`;
+<body class="inner">
+<div class="frame">
+${generatedOfficial('pl')}`;
 }
 
 export function renderMonthPage(origin: OriginPage, places: Place[], featured: FeaturedDeal[], key: string, generatedAt: string): string {
@@ -833,6 +841,7 @@ ${attractionsHtml}
 </main>
 ${renderFooter()}
 <p class="muted">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne.</p>
+</div>
 </body>
 </html>`;
 }
@@ -864,6 +873,7 @@ ${directions}
 <p><a href="/${destinationSlug(origin, place)}">Wszystkie terminy: ${escapeHtml(name)}</a> - <a href="/${origin.slug}/${mp.slug}">Cały ${escapeHtml(mp.nominative)}</a></p>
 ${renderFooter()}
 <p class="muted">Wygenerowano ${escapeHtml(generatedAt)}.</p>
+</div>
 </body>
 </html>`;
 }
@@ -891,6 +901,7 @@ ${extras}
 </ul>
 ${renderFooter()}
 <p class="muted">Wygenerowano ${escapeHtml(generatedAt)}.</p>
+</div>
 </body>
 </html>`;
 }
@@ -900,6 +911,7 @@ export function renderIndexPage(generatedAt: string): string {
     .map((origin) => `<li><a href="/${origin.slug}">Tanie loty z ${escapeHtml(origin.genitive)}</a></li>`)
     .join('');
   const url = `${PUBLIC_BASE}/tanie-loty`;
+  const t = siteText('pl');
   return `<!doctype html>
 <html lang="pl">
 <head>
@@ -916,19 +928,24 @@ export function renderIndexPage(generatedAt: string): string {
 <meta property="og:locale" content="pl_PL">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="https://panperyskop.app/icon.png">
+${generatedHeadLinks()}
 <style>${SITE_CSS}${HUB_CSS}</style>
 </head>
-<body>
-  <header class="site">
-    <a class="brand" href="/">Pan<span class="grad-text">Peryskop</span></a>
+<body class="inner">
+<div class="frame">
+${generatedOfficial('pl')}
+  <header class="nav">
+    <button class="btn btn-primary menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(t.menu)}</button>
+    <a class="brand" href="/"><img src="/icon.png" alt="" width="26" height="26" /><span>Pan Peryskop</span></a>
     <a class="crumb" href="/">Strona główna</a>
-    <a class="btn" href="https://apps.apple.com/pl/app/pan-peryskop/id6803138750" rel="noopener">Pobierz</a>
+    <a class="btn" href="${APP_STORE_URL}" rel="noopener">Pobierz</a>
   </header>
 <h1>Tanie loty i weekendy z polskich lotnisk</h1>
 <p class="lead">12 lotnisk wylotu w Polsce. Wybierz swoje i zobacz najtańsze kierunki oraz terminy.</p>
 <div class="hub"><ul class="plain">${links}</ul></div>
 ${renderFooter()}
 <p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne.</p>
+</div>
 </body>
 </html>`;
 }
@@ -981,15 +998,28 @@ function renderCarCard(place: Place | undefined): string {
       </a>`;
 }
 
+const APP_STORE_URL = 'https://apps.apple.com/pl/app/pan-peryskop/id6803138750';
+
+function generatedHeadLinks(): string {
+  return `${stylesheetLinks()}
+<link rel="stylesheet" href="/css/shell.css" />`;
+}
+
+function generatedOfficial(lang: 'pl' | 'en'): string {
+  return `  <p class="official">${escapeHtml(siteText(lang).official)}</p>`;
+}
+
 function renderHeader(origin: OriginPage): string {
   const links = ORIGIN_PAGES
     .filter((page) => page.id !== origin.id)
     .map((page) => `<li><a href="/${page.slug}">${escapeHtml(page.name)}</a></li>`)
     .join('');
-  return `  <header class="site">
-    <a class="brand" href="/">Pan<span class="grad-text">Peryskop</span></a>
+  const t = siteText('pl');
+  return `  <header class="nav">
+    <button class="btn btn-primary menu-trigger" id="menu-open" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(t.menu)}</button>
+    <a class="brand" href="/"><img src="/icon.png" alt="" width="26" height="26" /><span>Pan Peryskop</span></a>
     <a class="crumb" href="/tanie-loty">Tanie loty</a>
-    <a class="btn" href="https://apps.apple.com/pl/app/pan-peryskop/id6803138750" rel="noopener">Pobierz</a>
+    <a class="btn" href="${APP_STORE_URL}" rel="noopener">Pobierz</a>
     <nav class="origins" aria-label="Loty z innych miast"><span class="origins__label">Loty z:</span><ul class="plain origins">${links}</ul></nav>
   </header>`;
 }
@@ -998,9 +1028,14 @@ function renderFooter(): string {
   const links = ORIGIN_PAGES
     .map((origin) => `<li><a href="/${origin.slug}">${escapeHtml(origin.name)}</a></li>`)
     .join('');
-  return `  <footer class="site-foot">
+  const t = siteText('pl');
+  return `  <footer class="foot">
     <nav class="origins" aria-label="Lotniska"><ul class="plain origins">${links}</ul></nav>
     <p class="foot-links"><a href="/tanie-loty">Wszystkie lotniska</a> - <a href="/sitemap.xml">Mapa strony</a> - <a href="/llms.txt">Dla AI</a></p>
+    <div class="foot-meta">
+      <span>${escapeHtml(t.footRights)}</span>
+      <span><a href="/sitemap.xml">${escapeHtml(t.footSitemap)}</a> · <a href="/llms.txt">${escapeHtml(t.footAi)}</a></span>
+    </div>
   </footer>`;
 }
 
@@ -1178,9 +1213,12 @@ ${heroImage ? `<meta property="og:image" content="${heroImage}">` : ''}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="https://panperyskop.app/icon.png">
 <script type="application/ld+json">${buildJsonLd(origin, sections, places)}</script>
+${generatedHeadLinks()}
 <style>${SITE_CSS}${ORIGIN_CSS}</style>
 </head>
-<body>
+<body class="inner">
+<div class="frame">
+${generatedOfficial('pl')}
 ${renderHeader(origin)}
 <h1>${escapeHtml(title)}</h1>
 <p class="lead">Loty, hotele i wydarzenia na najbliższe weekendy. Ceny podajemy za osobę.</p>
@@ -1192,6 +1230,7 @@ ${renderPartners(places)}
 <section class="editorial"><h2>Tanie loty z innych miast</h2><ul class="plain origins">${others}</ul></section>
 ${renderFooter()}
 <p class="foot">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne i mogą się zmienić u przewoźnika lub w hotelu. Serwis korzysta z linków partnerskich.</p>
+</div>
 </body>
 </html>`;
 }

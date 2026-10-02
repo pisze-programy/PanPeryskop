@@ -25,3 +25,5 @@
 .laurel.is-mirror { transform: scaleX(-1); }
 
 .page-head { position: relative; padding-top: 144px; }
+
+.page-body { padding: 0 var(--gutter); }

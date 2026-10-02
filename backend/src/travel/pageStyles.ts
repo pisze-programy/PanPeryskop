@@ -71,6 +71,9 @@ export const SITE_CSS = `.muted{color:rgba(0,0,0,.68)}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}}.page-media{display:block;width:100%;height:auto;margin:0 0 24px;border-radius:24px}
 .page-note{margin:32px 0 0;font-size:13px;color:rgba(0,0,0,.45)}
+
+.page-links{margin:16px 0 0;font-size:15px}
+.page-links a{font-weight:600;text-decoration:underline;text-underline-offset:3px}
 `;
 
 export const ORIGIN_CSS = `.place{display:grid;grid-template-columns:240px minmax(0,1fr);align-items:stretch;margin:16px 0;background:#fff;border:1px solid var(--line);border-radius:var(--r-4);overflow:hidden}

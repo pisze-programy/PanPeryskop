@@ -755,6 +755,7 @@ ${generatedHeadLinks()}
 <div class="frame">
 ${generatedOfficial('pl')}
 ${renderHeader(origin)}
+<div class="page-body">
 <h1>${escapeHtml(title)}</h1>
 <p class="lead">Kierunek ${escapeHtml(name)}: najtańsze weekendy z ${escapeHtml(origin.genitive)}. Od ${headline} zł/os. Cena za osobę; lot w obie strony, a nocleg gdy podany.</p>
 ${heroImage ? `<img class="page-media" src="${esc(heroImage)}" alt="${escapeHtml(name)}" fetchpriority="high" decoding="async" width="1000" height="500">` : ''}
@@ -771,6 +772,7 @@ ${directions}
 ${faqHtml}
 ${monthLinks ? `<h2>Terminy miesięczne</h2><ul class="plain origins">${monthLinks}</ul>` : ''}
 ${links ? `<h2>Inne kierunki z ${escapeHtml(origin.genitive)}</h2><ul class="plain origins">${links}</ul>` : ''}
+</div>
 ${renderFooter()}
 <p class="page-note">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne. Serwis korzysta z linków partnerskich.</p>
 </div>
@@ -829,6 +831,7 @@ export function renderMonthPage(origin: OriginPage, places: Place[], featured: F
   const past = key < new Date().toISOString().slice(0, 7);
   return `${docHead(title, `${title}. Najtańsze kierunki, wydarzenia i atrakcje. Ceny za osobę.`, url, null, JSON.stringify(graph).replace(/</g, '\\u003c'), past)}
 ${renderHeader(origin)}
+<div class="page-body">
 <main>
 <h1>${escapeHtml(title)}</h1>
 <p class="muted">Najtańsze kierunki w tym miesiącu. Ceny za osobę.</p>
@@ -839,6 +842,7 @@ ${rows}
 ${eventsHtml}
 ${attractionsHtml}
 </main>
+</div>
 ${renderFooter()}
 <p class="muted">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne.</p>
 </div>
@@ -861,6 +865,7 @@ export function renderDealPage(origin: OriginPage, place: Place, deal: FeaturedD
   const graph = { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url, inLanguage: 'pl-PL' };
   return `${docHead(title, `${title}. Lot, hotel i atrakcje. Cena za osobę.`, url, place.imageLargeUrl, JSON.stringify(graph).replace(/</g, '\\u003c'), true)}
 ${renderHeader(origin)}
+<div class="page-body">
 <h1>${escapeHtml(title)}</h1>
 <p class="muted">Najtańszy termin w tym miesiącu. Cena łączna to lot plus połowa noclegu za dwie osoby.</p>
 <ul class="options">
@@ -871,6 +876,7 @@ ${attractions}
 ${events}
 ${directions}
 <p><a href="/${destinationSlug(origin, place)}">Wszystkie terminy: ${escapeHtml(name)}</a> - <a href="/${origin.slug}/${mp.slug}">Cały ${escapeHtml(mp.nominative)}</a></p>
+</div>
 ${renderFooter()}
 <p class="muted">Wygenerowano ${escapeHtml(generatedAt)}.</p>
 </div>
@@ -893,12 +899,14 @@ export function renderConnectionsPage(origin: OriginPage, places: Place[], gener
   const graph = { '@context': 'https://schema.org', '@type': 'CollectionPage', name: title, url, inLanguage: 'pl-PL' };
   return `${docHead(title, `${title}. Ceny lotów w obie strony za osobę.`, url, null, JSON.stringify(graph).replace(/</g, '\\u003c'))}
 ${renderHeader(origin)}
+<div class="page-body">
 <h1>${escapeHtml(title)}</h1>
 <p class="muted">Wszystkie kierunki i najtańsze ceny lotów za osobę.</p>
 <ul class="plain rows">
 ${rows}
 ${extras}
 </ul>
+</div>
 ${renderFooter()}
 <p class="muted">Wygenerowano ${escapeHtml(generatedAt)}.</p>
 </div>
@@ -935,9 +943,11 @@ ${generatedHeadLinks()}
 <div class="frame">
 ${generatedOfficial('pl')}
 ${renderHeaderHub()}
+<div class="page-body">
 <h1>Tanie loty i weekendy z polskich lotnisk</h1>
 <p class="lead">12 lotnisk wylotu w Polsce. Wybierz swoje i zobacz najtańsze kierunki oraz terminy.</p>
 <div class="hub"><ul class="plain">${links}</ul></div>
+</div>
 ${renderFooter()}
 <p class="page-note">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne.</p>
 </div>
@@ -1196,14 +1206,16 @@ ${generatedHeadLinks()}
 <div class="frame">
 ${generatedOfficial('pl')}
 ${renderHeader(origin)}
+<div class="page-body">
 <h1>${escapeHtml(title)}</h1>
 <p class="lead">Loty, hotele i wydarzenia na najbliższe weekendy. Ceny podajemy za osobę.</p>
 <h2>Kierunki i terminy</h2>
 ${cards}
 ${renderEditorial(origin, places)}
 ${renderPartners(places)}
-<section class="editorial"><h2>Miesięczne zestawienia</h2><ul class="plain origins">${monthLinks}</ul><p class="foot-links"><a href="/${origin.slug}/polaczenia">Wszystkie połączenia z ${escapeHtml(origin.genitive)}</a></p></section>
+<section class="editorial"><h2>Miesięczne zestawienia</h2><ul class="plain origins">${monthLinks}</ul><p class="page-links"><a href="/${origin.slug}/polaczenia">Wszystkie połączenia z ${escapeHtml(origin.genitive)}</a></p></section>
 <section class="editorial"><h2>Tanie loty z innych miast</h2><ul class="plain origins">${others}</ul></section>
+</div>
 ${renderFooter()}
 <p class="page-note">Wygenerowano ${escapeHtml(generatedAt)}. Ceny są orientacyjne i mogą się zmienić u przewoźnika lub w hotelu. Serwis korzysta z linków partnerskich.</p>
 </div>

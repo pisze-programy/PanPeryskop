@@ -63,6 +63,10 @@ install -m 0755 "$SRC_TMP/setup-vps.sh"    "$REPO_DIR/admin/vps/setup-vps.sh"
 install -m 0644 "$SRC_TMP/ipv4-proxy.mjs"  "$REPO_DIR/admin/vps/ipv4-proxy.mjs"
 say "bundle + scripts installed into $REPO_DIR"
 
+# A deploy must reach the RUNNING consumer: the long-lived process holds the old
+# bundle in memory, so stop it here and let consumer-ensure.sh start the new one.
+pkill -f 'backend/dist/seed-consumer\.mjs' 2>/dev/null || true
+
 # Remove legacy files (old orchestrator + seed-ingest uploader).
 rm -f "$REPO_DIR/backend/dist/vps-seed.mjs" "$REPO_DIR/admin/vps/orchestrator.sh" \
       "$REPO_DIR/admin/src/seed-ingest.mjs" "$REPO_DIR/admin/vps/watchdog.sh" \

@@ -2,6 +2,8 @@
 // Strategy: normalized n-gram Dice similarity on the flattened name, requiring a
 // shared significant token as a guard against false positives ("Kino Muza" should
 // NOT match "Teatr Muzyczny" just because "muza" ⊂ "muzyczny").
+import { CITIES } from '../../admin/cities';
+
 export interface GeoPoint { lat: number; lng: number; }
 export interface VenueEntry { name: string; geo: GeoPoint | null; city?: string | null; }
 
@@ -43,8 +45,14 @@ export function dice(a: string, b: string, n = 3): number {
 
 // Significant tokens are words with length>=5 that are NOT generic place words.
 const STOP = new Set(['poznaniu', 'warszawie', 'wroclawiu', 'lodzi', 'krakowie', 'gdansku', 'szczecinie', 'katowicach', 'lublinie', 'bialymstoku', 'centrum', 'sala', 'sali', 'klub', 'teatr', 'kino', 'muzeum', 'scena', 'galeria']);
+// City names plus the venue-type words above. A name built ONLY from these is not
+// a venue name: a bare "Poznań" once matched "Multikino Poznań Stary Browar" at
+// 1.0, became an alias of it, and then every "… Poznań" name matched that alias and
+// overwrote the cinema's coordinates (it moved to Cytadela, 2.2 km away).
+const CITY_WORDS = new Set(CITIES.map((c) => flat(c.name)));
+const GENERIC = new Set([...STOP, ...CITY_WORDS]);
 function significantTokens(s: string): string[] {
-  return tokens(s).filter((w) => w.length >= 5 && !STOP.has(w));
+  return tokens(s).filter((w) => w.length >= 5 && !GENERIC.has(w));
 }
 
 export function venueSimilarity(a: string, b: string): number {
@@ -54,7 +62,10 @@ export function venueSimilarity(a: string, b: string): number {
   const wa = wordTokens(a), wb = wordTokens(b);
   const [short, long] = wa.length <= wb.length ? [wa, wb] : [wb, wa];
   if (fa.length >= 4 && fb.length >= 4 && short.length > 0) {
-    if (short.every((w) => long.includes(w))) return 1;
+    // Containment needs one distinctive word on the short side: "Poznań" or "Kino"
+    // alone names a place type, not a venue.
+    const distinctive = short.some((w) => !GENERIC.has(w));
+    if (distinctive && short.every((w) => long.includes(w))) return 1;
     // Abbreviation match: "UAM" ↔ "Aula Uniwersytetu Adama Mickiewicza" — the short
     // token's letters equal first letters of the long words that aren't shared.
     const shortTokens = short.filter((w) => w.length <= 4 && !long.includes(w));

@@ -32,6 +32,16 @@ test('venueMatch: real-world short-name and abbreviation pairs match', () => {
   assert.ok(venueSimilarity('Kino Muza', 'Teatr Muzyczny') < VENUE_MATCH_THRESHOLD);
 });
 
+test('venueMatch: a bare city name is a place, not a venue', () => {
+  // The production case: "Poznań" scored 1.0 against "Multikino Poznań Stary
+  // Browar", became its alias, and every "… Poznań" name then matched that alias.
+  assert.ok(venueSimilarity('Poznań', 'Multikino Poznań Stary Browar') < VENUE_MATCH_THRESHOLD);
+  assert.ok(venueSimilarity('aleja Armii Poznań', 'Poznań') < VENUE_MATCH_THRESHOLD);
+  assert.ok(venueSimilarity('Knyfyrtel Hackerspace Poznań', 'Poznań') < VENUE_MATCH_THRESHOLD);
+  // A distinctive short word still matches (the documented "Klub Tama" case).
+  assert.ok(venueSimilarity('Klub Tama', 'Tama') >= VENUE_MATCH_THRESHOLD);
+});
+
 test('venueMatch: prefers same-city venue, ignores other city', () => {
   const cache = [
     { name: 'Tama', geo: { lat: 52.2297, lng: 21.0122 }, city: 'warszawa' },
@@ -240,4 +250,37 @@ test('venueStore: a city-less row still cannot answer a geo lookup for another c
   const db = mockDb();
   await upsertVenue(db, { name: 'Amfiteatr Wolskiego Centrum Kultury', lat: 52.2309856, lng: 20.9492338, provider: 'going' });
   assert.equal(await resolveVenueGeo(db, 'Amfiteatr', 'krakow'), null, 'the upsert pool loosens, the lookup does not');
+});
+
+test('venueStore: a bare city never matches and never moves a venue pin', async () => {
+  const db = mockDb();
+  await upsertVenue(db, { name: 'Multikino Poznań Stary Browar', lat: 52.40288475327153, lng: 16.92430181027181, city: 'poznan', provider: 'multikino' });
+  // The production pollution: a generic "Poznań" upsert, then a Cytadela venue.
+  await upsertVenue(db, { name: 'Poznań', lat: 52.4064, lng: 16.9252, city: 'poznan', provider: 'going' });
+  await upsertVenue(db, { name: 'aleja Armii Poznań', lat: 52.4216742, lng: 16.936194, city: 'poznan', provider: 'luma' });
+  const row = db._venues.find((r) => r.name === 'Multikino Poznań Stary Browar')!;
+  assert.ok(Math.abs(row.lat - 52.40288475327153) < 1e-9, `lat kept, got ${row.lat}`);
+  assert.ok(Math.abs(row.lng - 16.92430181027181) < 1e-9, `lng kept, got ${row.lng}`);
+});
+
+test('venueStore: a fuzzy spelling keeps the existing coordinates', async () => {
+  const db = mockDb();
+  await upsertVenue(db, { name: 'Multikino Poznań Stary Browar', lat: 52.40288475327153, lng: 16.92430181027181, city: 'poznan', provider: 'multikino' });
+  // A different spelling of the same venue (score 1.0 by word containment, but a
+  // different flattened name) must add its alias and keep the first point.
+  await upsertVenue(db, { name: 'Multikino Stary Browar', lat: 52.41, lng: 16.9, city: 'poznan', provider: 'kupbilecik', ref: '99' });
+  const row = db._venues.find((r) => r.name === 'Multikino Poznań Stary Browar')!;
+  assert.ok(Math.abs(row.lat - 52.40288475327153) < 1e-9, `first point stays, got ${row.lat}`);
+  assert.ok(Math.abs(row.lng - 16.92430181027181) < 1e-9, `first point stays, got ${row.lng}`);
+});
+
+test('venueStore: the identical name may refine the pin (and only the identical name)', async () => {
+  const db = mockDb();
+  // Two spellings of the SAME name (flat() equal: "salakoncertowafryderyk") are one
+  // venue, so the later point wins — this is the documented "latest provider may be
+  // more accurate" refresh, now unreachable for a fuzzy name.
+  await upsertVenue(db, { name: 'Sala Koncertowa Fryderyk', lat: 52.25, lng: 21.01, city: 'warszawa', provider: 'going' });
+  await upsertVenue(db, { name: 'sala koncertowa fryderyk', lat: 52.2505, lng: 21.0105, city: 'warszawa', provider: 'kupbilecik', ref: '7' });
+  const row = db._venues.find((r) => r.name === 'Sala Koncertowa Fryderyk')!;
+  assert.ok(Math.abs(row.lat - 52.2505) < 1e-9, `same name refines, got ${row.lat}`);
 });

@@ -70,17 +70,20 @@ export async function upsertVenue(db: D1Database, v: VenueInput): Promise<string
   }
 
   if (best && bestScore >= MATCH_THRESHOLD) {
-    // Refresh geo (latest provider may be more accurate), add alias/ref.
+    // Same venue only when the name is the SAME. A different name adds its alias
+    // and keeps the coordinates: a fuzzy match must never move an existing pin
+    // (a bare "Poznań" alias dragged Multikino Stary Browar to Cytadela).
     const aliases = safeJSON<string[]>(best.aliases, []);
     const canonical = flat(best.name);
-    if (flat(v.name) !== canonical && !aliases.some((a) => flat(a) === flat(v.name))) {
+    const sameName = flat(v.name) === canonical;
+    if (!sameName && !aliases.some((a) => flat(a) === flat(v.name))) {
       aliases.push(v.name);
     }
     const sources = { ...safeJSON<Record<string, string>>(best.sources, {}), ...(v.provider && v.ref ? { [v.provider]: v.ref } : {}) };
     const city = venueKey(best.city || v.city || '') || null;
     await db.prepare(
       `UPDATE venues SET lat=?, lng=?, aliases=?, sources=?, city=?, hit_count=hit_count+1, last_seen=? WHERE id=?`
-    ).bind(v.lat, v.lng, JSON.stringify(aliases), JSON.stringify(sources), city, now, best.id).run();
+    ).bind(sameName ? v.lat : best.lat, sameName ? v.lng : best.lng, JSON.stringify(aliases), JSON.stringify(sources), city, now, best.id).run();
     return best.id;
   }
 

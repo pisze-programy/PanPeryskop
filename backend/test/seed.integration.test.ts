@@ -215,8 +215,7 @@ test('integration: parseStoriesLimit defaults to 50, caps at 1000, clamps to >=1
 });
 
 test('vps entryFor: single startMs becomes a showtimes array (luma/meetup/going)', () => {
-  const today = todayWarsaw();
-  const startMs = warsawMidnightMs(today) + 11 * CONFIG.time.hourMs; // 11:00 Europe/Warsaw
+  const startMs = new Date('2026-06-15T11:00:00+02:00').getTime();
   const cand = {
     source: 'luma' as const, externalId: 'luma-x', title: 'Spacer', startMs,
     lat: 52.4, lng: 16.9, city: 'Poznań', venue: 'Park', address: '', link: '',

@@ -6,7 +6,7 @@ import { CONFIG } from '../../../config/index';
 import { enabledProviders } from '../../providers';
 import { SeedContext, SeedCandidate } from '../../core/types';
 import { warsawMidnightMs, warsawDateOf, eventCreatedAtMs, eventDayEndMs, addDaysWarsaw } from '../../core/dates';
-import { ClaimedUnit, claimUnit, completeUnit, failUnit, unitWindowDays } from './units';
+import { ClaimedUnit, claimUnit, completeUnit, countOpenUnitsForDay, failUnit, unitWindowDays } from './units';
 import { writeRawRows } from './raw';
 import { parseCandidate } from '../../core/candidate';
 
@@ -82,14 +82,12 @@ async function runUnit(env: Env, unit: ClaimedUnit): Promise<void> {
   const ok = await completeUnit(env.DB, unit.id, unit.token, rowsWritten);
   if (!ok) throw new Error('completeUnit failed (lost lease?)');
 
-  // Wake the finalize consumer for every day this unit can write. The day that
-  // was already terminal re-checks the gate and is a no-op; the day that just
-  // became complete reconciles + ingests. Enqueue for ALL window days (not just
-  // the ones written) — a unit that produced nothing must still let the day finalize.
-  // Best-effort: the unit is done; if the wake is lost the watchdog re-enqueues it.
   try {
     for (const eventDay of unitWindowDays(unit)) {
-      await env.SEED_FETCH_QUEUE.send({ type: 'finalize', day: eventDay, batchId: unit.batch_id });
+      const open = await countOpenUnitsForDay(env.DB, eventDay);
+      if (open === 0) {
+        await env.SEED_FETCH_QUEUE.send({ type: 'finalize', day: eventDay, batchId: unit.batch_id });
+      }
     }
   } catch (e) {
     console.error(`finalize wake failed for unit ${unit.id}: ${(e as Error).message}`);

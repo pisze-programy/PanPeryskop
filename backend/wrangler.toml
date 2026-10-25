@@ -62,12 +62,6 @@ max_retries = 2
 retry_delay = 30
 max_concurrency = 1
 
-# Headless Chrome via Cloudflare Browser Run — used by browser-transport seed
-# providers (kupbilecik). remote=true so `wrangler dev` matches deployed CF.
-[browser]
-binding = "BROWSER"
-remote = true
-
 [[d1_databases]]
 binding = "DB"
 database_name = "panperyskop-db"

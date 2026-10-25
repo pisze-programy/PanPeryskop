@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { STATUS_APPROVED, STATUS_REJECTED, CATEGORY_EVENTS } from '../core/models';
 import { todayWarsaw, addDaysWarsaw } from '../seed/core/dates';
 import { CANONICAL_TAG_SET } from '../seed/core/tags';
-import { claimUnit, completeUnit, failUnit, unitDayStatus, unitWindowDays } from '../seed/pipeline/queue/units';
+import { claimUnit, completeUnit, countOpenUnitsForDay, failUnit, unitDayStatus, unitWindowDays } from '../seed/pipeline/queue/units';
 import { writeRawRows } from '../seed/pipeline/queue/raw';
 import { warsawDateOf } from '../seed/core/dates';
 import { SeedCandidate } from '../seed/core/types';
@@ -478,11 +478,12 @@ adminRoutes.post('/seed/units/complete', async (c) => {
     const days = unit.kind === 'window'
       ? Array.from({ length: CONFIG.seed.window.refillAhead + 1 }, (_, i) => addDaysWarsaw(unit.day, i))
       : [unit.day];
-    // Best-effort: the unit is already done; if the wake is lost the hourly
-    // watchdog re-enqueues finalize for ready days.
     try {
       for (const d of days) {
-        await c.env.SEED_FETCH_QUEUE.send({ type: 'finalize', day: d, batchId: unit.batch_id });
+        const open = await countOpenUnitsForDay(c.env.DB, d);
+        if (open === 0) {
+          await c.env.SEED_FETCH_QUEUE.send({ type: 'finalize', day: d, batchId: unit.batch_id });
+        }
       }
     } catch (e) {
       console.error(`finalize wake failed for unit ${body.unitId}: ${(e as Error).message}`);

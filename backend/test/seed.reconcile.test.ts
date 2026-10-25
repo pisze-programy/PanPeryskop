@@ -120,8 +120,8 @@ class MockReconDB {
     };
   }
 
-  async batch(_stmts: unknown[]): Promise<unknown[]> {
-    return [];
+  async batch(stmts: unknown[]): Promise<unknown[]> {
+    return Promise.all((stmts as Array<{ run: () => Promise<unknown> }>).map((s) => s.run()));
   }
 }
 

@@ -63,3 +63,50 @@ export async function pruneSeedManifests(env: Env, keepDays = 10): Promise<numbe
   if (removed) console.log(`seed manifests pruned: ${removed} (kept last ${keepDays} days)`);
   return removed;
 }
+
+export async function pruneExpiredPosts(db: D1Database, keepPastDays = 7, limit = 2000): Promise<number> {
+  const cutoffDate = addDaysWarsaw(todayWarsaw(), -keepPastDays);
+  const rows = await db
+    .prepare(
+      `SELECT id FROM posts
+       WHERE event_date < ?
+         AND geo_locked = 0 AND tags_locked = 0 AND time_locked = 0 AND sold_out_locked = 0
+       LIMIT ?`,
+    )
+    .bind(cutoffDate, limit)
+    .all<{ id: string }>();
+  const ids = (rows.results || []).map((r) => r.id);
+  if (ids.length === 0) return 0;
+  for (let i = 0; i < ids.length; i += 50) {
+    const chunk = ids.slice(i, i + 50);
+    const ph = chunk.map(() => '?').join(',');
+    await db.batch([
+      db.prepare(`DELETE FROM views WHERE post_id IN (${ph})`).bind(...chunk),
+      db.prepare(`DELETE FROM likes WHERE post_id IN (${ph})`).bind(...chunk),
+      db.prepare(`DELETE FROM dislikes WHERE post_id IN (${ph})`).bind(...chunk),
+      db.prepare(`DELETE FROM shares WHERE post_id IN (${ph})`).bind(...chunk),
+      db.prepare(`DELETE FROM reports WHERE post_id IN (${ph})`).bind(...chunk),
+      db.prepare(`DELETE FROM posts WHERE id IN (${ph})`).bind(...chunk),
+    ]);
+  }
+  return ids.length;
+}
+
+export async function pruneViatorCache(db: D1Database, keepPastDays = 3, limit = 500): Promise<number> {
+  const cutoffDate = addDaysWarsaw(todayWarsaw(), -keepPastDays);
+  const expired = await db
+    .prepare('SELECT cache_key FROM viator_city_cache WHERE window_end < ? LIMIT ?')
+    .bind(cutoffDate, limit)
+    .all<{ cache_key: string }>();
+  const keys = (expired.results || []).map((r) => r.cache_key);
+  if (keys.length === 0) return 0;
+  for (let i = 0; i < keys.length; i += 50) {
+    const chunk = keys.slice(i, i + 50);
+    const ph = chunk.map(() => '?').join(',');
+    await db.batch([
+      db.prepare(`DELETE FROM viator_products WHERE cache_key IN (${ph})`).bind(...chunk),
+      db.prepare(`DELETE FROM viator_city_cache WHERE cache_key IN (${ph})`).bind(...chunk),
+    ]);
+  }
+  return keys.length;
+}

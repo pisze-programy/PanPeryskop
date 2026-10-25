@@ -22,6 +22,7 @@ import { now, getOrCreateSeedUser } from './pipeline/queue/state';
 import { countOpenUnitsForDay, MAX_UNIT_ATTEMPTS } from './pipeline/queue/units';
 import { isCancelled } from './core/filters';
 import { ingestWinnerRow, RawWinnerRow } from './pipeline/queue/ingest';
+import { loadBlacklistRules } from './core/blacklist';
 import { SEED_PROVIDERS } from './providers';
 import { addDaysWarsaw, warsawDateOf } from './core/dates';
 import { snitchReport } from './alert';
@@ -338,15 +339,14 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
     summary.failures += 1;
   }
 
+  const updateStmts: D1PreparedStatement[] = [];
   for (const members of groups.values()) {
-    // Ambiguous members were already recorded as failures above — the rest of
-    // the group still merges normally, so no row is ever left behind in 'raw'.
     const clean = members.filter((r) => !ambiguousIds.has(r.id));
     if (clean.length === 0) continue;
     if (clean.length === 1) {
       const solo = clean[0];
-      if (solo.status === 'done') continue; // already a post — never re-open
-      await db.prepare(`UPDATE seed_raw SET status='winner', updated_at=? WHERE id=?`).bind(t, solo.id).run();
+      if (solo.status === 'done') continue;
+      updateStmts.push(db.prepare(`UPDATE seed_raw SET status='winner', updated_at=? WHERE id=?`).bind(t, solo.id));
       summary.winners += 1;
       continue;
     }
@@ -357,11 +357,8 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
         x.start_min - y.start_min,
     );
     const winner = sorted[0];
-    if (ambiguousIds.has(winner.id)) continue; // winner itself ambiguous: handled above, skip group
-    // A done winner already has a live post: never re-open it. Only its raw
-    // losers are demoted, so a late duplicate is absorbed without re-ingest.
+    if (ambiguousIds.has(winner.id)) continue;
     if (winner.status !== 'done') {
-      // Absorb: union of times + per-time bookings, cheapest price, all-sold-out flag, earliest start.
       const times = new Set<string>();
       const bookings = new Map<string, ShowtimeBooking>();
       let price: number | null = null;
@@ -374,12 +371,13 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
         if (!m.is_sold_out) soldOut = false;
         if (m.start_min < startMin) startMin = m.start_min;
       }
-      await db
-        .prepare(
-          `UPDATE seed_raw SET status='winner', showtimes=?, showtime_booking=?, price_pln=?, is_sold_out=?, start_min=?, updated_at=? WHERE id=?`,
-        )
-        .bind(JSON.stringify([...times].sort()), JSON.stringify([...bookings.values()]), price, soldOut ? 1 : 0, startMin, t, winner.id)
-        .run();
+      updateStmts.push(
+        db
+          .prepare(
+            `UPDATE seed_raw SET status='winner', showtimes=?, showtime_booking=?, price_pln=?, is_sold_out=?, start_min=?, updated_at=? WHERE id=?`,
+          )
+          .bind(JSON.stringify([...times].sort()), JSON.stringify([...bookings.values()]), price, soldOut ? 1 : 0, startMin, t, winner.id),
+      );
       summary.winners += 1;
     }
 
@@ -395,19 +393,24 @@ export async function reconcileDay(db: D1Database, day: string, batchId: string)
         summary.failures += 1;
         continue;
       }
-      await db
-        .prepare(`UPDATE seed_raw SET status='duplicate', winner_raw_id=?, reason=?, updated_at=? WHERE id=?`)
-        .bind(winner.id, `covered by ${winner.provider}/${winner.external_id}`, t, loser.id)
-        .run();
+      updateStmts.push(
+        db
+          .prepare(`UPDATE seed_raw SET status='duplicate', winner_raw_id=?, reason=?, updated_at=? WHERE id=?`)
+          .bind(winner.id, `covered by ${winner.provider}/${winner.external_id}`, t, loser.id),
+      );
       summary.duplicates += 1;
       if (post) {
-        await db
-          .prepare(`UPDATE posts SET status='rejected', rejection_reason=? WHERE id=?`)
-          .bind(`duplicate of ${winner.external_id} (${winner.provider})`, post.id)
-          .run();
+        updateStmts.push(
+          db
+            .prepare(`UPDATE posts SET status='rejected', rejection_reason=? WHERE id=?`)
+            .bind(`duplicate of ${winner.external_id} (${winner.provider})`, post.id),
+        );
         summary.rejectedPosts += 1;
       }
     }
+  }
+  for (let i = 0; i < updateStmts.length; i += 50) {
+    await db.batch(updateStmts.slice(i, i + 50));
   }
   return summary;
 }
@@ -425,6 +428,7 @@ export async function ingestWinnersForDay(env: Env, day: string, limit = 200): P
   const rows = results || [];
   if (rows.length === 0) return { ingested: 0, processed: 0, remaining: 0 };
   const user = await getOrCreateSeedUser(env.DB);
+  const blacklistRules = await loadBlacklistRules(env.DB as D1Database).catch(() => []);
   let n = 0;
   let processed = 0;
   for (const row of rows) {
@@ -436,7 +440,7 @@ export async function ingestWinnersForDay(env: Env, day: string, limit = 200): P
       continue;
     }
     try {
-      await ingestWinnerRow(env, provider, user.id, day, row);
+      await ingestWinnerRow(env, provider, user.id, day, row, blacklistRules);
       n += 1;
     } catch (e) {
       console.error(`ingest ${row.provider}/${row.external_id} failed: ${(e as Error).message}`);

@@ -9,6 +9,7 @@ export interface BrowserContentResult {
 }
 
 export async function browserContent(env: Env, url: string): Promise<BrowserContentResult> {
+  if (!env.BROWSER) throw new Error('Browser binding not configured');
   const res = await env.BROWSER.quickAction('content', {
     url,
     gotoOptions: { waitUntil: 'networkidle2' },

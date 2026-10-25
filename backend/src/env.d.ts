@@ -3,7 +3,7 @@ type SeedQueueMessage = import('./seed').SeedQueueMessage;
 interface Env {
   DB: D1Database;
   MEDIA: R2Bucket;
-  BROWSER: BrowserRun;
+  BROWSER?: BrowserRun;
   SEED_FETCH_QUEUE: Queue<SeedQueueMessage>;
   // Admin (Bearer for CLI/seed + password hash + cookie signing for dashboard).
   ADMIN_SECRET?: string;

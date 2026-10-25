@@ -8,7 +8,7 @@ import { anonymousClientId, sendGa4Events } from './ga4';
 
 export const redirectRoutes = new Hono<{ Bindings: Env }>();
 
-const TOKEN_TTL_MS = 90 * 24 * 3_600_000;
+const TOKEN_TTL_MS = 14 * 24 * 3_600_000;
 
 // Hosts a target may point at. Validated once, at mint time.
 const ALLOWED_HOSTS = [
@@ -66,8 +66,12 @@ function redirectBase(env: Env): string {
 }
 
 export async function pruneRedirectTokens(env: Env): Promise<number> {
-  const result = await env.DB.prepare('DELETE FROM redirect_tokens WHERE expires_at < ?').bind(Date.now()).run();
-  return Number(result.meta?.changes ?? 0);
+  const expired = await env.DB.prepare('DELETE FROM redirect_tokens WHERE expires_at < ?').bind(Date.now()).run();
+  const unhit = await env.DB
+    .prepare('DELETE FROM redirect_tokens WHERE hits = 0 AND created_at < ?')
+    .bind(Date.now() - TOKEN_TTL_MS)
+    .run();
+  return Number(expired.meta?.changes ?? 0) + Number(unhit.meta?.changes ?? 0);
 }
 
 redirectRoutes.get('/r/:token', async (c) => {

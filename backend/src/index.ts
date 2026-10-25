@@ -24,7 +24,7 @@ import {withSentry} from '@sentry/cloudflare';
 import {sentryOptions} from './analytics/sentry';
 import {tomorrowWarsaw, todayWarsaw, addDaysWarsaw} from './seed';
 import {produceSeedWindow, runQueue, SeedQueueMessage, watchdogUnits} from './seed/pipeline/queue';
-import {pruneSeedData, pruneSeedManifests} from './seed/pipeline/cleanup';
+import {pruneExpiredPosts, pruneSeedData, pruneSeedManifests, pruneViatorCache} from './seed/pipeline/cleanup';
 import {alertFailedUnits, daysReadyToReconcile, sweepStuckRaw} from './seed/reconcile';
 import {getLastSeedDay, setLastSeedDay, seedDue} from './seed/cadence';
 import {refreshViatorDestinations} from './travel/viator';
@@ -194,13 +194,14 @@ export default withSentry<Env, SeedQueueMessage>(
       return;
     }
     if (controller.cron === CLEANUP_CRON) {
-      // Daily audit cleanup: drop seed audit older than 4 days (venues kept).
       ctx.waitUntil(
         pruneSeedData(env, 'cron')
           .then(() => pruneSeedManifests(env))
           .then(() => pruneFlightCache(env.DB))
           .then(() => pruneRedirectTokens(env))
-          .then((dropped) => console.log(`seed cleanup cron done (flight_cache -${dropped})`))
+          .then(() => pruneExpiredPosts(env.DB))
+          .then(() => pruneViatorCache(env.DB))
+          .then(() => console.log('seed cleanup cron done'))
           .catch((e) => console.error(`seed cleanup cron failed: ${(e as Error).message}`))
       );
       return;

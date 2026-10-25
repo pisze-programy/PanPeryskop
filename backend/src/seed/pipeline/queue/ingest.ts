@@ -11,7 +11,7 @@ import { detectMediaType, extForMediaType } from '../../../core/mediaFormat';
 import { presentUrl } from '../../../core/media';
 import { doSavePost } from '../../../api/posts';
 import { STATUS_APPROVED, STATUS_PENDING, POST_TYPE_PHOTO } from '../../../core/models';
-import { findBlacklist, loadBlacklistRules, blacklistReason } from '../../core/blacklist';
+import { findBlacklist, loadBlacklistRules, blacklistReason, BlacklistRule } from '../../core/blacklist';
 import { configOf } from '../../providers/registry';
 import { eventCreatedAtMs, eventDayEndMs, warsawMidnightMs } from '../../core/dates';
 import { now } from './state';
@@ -71,6 +71,7 @@ export async function ingestWinnerRow(
   userId: string,
   day: string,
   row: RawWinnerRow,
+  cachedBlacklist?: BlacklistRule[],
 ): Promise<RawIngestResult> {
   if (row.status === 'done') {
     const post = await env.DB.prepare('SELECT id FROM posts WHERE external_id=?')
@@ -82,9 +83,6 @@ export async function ingestWinnerRow(
     return { postId: null, skipped: true, pendingGeo: false };
   }
 
-  // Atomic claim: only one worker may move a winner to 'ingesting'. A concurrent
-  // finalize loses here (changes=0) instead of racing the post unique index and
-  // getting its row stuck in 'error'.
   const claim = await env.DB
     .prepare(`UPDATE seed_raw SET status='ingesting', attempts=attempts+1, updated_at=? WHERE id=? AND status='winner'`)
     .bind(now(), row.id)
@@ -96,9 +94,7 @@ export async function ingestWinnerRow(
     const dayStart = warsawMidnightMs(day);
     const createdAt = eventCreatedAtMs(day);
 
-    // Blacklist gate BEFORE geo and media: a matched rule drops the row without
-    // spending a geocode or a download. Same order as handleIngest.
-    const blacklistRules = await loadBlacklistRules(env.DB as D1Database);
+    const blacklistRules = cachedBlacklist ?? (await loadBlacklistRules(env.DB as D1Database));
     const bl = findBlacklist(blacklistRules, { title: row.title, venue: row.raw_venue, partnerId: row.partner_id, source: row.provider });
     if (bl) {
       await env.DB.prepare(`UPDATE seed_raw SET status='duplicate', reason=?, updated_at=? WHERE id=?`)

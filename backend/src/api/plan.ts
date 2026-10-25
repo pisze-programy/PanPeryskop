@@ -31,7 +31,7 @@ async function sitemapXml(env: Env): Promise<{ body: string; etag: string }> {
 }
 
 function robotsTxt(): string {
-  return `User-agent: *\nAllow: /\n\nUser-agent: Googlebot\nAllow: /\n\nUser-agent: Bingbot\nAllow: /\n\nUser-agent: OAI-SearchBot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nSitemap: ${PUBLIC_BASE}/sitemap.xml\n`;
+  return `User-agent: *\nDisallow: /r/\nAllow: /\n\nUser-agent: Googlebot\nDisallow: /r/\nAllow: /\n\nUser-agent: Bingbot\nDisallow: /r/\nAllow: /\n\nUser-agent: OAI-SearchBot\nDisallow: /r/\nAllow: /\n\nUser-agent: PerplexityBot\nDisallow: /r/\nAllow: /\n\nSitemap: ${PUBLIC_BASE}/sitemap.xml\n`;
 }
 
 contentRoutes.get('/', (c) => c.html(renderSite('pl')));

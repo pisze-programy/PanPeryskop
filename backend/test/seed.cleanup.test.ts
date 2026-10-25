@@ -1,7 +1,7 @@
 import { CONFIG } from '../src/config/index';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pruneSeedData } from '../src/seed/pipeline/cleanup';
+import { pruneExpiredPosts, pruneSeedData, pruneViatorCache } from '../src/seed/pipeline/cleanup';
 
 test('cleanup: pruneSeedData keeps window + audit, skips open units/reconciling days', async () => {
   // Fake D1 recording DELETE statements and their WHERE bindings.
@@ -40,4 +40,66 @@ test('cleanup: pruneSeedData keeps window + audit, skips open units/reconciling 
   assert.ok(runs, 'runs pruned');
   // The persistent venues store must never be pruned.
   assert.ok(!deletes.some((d) => d.sql.includes('FROM venues')), 'venues untouched');
+});
+
+test('cleanup: pruneExpiredPosts deletes non-locked past posts and child rows', async () => {
+  const deletedSqls: string[] = [];
+  const db = {
+    prepare: (sql: string) => ({
+      bind: () => ({
+        all: async () => {
+          if (sql.includes('FROM posts')) {
+            return { results: [{ id: 'p1' }, { id: 'p2' }] };
+          }
+          return { results: [] };
+        },
+        run: async () => {
+          deletedSqls.push(sql);
+          return { meta: { changes: 1 } };
+        },
+      }),
+    }),
+    batch: async (stmts: Array<{ run?: () => Promise<unknown> }>) => {
+      for (const s of stmts) {
+        if (s.run) await s.run();
+      }
+      return [];
+    },
+  } as unknown as D1Database;
+
+  const count = await pruneExpiredPosts(db, 7);
+  assert.equal(count, 2);
+  assert.ok(deletedSqls.some((s) => s.includes('DELETE FROM views')));
+  assert.ok(deletedSqls.some((s) => s.includes('DELETE FROM posts')));
+});
+
+test('cleanup: pruneViatorCache deletes expired products and city cache', async () => {
+  const deletedSqls: string[] = [];
+  const db = {
+    prepare: (sql: string) => ({
+      bind: () => ({
+        all: async () => {
+          if (sql.includes('FROM viator_city_cache')) {
+            return { results: [{ cache_key: 'k1' }] };
+          }
+          return { results: [] };
+        },
+        run: async () => {
+          deletedSqls.push(sql);
+          return { meta: { changes: 1 } };
+        },
+      }),
+    }),
+    batch: async (stmts: Array<{ run?: () => Promise<unknown> }>) => {
+      for (const s of stmts) {
+        if (s.run) await s.run();
+      }
+      return [];
+    },
+  } as unknown as D1Database;
+
+  const count = await pruneViatorCache(db, 3);
+  assert.equal(count, 1);
+  assert.ok(deletedSqls.some((s) => s.includes('DELETE FROM viator_products')));
+  assert.ok(deletedSqls.some((s) => s.includes('DELETE FROM viator_city_cache')));
 });

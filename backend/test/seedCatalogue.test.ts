@@ -18,11 +18,12 @@ test('routes: no aggregate over-expansion per origin', () => {
   }
 });
 
-test('catalogue: 11 origin cities with the Warsaw pair and the Bialystok fallback', () => {
+test('catalogue: 12 origin cities with the Warsaw pair and the Bialystok fallback', () => {
   const c = buildCatalogue('2026-01-01T00:00:00.000Z');
-  assert.equal(c.cities.length, 11);
+  assert.equal(c.cities.length, 12);
   assert.deepEqual(c.cities.find((city) => city.id === 'warszawa')?.airports, ['WAW', 'WMI']);
   assert.deepEqual(c.cities.find((city) => city.id === 'bialystok')?.airports, ['SZY']);
+  assert.deepEqual(c.cities.find((city) => city.id === 'koszalin')?.airports, ['SZZ', 'GDN']);
   assert.equal(c.airports.length, 14);
   assert.equal(Object.keys(c.destinations).length, 14);
 });

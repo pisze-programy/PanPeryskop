@@ -1,6 +1,6 @@
 {
-  "version": "ba053122a4bf0eb49cc93ba2cf0f7404bd0559db7d295cc482da14404f08d11e",
-  "generatedAt": "2026-09-28T16:26:07.471Z",
+  "version": "80423b644523d1f1dd0587575be6d97ed6ef06db40dedc9f634c24d9cf17facb",
+  "generatedAt": "2026-10-28T05:47:08.203Z",
   "schemaVersion": 1,
   "minAppBuild": 36,
   "cities": [
@@ -102,6 +102,16 @@
       "lng": 23.1688,
       "airports": [
         "SZY"
+      ]
+    },
+    {
+      "id": "koszalin",
+      "name": "Koszalin",
+      "lat": 54.1943,
+      "lng": 16.1715,
+      "airports": [
+        "SZZ",
+        "GDN"
       ]
     }
   ],

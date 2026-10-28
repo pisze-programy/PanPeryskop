@@ -17,6 +17,7 @@ const ORIGIN_CITIES: Array<{ id: string; airports: string[] }> = [
   { id: 'lublin', airports: ['LUZ'] },
   { id: 'katowice', airports: ['KTW'] },
   { id: 'bialystok', airports: ['SZY'] },
+  { id: 'koszalin', airports: ['SZZ', 'GDN'] },
 ];
 
 export const ORIGIN_AIRPORTS = ['WAW', 'WMI', 'KRK', 'GDN', 'POZ', 'WRO', 'KTW', 'LCJ', 'SZZ', 'BZG', 'LUZ', 'RZE', 'RDO', 'SZY'];

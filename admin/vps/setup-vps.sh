@@ -80,9 +80,12 @@ TMP_CRON=$(mktemp)
 crontab -l 2>/dev/null | grep -vE 'panperyskop.*(watchdog|orchestrator)\.sh|vps-seed\.mjs|(kup-warm|awin-warm|travel|consumer-ensure|route-days)\.(mjs|sh)' > "$TMP_CRON"
 # Seed consumer supervisor — restart the long-lived drain within 5 min if it dies.
 printf '%s\n' '*/5 * * * * /opt/panperyskop/admin/vps/consumer-ensure.sh' >> "$TMP_CRON"
-# Nightly kupbilecik manifest warm — 00:01 Warsaw, CLEAN env (no proxy: the origin
+# Nightly kupbilecik manifest warm — 04:00 Warsaw, CLEAN env (no proxy: the origin
 # needs none and we don't pay residential bandwidth for an 8 MB gzip download).
-printf '%s\n' '1 0 * * * cd /opt/panperyskop && /usr/bin/node --max-old-space-size=128 backend/dist/kup-warm.mjs >> admin/vps/logs/warm-kup.log 2>&1' >> "$TMP_CRON"
+# Runs WELL AFTER the origin's midnight import window (corrupt catalog bodies
+# were observed at 00:01 on 2026-10-21/24/27) and after the seed cron, so the
+# far-edge manifests land before the watchdog retries the fresh units.
+printf '%s\n' '0 4 * * * cd /opt/panperyskop && /usr/bin/node --max-old-space-size=128 backend/dist/kup-warm.mjs >> admin/vps/logs/warm-kup.log 2>&1' >> "$TMP_CRON"
 # Eventim (Awin) feed warm — 00:03 Warsaw, after the kupbilecik warm.
 printf '%s\n' '3 0 * * * cd /opt/panperyskop && /usr/bin/node --max-old-space-size=128 backend/dist/awin-warm.mjs >> admin/vps/logs/warm-awin.log 2>&1' >> "$TMP_CRON"
 # ESPN soccer replenish — Monday 00:10 Warsaw.
@@ -93,7 +96,7 @@ printf '%s\n' '25 0 * * 1 cd /opt/panperyskop && /usr/bin/node --max-old-space-s
 printf '%s\n' '0 11 * * * /opt/panperyskop/admin/vps/route-days.sh >> /opt/panperyskop/admin/vps/logs/travel-route-days.log 2>&1' >> "$TMP_CRON"
 crontab "$TMP_CRON"
 rm -f "$TMP_CRON"
-say "crontab ok: */5 consumer-ensure + 00:01 kup-warm + 00:03 awin-warm + 00:10 mon espn + 00:25 mon worldsmarathons + 11:00 daily route-days"
+say "crontab ok: */5 consumer-ensure + 04:00 kup-warm + 00:03 awin-warm + 00:10 mon espn + 00:25 mon worldsmarathons + 11:00 daily route-days"
 
 # ---------- env ----------
 if [ -f "$ENV_FILE" ]; then

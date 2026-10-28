@@ -63,7 +63,7 @@ Separate jobs run on their own cron:
 | Job | Cron (Warsaw) | Command | Purpose |
 | --- | --- | --- | --- |
 | consumer keep-alive | `*/5 * * * *` | `consumer-ensure.sh` | restart the drain if it dies |
-| kupbilecik warm | `01:00` | `kup-warm.mjs` | per-day manifest into R2 |
+| kupbilecik warm | `04:00` | `kup-warm.mjs` | per-day manifest into R2 |
 | eventim (Awin) warm | `00:03` | `awin-warm.mjs` | Awin feed into R2 |
 | ESPN soccer | `Mon 00:10` | `travel.mjs --provider=espn` | travel events |
 | worldsmarathons runs | `Mon 00:25` | `travel.mjs --provider=worldsmarathons` | travel events |

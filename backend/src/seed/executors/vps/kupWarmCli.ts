@@ -8,8 +8,9 @@ import { CONFIG } from '../../../config/index';
 // the token budget is ~10 req/day, so the warm must run once a day from an IP
 // kupbilecik accepts, streaming the ~60 MB catalog through scanKupEvents (never
 // materializing it) and pushing per-day manifests to R2 via the Worker admin
-// endpoint. Runs 00:01 Warsaw (root crontab, see setup-vps.sh), BEFORE the seed
-// cron, with a clean env (no residential proxy — an 8 MB gzip does not pay for it).
+// endpoint. Runs 04:00 Warsaw (root crontab, see setup-vps.sh) — clear of the
+// origin's midnight import window that served corrupt bodies at 00:01 — with a
+// clean env (no residential proxy — an 8 MB gzip does not pay for it).
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

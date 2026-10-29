@@ -92,6 +92,64 @@ interface CityCacheRow {
   fetchedAt: number;
 }
 
+interface CityCatalogueRow {
+  destinationId: number;
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+// The partner catalogue refreshes weekly, so an hourly re-read keeps isolates fresh.
+const CITY_CATALOGUE_TTL_MS = 3_600_000;
+
+let cityCatalogue: { rows: CityCatalogueRow[]; fetchedAt: number } | null = null;
+let cityCatalogueLoading: Promise<CityCatalogueRow[]> | null = null;
+
+export function resetViatorCityCache(): void {
+  cityCatalogue = null;
+  cityCatalogueLoading = null;
+}
+
+async function loadCityCatalogue(db: D1Database): Promise<CityCatalogueRow[]> {
+  const stale = cityCatalogue;
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT destination_id AS destinationId, name, lat, lng
+           FROM viator_destinations
+          WHERE type = 'CITY' AND iata_codes IS NOT NULL
+            AND lat IS NOT NULL AND lng IS NOT NULL`,
+      )
+      .all<CityCatalogueRow>();
+    cityCatalogue = { rows: results ?? [], fetchedAt: Date.now() };
+  } catch (error) {
+    if (!stale) throw error;
+  } finally {
+    cityCatalogueLoading = null;
+  }
+  return cityCatalogue?.rows ?? [];
+}
+
+function cityCatalogueRows(db: D1Database): Promise<CityCatalogueRow[]> {
+  if (cityCatalogue && Date.now() - cityCatalogue.fetchedAt < CITY_CATALOGUE_TTL_MS) {
+    return Promise.resolve(cityCatalogue.rows);
+  }
+  if (!cityCatalogueLoading) cityCatalogueLoading = loadCityCatalogue(db);
+  return cityCatalogueLoading;
+}
+
+function nearestCatalogueCity(rows: CityCatalogueRow[], lat: number, lng: number): ViatorCity | null {
+  let best: CityCatalogueRow | null = null;
+  let bestDist = Infinity;
+  for (const row of rows) {
+    const dist = (row.lat - lat) * (row.lat - lat) + (row.lng - lng) * (row.lng - lng);
+    if (dist >= bestDist) continue;
+    best = row;
+    bestDist = dist;
+  }
+  return best;
+}
+
 function credentials(env: ViatorEnv): Credentials | null {
   const sandbox = env.VIATOR_ENV === 'sandbox';
   const key = (sandbox ? env.VIATOR_API_KEY_SANDBOX : env.VIATOR_API_KEY)?.trim();
@@ -184,17 +242,7 @@ export async function refreshViatorDestinations(db: D1Database, env: ViatorEnv):
 
 /** The catalogue city nearest to the given coordinates — deterministic. */
 export async function viatorNearestCity(db: D1Database, lat: number, lng: number): Promise<ViatorCity | null> {
-  return db
-    .prepare(
-      `SELECT destination_id AS destinationId, name, lat, lng
-         FROM viator_destinations
-        WHERE type = 'CITY' AND iata_codes IS NOT NULL
-          AND lat IS NOT NULL AND lng IS NOT NULL
-        ORDER BY (lat - ?1) * (lat - ?1) + (lng - ?2) * (lng - ?2)
-        LIMIT 1`,
-    )
-    .bind(lat, lng)
-    .first<ViatorCity>();
+  return nearestCatalogueCity(await cityCatalogueRows(db), lat, lng);
 }
 
 export function viatorPickImage(images: RawImage[] | undefined): string | null {

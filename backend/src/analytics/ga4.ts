@@ -47,14 +47,23 @@ export async function sendGa4Events(env: Env, events: UsageEvent[], clientId: st
 /** GA4 requires a client_id, but we only want totals. Derive one stable value
  *  per day from the salt: it counts daily totals and cannot be traced back to a
  *  device or an account. Rotates every day. */
-export async function anonymousClientId(env: Env): Promise<string> {
+let cachedDay = '';
+let cachedSalt = '';
+let cachedClientId = '';
+
+export async function anonymousClientId(env: Env, now = Date.now()): Promise<string> {
   const salt = env.ANALYTICS_SALT ?? 'panperyskop';
-  const day = new Date().toISOString().slice(0, 10);
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(salt), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(day));
-  const hex = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
-  // GA4 accepts "<int>.<int>"; derive two large ints from the digest.
-  const a = BigInt(`0x${hex.slice(0, 16)}`);
-  const b = BigInt(`0x${hex.slice(16, 32)}`);
-  return `${a}.${b}`;
+  const day = new Date(now).toISOString().slice(0, 10);
+  if (day !== cachedDay || salt !== cachedSalt) {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(salt), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(day));
+    const hex = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    // GA4 accepts "<int>.<int>"; derive two large ints from the digest.
+    const a = BigInt(`0x${hex.slice(0, 16)}`);
+    const b = BigInt(`0x${hex.slice(16, 32)}`);
+    cachedClientId = `${a}.${b}`;
+    cachedDay = day;
+    cachedSalt = salt;
+  }
+  return cachedClientId;
 }

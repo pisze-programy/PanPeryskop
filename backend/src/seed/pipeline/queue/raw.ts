@@ -133,7 +133,8 @@ export async function writeRawRows(db: D1Database, input: RawWriteInput, chunkSi
            pending_reason=excluded.pending_reason,
            status=CASE WHEN seed_raw.content_hash <> excluded.content_hash THEN 'raw' ELSE seed_raw.status END,
            reason=CASE WHEN seed_raw.content_hash <> excluded.content_hash THEN NULL ELSE seed_raw.reason END,
-           updated_at=excluded.updated_at`,
+           updated_at=excluded.updated_at
+         WHERE excluded.content_hash <> seed_raw.content_hash`,
       ).bind(
         nanoid(24), input.day, input.batchId, input.unitId, input.provider, c.externalId, c.title,
         JSON.stringify([...titleTokens(c.title, c.venue)]), c.venue, c.city === '' ? null : c.city,

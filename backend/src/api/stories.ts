@@ -60,6 +60,38 @@ storiesRoutes.get('/tags', async (c) => c.json({
   tags: (await tagCatalog(c.env.DB)).map((t) => ({ id: t.id, label: t.label })),
 }));
 
+interface TagCountRow {
+  category: string | null;
+  event_date: string | null;
+  showtimes: string | null;
+  tags: string | null;
+}
+
+const tagCountsCache = new Map<string, { storedAt: number; rows: TagCountRow[] }>();
+const TAG_COUNTS_TTL_MS = 3 * CONFIG.time.hourMs;
+
+export function clearTagCountsCache(): void {
+  tagCountsCache.clear();
+}
+
+async function tagCountsRows(db: D1Database, key: string, swLat: number, swLng: number, neLat: number, neLng: number, day: string): Promise<TagCountRow[]> {
+  const hit = tagCountsCache.get(key);
+  if (hit && Date.now() - hit.storedAt < TAG_COUNTS_TTL_MS) return hit.rows.map((row) => ({ ...row }));
+  const { results } = await db
+    .prepare(
+      `SELECT category, event_date, showtimes, tags FROM posts
+       WHERE lat BETWEEN ? AND ?
+       AND lng BETWEEN ? AND ?
+       AND status = '${STATUS_APPROVED}'
+       AND (event_date = ? OR category = '${CATEGORY_FOOD}')`
+    )
+    .bind(swLat, neLat, swLng, neLng, day)
+    .all<TagCountRow>();
+  const rows = results || [];
+  tagCountsCache.set(key, { storedAt: Date.now(), rows });
+  return rows.map((row) => ({ ...row }));
+}
+
 // Per-tag event counts for the map tag badges — scoped to a CITY (not the current
 // viewport) for a specific day. The client cannot derive these from its viewport
 // posts, and seeds change ~every 3 days, so the app calls this on app-start and on
@@ -73,23 +105,13 @@ storiesRoutes.get('/tag-counts', async (c) => {
   const bbox = cityBbox(city);
   if (!bbox) return c.json({ error: 'Unknown city' }, 404);
 
-  // Select approved events for that day within the city bbox and tally tags in TS
-  // (single query, no N LIKE scans). NULL-tag posts contribute only to total.
-  // The same +1h liveness rule as /stories keeps badges consistent with the pins.
-  const { results } = await db
-    .prepare(
-      `SELECT category, event_date, showtimes, tags FROM posts
-       WHERE lat BETWEEN ? AND ?
-       AND lng BETWEEN ? AND ?
-       AND status = '${STATUS_APPROVED}'
-       AND (event_date = ? OR category = '${CATEGORY_FOOD}')`
-    )
-    .bind(bbox.swLat, bbox.neLat, bbox.swLng, bbox.neLng, day)
-    .all<{ category: string | null; event_date: string | null; showtimes: string | null; tags: string | null }>();
+  // The D1 scan repeats for the same city+day, so raw rows wait in a module map.
+  // Liveness still runs per request, so the +1h rule never goes stale with time.
+  const rows = await tagCountsRows(db, city + '\n' + day, bbox.swLat, bbox.swLng, bbox.neLat, bbox.neLng, day);
 
   const counts = new Map<string, number>();
   let total = 0;
-  for (const row of results || []) {
+  for (const row of rows) {
     if (!applyEventLiveness(row)) continue;
     total += 1;
     if (!row.tags) continue;

@@ -102,3 +102,25 @@ test('maybeGunzip: raw gzip body is decompressed before scanning', async () => {
   assert.equal(total, 2);
   assert.equal(byDay.get(d1)?.length, 1);
 });
+
+test('maybeGunzip: multi-chunk uncompressed stream preserves all chunks', async () => {
+  const catalog = `{"events":[${ev(1, d1)},${ev(2, d2)}]}`;
+  const stream = streamOf(catalog, 50);
+  const { byDay, total } = await scanKupEvents(await maybeGunzip(stream));
+  assert.equal(total, 2);
+  assert.equal(byDay.get(d1)?.length, 1);
+});
+
+test('maybeGunzip: multi-chunk gzip stream preserves all chunks', async () => {
+  const catalog = `{"events":[${ev(1, d1)},${ev(2, d2)}]}`;
+  const gz = new Uint8Array(gzipSync(Buffer.from(catalog, 'utf8')));
+  const stream = new ReadableStream<Uint8Array>({
+    start(c) {
+      for (let i = 0; i < gz.length; i += 64) c.enqueue(gz.subarray(i, i + 64));
+      c.close();
+    },
+  });
+  const { byDay, total } = await scanKupEvents(await maybeGunzip(stream));
+  assert.equal(total, 2);
+  assert.equal(byDay.get(d1)?.length, 1);
+});

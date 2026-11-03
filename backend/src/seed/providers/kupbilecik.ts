@@ -302,29 +302,22 @@ function probeHasEventsArray(probe: number[]): boolean {
 export async function maybeGunzip(stream: ReadableStream<Uint8Array>): Promise<ReadableStream<Uint8Array>> {
   const reader = stream.getReader();
   const first = await reader.read();
-  if (first.done) return new ReadableStream({ start(c) { c.close(); } });
+  if (first.done || !first.value) return new ReadableStream({ start(c) { c.close(); } });
   const bytes = first.value;
   const isGzip = bytes.length > 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
-  const rest = new ReadableStream<Uint8Array>({
+  const source = new ReadableStream<Uint8Array>({
+    start(c) {
+      c.enqueue(bytes);
+    },
     pull(c) {
       return reader.read().then(({ done, value }) => (done ? c.close() : c.enqueue(value)));
     },
-  });
-  if (!isGzip) {
-    return new ReadableStream<Uint8Array>({
-      start(c) { c.enqueue(bytes); },
-      pull(c) {
-        return reader.read().then(({ done, value }) => (done ? c.close() : c.enqueue(value)));
-      },
-    });
-  }
-  const merged = new ReadableStream<Uint8Array>({
-    start(c) { c.enqueue(bytes); },
-    pull(c) {
-      return reader.read().then(({ done, value }) => (done ? c.close() : c.enqueue(value)));
+    cancel(reason) {
+      return reader.cancel(reason);
     },
   });
-  return merged.pipeThrough(new DecompressionStream('gzip'));
+  if (isGzip) return source.pipeThrough(new DecompressionStream('gzip'));
+  return source;
 }
 
 /**

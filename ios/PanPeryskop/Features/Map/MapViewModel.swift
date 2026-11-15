@@ -121,7 +121,8 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     func toggleTag(_ id: String) {
         tagSelection.toggle(id)
         clearFeed()
-        refreshCurrentRegion()
+        guard viewport != nil else { return }
+        scheduleVisibleFetch(debounced: true)
     }
 
     func isTagSelected(_ id: String) -> Bool { tagSelection.isSelected(id) }

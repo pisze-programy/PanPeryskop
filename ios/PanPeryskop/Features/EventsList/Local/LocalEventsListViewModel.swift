@@ -1,46 +1,29 @@
 import Foundation
 
-struct LocalDaySection: Identifiable, Equatable {
-    let dayOffset: Int
-    let isoDay: String
-    let title: String
-    let posts: [Post]
-
-    var id: String { isoDay }
-}
-
 @MainActor
 final class LocalEventsListViewModel: ObservableObject {
     @Published private(set) var sections: [LocalDaySection] = []
+    @Published private(set) var tagCounts: [String: Int] = [:]
     @Published private(set) var isInitialLoading = false
     @Published private(set) var isLoadingMore = false
     @Published private(set) var hasMore = false
     @Published private(set) var errorMessage: String?
 
-    private struct QueryKey: Equatable {
-        let cityId: String
-        let tags: String?
-        let startDayOffset: Int
-    }
-
-    private enum ChunkOutcome {
-        case loaded(sections: [LocalDaySection], nextOffset: Int, eventCount: Int)
-        case cancelled
-        case failed
-    }
-
-    private struct DayFetchResult: Sendable {
-        let offset: Int
-        let isoDay: String
-        let posts: [Post]
-    }
-
     nonisolated static let restaurantTagId = "restauracje"
+    nonisolated static let maxDayOffset = 7
 
-    private static let maxDayOffset = 30
-    private static let chunkSize = 3
-    private static let initialTargetEvents = 12
+    private static let waveSize = 4
+    nonisolated private static let retryDelaysMs = [0, 180, 400]
     private static let loadErrorText = "Coś poszło nie tak, spróbuj ponownie"
+
+    private static let isoDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = AppConstants.warsawCalendar
+        formatter.timeZone = AppConstants.warsawTimeZone
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 
     nonisolated static func effectiveTagsParam(_ selectedTagsParam: String?, visibleTags: [TagPill]) -> String? {
         guard let selectedTagsParam, !selectedTagsParam.isEmpty else { return nil }
@@ -52,289 +35,354 @@ final class LocalEventsListViewModel: ObservableObject {
         return fallback.isEmpty ? nil : fallback.joined(separator: ",")
     }
 
-    private static let isoDayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.calendar = AppConstants.warsawCalendar
-        f.timeZone = AppConstants.warsawTimeZone
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    nonisolated static func effectiveFilterTagIds(_ selectedTagsParam: String?, visibleTags: [TagPill]) -> Set<String>? {
+        guard let selectedTagsParam, !selectedTagsParam.isEmpty else { return nil }
+        let remaining = Set(nonRestaurantTagIDs(from: selectedTagsParam))
+        guard !remaining.isEmpty else { return nil }
+        let visibleIds = Set(visibleTags.map(\.id))
+        if !visibleIds.isEmpty, remaining == visibleIds {
+            return nil
+        }
+        return remaining
+    }
 
+    private var dayCache: [String: [Post]] = [:]
+    private var currentCityId: String?
+    private var currentStartOffset = 0
+    private var currentReferenceDate = Date()
+    private var filterTagIds: Set<String>?
     private var generation = 0
-    private var nextDayOffset = 0
-    private var loadedKey: QueryKey?
     private var activeTask: Task<Void, Never>?
 
-    func loadIfNeeded(city: City, tags: String?, startDayOffset: Int = 0) {
+    func loadIfNeeded(
+        city: City,
+        tags: String?,
+        startDayOffset: Int = 0,
+        visibleTags: [TagPill] = []
+    ) {
         let start = Self.clampedStart(startDayOffset)
-        let key = QueryKey(cityId: city.id, tags: tags, startDayOffset: start)
-        guard loadedKey != key || errorMessage != nil else { return }
-        loadInitial(city: city, tags: tags, startDayOffset: start)
-    }
-
-    func loadInitial(city: City, tags: String?, startDayOffset: Int = 0) {
-        let start = Self.clampedStart(startDayOffset)
-        activeTask?.cancel()
-        generation += 1
-        let token = generation
-        loadedKey = QueryKey(cityId: city.id, tags: tags, startDayOffset: start)
-        sections = []
-        nextDayOffset = start
-        hasMore = true
-        errorMessage = nil
-        isLoadingMore = false
-        isInitialLoading = true
-        activeTask = Task { [weak self] in
-            await self?.runInitialLoad(
-                city: city,
-                tags: tags,
-                startDayOffset: start,
-                token: token,
-                replaceOnComplete: false
-            )
+        filterTagIds = Self.effectiveFilterTagIds(tags, visibleTags: visibleTags)
+        if isSameInFlightScope(cityId: city.id, startOffset: start) {
+            rebuildSections()
+            return
         }
+        if isFullyCachedScope(cityId: city.id, startOffset: start) {
+            currentStartOffset = start
+            rebuildAll()
+            markCompleted()
+            return
+        }
+        startLoad(city: city, startOffset: start, forceRefresh: false)
     }
 
-    func refresh(city: City, tags: String?, startDayOffset: Int = 0) async {
+    func loadInitial(
+        city: City,
+        tags: String?,
+        startDayOffset: Int = 0,
+        visibleTags: [TagPill] = []
+    ) {
         let start = Self.clampedStart(startDayOffset)
+        filterTagIds = Self.effectiveFilterTagIds(tags, visibleTags: visibleTags)
+        startLoad(city: city, startOffset: start, forceRefresh: false)
+    }
+
+    func syncTags(_ nextFilterTagIds: Set<String>?) {
+        guard filterTagIds != nextFilterTagIds else { return }
+        filterTagIds = nextFilterTagIds
+        rebuildSections()
+    }
+
+    func refresh(
+        city: City,
+        tags: String?,
+        startDayOffset: Int = 0,
+        visibleTags: [TagPill] = []
+    ) async {
+        let start = Self.clampedStart(startDayOffset)
+        filterTagIds = Self.effectiveFilterTagIds(tags, visibleTags: visibleTags)
         activeTask?.cancel()
-        generation += 1
-        let token = generation
-        loadedKey = QueryKey(cityId: city.id, tags: tags, startDayOffset: start)
-        errorMessage = nil
-        isLoadingMore = false
-        isInitialLoading = sections.isEmpty
         let task = Task<Void, Never> { [weak self] in
-            await self?.runInitialLoad(
-                city: city,
-                tags: tags,
-                startDayOffset: start,
-                token: token,
-                replaceOnComplete: true
-            )
+            await self?.performLoad(city: city, startOffset: start, forceRefresh: true)
         }
         activeTask = task
         await task.value
     }
 
-    func loadMoreIfNeeded(currentSection: LocalDaySection, city: City, tags: String?, startDayOffset: Int = 0) {
-        guard shouldLoadMore(for: currentSection) else { return }
+    func loadMoreIfNeeded(
+        currentSection: LocalDaySection,
+        city: City,
+        tags: String?,
+        startDayOffset: Int = 0
+    ) {
+        guard hasMore, !isInitialLoading, !isLoadingMore else { return }
         loadMore(city: city, tags: tags, startDayOffset: startDayOffset)
     }
 
     func loadMore(city: City, tags: String?, startDayOffset: Int = 0) {
         let start = Self.clampedStart(startDayOffset)
-        let key = QueryKey(cityId: city.id, tags: tags, startDayOffset: start)
-        guard loadedKey == key else { return }
-        guard !isInitialLoading, !isLoadingMore, hasMore else { return }
-        guard nextDayOffset <= Self.maxDayOffset else {
-            hasMore = false
-            return
-        }
-        let token = generation
-        isLoadingMore = true
+        guard currentCityId == city.id,
+              currentStartOffset == start,
+              hasMore,
+              !isInitialLoading,
+              !isLoadingMore else { return }
+        startLoad(city: city, startOffset: start, forceRefresh: false)
+    }
+
+    private func isSameInFlightScope(cityId: String, startOffset: Int) -> Bool {
+        currentCityId == cityId && currentStartOffset == startOffset && (isInitialLoading || isLoadingMore)
+    }
+
+    private func isFullyCachedScope(cityId: String, startOffset: Int) -> Bool {
+        guard currentCityId == cityId, errorMessage == nil else { return false }
+        return missingOffsets(cityId: cityId, from: startOffset, referenceDate: currentReferenceDate).isEmpty
+    }
+
+    private func startLoad(city: City, startOffset: Int, forceRefresh: Bool) {
+        activeTask?.cancel()
         activeTask = Task { [weak self] in
-            await self?.runLoadMore(city: city, tags: tags, token: token)
+            await self?.performLoad(city: city, startOffset: startOffset, forceRefresh: forceRefresh)
         }
     }
 
-    private func shouldLoadMore(for section: LocalDaySection) -> Bool {
-        guard let index = sections.firstIndex(where: { $0.id == section.id }) else { return false }
-        return index >= max(0, sections.count - 2)
+    private func performLoad(city: City, startOffset: Int, forceRefresh: Bool) async {
+        generation += 1
+        let token = generation
+        let referenceDate = Date()
+        prepareScope(cityId: city.id, startOffset: startOffset, referenceDate: referenceDate, forceRefresh: forceRefresh)
+        let offsets = offsetsToLoad(cityId: city.id, from: startOffset, referenceDate: referenceDate, forceRefresh: forceRefresh)
+        guard !offsets.isEmpty else {
+            markCompleted()
+            return
+        }
+        await executeWaveLoad(
+            offsets: offsets,
+            city: city,
+            startOffset: startOffset,
+            referenceDate: referenceDate,
+            token: token
+        )
+    }
+
+    private func prepareScope(
+        cityId: String,
+        startOffset: Int,
+        referenceDate: Date,
+        forceRefresh: Bool
+    ) {
+        let cityChanged = currentCityId != cityId
+        currentCityId = cityId
+        currentStartOffset = startOffset
+        currentReferenceDate = referenceDate
+        errorMessage = nil
+        if cityChanged, !hasAnyCachedDay(cityId: cityId, from: startOffset, referenceDate: referenceDate) {
+            sections = []
+            tagCounts = [:]
+            return
+        }
+        guard !forceRefresh else { return }
+        rebuildAll()
+    }
+
+    private func executeWaveLoad(
+        offsets: [Int],
+        city: City,
+        startOffset: Int,
+        referenceDate: Date,
+        token: Int
+    ) async {
+        let bbox = MapViewModel.cityBBox(for: city)
+        let firstWave = Array(offsets.prefix(Self.waveSize))
+        let secondWave = Array(offsets.dropFirst(Self.waveSize))
+        isInitialLoading = sections.isEmpty
+        isLoadingMore = !sections.isEmpty
+        hasMore = true
+        let firstSucceeded = await loadWave(
+            offsets: firstWave,
+            cityId: city.id,
+            bbox: bbox,
+            referenceDate: referenceDate,
+            token: token
+        )
+        guard !Task.isCancelled, token == generation else { return }
+        rebuildAll()
+        isInitialLoading = false
+        guard firstSucceeded > 0 || hasAnyCachedDay(cityId: city.id, from: startOffset, referenceDate: referenceDate) else {
+            finishWithError()
+            return
+        }
+        await finishSecondWave(
+            secondWave,
+            cityId: city.id,
+            bbox: bbox,
+            referenceDate: referenceDate,
+            token: token
+        )
+    }
+
+    private func finishSecondWave(
+        _ secondWave: [Int],
+        cityId: String,
+        bbox: MapBBox,
+        referenceDate: Date,
+        token: Int
+    ) async {
+        guard !secondWave.isEmpty else {
+            markCompleted()
+            return
+        }
+        isLoadingMore = true
+        _ = await loadWave(
+            offsets: secondWave,
+            cityId: cityId,
+            bbox: bbox,
+            referenceDate: referenceDate,
+            token: token
+        )
+        guard !Task.isCancelled, token == generation else { return }
+        rebuildAll()
+        markCompleted()
+    }
+
+    private func markCompleted() {
+        errorMessage = nil
+        isInitialLoading = false
+        isLoadingMore = false
+        hasMore = false
+    }
+
+    private func finishWithError() {
+        isInitialLoading = false
+        isLoadingMore = false
+        hasMore = false
+        errorMessage = Self.loadErrorText
+    }
+
+    private func loadWave(
+        offsets: [Int],
+        cityId: String,
+        bbox: MapBBox,
+        referenceDate: Date,
+        token: Int
+    ) async -> Int {
+        guard !Task.isCancelled, token == generation else { return 0 }
+        let dayPairs = offsets.map { ($0, Self.dayString(offset: $0, from: referenceDate)) }
+        let results = await Self.fetchDays(dayPairs: dayPairs, bbox: bbox)
+        guard !Task.isCancelled, token == generation else { return 0 }
+        return storeDayResults(results, cityId: cityId)
+    }
+
+    private func storeDayResults(_ results: [(Int, String, [Post]?)], cityId: String) -> Int {
+        var succeeded = 0
+        for (_, isoDay, posts) in results {
+            succeeded += storeSingleDay(isoDay: isoDay, posts: posts, cityId: cityId)
+        }
+        return succeeded
+    }
+
+    private func storeSingleDay(isoDay: String, posts: [Post]?, cityId: String) -> Int {
+        guard let posts else { return 0 }
+        dayCache[Self.cacheKey(cityId: cityId, isoDay: isoDay)] = posts
+        return 1
+    }
+
+    private func rebuildAll() {
+        rebuildTagCounts()
+        rebuildSections()
+    }
+
+    private func rebuildTagCounts() {
+        guard let cityId = currentCityId else {
+            publishTagCounts([:])
+            return
+        }
+        var counts: [String: Int] = [:]
+        for offset in currentStartOffset...Self.maxDayOffset {
+            let isoDay = Self.dayString(offset: offset, from: currentReferenceDate)
+            let posts = dayCache[Self.cacheKey(cityId: cityId, isoDay: isoDay)] ?? []
+            Self.accumulateCounts(&counts, posts: posts)
+        }
+        publishTagCounts(counts)
+    }
+
+    private static func accumulateCounts(_ counts: inout [String: Int], posts: [Post]) {
+        for post in posts {
+            accumulatePostTags(&counts, tags: post.tags)
+        }
+    }
+
+    private static func accumulatePostTags(_ counts: inout [String: Int], tags: [String]?) {
+        guard let tags else { return }
+        for tag in Set(tags) where tag != restaurantTagId {
+            counts[tag, default: 0] += 1
+        }
+    }
+
+    private func publishTagCounts(_ counts: [String: Int]) {
+        guard tagCounts != counts else { return }
+        tagCounts = counts
+    }
+
+    private func rebuildSections() {
+        guard let cityId = currentCityId else {
+            publishSections([])
+            return
+        }
+        let nextSections = (currentStartOffset...Self.maxDayOffset).compactMap { offset in
+            buildSection(cityId: cityId, offset: offset)
+        }
+        publishSections(nextSections)
+    }
+
+    private func buildSection(cityId: String, offset: Int) -> LocalDaySection? {
+        let isoDay = Self.dayString(offset: offset, from: currentReferenceDate)
+        guard let cachedPosts = dayCache[Self.cacheKey(cityId: cityId, isoDay: isoDay)] else { return nil }
+        let filtered = cachedPosts.filter { Self.matchesFilter($0, filterTagIds: filterTagIds) }
+        guard !filtered.isEmpty else { return nil }
+        let title = EventsDateHeaderFormatter.title(isoDay: isoDay, now: currentReferenceDate)
+        return LocalDaySection(dayOffset: offset, isoDay: isoDay, title: title, posts: filtered)
+    }
+
+    private func publishSections(_ nextSections: [LocalDaySection]) {
+        guard sections != nextSections else { return }
+        sections = nextSections
+    }
+
+    private func offsetsToLoad(
+        cityId: String,
+        from startOffset: Int,
+        referenceDate: Date,
+        forceRefresh: Bool
+    ) -> [Int] {
+        guard !forceRefresh else { return Array(startOffset...Self.maxDayOffset) }
+        return missingOffsets(cityId: cityId, from: startOffset, referenceDate: referenceDate)
+    }
+
+    private func missingOffsets(cityId: String, from startOffset: Int, referenceDate: Date) -> [Int] {
+        (startOffset...Self.maxDayOffset).filter { offset in
+            let isoDay = Self.dayString(offset: offset, from: referenceDate)
+            return dayCache[Self.cacheKey(cityId: cityId, isoDay: isoDay)] == nil
+        }
+    }
+
+    private func hasAnyCachedDay(cityId: String, from startOffset: Int, referenceDate: Date) -> Bool {
+        (startOffset...Self.maxDayOffset).contains { offset in
+            let isoDay = Self.dayString(offset: offset, from: referenceDate)
+            return dayCache[Self.cacheKey(cityId: cityId, isoDay: isoDay)] != nil
+        }
+    }
+
+    private static func matchesFilter(_ post: Post, filterTagIds: Set<String>?) -> Bool {
+        guard let filterTagIds else { return true }
+        guard let postTags = post.tags else { return false }
+        return postTags.contains { filterTagIds.contains($0) }
     }
 
     private static func clampedStart(_ startDayOffset: Int) -> Int {
         min(max(0, startDayOffset), maxDayOffset)
     }
 
-    private func runInitialLoad(
-        city: City,
-        tags: String?,
-        startDayOffset: Int,
-        token: Int,
-        replaceOnComplete: Bool
-    ) async {
-        let now = Date()
-        let bbox = MapViewModel.cityBBox(for: city)
-        await loadInitialChunk(
-            cursor: startDayOffset,
-            collected: [],
-            totalEvents: 0,
-            bbox: bbox,
-            tags: tags,
-            referenceDate: now,
-            token: token,
-            replaceOnComplete: replaceOnComplete
-        )
-    }
-
-    private func loadInitialChunk(
-        cursor: Int,
-        collected: [LocalDaySection],
-        totalEvents: Int,
-        bbox: MapBBox,
-        tags: String?,
-        referenceDate: Date,
-        token: Int,
-        replaceOnComplete: Bool
-    ) async {
-        guard !Task.isCancelled, token == generation else { return }
-        guard cursor <= Self.maxDayOffset, totalEvents < Self.initialTargetEvents else {
-            finishInitialSuccess(collected: collected, cursor: cursor, token: token)
-            return
-        }
-        let outcome = await loadChunk(startOffset: cursor, bbox: bbox, tags: tags, referenceDate: referenceDate)
-        guard !Task.isCancelled, token == generation else { return }
-        guard case let .loaded(chunkSections, nextOffset, eventCount) = outcome else {
-            finishInitialFailure(outcome: outcome, collected: collected, cursor: cursor, token: token)
-            return
-        }
-        let nextCollected = collected + chunkSections
-        let nextTotal = totalEvents + eventCount
-        publishInitialProgress(
-            collected: nextCollected,
-            cursor: nextOffset,
-            totalEvents: nextTotal,
-            replaceOnComplete: replaceOnComplete
-        )
-        await loadInitialChunk(
-            cursor: nextOffset,
-            collected: nextCollected,
-            totalEvents: nextTotal,
-            bbox: bbox,
-            tags: tags,
-            referenceDate: referenceDate,
-            token: token,
-            replaceOnComplete: replaceOnComplete
-        )
-    }
-
-    private func publishInitialProgress(
-        collected: [LocalDaySection],
-        cursor: Int,
-        totalEvents: Int,
-        replaceOnComplete: Bool
-    ) {
-        guard !replaceOnComplete, !collected.isEmpty else { return }
-        sections = collected
-        nextDayOffset = cursor
-        hasMore = cursor <= Self.maxDayOffset
-        isInitialLoading = false
-        isLoadingMore = hasMore && totalEvents < Self.initialTargetEvents
-    }
-
-    private func finishInitialSuccess(collected: [LocalDaySection], cursor: Int, token: Int) {
-        guard token == generation else { return }
-        sections = collected
-        nextDayOffset = cursor
-        hasMore = cursor <= Self.maxDayOffset
-        isInitialLoading = false
-        isLoadingMore = false
-    }
-
-    private func finishInitialFailure(outcome: ChunkOutcome, collected: [LocalDaySection], cursor: Int, token: Int) {
-        guard token == generation else { return }
-        isInitialLoading = false
-        isLoadingMore = false
-        if case .cancelled = outcome { return }
-        if collected.isEmpty, sections.isEmpty {
-            errorMessage = Self.loadErrorText
-            hasMore = false
-            return
-        }
-        guard !collected.isEmpty else { return }
-        sections = collected
-        nextDayOffset = cursor
-        hasMore = cursor <= Self.maxDayOffset
-    }
-
-    private func runLoadMore(city: City, tags: String?, token: Int) async {
-        let now = Date()
-        let bbox = MapViewModel.cityBBox(for: city)
-        await loadMoreStep(cursor: nextDayOffset, bbox: bbox, tags: tags, referenceDate: now, token: token)
-    }
-
-    private func loadMoreStep(
-        cursor: Int,
-        bbox: MapBBox,
-        tags: String?,
-        referenceDate: Date,
-        token: Int
-    ) async {
-        guard !Task.isCancelled, token == generation else { return }
-        guard cursor <= Self.maxDayOffset else {
-            applyLoadMore(found: [], cursor: cursor, token: token)
-            return
-        }
-        let outcome = await loadChunk(startOffset: cursor, bbox: bbox, tags: tags, referenceDate: referenceDate)
-        guard !Task.isCancelled, token == generation else { return }
-        guard case let .loaded(chunkSections, nextOffset, _) = outcome else {
-            finishLoadMoreFailure(cursor: cursor, token: token)
-            return
-        }
-        guard chunkSections.isEmpty else {
-            applyLoadMore(found: chunkSections, cursor: nextOffset, token: token)
-            return
-        }
-        await loadMoreStep(cursor: nextOffset, bbox: bbox, tags: tags, referenceDate: referenceDate, token: token)
-    }
-
-    private func applyLoadMore(found: [LocalDaySection], cursor: Int, token: Int) {
-        guard token == generation else { return }
-        nextDayOffset = cursor
-        hasMore = cursor <= Self.maxDayOffset
-        isLoadingMore = false
-        guard !found.isEmpty else { return }
-        let existingDays = Set(sections.map(\.isoDay))
-        let newSections = found.filter { !existingDays.contains($0.isoDay) }
-        sections.append(contentsOf: newSections)
-    }
-
-    private func finishLoadMoreFailure(cursor: Int, token: Int) {
-        guard token == generation else { return }
-        nextDayOffset = cursor
-        hasMore = cursor <= Self.maxDayOffset
-        isLoadingMore = false
-    }
-
-    private func loadChunk(
-        startOffset: Int,
-        bbox: MapBBox,
-        tags: String?,
-        referenceDate: Date
-    ) async -> ChunkOutcome {
-        let endOffset = min(startOffset + Self.chunkSize - 1, Self.maxDayOffset)
-        let dayPairs = (startOffset...endOffset).map { offset in
-            (offset, Self.dayString(offset: offset, from: referenceDate))
-        }
-        do {
-            let rawDays = try await Self.fetchDays(dayPairs: dayPairs, bbox: bbox, tags: tags)
-            let chunkSections = Self.makeSections(from: rawDays, referenceDate: referenceDate)
-            let eventCount = chunkSections.reduce(0) { $0 + $1.posts.count }
-            return .loaded(sections: chunkSections, nextOffset: endOffset + 1, eventCount: eventCount)
-        } catch is CancellationError {
-            return .cancelled
-        } catch let error as URLError where error.code == .cancelled {
-            return .cancelled
-        } catch {
-            return .failed
-        }
-    }
-
-    private static func makeSections(from rawDays: [DayFetchResult], referenceDate: Date) -> [LocalDaySection] {
-        rawDays.compactMap { makeSection(from: $0, referenceDate: referenceDate) }
-    }
-
-    private static func makeSection(from result: DayFetchResult, referenceDate: Date) -> LocalDaySection? {
-        guard !result.posts.isEmpty else { return nil }
-        let title = EventsDateHeaderFormatter.title(isoDay: result.isoDay, now: referenceDate)
-        return LocalDaySection(
-            dayOffset: result.offset,
-            isoDay: result.isoDay,
-            title: title,
-            posts: result.posts
-        )
+    private static func cacheKey(cityId: String, isoDay: String) -> String {
+        "\(cityId)|\(isoDay)"
     }
 
     private static func dayString(offset: Int, from referenceDate: Date) -> String {
@@ -346,27 +394,44 @@ final class LocalEventsListViewModel: ObservableObject {
 
     nonisolated private static func fetchDays(
         dayPairs: [(Int, String)],
-        bbox: MapBBox,
-        tags: String?
-    ) async throws -> [DayFetchResult] {
-        let fetched = try await withThrowingTaskGroup(of: DayFetchResult.self) { group in
+        bbox: MapBBox
+    ) async -> [(Int, String, [Post]?)] {
+        await withTaskGroup(of: (Int, String, [Post]?).self) { group in
             for (offset, isoDay) in dayPairs {
                 group.addTask {
-                    let posts = try await fetchDay(isoDay: isoDay, bbox: bbox, tags: tags)
-                    return DayFetchResult(offset: offset, isoDay: isoDay, posts: posts)
+                    let posts = await fetchDayWithRetry(isoDay: isoDay, bbox: bbox, attempt: 0)
+                    return (offset, isoDay, posts)
                 }
             }
-            var results: [DayFetchResult] = []
-            for try await dayResult in group {
-                results.append(dayResult)
+            var collected: [(Int, String, [Post]?)] = []
+            for await item in group {
+                collected.append(item)
             }
-            return results
+            return collected.sorted { $0.0 < $1.0 }
         }
-        return fetched.sorted { $0.offset < $1.offset }
     }
 
-    nonisolated private static func fetchDay(isoDay: String, bbox: MapBBox, tags: String?) async throws -> [Post] {
-        var params = [
+    nonisolated private static func fetchDayWithRetry(
+        isoDay: String,
+        bbox: MapBBox,
+        attempt: Int
+    ) async -> [Post]? {
+        guard !Task.isCancelled, attempt < retryDelaysMs.count else { return nil }
+        let delayMs = retryDelaysMs[attempt]
+        if delayMs > 0 {
+            try? await Task.sleep(for: .milliseconds(delayMs))
+        }
+        guard !Task.isCancelled else { return nil }
+        do {
+            return try await fetchDayOnce(isoDay: isoDay, bbox: bbox)
+        } catch {
+            guard !isCancellation(error) else { return nil }
+            return await fetchDayWithRetry(isoDay: isoDay, bbox: bbox, attempt: attempt + 1)
+        }
+    }
+
+    nonisolated private static func fetchDayOnce(isoDay: String, bbox: MapBBox) async throws -> [Post] {
+        let params = [
             "sw_lat": String(bbox.swLat),
             "sw_lng": String(bbox.swLng),
             "ne_lat": String(bbox.neLat),
@@ -375,17 +440,14 @@ final class LocalEventsListViewModel: ObservableObject {
             "day": isoDay,
             "limit": String(AppConstants.apiLimit),
         ]
-        if let sanitized = sanitizedQueryTags(tags) {
-            params["tags"] = sanitized
-        }
         let response: PostListResponse = try await APIClient.get("/stories", params: params)
         return ProviderSortRank.sort(deduplicate(response.stories.filter(\.isLocalListEvent)))
     }
 
-    nonisolated private static func sanitizedQueryTags(_ rawTags: String?) -> String? {
-        guard let rawTags, !rawTags.isEmpty else { return nil }
-        let filtered = nonRestaurantTagIDs(from: rawTags)
-        return filtered.isEmpty ? nil : filtered.joined(separator: ",")
+    nonisolated private static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        guard let urlError = error as? URLError else { return false }
+        return urlError.code == .cancelled
     }
 
     nonisolated private static func nonRestaurantTagIDs(from rawTags: String) -> [String] {
@@ -393,6 +455,7 @@ final class LocalEventsListViewModel: ObservableObject {
             .split(separator: ",")
             .map(String.init)
             .filter { !$0.isEmpty && $0 != restaurantTagId }
+            .sorted()
     }
 
     nonisolated private static func deduplicate(_ posts: [Post]) -> [Post] {

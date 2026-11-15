@@ -266,20 +266,25 @@ final class EventsListTests: XCTestCase {
         let city = CatalogueStore.shared.defaultCity
         vm.loadIfNeeded(city: city, tags: nil, startDayOffset: -5)
         await waitUntil { !vm.isInitialLoading && !vm.isLoadingMore }
-        let countAfterNegative = recorder.days(for: "/stories").count
+        let countAfterInitial = recorder.days(for: "/stories").count
         XCTAssertTrue(recorder.days(for: "/stories").contains(dayIsoString(offset: 0)))
+        XCTAssertTrue(recorder.days(for: "/stories").contains(dayIsoString(offset: LocalEventsListViewModel.maxDayOffset)))
+        XCTAssertEqual(vm.tagCounts["muzyka"], 1)
         vm.loadIfNeeded(city: city, tags: nil, startDayOffset: 0)
-        XCTAssertEqual(recorder.days(for: "/stories").count, countAfterNegative)
+        XCTAssertEqual(recorder.days(for: "/stories").count, countAfterInitial)
         vm.loadIfNeeded(city: city, tags: nil, startDayOffset: 99)
         await waitUntil { !vm.isInitialLoading && !vm.isLoadingMore }
-        XCTAssertTrue(recorder.days(for: "/stories").contains(dayIsoString(offset: 30)))
-        let countAfterMax = recorder.days(for: "/stories").count
-        vm.loadIfNeeded(city: city, tags: nil, startDayOffset: 30)
-        XCTAssertEqual(recorder.days(for: "/stories").count, countAfterMax)
+        XCTAssertEqual(recorder.days(for: "/stories").count, countAfterInitial)
         vm.loadIfNeeded(city: city, tags: nil, startDayOffset: 2)
         await waitUntil { !vm.isInitialLoading && !vm.isLoadingMore && !vm.sections.isEmpty }
         XCTAssertEqual(vm.sections.first?.dayOffset, 2)
         XCTAssertEqual(vm.sections.first?.isoDay, dayTwoIso)
+        vm.syncTags(["kino"])
+        XCTAssertTrue(vm.sections.isEmpty)
+        XCTAssertEqual(vm.tagCounts["muzyka"], 1)
+        vm.syncTags(["muzyka"])
+        XCTAssertEqual(vm.sections.first?.isoDay, dayTwoIso)
+        XCTAssertEqual(recorder.days(for: "/stories").count, countAfterInitial)
     }
 
     func testLocalEventsListViewStickyFilterAndFullWidthMultiShowtimeCards() async throws {
@@ -350,11 +355,15 @@ final class EventsListTests: XCTestCase {
             onSelectPost: { _, _ in }
         )
         let result = await renderAndSnapshot(view) {
-            !listVM.sections.isEmpty && !listVM.isInitialLoading
+            !listVM.sections.isEmpty && !listVM.isInitialLoading && !listVM.isLoadingMore
         }
         let scrollViews = result.views.compactMap { $0 as? UIScrollView }
         let horizontalFilterBars = scrollViews.filter { $0.frame.height > 25 && $0.frame.height < 120 && $0.frame.width > 300 }
         XCTAssertFalse(horizontalFilterBars.isEmpty)
+        XCTAssertEqual(listVM.tagCounts["muzyka"], 1)
+        XCTAssertEqual(listVM.tagCounts["kino"], 1)
+        XCTAssertEqual(listVM.tagCounts["imprezy"], 1)
+        XCTAssertEqual(listVM.tagCounts["kultura"], 1)
         XCTAssertTrue(result.labels.contains { $0.contains("Warszawa") })
         XCTAssertTrue(result.labels.contains { $0.contains("Dziś") })
         XCTAssertTrue(result.labels.contains { $0.contains("Imprezy") })
@@ -436,6 +445,13 @@ final class EventsListTests: XCTestCase {
         )
         XCTAssertEqual(groups.map(\.title), ["Hiszpania", "Wielka Brytania", "Włochy"])
         XCTAssertEqual(groups[2].events.map(\.external_id), ["it-1", "it-2"])
+        let flatItems = EuropaEventCountryGroup.sectionItems(
+            from: [ukEvent, italyEarly, spainEvent, italyLate],
+            sectionId: "2026-11-26",
+            language: "pl",
+            isLastSection: false
+        )
+        XCTAssertEqual(flatItems.count, 7)
     }
 
     func testEuropaViewsSortSheetAndVisualScreenshots() async throws {
@@ -487,6 +503,7 @@ final class EventsListTests: XCTestCase {
         let day1To = dayRangeEndMs(offset: 1)
         let day0EventsPayload = try encodeEventsJSON([matchEvent])
         let day1EventsPayload = try encodeEventsJSON([runEvent])
+        let bothEventsPayload = try encodeEventsJSON([matchEvent, runEvent])
         let emptyEventsPayload = Data(#"{"events":[],"enriched":true}"#.utf8)
         registerVerifyStub { request in
             Self.routeEuropaStub(
@@ -498,6 +515,7 @@ final class EventsListTests: XCTestCase {
                 day1To: day1To,
                 day0EventsPayload: day0EventsPayload,
                 day1EventsPayload: day1EventsPayload,
+                bothEventsPayload: bothEventsPayload,
                 emptyEventsPayload: emptyEventsPayload
             )
         }
@@ -517,7 +535,7 @@ final class EventsListTests: XCTestCase {
             settleSeconds: 0.65
         )
         XCTAssertTrue(mixedResult.labels.contains { $0.contains("City Break") })
-        XCTAssertTrue(mixedResult.labels.contains { $0.contains("Zobacz więcej") })
+        XCTAssertTrue(mixedResult.labels.contains { $0.contains("Zobacz więcej (5)") })
         XCTAssertTrue(mixedResult.labels.contains { $0.contains("Wielka Brytania") })
         XCTAssertFalse(mixedResult.labels.contains { $0 == TripsViewModel.TravelTag.citybreak.label })
         XCTAssertFalse(mixedResult.labels.contains { $0.contains("Polecane kierunki") })
@@ -820,13 +838,29 @@ final class EventsListTests: XCTestCase {
         day1To: Int64,
         day0EventsPayload: Data,
         day1EventsPayload: Data,
+        bothEventsPayload: Data,
         emptyEventsPayload: Data
     ) -> (HTTPURLResponse, Data) {
         let path = request.url?.path ?? ""
         if path == "/stories/tags" { return (okResponse(for: request), Data(#"{"tags":[]}"#.utf8)) }
         if path == "/stories/tag-counts" { return (okResponse(for: request), Data(#"{"total":0,"counts":[]}"#.utf8)) }
         if path == "/travel/cities" { return (okResponse(for: request), citiesPayload) }
-        if path == "/travel/events" { return (okResponse(for: request), stubEventsPayload(request: request, day0From: day0From, day0To: day0To, day1From: day1From, day1To: day1To, day0EventsPayload: day0EventsPayload, day1EventsPayload: day1EventsPayload, emptyEventsPayload: emptyEventsPayload)) }
+        if path == "/travel/events" {
+            return (
+                okResponse(for: request),
+                stubEventsPayload(
+                    request: request,
+                    day0From: day0From,
+                    day0To: day0To,
+                    day1From: day1From,
+                    day1To: day1To,
+                    day0EventsPayload: day0EventsPayload,
+                    day1EventsPayload: day1EventsPayload,
+                    bothEventsPayload: bothEventsPayload,
+                    emptyEventsPayload: emptyEventsPayload
+                )
+            )
+        }
         if path.hasPrefix("/travel/flights/") { return (okResponse(for: request), Data(#"{"outbound":[],"returning":[]}"#.utf8)) }
         return (okResponse(for: request), Data("{}".utf8))
     }
@@ -839,11 +873,16 @@ final class EventsListTests: XCTestCase {
         day1To: Int64,
         day0EventsPayload: Data,
         day1EventsPayload: Data,
+        bothEventsPayload: Data,
         emptyEventsPayload: Data
     ) -> Data {
         let fromMs = Int64(queryParam("from", in: request) ?? "") ?? 0
-        if (day0From...day0To).contains(fromMs) { return day0EventsPayload }
-        if (day1From...day1To).contains(fromMs) { return day1EventsPayload }
+        let toMs = Int64(queryParam("to", in: request) ?? "") ?? fromMs
+        let hasDay0 = fromMs <= day0To && toMs >= day0From
+        let hasDay1 = fromMs <= day1To && toMs >= day1From
+        if hasDay0 && hasDay1 { return bothEventsPayload }
+        if hasDay0 { return day0EventsPayload }
+        if hasDay1 { return day1EventsPayload }
         return emptyEventsPayload
     }
 

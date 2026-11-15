@@ -24,6 +24,7 @@ struct EuropaMatchTeamView: View {
 
     private var crestView: some View {
         TeamCrest(name: name, code: code, colorHex: colorHex, teamId: teamId, size: Self.crestSize)
+            .frame(width: Self.crestSize, height: Self.crestSize)
     }
 
     private var labelsColumn: some View {

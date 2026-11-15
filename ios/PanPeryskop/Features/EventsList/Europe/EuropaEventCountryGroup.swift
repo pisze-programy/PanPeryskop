@@ -13,6 +13,47 @@ struct EuropaEventCountryGroup: Identifiable, Equatable {
             .sorted { compareGroups($0, $1, locale: locale) }
     }
 
+    static func sectionItems(
+        from events: [TravelEvent],
+        sectionId: String,
+        language: String,
+        isLastSection: Bool
+    ) -> [EuropaSectionItem] {
+        let countryGroups = groups(from: events, language: language)
+        let firstGroupId = countryGroups.first?.id
+        let lastGroupId = countryGroups.last?.id
+        return countryGroups.flatMap { group in
+            items(
+                for: group,
+                sectionId: sectionId,
+                isFirstGroup: group.id == firstGroupId,
+                addsTrailingSpacing: group.id == lastGroupId && !isLastSection
+            )
+        }
+    }
+
+    private static func items(
+        for group: EuropaEventCountryGroup,
+        sectionId: String,
+        isFirstGroup: Bool,
+        addsTrailingSpacing: Bool
+    ) -> [EuropaSectionItem] {
+        let header = EuropaSectionItem.countryHeader(
+            id: "\(sectionId)|country|\(group.id)",
+            title: group.title,
+            isFirst: isFirstGroup
+        )
+        let lastEventId = group.events.last?.id
+        let rows = group.events.map { event in
+            EuropaSectionItem.event(
+                id: "\(sectionId)|event|\(event.id)",
+                event: event,
+                addsSectionSpacing: addsTrailingSpacing && event.id == lastEventId
+            )
+        }
+        return [header] + rows
+    }
+
     private static func buildGroup(
         id: String,
         events: [TravelEvent],

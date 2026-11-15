@@ -664,9 +664,18 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     private enum LoadOutcome { case confirmed, pending, failed }
     private enum DayFetchOutcome { case confirmed([TravelEvent]), pending, failed }
 
+    func clearEventsCache() {
+        eventsCache.removeAll()
+    }
+
     func fetchConfirmedDayEvents(offset: Int) async -> [TravelEvent]? {
+        await fetchConfirmedRangeEvents(startOffset: offset, endOffset: offset)
+    }
+
+    func fetchConfirmedRangeEvents(startOffset: Int, endOffset: Int) async -> [TravelEvent]? {
         let origins = originIatas
-        let (from, to) = dayRange(offset: offset)
+        let (from, _) = dayRange(offset: startOffset)
+        let (_, to) = dayRange(offset: max(startOffset, endOffset))
         let key = eventsCacheKey(origins: origins, from: from, to: to)
         if let cached = eventsCache[key] {
             return Self.sortedEvents(from: cached)
@@ -724,6 +733,16 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     }
 
     private func requestTravelEvents(from: Int64, to: Int64, origins: [String]) async -> TravelEventsResponse? {
+        if let first = await requestTravelEventsOnce(from: from, to: to, origins: origins) {
+            return first
+        }
+        guard !Task.isCancelled else { return nil }
+        try? await Task.sleep(for: .milliseconds(200))
+        guard !Task.isCancelled else { return nil }
+        return await requestTravelEventsOnce(from: from, to: to, origins: origins)
+    }
+
+    private func requestTravelEventsOnce(from: Int64, to: Int64, origins: [String]) async -> TravelEventsResponse? {
         do {
             return try await APIClient.getTravelEvents(from: from, to: to, origins: origins)
         } catch {

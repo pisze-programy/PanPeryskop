@@ -8,20 +8,29 @@ struct LocalEventsListView: View {
     let onSelectPost: (Post, String?) -> Void
 
     private static let bottomContentInset: CGFloat = 170
+    private static let filterTrailingExtraPadding: CGFloat = 6
 
-    private var visibleTags: [TagPill] {
-        mapViewModel.sortedTags.filter { $0.id != LocalEventsListViewModel.restaurantTagId }
+    private var rawVisibleTags: [TagPill] {
+        mapViewModel.tags.filter { $0.id != LocalEventsListViewModel.restaurantTagId }
     }
 
-    private var effectiveTagsParam: String? {
-        LocalEventsListViewModel.effectiveTagsParam(
+    private var visibleTags: [TagPill] {
+        TagSorting.sorted(rawVisibleTags, counts: listViewModel.tagCounts)
+    }
+
+    private var effectiveFilterTagIds: Set<String>? {
+        LocalEventsListViewModel.effectiveFilterTagIds(
             mapViewModel.selectedTagsParam,
-            visibleTags: visibleTags
+            visibleTags: rawVisibleTags
         )
     }
 
-    private var queryKey: String {
-        "\(mapViewModel.selectedCity.id)|\(effectiveTagsParam ?? "all")|\(mapViewModel.selectedDayOffset)"
+    private var scopeKey: String {
+        "\(mapViewModel.selectedCity.id)|\(mapViewModel.selectedDayOffset)"
+    }
+
+    private var tagSelectionKey: String {
+        "\(mapViewModel.selectedTagsParam ?? "all")|\(rawVisibleTags.count)"
     }
 
     private var lastSectionId: String? {
@@ -38,16 +47,21 @@ struct LocalEventsListView: View {
         .onAppear {
             listViewModel.loadIfNeeded(
                 city: mapViewModel.selectedCity,
-                tags: effectiveTagsParam,
-                startDayOffset: mapViewModel.selectedDayOffset
+                tags: mapViewModel.selectedTagsParam,
+                startDayOffset: mapViewModel.selectedDayOffset,
+                visibleTags: rawVisibleTags
             )
         }
-        .onChange(of: queryKey) { _, _ in
-            listViewModel.loadInitial(
+        .onChange(of: scopeKey) { _, _ in
+            listViewModel.loadIfNeeded(
                 city: mapViewModel.selectedCity,
-                tags: effectiveTagsParam,
-                startDayOffset: mapViewModel.selectedDayOffset
+                tags: mapViewModel.selectedTagsParam,
+                startDayOffset: mapViewModel.selectedDayOffset,
+                visibleTags: rawVisibleTags
             )
+        }
+        .onChange(of: tagSelectionKey) { _, _ in
+            listViewModel.syncTags(effectiveFilterTagIds)
         }
     }
 
@@ -62,8 +76,9 @@ struct LocalEventsListView: View {
         .refreshable {
             await listViewModel.refresh(
                 city: mapViewModel.selectedCity,
-                tags: effectiveTagsParam,
-                startDayOffset: mapViewModel.selectedDayOffset
+                tags: mapViewModel.selectedTagsParam,
+                startDayOffset: mapViewModel.selectedDayOffset,
+                visibleTags: rawVisibleTags
             )
         }
     }
@@ -78,18 +93,28 @@ struct LocalEventsListView: View {
                 MapPickerPill(title: mapViewModel.selectedCity.name, action: onCityTap)
                     .padding(.trailing, Theme.Spacing.xs)
                 ForEach(visibleTags) { tag in
-                    Chip(label: tag.label, isSelected: mapViewModel.isTagSelected(tag.id)) {
-                        toggleVisibleTag(tag.id)
-                    }
+                    filterChip(for: tag)
                 }
             }
-            .padding(.horizontal, Theme.Spacing.l)
+            .padding(.leading, Theme.Spacing.l)
+            .padding(.trailing, Theme.Spacing.l + Self.filterTrailingExtraPadding)
             .padding(.top, Theme.Spacing.m)
             .padding(.bottom, Theme.Spacing.m)
         }
         .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.systemGroupedBackground))
+    }
+
+    private func filterChip(for tag: TagPill) -> some View {
+        Chip(
+            label: tag.label,
+            isSelected: isVisibleTagSelected(tag.id),
+            badgeCount: listViewModel.tagCounts[tag.id] ?? 0,
+            showsBadgeWhenEmpty: true
+        ) {
+            toggleVisibleTag(tag.id)
+        }
     }
 
     @ViewBuilder
@@ -102,13 +127,14 @@ struct LocalEventsListView: View {
             ErrorState(message: error) {
                 listViewModel.loadInitial(
                     city: mapViewModel.selectedCity,
-                    tags: effectiveTagsParam,
-                    startDayOffset: mapViewModel.selectedDayOffset
+                    tags: mapViewModel.selectedTagsParam,
+                    startDayOffset: mapViewModel.selectedDayOffset,
+                    visibleTags: rawVisibleTags
                 )
             }
             .padding(.horizontal, Theme.Spacing.l)
             .padding(.top, Theme.Spacing.xl)
-        } else if listViewModel.sections.isEmpty {
+        } else if listViewModel.sections.isEmpty && !listViewModel.isLoadingMore {
             EmptyState(
                 icon: "calendar",
                 title: "Brak nadchodzących wydarzeń",
@@ -137,25 +163,13 @@ struct LocalEventsListView: View {
                     .padding(.bottom, interSectionBottomPadding(postId: post.id, lastPostId: lastPostId, sectionId: section.id))
             }
         } header: {
-            sectionHeader(section)
+            StickyDayHeaderView(title: section.title)
         }
     }
 
     private func interSectionBottomPadding(postId: String, lastPostId: String?, sectionId: String) -> CGFloat {
         guard postId == lastPostId, sectionId != lastSectionId else { return 0 }
         return Theme.Spacing.l
-    }
-
-    private func sectionHeader(_ section: LocalDaySection) -> some View {
-        StickyDayHeaderView(title: section.title)
-            .onAppear {
-                listViewModel.loadMoreIfNeeded(
-                    currentSection: section,
-                    city: mapViewModel.selectedCity,
-                    tags: effectiveTagsParam,
-                    startDayOffset: mapViewModel.selectedDayOffset
-                )
-            }
     }
 
     private func eventRow(for post: Post) -> some View {
@@ -175,16 +189,32 @@ struct LocalEventsListView: View {
                 .onAppear {
                     listViewModel.loadMore(
                         city: mapViewModel.selectedCity,
-                        tags: effectiveTagsParam,
+                        tags: mapViewModel.selectedTagsParam,
                         startDayOffset: mapViewModel.selectedDayOffset
                     )
                 }
         }
     }
 
+    private func isVisibleTagSelected(_ id: String) -> Bool {
+        guard let filterIds = effectiveFilterTagIds else { return true }
+        return filterIds.contains(id)
+    }
+
     private func toggleVisibleTag(_ id: String) {
-        let selectedVisible = visibleTags.filter { mapViewModel.isTagSelected($0.id) }.count
-        if mapViewModel.isTagSelected(id), selectedVisible <= 1 { return }
+        let explicitSelected = rawVisibleTags.map(\.id).filter { mapViewModel.isTagSelected($0) }
+        if explicitSelected.isEmpty {
+            selectComplementVisibleTags(excluding: id)
+            return
+        }
+        if explicitSelected.contains(id), explicitSelected.count <= 1 { return }
         mapViewModel.toggleTag(id)
+    }
+
+    private func selectComplementVisibleTags(excluding excludedId: String) {
+        let remaining = rawVisibleTags.map(\.id).filter { $0 != excludedId }
+        for tagId in remaining {
+            mapViewModel.toggleTag(tagId)
+        }
     }
 }

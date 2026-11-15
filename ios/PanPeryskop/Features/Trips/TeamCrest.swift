@@ -57,6 +57,7 @@ struct TeamCrest: View {
                 .padding(.horizontal, Self.codeHorizontalPadding)
                 .foregroundColor(Self.isLight(colorHex) ? .black : .white)
         }
+        .frame(width: size, height: size)
     }
 
     private var normalizedTeamId: String? {

@@ -3,12 +3,27 @@ import SwiftUI
 struct StoryBadgesView: View {
     let post: Post
     let tags: [TagPill]
+    var showsSponsored: Bool = true
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var showPriceInfo = false
 
     var body: some View {
-        let row = badgesHStack
+        badgeContainer(for: badgeItems)
+    }
+
+    @ViewBuilder
+    private func badgeContainer(for items: [EventBadge]) -> some View {
+        if !items.isEmpty {
+            badgeStrip(items)
+                .sheet(isPresented: $showPriceInfo) {
+                    PriceInfoSheet()
+                }
+        }
+    }
+
+    private func badgeStrip(_ items: [EventBadge]) -> some View {
+        let row = badgesHStack(items)
         return ViewThatFits(in: .horizontal) {
             row
             ScrollView(.horizontal, showsIndicators: false) {
@@ -16,9 +31,6 @@ struct StoryBadgesView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .sheet(isPresented: $showPriceInfo) {
-            PriceInfoSheet()
-        }
     }
 
     private struct EventBadge: Identifiable {
@@ -29,49 +41,61 @@ struct StoryBadgesView: View {
     }
 
     private var badgeItems: [EventBadge] {
+        let neutralColor = Theme.Palette.neutral(colorScheme)
         var items: [EventBadge] = []
-        if post.is_sponsored == true {
-            items.append(EventBadge(id: "sponsored", text: "SPONSOROWANE", icon: "megaphone.fill", color: badgeGray))
+        if includesSponsoredBadge {
+            items.append(EventBadge(id: "sponsored", text: "SPONSOROWANE", icon: "megaphone.fill", color: neutralColor))
         }
         if post.is_sold_out == true {
             items.append(EventBadge(id: "soldout", text: "WYPRZEDANE", icon: "xmark.circle.fill", color: .red))
         }
-        for tagId in post.tags ?? [] {
-            if let label = tagBadgeLabel(tagId) {
-                items.append(EventBadge(id: "tag-\(tagId)", text: label.uppercased(), icon: "tag.fill", color: badgeGray))
-            }
-        }
+        items.append(contentsOf: tagBadges(neutralColor: neutralColor))
         return items
     }
 
-    private var badgeGray: Color {
-        colorScheme == .dark
-            ? Color(red: 0.75, green: 0.76, blue: 0.78)
-            : Color(red: 0.35, green: 0.36, blue: 0.38)
+    private var includesSponsoredBadge: Bool {
+        showsSponsored && post.is_sponsored == true
     }
 
-    private var badgesHStack: some View {
-        HStack(spacing: 8) {
-            ForEach(Array(badgeItems.enumerated()), id: \.element.id) { index, badge in
-                if index > 0 {
-                    Text("•")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                if badge.id == "sponsored" {
-                    Button {
-                        Haptics.selection()
-                        showPriceInfo = true
-                    } label: {
-                        badgeLabel(badge)
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    badgeLabel(badge)
-                }
+    private func tagBadges(neutralColor: Color) -> [EventBadge] {
+        (post.tags ?? []).compactMap { tagId in
+            guard let label = tagBadgeLabel(tagId) else { return nil }
+            return EventBadge(id: "tag-\(tagId)", text: label.uppercased(), icon: "tag.fill", color: neutralColor)
+        }
+    }
+
+    private func badgesHStack(_ items: [EventBadge]) -> some View {
+        HStack(spacing: Theme.Spacing.s) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, badge in
+                badgeEntry(index: index, badge: badge)
             }
         }
         .fixedSize(horizontal: true, vertical: false)
+    }
+
+    @ViewBuilder
+    private func badgeEntry(index: Int, badge: EventBadge) -> some View {
+        if index > 0 {
+            Text("•")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        badgeView(badge)
+    }
+
+    @ViewBuilder
+    private func badgeView(_ badge: EventBadge) -> some View {
+        if badge.id == "sponsored" {
+            Button {
+                Haptics.selection()
+                showPriceInfo = true
+            } label: {
+                badgeLabel(badge)
+            }
+            .buttonStyle(.plain)
+        } else {
+            badgeLabel(badge)
+        }
     }
 
     private func badgeLabel(_ badge: EventBadge) -> some View {

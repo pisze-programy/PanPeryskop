@@ -1,12 +1,7 @@
 import SwiftUI
 import WebKit
 
-/// Registrable domains the in-app browser may load. Any main-frame navigation to a
-/// host outside this list is cancelled and handed off to the system browser, so the
-/// app never becomes an unrestricted browser (keeps the App Store age-rating
-/// "Unrestricted Web Access = No" honest).
-/// ponytail: hand-maintained; keep in sync with backend seed providers
-/// (backend/src/seed/core/constants.ts) and any new link_url source.
+// Restrict in-app hosts to keep App Store "Unrestricted Web Access = No" accurate.
 enum AllowedWebDomains {
     static let registrableDomains: Set<String> = [
         "kupbilecik.pl", "goingapp.pl",
@@ -14,36 +9,30 @@ enum AllowedWebDomains {
         "meetup.com", "getyourguide.com", "maratonypolskie.pl",
         "lu.ma", "luma.com",
         "ebilet.pl", "tradedoubler.com",
+        "eventim.pl", "awin1.com",
+        "mtp.pl", "facebook.com", "fb.me",
         "booking.com", "airbnb.com", "espn.com",
         "viator.com",
         "ticketmaster.pl", "ra.co",
     ]
 
-    /// Exact host or a subdomain of a registrable domain, e.g. "bilety.helios.pl".
     static func isAllowed(_ host: String) -> Bool {
         let host = host.lowercased()
         return registrableDomains.contains { host == $0 || host.hasSuffix("." + $0) }
     }
 }
 
-/// In-app browser presented as a bottom sheet (max 70% of the screen height).
-/// Every external web link opens here first; the bottom toolbar offers
-/// open-in-system-browser (globe), back/forward and close.
 struct InAppBrowserView: View {
     let url: URL
-    /// Bottom safe-area inset (home indicator) so the toolbar lifts above it.
     var bottomInset: CGFloat = 0
-    /// True for links that may leave the fixed allow-list (race websites with
-    /// external redirects) — any http(s) host is kept in-app.
     var allowAnyHost: Bool = false
-    /// Called when the user closes the browser (X button).
     var onClose: () -> Void = {}
 
     @StateObject private var model = BrowserModel()
 
     var body: some View {
         VStack(spacing: 0) {
-            BrowserWebView(url: url, model: model, allowAnyHost: allowAnyHost)
+            BrowserWebView(url: url, model: model, allowAnyHost: allowAnyHost, onClose: onClose)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay { if model.loadFailed { loadFailedView } }
             Divider()
@@ -73,7 +62,6 @@ struct InAppBrowserView: View {
         .background(Color(.systemBackground))
     }
 
-    /// Full-width bottom toolbar — icons respond to taps only (no drag gestures).
     private var toolbar: some View {
         HStack {
             Button {
@@ -123,49 +111,18 @@ struct InAppBrowserView: View {
     }
 }
 
-/// WKWebView bridge — keeps the toolbar state (canGoBack/canGoForward/currentURL)
-/// in sync via KVO (reliable across navigation events) and routes `target=_blank`
-/// links back into the same web view.
 private struct BrowserWebView: UIViewRepresentable {
     let url: URL
     @ObservedObject var model: BrowserModel
     var allowAnyHost: Bool = false
+    var onClose: () -> Void = {}
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(model: model, allowAnyHost: allowAnyHost)
+        Coordinator(model: model, allowAnyHost: allowAnyHost, onClose: onClose)
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        // Block pages from triggering system permission prompts (location, push
-        // notifications, geolocation-permissions query) — providers in the
-        // allow-list often request them and the user wants none of that in-app.
-        let permissionStub = """
-        (function () {
-          if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition = function (_ok, err) { if (err) err({ code: 1, message: 'denied' }); };
-            navigator.geolocation.watchPosition = function (_ok, err) { if (err) err({ code: 1, message: 'denied' }); };
-            navigator.geolocation.clearWatch = function () {};
-          }
-          if (window.Notification && Notification.requestPermission) {
-            Notification.requestPermission = function () { return Promise.resolve('denied'); };
-          }
-          if (navigator.permissions && navigator.permissions.query) {
-            var q = navigator.permissions.query.bind(navigator.permissions);
-            navigator.permissions.query = function (desc) {
-              if (desc && (desc.name === 'geolocation' || desc.name === 'notifications')) {
-                return Promise.resolve({ state: 'denied', onchange: null });
-              }
-              return q(desc);
-            };
-          }
-        })();
-        """
-        configuration.userContentController.addUserScript(
-            WKUserScript(source: permissionStub, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-        )
-        configuration.userContentController.addUserScript(NoZoomWebView.userScript())
-        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let webView = WKWebView(frame: .zero, configuration: makeConfiguration())
         webView.uiDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
@@ -175,22 +132,56 @@ private struct BrowserWebView: UIViewRepresentable {
         return webView
     }
 
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        context.coordinator.onClose = onClose
+    }
+
+    private func makeConfiguration() -> WKWebViewConfiguration {
+        let configuration = WKWebViewConfiguration()
+        // Deny geolocation and push silently so third-party ticket pages never trigger iOS prompts.
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: Self.permissionStub, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        )
+        configuration.userContentController.addUserScript(NoZoomWebView.userScript())
+        return configuration
+    }
+
+    private static let permissionStub = """
+    (function () {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition = function (_ok, err) { if (err) err({ code: 1, message: 'denied' }); };
+        navigator.geolocation.watchPosition = function (_ok, err) { if (err) err({ code: 1, message: 'denied' }); };
+        navigator.geolocation.clearWatch = function () {};
+      }
+      if (window.Notification && Notification.requestPermission) {
+        Notification.requestPermission = function () { return Promise.resolve('denied'); };
+      }
+      if (navigator.permissions && navigator.permissions.query) {
+        var q = navigator.permissions.query.bind(navigator.permissions);
+        navigator.permissions.query = function (desc) {
+          if (desc && (desc.name === 'geolocation' || desc.name === 'notifications')) {
+            return Promise.resolve({ state: 'denied', onchange: null });
+          }
+          return q(desc);
+        };
+      }
+    })();
+    """
 
     @MainActor
     final class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate {
         let model: BrowserModel
         let allowAnyHost: Bool
+        var onClose: () -> Void
+        private var didAutoClose = false
         private var observations: [NSKeyValueObservation] = []
 
-        init(model: BrowserModel, allowAnyHost: Bool) {
+        init(model: BrowserModel, allowAnyHost: Bool, onClose: @escaping () -> Void) {
             self.model = model
             self.allowAnyHost = allowAnyHost
+            self.onClose = onClose
         }
 
-        /// In-app browsing stays on the allow-list; any other main-frame navigation
-        /// (outbound link, payment hop, non-web scheme) is bounced straight to the
-        /// system browser so the flow keeps working without unrestricted in-app web.
         func webView(
             _ webView: WKWebView,
             decidePolicyFor navigationAction: WKNavigationAction,
@@ -204,6 +195,7 @@ private struct BrowserWebView: UIViewRepresentable {
                !isAllowedWebNavigation(to: url) {
                 decisionHandler(.cancel)
                 openExternally(url)
+                closeIfUncommitted()
                 return
             }
             decisionHandler(.allow)
@@ -217,7 +209,14 @@ private struct BrowserWebView: UIViewRepresentable {
         }
 
         private func openExternally(_ url: URL) {
+            guard url.scheme?.lowercased() != "about" else { return }
             UIApplication.shared.open(url)
+        }
+
+        private func closeIfUncommitted() {
+            guard !model.hasCommittedPage, !didAutoClose else { return }
+            didAutoClose = true
+            onClose()
         }
 
         func attach(_ webView: WKWebView) {
@@ -258,17 +257,15 @@ private struct BrowserWebView: UIViewRepresentable {
             for navigationAction: WKNavigationAction,
             windowFeatures: WKWindowFeatures
         ) -> WKWebView? {
-            if let url = navigationAction.request.url {
-                if isAllowedWebNavigation(to: url) {
-                    webView.load(URLRequest(url: url))
-                } else {
-                    openExternally(url)
-                }
+            guard let url = navigationAction.request.url else { return nil }
+            if isAllowedWebNavigation(to: url) {
+                webView.load(URLRequest(url: url))
+            } else {
+                openExternally(url)
             }
             return nil
         }
 
-        /// Never grant camera/mic/screen access — the in-app browser is read-only.
         func webView(
             _ webView: WKWebView,
             requestMediaCapturePermissionFor origin: WKSecurityOrigin,
@@ -283,6 +280,10 @@ private struct BrowserWebView: UIViewRepresentable {
             model.loadFailed = false
         }
 
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            model.hasCommittedPage = true
+        }
+
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             reportFailure(error)
         }
@@ -292,20 +293,20 @@ private struct BrowserWebView: UIViewRepresentable {
         }
 
         private func reportFailure(_ error: Error) {
-            guard (error as NSError).code != NSURLErrorCancelled else { return }
+            let nsError = error as NSError
+            let interrupted = nsError.domain == "WebKitErrorDomain" && nsError.code == 102
+            guard nsError.code != NSURLErrorCancelled, !interrupted else { return }
             model.loadFailed = true
         }
     }
 }
 
-/// Navigation state + actions for the in-app browser toolbar.
 @MainActor
 final class BrowserModel: ObservableObject {
     @Published var canGoBack = false
     @Published var canGoForward = false
-    /// True when a page load fails (ATS, TLS, DNS, offline) — the body shows an
-    /// error instead of a silent blank web view.
     @Published var loadFailed = false
+    @Published var hasCommittedPage = false
     var currentURL: URL?
 
     weak var webView: WKWebView?

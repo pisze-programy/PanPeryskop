@@ -4,7 +4,7 @@ import PhotosUI
 @MainActor
 struct ProfileView: View {
     @EnvironmentObject private var authManager: AuthManager
-    let onBack: () -> Void
+    var onBack: (() -> Void)? = nil
 
     @State private var avatarItem: PhotosPickerItem?
     @State private var uploadingAvatar = false
@@ -13,59 +13,78 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    HStack {
-                        Button(action: onBack) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(.primary)
-                                .frame(width: 36, height: 36)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-
+                VStack(spacing: Theme.Spacing.xl) {
+                    backHeader
                     avatarSection
-
-                    HStack(spacing: 8) {
-                        Text(authManager.displayUsername)
-                            .font(.title)
-                            .fontWeight(.bold)
-                        Button {
-                            showNicknameEditor = true
-                        } label: {
-                            Image(systemName: "pencil")
-                                .font(.subheadline)
-                                .foregroundColor(.accentColor)
-                        }
-                    }
-
-                    if let userId = authManager.userId {
-                        Text("ID urządzenia: \(userId.prefix(16))...")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    if let provider = authManager.authProvider {
-                        Text(providerLabel(provider))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
+                    usernameRow
+                    deviceIdLabel
+                    providerLabelView
                     menuList
-
-                    Spacer().frame(height: 120)
+                    Spacer().frame(height: 140)
                 }
+                .padding(.top, onBack == nil ? Theme.Spacing.xl : 0)
             }
-            .navigationBarHidden(true)
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showNicknameEditor) {
                 NicknameEditView(initial: authManager.username ?? "")
                     .environmentObject(authManager)
             }
+        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+    }
+
+    @ViewBuilder
+    private var backHeader: some View {
+        if let onBack {
+            HStack {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 36, height: 36)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.top, Theme.Spacing.m)
+        }
+    }
+
+    private var usernameRow: some View {
+        HStack(spacing: Theme.Spacing.s) {
+            Text(authManager.displayUsername)
+                .font(.title)
+                .fontWeight(.bold)
+            Button {
+                showNicknameEditor = true
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.subheadline)
+                    .foregroundColor(.accentColor)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var deviceIdLabel: some View {
+        if let userId = authManager.userId {
+            Text("ID urządzenia: \(userId.prefix(16))...")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var providerLabelView: some View {
+        if let provider = authManager.authProvider {
+            Text(providerLabel(provider))
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
     }
 
@@ -75,18 +94,7 @@ struct ProfileView: View {
             AvatarView(url: authManager.avatarDisplayURL, size: 100)
 
             PhotosPicker(selection: $avatarItem, matching: .images) {
-                ZStack {
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 30, height: 30)
-                    if isUploading {
-                        ProgressView().tint(.white).scaleEffect(0.7)
-                    } else {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
-                }
+                AvatarUploadBadge(isUploading: isUploading)
             }
             .offset(x: 4, y: 4)
         }
@@ -100,6 +108,7 @@ struct ProfileView: View {
         VStack(spacing: 10) {
             NavigationLink {
                 SettingsView()
+                    .toolbar(.visible, for: .navigationBar)
             } label: {
                 ProfileMenuRow(
                     icon: "gearshape.fill",
@@ -107,7 +116,7 @@ struct ProfileView: View {
                 )
             }
 
-            Spacer().frame(height: 12)
+            Spacer().frame(height: Theme.Spacing.m)
 
             Button {
                 Task { await authManager.logout() }
@@ -137,8 +146,7 @@ struct ProfileView: View {
         defer { uploadingAvatar = false }
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else { return }
-            let image = UIImage(data: data)
-            guard let image else { return }
+            guard let image = UIImage(data: data) else { return }
             let resized = image.resized(to: 128)
             guard let jpeg = resized.jpegData(compressionQuality: 0.7) else { return }
             let url = try await APIClient.uploadAvatar(jpeg)
@@ -156,7 +164,7 @@ struct ProfileMenuRow: View {
     var showsChevron: Bool = true
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Theme.Spacing.m) {
             Image(systemName: icon)
                 .font(.title3)
                 .foregroundColor(.accentColor)
@@ -167,24 +175,34 @@ struct ProfileMenuRow: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                subtitleView
             }
 
             Spacer()
 
-            if showsChevron {
-                Image(systemName: "chevron.right")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-            }
+            chevronView
         }
-        .padding(12)
+        .padding(Theme.Spacing.m)
         .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
+    }
+
+    @ViewBuilder
+    private var subtitleView: some View {
+        if let subtitle {
+            Text(subtitle)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var chevronView: some View {
+        if showsChevron {
+            Image(systemName: "chevron.right")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+        }
     }
 }
 
@@ -192,23 +210,24 @@ struct AvatarView: View {
     let url: String?
     var size: CGFloat = 100
 
+    private var avatarURL: URL? {
+        url.flatMap(URL.init(string:))
+    }
+
     var body: some View {
-        Group {
-            if let url, let avatarURL = URL(string: url) {
-                AsyncImage(url: avatarURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    default:
-                        defaultAvatar
-                    }
-                }
-            } else {
-                defaultAvatar
-            }
+        ZStack {
+            defaultAvatar
+            remoteAvatar
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+    }
+
+    @ViewBuilder
+    private var remoteAvatar: some View {
+        if let avatarURL {
+            RemoteImage(url: avatarURL)
+        }
     }
 
     private var defaultAvatar: some View {
@@ -218,6 +237,30 @@ struct AvatarView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .scaleEffect(0.85)
+        }
+    }
+}
+
+private struct AvatarUploadBadge: View {
+    let isUploading: Bool
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 30, height: 30)
+            icon
+        }
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        if isUploading {
+            ProgressView().tint(.white).scaleEffect(0.7)
+        } else {
+            Image(systemName: "pencil")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.white)
         }
     }
 }

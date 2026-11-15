@@ -91,8 +91,13 @@ struct CityFlightSheet: View {
         options.first { $0.id == selectedOptionId } ?? options.first
     }
 
-    private func origin(for destination: Destination) -> Airport {
-        TripsViewModel.origin(for: destination, among: viewModel.originAirports)
+    private func origin(for option: FlightOption) -> Airport {
+        let catalogue = CatalogueStore.shared.catalogue
+        return viewModel.originAirports.first { airport in
+            catalogue.destinations[airport.iata]?.contains {
+                $0.iata == option.destination.iata && $0.providers.contains(option.carrier)
+            } ?? false
+        } ?? TripsViewModel.origin(for: option.destination, among: viewModel.originAirports, catalogue: catalogue)
     }
     private var outboundStation: FlightStation? {
         outboundWindow?.outboundStation ?? returningWindow?.outboundStation
@@ -104,8 +109,9 @@ struct CityFlightSheet: View {
 
     private var realOrigin: Airport? {
         guard let option = selectedOption else { return nil }
-        guard let iata = outboundStation?.from else { return origin(for: option.destination) }
-        return viewModel.originAirports.first { $0.iata == iata } ?? origin(for: option.destination)
+        let resolved = origin(for: option)
+        guard let iata = outboundStation?.from else { return resolved }
+        return viewModel.originAirports.first { $0.iata == iata } ?? resolved
     }
 
     private func legTitle(_ from: String, _ to: String) -> String {
@@ -133,7 +139,7 @@ struct CityFlightSheet: View {
         outboundLoading = true
         async let loaded = FlightPricesService.shared.month(
             airline: option.carrier,
-            origin: origin(for: option.destination).iata,
+            origin: origin(for: option).iata,
             destination: option.destination.iata,
             month: outboundMonth
         )
@@ -154,7 +160,7 @@ struct CityFlightSheet: View {
         returningLoading = true
         async let loaded = FlightPricesService.shared.month(
             airline: option.carrier,
-            origin: origin(for: option.destination).iata,
+            origin: origin(for: option).iata,
             destination: option.destination.iata,
             month: returningMonth
         )
@@ -183,24 +189,36 @@ struct CityFlightSheet: View {
             TripsSectionHeader(title: "Lotnisko")
                 .padding(.horizontal, Theme.Spacing.l)
             if let selected = selectedOption, let origin = realOrigin {
-                DestinationMapRail(
-                    origin: origin,
-                    options: options,
-                    selected: selected,
-                    onSelect: { option in
-                        selectedOptionId = option.id
-                        outboundWindow = nil
-                        returningWindow = nil
-                    }
-                )
-                .padding(.horizontal, Theme.Spacing.l)
-                airportCaption(selected)
-                if options.count > 1 {
-                    PageDots(count: options.count, index: selectedIndex)
-                        .padding(.horizontal, Theme.Spacing.l)
-                }
+                railContent(selected: selected, origin: origin)
             }
         }
+    }
+
+    @ViewBuilder
+    private func railContent(selected: FlightOption, origin: Airport) -> some View {
+        DestinationMapRail(
+            origin: origin,
+            options: options,
+            selected: selected,
+            onSelect: selectOption
+        )
+        .padding(.horizontal, Theme.Spacing.l)
+        airportCaption(selected)
+        if options.count > 1 {
+            PageDots(count: options.count, index: selectedIndex)
+                .padding(.horizontal, Theme.Spacing.l)
+        }
+    }
+
+    private func selectOption(_ option: FlightOption) {
+        guard selectedOption?.id != option.id else { return }
+        selectedOptionId = option.id
+        outbound = nil
+        returning = nil
+        outboundWindow = nil
+        returningWindow = nil
+        outboundFailed = false
+        returningFailed = false
     }
 
     private var selectedIndex: Int {
@@ -221,7 +239,7 @@ struct CityFlightSheet: View {
         if let option = selectedOption {
             calendar(
                 title: "Wylot",
-                route: legTitle(outboundStation?.from ?? origin(for: option.destination).iata, outboundStation?.to ?? option.destination.iata),
+                route: legTitle(outboundStation?.from ?? origin(for: option).iata, outboundStation?.to ?? option.destination.iata),
                 cells: outboundWindow?.outbound ?? [],
                 month: $outboundMonth,
                 selected: Binding(
@@ -247,7 +265,7 @@ struct CityFlightSheet: View {
         } else if let option = selectedOption {
             calendar(
                 title: "Powrót",
-                route: legTitle(returningStation?.from ?? option.destination.iata, returningStation?.to ?? origin(for: option.destination).iata),
+                route: legTitle(returningStation?.from ?? option.destination.iata, returningStation?.to ?? origin(for: option).iata),
                 cells: returningWindow?.returning ?? [],
                 month: $returningMonth,
                 selected: $returning,
@@ -382,7 +400,7 @@ struct CityFlightSheet: View {
 
     private func openBooking() {
         guard let option = selectedOption else { return }
-        let from = outboundStation?.from ?? origin(for: option.destination).iata
+        let from = outboundStation?.from ?? origin(for: option).iata
         let to = outboundStation?.to ?? option.destination.iata
         guard let url = option.carrier.bookingURL(
             origin: from,

@@ -68,18 +68,22 @@ private struct PopScale: ViewModifier {
     func body(content: Content) -> some View {
         content
             .scaleEffect(scale)
-            .onChange(of: trigger) { _, _ in
-                guard trigger > 0 else { return }
-                scale = 1.35
-                withAnimation(.spring(response: 0.13, dampingFraction: 0.5)) {
-                    scale = 0.9
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
-                    withAnimation(.spring(response: 0.11, dampingFraction: 0.4)) {
-                        scale = 1
-                    }
-                }
+            .task(id: trigger) {
+                await runBounce()
             }
+    }
+
+    private func runBounce() async {
+        guard trigger > 0 else { return }
+        scale = 1.35
+        withAnimation(.spring(response: 0.13, dampingFraction: 0.5)) {
+            scale = 0.9
+        }
+        try? await Task.sleep(nanoseconds: 140_000_000)
+        guard !Task.isCancelled else { return }
+        withAnimation(.spring(response: 0.11, dampingFraction: 0.4)) {
+            scale = 1
+        }
     }
 }
 

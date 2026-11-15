@@ -41,14 +41,15 @@ struct SinglePostPin: View {
     private var isMine: Bool { currentUserId != nil && post.user_id == currentUserId }
     private var isHighlighted: Bool { !isMine }
 
-    private var ageHours: Double {
-        Double(Date().timeIntervalSince1970 - TimeInterval(post.created_at) / 1000) / AppConstants.secondsPerHour
+    private func ageHours(at date: Date) -> Double {
+        Double(date.timeIntervalSince1970 - TimeInterval(post.created_at) / 1000) / AppConstants.secondsPerHour
     }
 
-    private var ringColor: Color {
+    private func ringColor(at date: Date) -> Color {
         guard isHighlighted else { return .white.opacity(0.5) }
-        if ageHours > 20 { return .red }
-        if ageHours > 12 { return .yellow }
+        let hours = ageHours(at: date)
+        if hours > 20 { return .red }
+        if hours > 12 { return .yellow }
         return .white
     }
 
@@ -59,8 +60,9 @@ struct SinglePostPin: View {
 
     private var bounceAmount: CGFloat {
         guard !post.isRestaurant, isHighlighted else { return 0 }
-        if ageHours > 20 { return 4 }
-        if ageHours > 12 { return 2 }
+        let hours = ageHours(at: Date())
+        if hours > 20 { return 4 }
+        if hours > 12 { return 2 }
         return 0
     }
 
@@ -69,11 +71,10 @@ struct SinglePostPin: View {
             ZStack {
                 ring
                     .frame(width: 52, height: 52)
-                    .onAppear { startBounce() }
-                    .onChange(of: post.id) { _, _ in
-                        bounceOffset = 0
-                        startBounce()
-                    }
+                    .onAppear { restartBounce() }
+                    .onDisappear { stopBounce() }
+                    .onChange(of: post.id) { _, _ in restartBounce() }
+                    .onChange(of: bounceAmount) { _, _ in restartBounce() }
 
                 if let url = post.resolvedThumbURL, !post.isRestaurant {
                     // The icon sits under the photo, so a failed load still shows
@@ -107,12 +108,13 @@ struct SinglePostPin: View {
         } else {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 let progress = progress(at: context.date)
+                let color = ringColor(at: context.date)
                 ZStack {
                     Circle().fill(Color.black.opacity(0.25))
-                    Circle().stroke(ringColor.opacity(0.25), lineWidth: 3)
+                    Circle().stroke(color.opacity(0.25), lineWidth: 3)
                     Circle()
                         .trim(from: progress, to: 1)
-                        .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .stroke(color, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                 }
             }
@@ -164,9 +166,17 @@ struct SinglePostPin: View {
         }
     }
 
-    private func startBounce() {
+    private func stopBounce() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            bounceOffset = 0
+        }
+    }
+
+    private func restartBounce() {
+        stopBounce()
         guard bounceAmount > 0 else { return }
-        bounceOffset = 0
         withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) {
             bounceOffset = -bounceAmount
         }
@@ -181,14 +191,15 @@ struct ClusterPin: View {
 
     @State private var sheenPhase: CGFloat = -1.4
 
-    private var ageHours: Double {
+    private func ageHours(at date: Date) -> Double {
         guard let oldestTimedPost else { return 0 }
-        return Double(Date().timeIntervalSince1970 - oldestTimedPost / 1000) / AppConstants.secondsPerHour
+        return Double(date.timeIntervalSince1970 - oldestTimedPost / 1000) / AppConstants.secondsPerHour
     }
 
-    private var ringColor: Color {
-        if ageHours > 20 { return .red }
-        if ageHours > 12 { return .yellow }
+    private func ringColor(at date: Date) -> Color {
+        let hours = ageHours(at: date)
+        if hours > 20 { return .red }
+        if hours > 12 { return .yellow }
         return .white
     }
 
@@ -204,16 +215,21 @@ struct ClusterPin: View {
             Circle().fill(Color.black.opacity(0.25))
         } else {
             TimelineView(.periodic(from: .now, by: 30)) { context in
-                let progress = progress(at: context.date)
-                ZStack {
-                    Circle().fill(Color.black.opacity(0.25))
-                    Circle().stroke(ringColor.opacity(0.25), lineWidth: 3)
-                    Circle()
-                        .trim(from: progress, to: 1)
-                        .stroke(ringColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                }
+                timedRing(at: context.date)
             }
+        }
+    }
+
+    private func timedRing(at date: Date) -> some View {
+        let progress = progress(at: date)
+        let color = ringColor(at: date)
+        return ZStack {
+            Circle().fill(Color.black.opacity(0.25))
+            Circle().stroke(color.opacity(0.25), lineWidth: 3)
+            Circle()
+                .trim(from: progress, to: 1)
+                .stroke(color, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .rotationEffect(.degrees(-90))
         }
     }
 
@@ -233,7 +249,6 @@ struct ClusterPin: View {
         .overlay { sheen }
     }
 
-    /// A slow, faint blue sweep, so a group pin is not fully static.
     private var sheen: some View {
         GeometryReader { geo in
             LinearGradient(
@@ -246,10 +261,22 @@ struct ClusterPin: View {
         }
         .clipShape(Circle())
         .allowsHitTesting(false)
-        .onAppear {
-            withAnimation(.linear(duration: 2.6).repeatForever(autoreverses: false)) {
-                sheenPhase = 1.4
-            }
+        .onAppear { startSheen() }
+        .onDisappear { resetSheen() }
+    }
+
+    private func startSheen() {
+        resetSheen()
+        withAnimation(.linear(duration: 2.6).repeatForever(autoreverses: false)) {
+            sheenPhase = 1.4
+        }
+    }
+
+    private func resetSheen() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            sheenPhase = -1.4
         }
     }
 }

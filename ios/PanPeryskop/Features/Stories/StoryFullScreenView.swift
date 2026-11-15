@@ -6,14 +6,13 @@ struct StoryFullScreenView: View {
     @Environment(\.colorScheme) private var systemScheme
     @State private var vm: StoryViewModel
 
-    /// UI-only state (presentation surfaces), kept out of the view model.
     @State private var shareItem: ShareItem?
-    /// Random gradient generated once per preview open — stable while viewing.
     @State private var backgroundSeed = StoryGradientSeed.random()
     @State private var browserURL: URL?
     @State private var browserAllowAnyHost = false
     @State private var showBrowser = false
     @State private var browserOffset: CGFloat = 0
+    @State private var browserAnimationTask: Task<Void, Never>?
 
     init(posts: [Post], startIndex: Int, isPresented: Binding<Bool>, actions: StoryActions) {
         self._isPresented = isPresented
@@ -50,10 +49,7 @@ struct StoryFullScreenView: View {
                 currentIndex: vm.currentIndex,
                 progressFraction: vm.progressFraction,
                 topInset: topSafeAreaInset,
-                onClose: {
-                    Haptics.selection()
-                    vm.exit()
-                }
+                onClose: { vm.exit() }
             )
 
             VStack {
@@ -88,9 +84,11 @@ struct StoryFullScreenView: View {
             vm.onExit = { isPresented = false }
             vm.onAppear()
         }
-        .onDisappear { vm.onDisappear() }
+        .onDisappear {
+            browserAnimationTask?.cancel()
+            vm.onDisappear()
+        }
         .onChange(of: showBrowser) { _, open in
-            // Hold the story timer while the browser is open; resume on close.
             open ? vm.pause() : vm.resume()
         }
         .sheet(item: $shareItem) { item in
@@ -99,39 +97,34 @@ struct StoryFullScreenView: View {
         }
     }
 
-    /// The photo mask card (club night, run) is always dark; every other story
-    /// follows the system scheme.
     private var cardScheme: ColorScheme {
         vm.currentPost.usesPhotoMask ? .dark : systemScheme
     }
 
-    // MARK: - Insets
+    private var keyWindowSafeAreaInsets: UIEdgeInsets {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }?.safeAreaInsets ?? .zero
+    }
 
-    /// Home-indicator inset — the media ignores the safe area but the bottom card
-    /// must sit above the iOS bottom bar.
     private var bottomSafeAreaInset: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow }?.safeAreaInsets.bottom ?? 0
+        keyWindowSafeAreaInsets.bottom
     }
 
-    /// Status-bar / Dynamic Island inset — the top bar must sit below it.
     private var topSafeAreaInset: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow }?.safeAreaInsets.top ?? 0
+        keyWindowSafeAreaInsets.top
     }
-
-    // MARK: - In-app browser (custom full-bleed bottom panel)
 
     private func openBrowser(_ url: URL, allowAnyHost: Bool) {
+        browserAnimationTask?.cancel()
         browserAllowAnyHost = allowAnyHost
         browserURL = url
         showBrowser = true
         browserOffset = StoryBrowserOverlay.panelHeight
-        DispatchQueue.main.async {
+        browserAnimationTask = Task { @MainActor in
+            await Task.yield()
+            guard !Task.isCancelled else { return }
             withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
                 browserOffset = 0
             }
@@ -139,66 +132,25 @@ struct StoryFullScreenView: View {
     }
 
     private func closeBrowser() {
+        browserAnimationTask?.cancel()
         withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
             browserOffset = StoryBrowserOverlay.panelHeight
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+        browserAnimationTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 280_000_000)
+            guard !Task.isCancelled else { return }
             showBrowser = false
             browserOffset = 0
         }
     }
 
-    /// Like / Dislike / Share capsule — kept in the hierarchy but hidden until the
-    /// UI is reworked (rendered as an overlay so the info card stays full-width).
     private var actionCapsule: some View {
         VStack(spacing: 20) {
-            let liked = vm.likedStates[vm.currentPost.id] ?? vm.currentPost.liked
-            FaveLikeButton(isLiked: liked) { _ in
+            FaveLikeButton(isLiked: vm.likedStates[vm.currentPost.id] ?? vm.currentPost.liked) { _ in
                 vm.toggleLike(vm.currentPost.id)
             }
-            let disliked = vm.dislikedStates[vm.currentPost.id] ?? vm.currentPost.disliked
-            let dislikeCount = vm.dislikesCounts[vm.currentPost.id] ?? vm.currentPost.dislikes_count
-            Button {
-                Haptics.impact(.light)
-                vm.toggleDislike(vm.currentPost.id)
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundColor(disliked ? .red : .white)
-                    if dislikeCount > 0 {
-                        Text("\(dislikeCount)")
-                            .font(.caption)
-                            .foregroundColor(.white)
-                    }
-                }
-                .frame(width: 56, height: 56)
-                .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            Button {
-                Haptics.impact(.light)
-                vm.pause()
-                Task { await actions.sharePost(vm.currentPost.id) }
-                shareItem = ShareItem(
-                    id: vm.currentPost.id,
-                    text: "\(DeepLink.scheme)://\(DeepLink.host)/\(vm.currentPost.id)"
-                )
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: "arrowshape.turn.up.right.fill")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundColor(.white)
-                    if vm.currentPost.shares_count > 0 {
-                        Text("\(vm.currentPost.shares_count)")
-                            .font(.caption)
-                            .foregroundColor(.white)
-                    }
-                }
-                .frame(width: 56, height: 56)
-                .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
+            dislikeButton
+            shareButton
         }
         .padding(.vertical, 14)
         .padding(.horizontal, 10)
@@ -206,5 +158,55 @@ struct StoryFullScreenView: View {
         .clipShape(Capsule())
         .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
         .hidden()
+    }
+
+    private var dislikeButton: some View {
+        let disliked = vm.dislikedStates[vm.currentPost.id] ?? vm.currentPost.disliked
+        let count = vm.dislikesCounts[vm.currentPost.id] ?? vm.currentPost.dislikes_count
+        return Button {
+            Haptics.impact(.light)
+            vm.toggleDislike(vm.currentPost.id)
+        } label: {
+            actionButtonLabel(
+                icon: disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                color: disliked ? .red : .white,
+                count: count
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var shareButton: some View {
+        Button {
+            Haptics.impact(.light)
+            vm.pause()
+            Task { await actions.sharePost(vm.currentPost.id) }
+            shareItem = ShareItem(
+                id: vm.currentPost.id,
+                text: "\(DeepLink.scheme)://\(DeepLink.host)/\(vm.currentPost.id)"
+            )
+        } label: {
+            actionButtonLabel(
+                icon: "arrowshape.turn.up.right.fill",
+                color: .white,
+                count: vm.currentPost.shares_count
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func actionButtonLabel(icon: String, color: Color, count: Int) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundColor(color)
+            if count > 0 {
+                Text("\(count)")
+                    .font(.caption)
+                    .foregroundColor(.white)
+            }
+        }
+        .frame(width: 56, height: 56)
+        .contentShape(Circle())
     }
 }

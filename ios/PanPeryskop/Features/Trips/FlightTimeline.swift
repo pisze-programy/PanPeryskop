@@ -31,15 +31,18 @@ struct FlightTimeline: View {
     private static let millisecondsPerSecond = 1000.0
 
     var body: some View {
-        ScrollViewReader { proxy in
+        let bestOutboundDay = best.map { Self.dayString($0.outbound.date) }
+        let bestReturnDay = best.map { Self.dayString($0.returning.date) }
+        let todayKey = Self.todayDayKey()
+        return ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Self.cellSpacing) {
                     ForEach(window.outbound, id: \.date) { cell in
-                        dayCell(cell, isOutbound: true)
+                        dayCell(cell, isOutbound: true, highlightedDay: bestOutboundDay, todayKey: todayKey)
                     }
                     eventMarker.id(Self.markerId)
                     ForEach(window.returning, id: \.date) { cell in
-                        dayCell(cell, isOutbound: false)
+                        dayCell(cell, isOutbound: false, highlightedDay: bestReturnDay, todayKey: todayKey)
                     }
                 }
                 .padding(.vertical, Theme.Spacing.xs)
@@ -51,22 +54,33 @@ struct FlightTimeline: View {
         }
     }
 
-    private func dayCell(_ cell: FlightWindowCell, isOutbound: Bool) -> some View {
+    private func dayCell(
+        _ cell: FlightWindowCell,
+        isOutbound: Bool,
+        highlightedDay: String?,
+        todayKey: String
+    ) -> some View {
         let selected = isSelected(cell, isOutbound: isOutbound)
+        let highlighted = cell.date == highlightedDay
         return Button {
             toggle(cell, isOutbound: isOutbound)
         } label: {
-            dayCellLabel(cell, selected: selected, highlighted: isBest(cell, isOutbound: isOutbound))
+            dayCellLabel(cell, selected: selected, highlighted: highlighted, todayKey: todayKey)
         }
         .buttonStyle(.plain)
         .disabled(cell.price == nil)
     }
 
-    private func dayCellLabel(_ cell: FlightWindowCell, selected: Bool, highlighted: Bool) -> some View {
+    private func dayCellLabel(
+        _ cell: FlightWindowCell,
+        selected: Bool,
+        highlighted: Bool,
+        todayKey: String
+    ) -> some View {
         VStack(spacing: Self.cellLineSpacing) {
             Text(Self.shortDay(cell.date))
                 .font(.caption2.weight(.semibold))
-            weekdayText(cell)
+            weekdayText(cell, todayKey: todayKey)
             Text(cell.hour ?? Self.missingValue)
                 .font(.system(size: Self.timeSize))
             Text(priceLabel(cell))
@@ -110,10 +124,11 @@ struct FlightTimeline: View {
         }
     }
 
-    private func weekdayText(_ cell: FlightWindowCell) -> some View {
-        Text(isToday(cell.date) ? "dziś" : Self.weekday(cell.date))
+    private func weekdayText(_ cell: FlightWindowCell, todayKey: String) -> some View {
+        let today = cell.date == todayKey
+        return Text(today ? "dziś" : Self.weekday(cell.date))
             .font(.system(size: Self.weekdaySize))
-            .foregroundColor(isToday(cell.date) ? .accentColor : .secondary)
+            .foregroundColor(today ? .accentColor : .secondary)
     }
 
     private var eventMarker: some View {
@@ -147,13 +162,12 @@ struct FlightTimeline: View {
         }
     }
 
-    private func isToday(_ dateString: String) -> Bool {
-        dateString == Self.dayKey(Int64(Date().timeIntervalSince1970 * Self.millisecondsPerSecond))
+    private static func todayDayKey() -> String {
+        dayString(Date())
     }
 
-    private func isBest(_ cell: FlightWindowCell, isOutbound: Bool) -> Bool {
-        guard let best else { return false }
-        return isOutbound ? best.outbound.date == Self.date(from: cell.date) : best.returning.date == Self.date(from: cell.date)
+    private static func dayString(_ date: Date) -> String {
+        AppConstants.isoDayFormatter.string(from: date)
     }
 
     private func priceLabel(_ cell: FlightWindowCell) -> String {
@@ -162,7 +176,7 @@ struct FlightTimeline: View {
     }
 
     static func dayKey(_ ms: Int64) -> String {
-        AppConstants.isoDayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ms) / millisecondsPerSecond))
+        dayString(Date(timeIntervalSince1970: TimeInterval(ms) / millisecondsPerSecond))
     }
 
     static func date(from dateString: String) -> Date? {

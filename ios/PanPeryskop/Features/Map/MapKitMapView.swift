@@ -17,28 +17,56 @@ struct MapKitMapView: View {
     @State private var visibleRegion: MKCoordinateRegion
     @State private var currentCameraDistance: CLLocationDistance
     @State private var derived = Derived()
-    @State private var arcs: [FlightArc] = []
+    @State private var arcs: [RenderedArc] = []
     @State private var allClusters: [MapCluster] = []
-
     @State private var clusteredRadius: Double = 0
+    @State private var mapSize: CGSize = .zero
 
-    private var arcsFingerprint: String {
-        var parts: [String] = []
-        for overlay in overlays {
-            guard case .arc(let arc) = overlay else { continue }
-            parts.append("\(arc.id):\(arc.progress)")
-            if parts.count >= 40 { break }
+    private struct RenderedArc: Identifiable {
+        let id: String
+        let color: Color
+        let polyline: MKPolyline
+    }
+
+    private struct OverlayFingerprint: Equatable {
+        let count: Int
+        let hash: Int
+    }
+
+    private var arcsFingerprint: OverlayFingerprint {
+        var hasher = Hasher()
+        var count = 0
+        for overlay in overlays where Self.hashArc(overlay, into: &hasher) {
+            count += 1
         }
-        return parts.joined(separator: "|")
+        return OverlayFingerprint(count: count, hash: hasher.finalize())
+    }
+
+    private var airportsFingerprint: OverlayFingerprint {
+        var hasher = Hasher()
+        var count = 0
+        for overlay in overlays where Self.hashAirport(overlay, into: &hasher) {
+            count += 1
+        }
+        return OverlayFingerprint(count: count, hash: hasher.finalize())
+    }
+
+    private var clusterFingerprint: OverlayFingerprint {
+        var hasher = Hasher()
+        hasher.combine(clusterConfig.radiusPixels)
+        hasher.combine(clusterConfig.longitudeScale)
+        hasher.combine(clusterConfig.anchor.latitude)
+        hasher.combine(clusterConfig.anchor.longitude)
+        var count = 0
+        for overlay in overlays where Self.hashClusterOverlay(overlay, into: &hasher) {
+            count += 1
+        }
+        return OverlayFingerprint(count: count, hash: hasher.finalize())
     }
 
     private struct Derived {
         var clusters: [MapCluster] = []
         var airports: [AirportPin] = []
-    }
-
-    private var overlaysFingerprint: String {
-        "\(overlays.count)|\(overlays.first?.id ?? "")|\(overlays.last?.id ?? "")"
     }
 
     private struct RegionKey: Equatable {
@@ -104,64 +132,70 @@ struct MapKitMapView: View {
         return 1 - CGFloat(t) * (1 - Self.markerMinScale)
     }
     private var clusterRadiusDegrees: Double {
-        let screenHeight = UIScreen.main.bounds.height
-        let degreesPerPixel = visibleRegion.span.latitudeDelta / Double(screenHeight)
+        let height = mapSize.height > 0 ? mapSize.height : UIScreen.main.bounds.height
+        let degreesPerPixel = visibleRegion.span.latitudeDelta / max(Double(height), 1)
         return max(degreesPerPixel * clusterConfig.radiusPixels, 0.00005)
     }
 
-    private func reclusterIfRadiusChanged() {
-        let radius = clusterRadiusDegrees
-        guard clusteredRadius == 0 || abs(radius - clusteredRadius) / clusteredRadius > 0.2 else { return }
-        recluster()
+    private func handleRegionChange() {
+        guard !reclusterIfRadiusChanged() else { return }
+        refreshVisible()
     }
 
-    private func flightArcs(_ visible: [MapOverlay]) -> [FlightArc] {
-        visible.compactMap { overlay in
-            if case .arc(let a) = overlay { return a }
-            return nil
-        }
+    private func reclusterIfRadiusChanged() -> Bool {
+        let radius = clusterRadiusDegrees
+        guard clusteredRadius == 0 || abs(radius - clusteredRadius) / clusteredRadius > 0.2 else { return false }
+        recluster()
+        return true
+    }
+
+    private func flightArcs(_ visible: [MapOverlay]) -> [RenderedArc] {
+        visible.compactMap(Self.renderedArc)
+    }
+
+    private static func renderedArc(from overlay: MapOverlay) -> RenderedArc? {
+        guard case .arc(let arc) = overlay else { return nil }
+        return RenderedArc(id: arc.id, color: arc.color, polyline: arc.polyline)
     }
 
     private func recluster() {
-        var items: [MapClusterItem] = []
-        for overlay in overlays {
-            switch overlay {
-            case .city(let pin): items.append(.city(pin.city))
-            case .pin(let p): items.append(.post(p.post))
-            case .airport, .arc, .group: continue
-            }
-        }
+        let items = overlays.compactMap(Self.clusterItem)
         let radius = clusterRadiusDegrees
         clusteredRadius = radius
         allClusters = clusterItems(items, radiusDegrees: radius, config: clusterConfig)
         refreshVisible()
     }
 
-    private func refreshVisible() {
+    private static func clusterItem(from overlay: MapOverlay) -> MapClusterItem? {
+        switch overlay {
+        case .city(let pin): return .city(pin.city)
+        case .pin(let pin): return .post(pin.post)
+        case .airport, .arc, .group: return nil
+        }
+    }
+
+    private func visibleBounds() -> MapBBox {
         let pad = clusterRadiusDegrees * 2
-        let lat0 = visibleRegion.center.latitude - visibleRegion.span.latitudeDelta / 2 - pad
-        let lat1 = visibleRegion.center.latitude + visibleRegion.span.latitudeDelta / 2 + pad
-        let lng0 = visibleRegion.center.longitude - visibleRegion.span.longitudeDelta / 2 - pad
-        let lng1 = visibleRegion.center.longitude + visibleRegion.span.longitudeDelta / 2 + pad
-        func inBox(_ lat: Double, _ lng: Double) -> Bool {
-            lat >= lat0 && lat <= lat1 && lng >= lng0 && lng <= lng1
-        }
-
-        var airports: [AirportPin] = []
-        for overlay in overlays {
-            switch overlay {
-            case .airport(let a):
-                guard inBox(a.coord.latitude, a.coord.longitude) else { continue }
-                airports.append(a)
-            case .pin, .city, .arc, .group:
-                continue
-            }
-        }
-
-        derived = Derived(
-            clusters: allClusters.filter { inBox($0.coord.latitude, $0.coord.longitude) },
-            airports: airports
+        return MapBBox(
+            swLat: visibleRegion.center.latitude - visibleRegion.span.latitudeDelta / 2 - pad,
+            swLng: visibleRegion.center.longitude - visibleRegion.span.longitudeDelta / 2 - pad,
+            neLat: visibleRegion.center.latitude + visibleRegion.span.latitudeDelta / 2 + pad,
+            neLng: visibleRegion.center.longitude + visibleRegion.span.longitudeDelta / 2 + pad
         )
+    }
+
+    private func refreshVisible() {
+        let box = visibleBounds()
+        derived = Derived(
+            clusters: allClusters.filter { box.contains(lat: $0.coord.latitude, lng: $0.coord.longitude) },
+            airports: overlays.compactMap { Self.airportPin(from: $0, in: box) }
+        )
+    }
+
+    private static func airportPin(from overlay: MapOverlay, in box: MapBBox) -> AirportPin? {
+        guard case .airport(let pin) = overlay,
+              box.contains(lat: pin.coord.latitude, lng: pin.coord.longitude) else { return nil }
+        return pin
     }
 
     private static func cameraDistance(for region: MKCoordinateRegion) -> CLLocationDistance {
@@ -183,11 +217,17 @@ struct MapKitMapView: View {
     }
 
     private func tap(for cluster: MapCluster) -> MapOverlay {
-        if cluster.count == 1, let item = cluster.items.first {
-            if let post = item.post { return .pin(MapPin(post: post)) }
-            if let city = item.city { return .city(CityPin(city: city)) }
+        if cluster.count == 1, let single = Self.singleTapOverlay(from: cluster.items.first) {
+            return single
         }
         return .group(MapGroup(id: cluster.id, posts: cluster.posts, cities: cluster.cities))
+    }
+
+    private static func singleTapOverlay(from item: MapClusterItem?) -> MapOverlay? {
+        guard let item else { return nil }
+        if let post = item.post { return .pin(MapPin(post: post)) }
+        if let city = item.city { return .city(CityPin(city: city)) }
+        return nil
     }
 
     var body: some View {
@@ -197,136 +237,270 @@ struct MapKitMapView: View {
         return GeometryReader { geo in
             MapReader { proxy in
                 Map(
-                position: $camera,
-                bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: maxZoomOutDistance),
-                interactionModes: [.pan, .zoom]
-            ) {
-                ForEach(arcs) { arc in
-                    MapPolyline(arc.polyline)
-                        .stroke(arc.color, lineWidth: 2.5)
-                }
+                    position: $camera,
+                    bounds: MapCameraBounds(minimumDistance: 500, maximumDistance: maxZoomOutDistance),
+                    interactionModes: [.pan, .zoom]
+                ) {
+                    ForEach(arcs) { arc in
+                        MapPolyline(arc.polyline)
+                            .stroke(arc.color, lineWidth: 2.5)
+                    }
 
-                ForEach(clusters) { cluster in
-                    Annotation(coordinate: cluster.coord, anchor: .center) {
-                        ClusterBadge(
-                            cluster: cluster,
-                            currentUserId: currentUserId,
-                            onTap: { onTap(tap(for: cluster)) }
-                        )
-                        .scaleEffect(scale)
-                    } label: { EmptyView() }
-                }
-
-                ForEach(airports) { pin in
-                    if pin.isOrigin {
-                        Annotation(coordinate: pin.coord, anchor: .center) {
-                            OriginAirportPin(iata: pin.iata, airlines: pin.airlines)
+                    ForEach(clusters) { cluster in
+                        Annotation(coordinate: cluster.coord, anchor: .center) {
+                            ClusterBadge(
+                                cluster: cluster,
+                                currentUserId: currentUserId,
+                                onTap: { onTap(tap(for: cluster)) }
+                            )
+                            .scaleEffect(scale)
                         } label: { EmptyView() }
-                    } else {
+                    }
+
+                    ForEach(airports) { pin in
                         Annotation(coordinate: pin.coord, anchor: .center) {
-                            AirportPinBadge(iata: pin.iata, airlines: pin.airlines, shimmer: pin.shimmer)
-                                .scaleEffect(scale)
-                                .onTapGesture { onTap(.airport(pin)) }
+                            airportPinView(pin, scale: scale)
                         } label: { EmptyView() }
                     }
                 }
-            }
-            .mapStyle(.standard(elevation: Self.usesRealisticTerrain ? .realistic : .flat, pointsOfInterest: .excludingAll))
-            .onMapCameraChange(frequency: .onEnd) { ctx in
-                let region = ctx.region
-                visibleRegion = region
-                currentCameraDistance = Self.cameraDistance(for: region)
-                let swLat = region.center.latitude - region.span.latitudeDelta / 2
-                let swLng = region.center.longitude - region.span.longitudeDelta / 2
-                let neLat = region.center.latitude + region.span.latitudeDelta / 2
-                let neLng = region.center.longitude + region.span.longitudeDelta / 2
-                onRegionChange(swLat, swLng, neLat, neLng)
-                onCameraSettled(region)
-            }
-            .onChange(of: regionKey) { _, _ in
-                refreshVisible()
-                reclusterIfRadiusChanged()
-            }
-            .onChange(of: arcsFingerprint) { _, _ in arcs = flightArcs(overlays) }
-            .onChange(of: overlaysFingerprint) { _, _ in recluster() }
-            .onAppear {
-                arcs = flightArcs(overlays)
-                recluster()
-                cameraController.bind { region, distance in
-                    visibleRegion = region
-                    let resolved = distance ?? MapKitMapView.cameraDistance(for: region)
-                    currentCameraDistance = resolved
-                    withAnimation(.easeInOut(duration: 1.2)) {
-                        camera = .camera(MapKitMapView.tiltedCamera(
-                            center: region.center,
-                            region: region,
-                            distance: resolved
-                        ))
-                    }
+                .mapStyle(.standard(elevation: Self.usesRealisticTerrain ? .realistic : .flat, pointsOfInterest: .excludingAll))
+                .onMapCameraChange(frequency: .onEnd) { ctx in
+                    handleMapCameraEnd(ctx.region)
                 }
-                cameraController.bindAvoidingSheet { coordinate in
-                    let size = geo.size
-                    let target = CGPoint(
-                        x: size.width * Self.sheetAvoidFraction.x,
-                        y: size.height * Self.sheetAvoidFraction.y
-                    )
-                    guard let targetCoord = proxy.convert(target, from: .local) else {
-                        camera = .camera(MapCamera(
-                            centerCoordinate: coordinate,
-                            distance: currentCameraDistance,
-                            heading: 0,
-                            pitch: Self.pitchDegrees
-                        ))
-                        return
-                    }
-                    let center = visibleRegion.center
-                    let newCenter = CLLocationCoordinate2D(
-                        latitude: center.latitude + coordinate.latitude - targetCoord.latitude,
-                        longitude: center.longitude + coordinate.longitude - targetCoord.longitude
-                    )
-                    visibleRegion = MKCoordinateRegion(center: newCenter, span: visibleRegion.span)
-                    withAnimation(.easeInOut(duration: 0.6)) {
-                        camera = .camera(MapCamera(
-                            centerCoordinate: newCenter,
-                            distance: currentCameraDistance,
-                            heading: 0,
-                            pitch: Self.pitchDegrees
-                        ))
-                    }
+                .onChange(of: geo.size) { _, newSize in
+                    mapSize = newSize
                 }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .scrollToPost)) { note in
-                guard let post = note.object as? Post else { return }
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    let region = MKCoordinateRegion(
-                        center: post.coordinate,
-                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                    )
-                    camera = .camera(MapKitMapView.tiltedCamera(center: post.coordinate, region: region))
+                .onChange(of: regionKey) { _, _ in
+                    handleRegionChange()
                 }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .centerMapOnCoordinate)) { note in
-                guard let payload = note.object as? MapCenterPayload else { return }
-                centerOnCoordinate(payload)
-            }
+                // Keep arcs separate from clusterFingerprint so loading arc animations never recluster pins.
+                .onChange(of: arcsFingerprint) { _, _ in
+                    arcs = flightArcs(overlays)
+                }
+                .onChange(of: airportsFingerprint) { _, _ in
+                    refreshVisible()
+                }
+                .onChange(of: clusterFingerprint) { _, _ in
+                    recluster()
+                }
+                .onAppear {
+                    mapSize = geo.size
+                    arcs = flightArcs(overlays)
+                    recluster()
+                    bindCameraController(proxy: proxy)
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .scrollToPost)) { note in
+                    guard let post = note.object as? Post else { return }
+                    scrollToPost(post)
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .centerMapOnCoordinate)) { note in
+                    guard let payload = note.object as? MapCenterPayload else { return }
+                    centerOnCoordinate(payload)
+                }
             }
         }
     }
 
-    private func centerOnCoordinate(_ payload: MapCenterPayload) {
-        let coordinate = CLLocationCoordinate2D(latitude: payload.lat, longitude: payload.lng)
-        withAnimation(.easeInOut(duration: 0.6)) {
-            if payload.zoomIn {
-                let region = MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
-                camera = .camera(MapKitMapView.tiltedCamera(center: coordinate, region: region))
-            } else {
-                camera = .camera(MapCamera(
-                    centerCoordinate: coordinate,
-                    distance: currentCameraDistance,
-                    heading: 0,
-                    pitch: Self.pitchDegrees
-                ))
-            }
+    @ViewBuilder
+    private func airportPinView(_ pin: AirportPin, scale: CGFloat) -> some View {
+        if pin.isOrigin {
+            OriginAirportPin(iata: pin.iata, airlines: pin.airlines)
+        } else {
+            AirportPinBadge(iata: pin.iata, airlines: pin.airlines, shimmer: pin.shimmer)
+                .scaleEffect(scale)
+                .onTapGesture { onTap(.airport(pin)) }
         }
+    }
+
+    private func handleMapCameraEnd(_ region: MKCoordinateRegion) {
+        visibleRegion = region
+        currentCameraDistance = Self.cameraDistance(for: region)
+        let swLat = region.center.latitude - region.span.latitudeDelta / 2
+        let swLng = region.center.longitude - region.span.longitudeDelta / 2
+        let neLat = region.center.latitude + region.span.latitudeDelta / 2
+        let neLng = region.center.longitude + region.span.longitudeDelta / 2
+        onRegionChange(swLat, swLng, neLat, neLng)
+        onCameraSettled(region)
+    }
+
+    private func bindCameraController(proxy: MapProxy) {
+        cameraController.bind { region, distance in
+            flyCamera(to: region, distance: distance)
+        }
+        cameraController.bindAvoidingSheet { coordinate in
+            moveCameraAvoidingSheet(to: coordinate, proxy: proxy)
+        }
+    }
+
+    private func flyCamera(to region: MKCoordinateRegion, distance: CLLocationDistance?) {
+        visibleRegion = region
+        let resolved = distance ?? Self.cameraDistance(for: region)
+        currentCameraDistance = resolved
+        withAnimation(.easeInOut(duration: 1.2)) {
+            camera = .camera(Self.tiltedCamera(
+                center: region.center,
+                region: region,
+                distance: resolved
+            ))
+        }
+    }
+
+    private func moveCameraAvoidingSheet(to coordinate: CLLocationCoordinate2D, proxy: MapProxy) {
+        let target = CGPoint(
+            x: mapSize.width * Self.sheetAvoidFraction.x,
+            y: mapSize.height * Self.sheetAvoidFraction.y
+        )
+        guard let targetCoord = proxy.convert(target, from: .local) else {
+            camera = .camera(currentDistanceCamera(center: coordinate))
+            return
+        }
+        let center = visibleRegion.center
+        let newCenter = CLLocationCoordinate2D(
+            latitude: center.latitude + coordinate.latitude - targetCoord.latitude,
+            longitude: center.longitude + coordinate.longitude - targetCoord.longitude
+        )
+        visibleRegion = MKCoordinateRegion(center: newCenter, span: visibleRegion.span)
+        withAnimation(.easeInOut(duration: 0.6)) {
+            camera = .camera(currentDistanceCamera(center: newCenter))
+        }
+    }
+
+    private func currentDistanceCamera(center: CLLocationCoordinate2D) -> MapCamera {
+        MapCamera(
+            centerCoordinate: center,
+            distance: currentCameraDistance,
+            heading: 0,
+            pitch: Self.pitchDegrees
+        )
+    }
+
+    private func scrollToPost(_ post: Post) {
+        let region = MKCoordinateRegion(
+            center: post.coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+        withAnimation(.easeInOut(duration: 0.6)) {
+            camera = .camera(Self.tiltedCamera(center: post.coordinate, region: region))
+        }
+    }
+
+    private func centerOnCoordinate(_ payload: MapCenterPayload) {
+        let target = targetCamera(for: payload)
+        withAnimation(.easeInOut(duration: 0.6)) {
+            camera = .camera(target)
+        }
+    }
+
+    private func targetCamera(for payload: MapCenterPayload) -> MapCamera {
+        let coordinate = CLLocationCoordinate2D(latitude: payload.lat, longitude: payload.lng)
+        guard payload.zoomIn else {
+            return currentDistanceCamera(center: coordinate)
+        }
+        let region = MKCoordinateRegion(
+            center: coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+        return Self.tiltedCamera(center: coordinate, region: region)
+    }
+
+    private static func hashArc(_ overlay: MapOverlay, into hasher: inout Hasher) -> Bool {
+        guard case .arc(let arc) = overlay else { return false }
+        hasher.combine(arc.id)
+        hasher.combine(arc.progress)
+        hasher.combine(arc.bowOffset)
+        hasher.combine(arc.from.latitude)
+        hasher.combine(arc.from.longitude)
+        hasher.combine(arc.to.latitude)
+        hasher.combine(arc.to.longitude)
+        hasher.combine(arc.airlines)
+        return true
+    }
+
+    private static func hashAirport(_ overlay: MapOverlay, into hasher: inout Hasher) -> Bool {
+        guard case .airport(let pin) = overlay else { return false }
+        hasher.combine(pin.iata)
+        hasher.combine(pin.coord.latitude)
+        hasher.combine(pin.coord.longitude)
+        hasher.combine(pin.isOrigin)
+        hasher.combine(pin.shimmer)
+        hasher.combine(pin.airlines)
+        return true
+    }
+
+    private static func hashClusterOverlay(_ overlay: MapOverlay, into hasher: inout Hasher) -> Bool {
+        switch overlay {
+        case .pin(let pin):
+            hasher.combine(0)
+            hashPost(pin.post, into: &hasher)
+            return true
+        case .city(let pin):
+            hasher.combine(1)
+            hashCity(pin.city, into: &hasher)
+            return true
+        case .airport, .arc, .group:
+            return false
+        }
+    }
+
+    private static func hashPost(_ post: Post, into hasher: inout Hasher) {
+        hasher.combine(post.id)
+        hasher.combine(post.lat)
+        hasher.combine(post.lng)
+        hasher.combine(post.created_at)
+        hasher.combine(post.likes_count)
+        hasher.combine(post.views_count)
+        hasher.combine(post.shares_count)
+        hasher.combine(post.dislikes_count)
+        hasher.combine(post.liked)
+        hasher.combine(post.disliked)
+        hasher.combine(post.watched)
+        hasher.combine(post.is_sponsored)
+        hasher.combine(post.is_sold_out)
+        hasher.combine(post.description)
+        hasher.combine(post.link_url)
+        hasher.combine(post.thumb_url)
+        hasher.combine(post.thumb_key)
+        hasher.combine(post.media_url)
+        hasher.combine(post.media_key)
+        hasher.combine(post.tags)
+        hasher.combine(post.distinction)
+        hasher.combine(post.showtimes)
+        hasher.combine(post.meta)
+        hashTravelPin(post.travelPin, into: &hasher)
+        hashShowtimeBookings(post.showtime_booking, into: &hasher)
+    }
+
+    private static func hashTravelPin(_ style: TravelPinStyle?, into hasher: inout Hasher) {
+        guard let style else {
+            hasher.combine(false)
+            return
+        }
+        hasher.combine(true)
+        hasher.combine(style.icon)
+        hasher.combine(style.startHex)
+        hasher.combine(style.endHex)
+    }
+
+    private static func hashShowtimeBookings(_ bookings: [ShowtimeBooking]?, into hasher: inout Hasher) {
+        guard let bookings else {
+            hasher.combine(-1)
+            return
+        }
+        hasher.combine(bookings.count)
+        for booking in bookings {
+            hasher.combine(booking.time)
+            hasher.combine(booking.kind)
+            hasher.combine(booking.params)
+        }
+    }
+
+    private static func hashCity(_ city: TravelCity, into hasher: inout Hasher) {
+        hasher.combine(city.id)
+        hasher.combine(city.lat)
+        hasher.combine(city.lng)
+        hasher.combine(city.countryCode)
+        hasher.combine(city.imageUrl)
+        hasher.combine(city.namePl)
+        hasher.combine(city.bandRank)
     }
 }

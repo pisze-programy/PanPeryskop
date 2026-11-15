@@ -13,9 +13,6 @@ struct ProgressBar: View {
     }
 }
 
-/// Subtle blurred gradient used behind the top (progress / close) and bottom
-/// (description / actions) overlays. `bottomFade: true` fades the blur out toward
-/// the bottom edge (top bar); `false` fades it out toward the top (bottom bar).
 struct StoryBlurBar: View {
     let bottomFade: Bool
 
@@ -35,43 +32,6 @@ struct StoryBlurBar: View {
     }
 }
 
-struct StoryAvatar: View {
-    let url: String?
-    let size: CGFloat
-
-    var body: some View {
-        Group {
-            if let url, let avatarURL = URL(string: url) {
-                AsyncImage(url: avatarURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    default:
-                        defaultAvatar
-                    }
-                }
-            } else {
-                defaultAvatar
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
-    }
-
-    private var defaultAvatar: some View {
-        ZStack {
-            Color.black
-            Image("Logo")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .scaleEffect(0.85)
-        }
-    }
-}
-
-/// Retro split-flap style time ("HH:MM" or "--:--") — dark panels, white monospaced
-/// digits, a hinge seam down the middle. Static look (no flip animation). Stretches
-/// vertically to match the neighbouring text column.
 struct FlipClockTime: View {
     let time: String
 
@@ -120,68 +80,93 @@ struct FlipClockDigit: View {
     }
 }
 
-/// Horizontally paged row of flip-clock times (one showtime per page) with dot
-/// indicators underneath — cinema events with multiple sessions.
 struct ShowtimesPager: View {
     let times: [String]
     var onInteraction: (Bool) -> Void = { _ in }
     var onSelect: (String) -> Void = { _ in }
     @State private var page: Int?
     @State private var isInteracting = false
+    @GestureState private var isDragging = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    ForEach(Array(times.enumerated()), id: \.offset) { _, t in
-                        FlipClockTime(time: t)
-                            .containerRelativeFrame(.horizontal)
-                    }
-                }
-                .scrollTargetLayout()
-            }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $page)
-            .frame(height: 50)
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 1)
-                    .onChanged { _ in
-                        if !isInteracting { isInteracting = true; onInteraction(true) }
-                    }
-                    .onEnded { _ in
-                        isInteracting = false
-                        onInteraction(false)
-                    }
-            )
-
-            // Story-style indicator: few showtimes → equal wide bars; many → the active
-            // bar is wide and the rest are thin notches, so the row always fits.
-            GeometryReader { geo in
-                let spacing: CGFloat = 4
-                let n = max(times.count, 1)
-                let many = n > 8
-                let inactiveW: CGFloat = many
-                    ? max(1.5, min(6, (geo.size.width / 2 - spacing * CGFloat(n - 1)) / CGFloat(max(1, n - 1))))
-                    : 0
-                let activeW: CGFloat = many
-                    ? geo.size.width - spacing * CGFloat(n - 1) - inactiveW * CGFloat(n - 1)
-                    : 0
-                HStack(spacing: spacing) {
-                    ForEach(times.indices, id: \.self) { i in
-                        let active = i == (page ?? 0)
-                        Capsule()
-                            .fill(active ? Color.blue : Color.secondary.opacity(0.3))
-                            .frame(width: many ? (active ? activeW : inactiveW) : nil)
-                            .frame(maxWidth: many ? nil : .infinity)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .frame(height: 4)
+            timesScroller
+            indicatorTrack
+        }
+        .onChange(of: isDragging) { _, dragging in
+            setInteracting(dragging)
         }
         .onChange(of: page) { old, new in
-            if old != new { Haptics.impact(.light) }
-            if let idx = new, idx < times.count { onSelect(times[idx]) }
+            handlePageChange(old: old, new: new)
         }
+        .onDisappear {
+            setInteracting(false)
+        }
+    }
+
+    private var timesScroller: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                ForEach(Array(times.enumerated()), id: \.offset) { _, time in
+                    FlipClockTime(time: time)
+                        .containerRelativeFrame(.horizontal)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $page)
+        .frame(height: 50)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 1)
+                .updating($isDragging) { _, state, _ in
+                    state = true
+                }
+        )
+    }
+
+    private var indicatorTrack: some View {
+        GeometryReader { geo in
+            indicatorRow(width: geo.size.width)
+        }
+        .frame(height: 4)
+    }
+
+    private func indicatorRow(width: CGFloat) -> some View {
+        let spacing: CGFloat = 4
+        let n = max(times.count, 1)
+        let many = n > 8
+        let totalSpacing = spacing * CGFloat(max(0, n - 1))
+        let inactiveW: CGFloat = many
+            ? max(1.5, min(6, (width / 2 - totalSpacing) / CGFloat(max(1, n - 1))))
+            : 0
+        let activeW: CGFloat = many
+            ? max(0, width - totalSpacing - inactiveW * CGFloat(n - 1))
+            : 0
+        return HStack(spacing: spacing) {
+            ForEach(times.indices, id: \.self) { index in
+                indicatorCapsule(active: index == (page ?? 0), many: many, activeW: activeW, inactiveW: inactiveW)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func indicatorCapsule(active: Bool, many: Bool, activeW: CGFloat, inactiveW: CGFloat) -> some View {
+        Capsule()
+            .fill(active ? Color.blue : Color.secondary.opacity(0.3))
+            .frame(width: many ? (active ? activeW : inactiveW) : nil)
+            .frame(maxWidth: many ? nil : .infinity)
+    }
+
+    private func setInteracting(_ interacting: Bool) {
+        guard isInteracting != interacting else { return }
+        isInteracting = interacting
+        onInteraction(interacting)
+    }
+
+    private func handlePageChange(old: Int?, new: Int?) {
+        if old != new { Haptics.impact(.light) }
+        guard let idx = new, idx < times.count else { return }
+        onSelect(times[idx])
     }
 }

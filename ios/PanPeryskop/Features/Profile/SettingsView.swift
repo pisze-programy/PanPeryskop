@@ -8,13 +8,15 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: Theme.Spacing.xl) {
                 policySection
-
                 accountSection
+                Spacer().frame(height: 120)
             }
             .padding(.vertical, 20)
         }
+        .scrollContentBackground(.hidden)
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Ustawienia")
         .navigationBarTitleDisplayMode(.inline)
         .alert("Usunąć konto?", isPresented: $showDeleteConfirm) {
@@ -27,12 +29,11 @@ struct SettingsView: View {
         }
     }
 
-    /// App data policy (OSM / Wikimedia / Unsplash attribution).
     private var policySection: some View {
         NavigationLink {
             AppPolicyView()
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: Theme.Spacing.m) {
                 Image(systemName: "doc.text.fill")
                     .font(.title3)
                     .foregroundColor(.accentColor)
@@ -51,9 +52,9 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            .padding(12)
+            .padding(Theme.Spacing.m)
             .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
         }
         .buttonStyle(.plain)
         .padding(.horizontal)
@@ -64,17 +65,8 @@ struct SettingsView: View {
             Button(role: .destructive) {
                 showDeleteConfirm = true
             } label: {
-                HStack(spacing: 12) {
-                    if isDeleting {
-                        ProgressView()
-                            .tint(.red)
-                            .frame(width: 32)
-                    } else {
-                        Image(systemName: "trash.fill")
-                            .font(.title3)
-                            .foregroundColor(.red)
-                            .frame(width: 32)
-                    }
+                HStack(spacing: Theme.Spacing.m) {
+                    deleteIcon
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Usuń konto")
                             .font(.subheadline)
@@ -86,9 +78,9 @@ struct SettingsView: View {
                     }
                     Spacer()
                 }
-                .padding(12)
+                .padding(Theme.Spacing.m)
                 .background(.regularMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
             }
             .buttonStyle(.plain)
             .disabled(isDeleting)
@@ -96,9 +88,23 @@ struct SettingsView: View {
             Text("Uwaga: usunięcie konta usuwa również Twoją zawartość z mapy. Nie będzie można jej przywrócić.")
                 .font(.caption2)
                 .foregroundColor(.secondary)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, Theme.Spacing.xs)
         }
         .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private var deleteIcon: some View {
+        if isDeleting {
+            ProgressView()
+                .tint(.red)
+                .frame(width: 32)
+        } else {
+            Image(systemName: "trash.fill")
+                .font(.title3)
+                .foregroundColor(.red)
+                .frame(width: 32)
+        }
     }
 
     @MainActor
@@ -112,5 +118,4 @@ struct SettingsView: View {
             ToastManager.shared.show("Nie udało się usunąć konta. Spróbuj ponownie.")
         }
     }
-
 }

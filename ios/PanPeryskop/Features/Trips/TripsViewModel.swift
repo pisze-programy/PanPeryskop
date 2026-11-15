@@ -27,9 +27,11 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     /// True while a user-triggered fetch (day/airport/tag) is in flight — drives the
     /// Wycieczki pill loader. Trips has no polling, so every load qualifies.
     @Published private(set) var isLoading = false
+    @Published private(set) var isLoadingCities = false
     private var loadTask: Task<Void, Never>?
     private var loadGeneration = 0
     private var citiesTask: Task<Void, Never>?
+    private var citiesGeneration = 0
     private var cityBreakCount = 0
     private static let loadErrorMessage = "Coś poszło nie tak, spróbuj ponownie"
     private static let confirmErrorMessage = "Nie udało się potwierdzić lotów, spróbuj ponownie"
@@ -174,6 +176,8 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         return cities.filter { city in city.airports.contains { served.contains($0) } }
     }
 
+    var availableCities: [TravelCity] { visibleCities }
+
     /// The airports of the selected city. Warszawa has two; the rest have one.
     /// Cached per city — read on every map render.
     var originAirports: [Airport] { cachedOriginAirports }
@@ -187,12 +191,12 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     var originIatas: [String] { originAirports.map(\.iata) }
 
-    private func originAirport(nearestTo dest: Destination) -> Airport {
+    private func originAirport(nearestTo dest: Destination) -> Airport? {
         let target = CLLocation(latitude: dest.lat, longitude: dest.lng)
         return originAirports.min { lhs, rhs in
             CLLocation(latitude: lhs.lat, longitude: lhs.lng).distance(from: target)
                 < CLLocation(latitude: rhs.lat, longitude: rhs.lng).distance(from: target)
-        } ?? originAirports[0]
+        } ?? originAirports.first
     }
 
     /// Arcs from the serving origin to a destination. A route flown by both
@@ -204,8 +208,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         allowed: [String]? = nil
     ) -> [MapOverlay] {
         let providers = allowed.map { allow in dest.providers.filter { allow.contains($0.rawValue) } } ?? dest.providers
-        guard !providers.isEmpty else { return [] }
-        let origin = originAirport(nearestTo: dest)
+        guard !providers.isEmpty, let origin = originAirport(nearestTo: dest) else { return [] }
         let from = CLLocationCoordinate2D(latitude: origin.lat, longitude: origin.lng)
         let to = CLLocationCoordinate2D(latitude: dest.lat, longitude: dest.lng)
         let prefix = scene.isEmpty ? "" : "\(scene)-"
@@ -228,6 +231,30 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         return airlines
     }
 
+    func routeLabel(for city: TravelCity) -> String? {
+        guard let destIata = destinationIata(for: city) else { return nil }
+        let originText = originRouteLabel(for: destIata)
+        guard !originText.isEmpty else { return nil }
+        return "\(originText) → \(destIata)"
+    }
+
+    private func destinationIata(for city: TravelCity) -> String? {
+        if let connected = city.connections.first?.iata, !connected.isEmpty {
+            return connected
+        }
+        let served = Set(mergedDestinations.map(\.iata))
+        return city.airports.first { served.contains($0) } ?? city.airports.first
+    }
+
+    private func originRouteLabel(for destIata: String) -> String {
+        let catalogue = CatalogueStore.shared.catalogue
+        let serving = originAirports.filter { airport in
+            catalogue.destinations[airport.iata]?.contains { $0.iata == destIata } ?? false
+        }
+        let codes = serving.isEmpty ? originIatas : serving.map(\.iata)
+        return codes.joined(separator: "/")
+    }
+
     /// Cities a traveller can reach from this event: one of the city's airports is
     /// served from the origin, and the city lies within the nearby radius of the
     /// event. Nearest first, so the sheet reads outward from the venue.
@@ -248,7 +275,8 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
 
     /// Reachable destinations (from origin) within the nearby radius, nearest first.
     /// THE source for both the map arcs and the card's airport rail — they must agree.
-    func nearbyDestinations(for event: TravelEvent) -> [Destination] {        let eventCoord = CLLocation(latitude: event.lat, longitude: event.lng)
+    func nearbyDestinations(for event: TravelEvent) -> [Destination] {
+        let eventCoord = CLLocation(latitude: event.lat, longitude: event.lng)
         return destinations
             .filter { dest in
                 let d = CLLocation(latitude: dest.lat, longitude: dest.lng)
@@ -286,11 +314,26 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     }
 
     func selectNearbyEvent(_ event: TravelEvent) {
-        if !events.contains(where: { $0.id == event.id }) { events.append(event) }
-        if !cachedPosts.contains(where: { $0.id == event.id }), let post = event.asPost {
-            cachedPosts.append(post)
-        }
+        registerEventIfNeeded(event)
         _ = selectTravelEvent(postId: event.id)
+    }
+
+    func openEventFromList(_ event: TravelEvent) {
+        registerEventIfNeeded(event)
+        clearLoadingScene()
+        selectedTravelEvent = event
+        selectedCityBreak = nil
+        showFlightLayer = true
+        selectedEventGroup = EventGroup(events: [event])
+    }
+
+    private func registerEventIfNeeded(_ event: TravelEvent) {
+        if !events.contains(where: { $0.id == event.id }) {
+            events.append(event)
+        }
+        guard !cachedPosts.contains(where: { $0.id == event.id }),
+              let post = event.asPost else { return }
+        cachedPosts.append(post)
     }
 
     var selectionId: String? { selectedCityBreak?.id ?? selectedTravelEvent?.id }
@@ -370,7 +413,7 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     ) -> Airport {
         origins.first { airport in
             catalogue.destinations[airport.iata]?.contains { $0.iata == destination.iata } ?? false
-        } ?? origins[0]
+        } ?? origins.first ?? catalogue.airports.first ?? Airport(iata: "", name: "", city: "", country: "", lat: 0, lng: 0)
     }
 
     /// Recompute after the catalogue changes (refresh).
@@ -619,12 +662,90 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
     }
 
     private enum LoadOutcome { case confirmed, pending, failed }
+    private enum DayFetchOutcome { case confirmed([TravelEvent]), pending, failed }
+
+    func fetchConfirmedDayEvents(offset: Int) async -> [TravelEvent]? {
+        let origins = originIatas
+        let (from, to) = dayRange(offset: offset)
+        let key = eventsCacheKey(origins: origins, from: from, to: to)
+        if let cached = eventsCache[key] {
+            return Self.sortedEvents(from: cached)
+        }
+        return await resolveConfirmedDayEvents(from: from, to: to, origins: origins, key: key, attempt: 0)
+    }
+
+    private func resolveConfirmedDayEvents(
+        from: Int64,
+        to: Int64,
+        origins: [String],
+        key: String,
+        attempt: Int
+    ) async -> [TravelEvent]? {
+        guard !Task.isCancelled, origins == originIatas, attempt < Self.refinementAttempts else {
+            return nil
+        }
+        let outcome = await loadConfirmedDayOnce(from: from, to: to, origins: origins, key: key)
+        switch outcome {
+        case .confirmed(let events):
+            return events
+        case .failed:
+            return nil
+        case .pending:
+            return await retryConfirmedDayEvents(from: from, to: to, origins: origins, key: key, attempt: attempt)
+        }
+    }
+
+    private func retryConfirmedDayEvents(
+        from: Int64,
+        to: Int64,
+        origins: [String],
+        key: String,
+        attempt: Int
+    ) async -> [TravelEvent]? {
+        guard attempt + 1 < Self.refinementAttempts else { return nil }
+        try? await Task.sleep(for: .milliseconds(Self.refinementDelayMilliseconds))
+        return await resolveConfirmedDayEvents(from: from, to: to, origins: origins, key: key, attempt: attempt + 1)
+    }
+
+    private func loadConfirmedDayOnce(
+        from: Int64,
+        to: Int64,
+        origins: [String],
+        key: String
+    ) async -> DayFetchOutcome {
+        guard let resp = await requestTravelEvents(from: from, to: to, origins: origins) else {
+            return .failed
+        }
+        guard origins == originIatas else { return .failed }
+        guard resp.enriched ?? true else { return .pending }
+        let bucket = Dictionary(resp.events.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        eventsCache[key] = bucket
+        return .confirmed(Self.sortedEvents(from: bucket))
+    }
+
+    private func requestTravelEvents(from: Int64, to: Int64, origins: [String]) async -> TravelEventsResponse? {
+        do {
+            return try await APIClient.getTravelEvents(from: from, to: to, origins: origins)
+        } catch {
+            return nil
+        }
+    }
+
+    private func eventsCacheKey(origins: [String], from: Int64, to: Int64) -> String {
+        "\(origins.joined(separator: ","))|\(from)-\(to)"
+    }
+
+    private static func sortedEvents(from bucket: [String: TravelEvent]) -> [TravelEvent] {
+        bucket.values.sorted {
+            $0.start_ms == $1.start_ms ? $0.id < $1.id : $0.start_ms < $1.start_ms
+        }
+    }
 
     /// Only a confirmed (enriched) answer may be shown. An unenriched answer is
     /// `pending`, so the loader stays up and we retry — no pin is ever retracted.
     private func loadEvents(generation: Int) async -> LoadOutcome {
         let (from, to) = dayRange(offset: selectedDayOffset)
-        let key = "\(originIatas.joined(separator: ","))|\(from)-\(to)"
+        let key = eventsCacheKey(origins: originIatas, from: from, to: to)
         if let cached = eventsCache[key], !cached.isEmpty {
             apply(cached, generation: generation)
             return .confirmed
@@ -676,23 +797,59 @@ final class TripsViewModel: ObservableObject, MapContentProvider {
         tagCounts = counts
     }
 
+    func loadCitiesIfNeeded() {
+        guard cities.isEmpty, !isLoadingCities else { return }
+        loadCities()
+    }
+
     /// The backend reads route_days, so this never calls a provider.
     func loadCities() {
         citiesTask?.cancel()
+        citiesGeneration += 1
+        let generation = citiesGeneration
+        isLoadingCities = true
         let origins = originIatas
         let day = dayIso(offset: selectedDayOffset)
         citiesTask = Task { [weak self] in
-            do {
-                let resp = try await APIClient.getCities(origins: origins, day: day)
-                guard !Task.isCancelled, let self else { return }
-                self.cities = resp.cities
-                self.cityBreakCount = self.visibleCities.count
-                self.refreshTagCounts()
-            } catch {
-                guard !(error is CancellationError) else { return }
-                print("Failed to load cities:", error)
-            }
+            await self?.performCityLoad(origins: origins, day: day, generation: generation)
         }
+    }
+
+    func refreshCities() async {
+        loadCities()
+        await citiesTask?.value
+    }
+
+    private func performCityLoad(origins: [String], day: String, generation: Int) async {
+        defer { finishCityLoad(generation: generation) }
+        do {
+            let resp = try await APIClient.getCities(origins: origins, day: day)
+            applyLoadedCities(resp.cities, generation: generation)
+        } catch {
+            logCityLoadError(error)
+        }
+    }
+
+    private func applyLoadedCities(_ loaded: [TravelCity], generation: Int) {
+        guard !Task.isCancelled, citiesGeneration == generation else { return }
+        cities = uniqueCities(from: loaded)
+        cityBreakCount = visibleCities.count
+        refreshTagCounts()
+    }
+
+    private func uniqueCities(from loaded: [TravelCity]) -> [TravelCity] {
+        var seen = Set<String>()
+        return loaded.filter { seen.insert($0.id).inserted }
+    }
+
+    private func logCityLoadError(_ error: Error) {
+        guard !(error is CancellationError) else { return }
+        print("Failed to load cities:", error)
+    }
+
+    private func finishCityLoad(generation: Int) {
+        guard citiesGeneration == generation else { return }
+        isLoadingCities = false
     }
 
     /// `YYYY-MM-DD` (Europe/Warsaw) for a day offset, matching `dayRange`.

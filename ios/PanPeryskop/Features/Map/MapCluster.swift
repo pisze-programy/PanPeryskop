@@ -60,20 +60,33 @@ struct ClusterConfig {
 }
 
 func clusterItems(_ items: [MapClusterItem], radiusDegrees: Double, config: ClusterConfig = .continental) -> [MapCluster] {
-    guard !items.isEmpty, radiusDegrees > 0 else { return [] }
+    guard !items.isEmpty, radiusDegrees > 0, radiusDegrees.isFinite else { return [] }
     let radiusLng = config.longitudeScale
         ? radiusDegrees / max(cos(config.anchor.latitude * .pi / 180), 0.01)
         : radiusDegrees
     var buckets: [String: [MapClusterItem]] = [:]
     buckets.reserveCapacity(items.count)
     for item in items {
-        let lat = Int(((item.lat - config.anchor.latitude) / radiusDegrees).rounded(.down))
-        let lng = Int(((item.lng - config.anchor.longitude) / radiusLng).rounded(.down))
-        buckets["\(lat):\(lng)", default: []].append(item)
+        guard let key = bucketKey(for: item, radiusDegrees: radiusDegrees, radiusLng: radiusLng, anchor: config.anchor) else { continue }
+        buckets[key, default: []].append(item)
     }
-    return buckets.map { key, group in
-        cluster(group, id: key)
-    }
+    return buckets
+        .sorted { $0.key < $1.key }
+        .map { cluster($0.value, id: $0.key) }
+}
+
+private func bucketKey(
+    for item: MapClusterItem,
+    radiusDegrees: Double,
+    radiusLng: Double,
+    anchor: CLLocationCoordinate2D
+) -> String? {
+    guard item.lat.isFinite, item.lng.isFinite, radiusLng > 0, radiusLng.isFinite else { return nil }
+    let latDelta = ((item.lat - anchor.latitude) / radiusDegrees).rounded(.down)
+    let lngDelta = ((item.lng - anchor.longitude) / radiusLng).rounded(.down)
+    guard latDelta.isFinite, lngDelta.isFinite else { return nil }
+    guard abs(latDelta) <= Double(Int.max / 2), abs(lngDelta) <= Double(Int.max / 2) else { return nil }
+    return "\(Int(latDelta)):\(Int(lngDelta))"
 }
 
 private func cluster(_ group: [MapClusterItem], id: String) -> MapCluster {

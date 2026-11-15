@@ -4,11 +4,14 @@ struct NicknameEditView: View {
     @EnvironmentObject private var authManager: AuthManager
     @Environment(\.dismiss) private var dismiss
 
+    private let initialTrimmed: String
     @State private var name: String
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @FocusState private var isNameFocused: Bool
 
     init(initial: String) {
+        self.initialTrimmed = initial.trimmingCharacters(in: .whitespacesAndNewlines)
         _name = State(initialValue: initial)
     }
 
@@ -19,17 +22,12 @@ struct NicknameEditView: View {
                     TextField("Nazwa użytkownika", text: $name)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .focused($isNameFocused)
                 } footer: {
                     Text("Nazwa użytkownika nie może być pusta (3–30 znaków).")
                 }
 
-                if let errorMessage {
-                    Section {
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
-                }
+                errorSection
             }
             .navigationTitle("Zmień nazwę użytkownika")
             .navigationBarTitleDisplayMode(.inline)
@@ -42,14 +40,30 @@ struct NicknameEditView: View {
                         .disabled(!isValid || isSaving)
                 }
             }
+            .onAppear {
+                isNameFocused = true
+            }
         }
         .interactiveDismissDisabled(isSaving)
     }
 
-    private var trimmed: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+    @ViewBuilder
+    private var errorSection: some View {
+        if let errorMessage {
+            Section {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
+        }
+    }
+
+    private var trimmed: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     private var isValid: Bool {
-        (3...30).contains(trimmed.count)
+        (3...30).contains(trimmed.count) && trimmed != initialTrimmed
     }
 
     private func save() async {

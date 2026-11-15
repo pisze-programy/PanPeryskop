@@ -6,40 +6,53 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     @Published var posts: [Post] = []
     @Published var isLoading = false
     @Published var selectedCity: City = CatalogueStore.shared.defaultCity
-    /// Canonical event tags for the map filter chips (backend order).
     @Published var tags: [TagPill] = []
-    /// Selected tag filter (all by default, at least one stays on), persisted.
     @Published private var tagSelection = MultiTagSelection(prefsKey: MapPrefs.selectedTags)
-    // Selected day offset 0…3 (dziś / jutro / +2 / +3). Kept only as a live variable
-    // (no persistence) — resets to today on a fresh launch, survives view switches.
     @Published var selectedDayOffset: Int = 0
-    /// Event-count badge per tag id for the selected day+city (city scope, not viewport).
-    /// Refreshed on app-start and city/day/category/tag change — seeds change rarely, never polled.
     @Published var tagCounts: [String: Int] = [:]
 
-    /// nil = no tag filter (all tags selected, or not loaded yet).
     private var tagFilterParam: String? {
         tagSelection.param(all: Set(tags.map(\.id)))
     }
+    var selectedTagsParam: String? { tagFilterParam }
+    static let cityRadiusDegrees = 0.2
+
+    static func cityBBox(for city: City) -> MapBBox {
+        MapBBox(
+            swLat: city.lat - cityRadiusDegrees,
+            swLng: city.lng - cityRadiusDegrees,
+            neLat: city.lat + cityRadiusDegrees,
+            neLng: city.lng + cityRadiusDegrees
+        )
+    }
+
     var currentUserId: String?
     private var viewport: MapBBox?
-    /// Downloaded 50 km squares, newest first (max `maxSquares`). Moving inside a
-    /// square never refetches; leaving it downloads only the new squares. Cleared
-    /// when the day or tags change.
     private var squares: [String: [String: Post]] = [:]
     private var squaresOrder: [String] = []
-    /// Posts fetched directly (deep link) — not tied to a square.
     private var extraPosts: [String: Post] = [:]
     private var knownPostIds: Set<String> = []
     private var pollingTask: Task<Void, Never>?
-    private var inFlightSquares: Set<String> = []
+    private var tagCountsTask: Task<Void, Never>?
+    private var inFlightSquares: [String: InFlightSquare] = [:]
+    private var feedGeneration = 0
+    private var fetchSequence = 0
     private var isRegionFetchPending = false
     private var isCityTransitionPending = false
     private var cityTransitionTask: Task<Void, Never>?
-    private static let squareSize = 0.45
-    /// A full zoom-out covers many squares; the cap must fit them, and a visible
-    /// square is never evicted (see `pruneSquares`).
+    private nonisolated static let squareSize = 0.45
+    // Visible squares are never evicted, so zoom-out needs a high cache cap.
     private static let maxSquares = 64
+
+    private struct InFlightSquare {
+        let flightID: UUID
+        let isUser: Bool
+    }
+
+    private struct SquareFetchResult: Sendable {
+        let id: String
+        let stories: [Post]
+    }
 
     private enum MapPrefs {
         static let cityId = "map.last_city_id"
@@ -58,42 +71,53 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         let savedCityId = UserDefaults.standard.string(forKey: MapPrefs.cityId)
         selectedCity = CatalogueStore.shared.city(id: savedCityId ?? "") ?? CatalogueStore.shared.defaultCity
         selectedDayOffset = min(StoredDay.loadOffset(key: MapPrefs.selectedDay) ?? 0, Self.maxDayOffset)
+        restoreCachedTags()
         loadTags()
         loadTagCounts()
     }
 
-    // MARK: - Tag filter (events only)
-
     private static let tagsCacheKey = "tags.cache"
 
-    /// Fetch the canonical tag list once at startup; cache in UserDefaults and
-    /// overwrite it whenever fresh data arrives. On a network failure fall back
-    /// to the cached list so the chips still render.
+    private func restoreCachedTags() {
+        guard let cached = UserDefaults.standard.string(forKey: Self.tagsCacheKey),
+              let data = cached.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(TagsResponse.self, from: data),
+              !decoded.tags.isEmpty else { return }
+        tags = decoded.tags
+        tagSelection.sync(all: Set(tags.map(\.id)))
+    }
+
+    private func cacheTags(_ response: TagsResponse) {
+        guard let data = try? JSONEncoder().encode(response),
+              let json = String(data: data, encoding: .utf8) else { return }
+        UserDefaults.standard.set(json, forKey: Self.tagsCacheKey)
+    }
+
+    private func applyTags(_ response: TagsResponse) {
+        let previousParam = tagFilterParam
+        tags = response.tags
+        tagSelection.sync(all: Set(tags.map(\.id)))
+        cacheTags(response)
+        guard previousParam != tagFilterParam, viewport != nil else { return }
+        clearFeed()
+        refreshCurrentRegion()
+    }
+
     @MainActor
     func loadTags() {
-        Task {
-            if let cached = UserDefaults.standard.string(forKey: Self.tagsCacheKey),
-               let data = cached.data(using: .utf8),
-               let decoded = try? JSONDecoder().decode(TagsResponse.self, from: data),
-                !decoded.tags.isEmpty {
-                tags = decoded.tags
-                tagSelection.sync(all: Set(tags.map(\.id)))
-            }
+        Task { [weak self] in
+            let resp: TagsResponse
             do {
-                let resp: TagsResponse = try await APIClient.get("/stories/tags")
-                tags = resp.tags
-                tagSelection.sync(all: Set(tags.map(\.id)))
-                if let data = try? JSONEncoder().encode(resp),
-                   let json = String(data: data, encoding: .utf8) {
-                    UserDefaults.standard.set(json, forKey: Self.tagsCacheKey)
-                }
+                resp = try await APIClient.get("/stories/tags")
             } catch {
                 print("Failed to load tags:", error)
+                return
             }
+            guard !Task.isCancelled else { return }
+            self?.applyTags(resp)
         }
     }
 
-    /// Toggle one tag. The last selected tag cannot be turned off.
     func toggleTag(_ id: String) {
         tagSelection.toggle(id)
         clearFeed()
@@ -102,25 +126,25 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
 
     func isTagSelected(_ id: String) -> Bool { tagSelection.isSelected(id) }
 
-    // MARK: - Tag count badges (events, per city+day)
-
-    /// Fetch per-tag event counts for the current city + day. City-scoped (not the
-    /// viewport), so it needs its own endpoint. No timer — counts change only on
-    /// app-start and city/day/category/tag changes.
     @MainActor
     func loadTagCounts() {
-        Task {
+        tagCountsTask?.cancel()
+        let cityId = selectedCity.id
+        let dayOffset = selectedDayOffset
+        let day = dayString(offset: dayOffset)
+        tagCountsTask = Task { [weak self] in
             struct TagCount: Decodable { let tag: String; let count: Int }
             struct TagCountsResponse: Decodable { let total: Int; let counts: [TagCount] }
             guard let resp: TagCountsResponse = try? await APIClient.get(
                 "/stories/tag-counts",
-                params: ["city": selectedCity.id, "day": dayString(offset: selectedDayOffset)]
+                params: ["city": cityId, "day": day]
             ) else { return }
-            tagCounts = Dictionary(uniqueKeysWithValues: resp.counts.map { ($0.tag, $0.count) })
+            guard !Task.isCancelled, let self else { return }
+            guard self.selectedCity.id == cityId, self.selectedDayOffset == dayOffset else { return }
+            self.tagCounts = Dictionary(resp.counts.map { ($0.tag, $0.count) }, uniquingKeysWith: { _, latest in latest })
         }
     }
 
-    /// Tags ordered for the filter chips (see `TagSorting` for the rules).
     var sortedTags: [TagPill] {
         TagSorting.sorted(tags, counts: tagCounts)
     }
@@ -143,8 +167,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         )
     }
 
-    /// A view wider than a city is not a place to return to. Without this cap the
-    /// map reopens over half of Europe after one zoom-out.
+    // Discard wide zoom-outs so relaunches stay on a city.
     private static let maxViewportSpan = 6.0
 
     var initialRegion: MKCoordinateRegion {
@@ -172,20 +195,22 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     }
 
     var allPosts: [Post] {
-        // Day browsing (offset>0) skips the TTL/future window — the server already
-        // scoped the response to the requested event_date (future days have
-        // created_at in the future and would otherwise be dropped client-side).
+        // Future day queries use future created_at, so skip client TTL checks.
         let dayBrowse = selectedDayOffset > 0
-        var byId: [String: Post] = [:]
-        for dict in squares.values { for (id, post) in dict { byId[id] = post } }
-        for (id, post) in extraPosts { byId[id] = post }
-        return byId.values.filter {
-            ($0.isRestaurant || (dayBrowse ? true : $0.isStillValid))
-                && Self.isMapCategory($0.category)
-        }
+        return mergedPostsById().values
+            .filter { ($0.isRestaurant || dayBrowse || $0.isStillValid) && Self.isMapCategory($0.category) }
+            .sorted { $0.id < $1.id }
     }
 
-    /// Map shows seed events plus the evergreen curated restaurants.
+    private func mergedPostsById() -> [String: Post] {
+        var byId: [String: Post] = [:]
+        for dict in squares.values {
+            byId.merge(dict) { _, latest in latest }
+        }
+        byId.merge(extraPosts) { _, latest in latest }
+        return byId
+    }
+
     private static func isMapCategory(_ category: String?) -> Bool {
         let value = category ?? AppConstants.categoryEvents
         return value == AppConstants.categoryEvents || value == AppConstants.categoryFood
@@ -199,19 +224,11 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         allPosts.map { .pin(MapPin(post: $0)) }
     }
 
-    /// YYYY-MM-DD (Europe/Warsaw) for a day offset relative to today.
     func dayString(offset: Int) -> String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "Europe/Warsaw")!
-        let date = calendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
-        let f = DateFormatter()
-        f.calendar = calendar
-        f.locale = Locale(identifier: "pl_PL")
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: date)
+        let date = AppConstants.warsawCalendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
+        return AppConstants.isoDayFormatter.string(from: date)
     }
 
-    /// Day-browser range, shared by the slider and the day sheet.
     static let minDayOffset = 0
     static let maxDayOffset = 5
     static var dayOffsets: [Int] { Array(minDayOffset...maxDayOffset) }
@@ -232,7 +249,6 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
 
     private var debounceTask: Task<Void, Never>?
 
-    /// Re-resolve the selected city after the catalogue changes (refresh).
     func reloadCities() {
         selectedCity = CatalogueStore.shared.city(id: selectedCity.id) ?? CatalogueStore.shared.defaultCity
     }
@@ -242,12 +258,8 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         UserDefaults.standard.set(city.id, forKey: MapPrefs.cityId)
         MapPrefs.viewportKeys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
         clearFeed()
-        let region = city.region
-        let swLat = region.center.latitude - region.span.latitudeDelta / 2
-        let swLng = region.center.longitude - region.span.longitudeDelta / 2
-        let neLat = region.center.latitude + region.span.latitudeDelta / 2
-        let neLng = region.center.longitude + region.span.longitudeDelta / 2
-        fetchStories(swLat: swLat, swLng: swLng, neLat: neLat, neLng: neLng)
+        let box = Self.bbox(for: city.region)
+        fetchStories(swLat: box.swLat, swLng: box.swLng, neLat: box.neLat, neLng: box.neLng)
         startCityTransition()
         loadTagCounts()
     }
@@ -270,50 +282,127 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
 
     private func scheduleVisibleFetch(debounced: Bool) {
         debounceTask?.cancel()
+        fetchSequence += 1
+        let seq = fetchSequence
+        removeUserInFlightSquares()
+        isRegionFetchPending = true
         debounceTask = Task { [weak self] in
-            guard let self else { return }
             if debounced {
                 try? await Task.sleep(nanoseconds: 500_000_000)
             }
-            guard !Task.isCancelled else { return }
-            await self.fetchVisibleSquares(refresh: false, trackLoad: true)
-            self.isRegionFetchPending = false
+            guard !Task.isCancelled, let self, self.fetchSequence == seq else { return }
+            await self.fetchVisibleSquares(refresh: false, trackLoad: true, userSeq: seq)
+            if self.fetchSequence == seq {
+                self.isRegionFetchPending = false
+            }
         }
     }
 
-    /// Download the 50 km squares that are on screen. `refresh` replaces squares we
-    /// already have (the poll); otherwise only the missing ones are fetched.
     @discardableResult
-    private func fetchVisibleSquares(refresh: Bool, trackLoad: Bool) async -> [Post] {
-        guard let viewport else { return [] }
-        let ids = Self.squareIds(in: viewport)
-        let visible = Set(ids)
-        let targets = ids.filter { !inFlightSquares.contains($0) && (refresh || squares[$0] == nil) }
-        guard !targets.isEmpty else {
-            pruneSquares(keeping: visible)
+    private func fetchVisibleSquares(refresh: Bool, trackLoad: Bool, userSeq: Int? = nil) async -> [Post] {
+        guard !Task.isCancelled, let viewport else {
+            await endUserLoadIfNeeded(trackLoad: trackLoad, userSeq: userSeq)
             return []
         }
-        inFlightSquares.formUnion(targets)
-        defer { inFlightSquares.subtract(targets) }
-        if trackLoad { startUserLoad() }
+        let ids = Self.squareIds(in: viewport)
+        let visible = Set(ids)
         let token = feedToken
-        var fetched: [Post] = []
-        for id in targets {
-            fetched.append(contentsOf: await fetchSquare(id, token: token))
+        let targets = missingSquareTargets(ids: ids, token: token, refresh: refresh)
+        guard !targets.isEmpty else {
+            _ = pruneSquares(keeping: visible)
+            await endUserLoadIfNeeded(trackLoad: trackLoad, userSeq: userSeq)
+            return []
         }
-        pruneSquares(keeping: visible)
+        let flightID = registerInFlightSquares(targets, token: token, isUser: trackLoad)
+        defer { unregisterInFlightSquares(flightID: flightID) }
+        if trackLoad { startUserLoad() }
+        let results = await fetchSquaresBatch(targets: targets)
+        guard !Task.isCancelled, token == feedToken else {
+            await endUserLoadIfNeeded(trackLoad: trackLoad, userSeq: userSeq)
+            return []
+        }
+        let fetched = applySquareResults(results, visible: visible)
         if trackLoad { knownPostIds.formUnion(fetched.map(\.id)) }
-        if trackLoad { await finishUserLoad() }
+        await endUserLoadIfNeeded(trackLoad: trackLoad, userSeq: userSeq)
+        return fetched
+    }
+
+    private func missingSquareTargets(ids: [String], token: String, refresh: Bool) -> [String] {
+        ids.filter { id in
+            inFlightSquares[Self.flightKey(token: token, id: id)] == nil && (refresh || squares[id] == nil)
+        }
+    }
+
+    private static func flightKey(token: String, id: String) -> String {
+        "\(token)|\(id)"
+    }
+
+    private func registerInFlightSquares(_ targets: [String], token: String, isUser: Bool) -> UUID {
+        let flightID = UUID()
+        let entry = InFlightSquare(flightID: flightID, isUser: isUser)
+        for id in targets {
+            inFlightSquares[Self.flightKey(token: token, id: id)] = entry
+        }
+        return flightID
+    }
+
+    private func unregisterInFlightSquares(flightID: UUID) {
+        inFlightSquares = inFlightSquares.filter { $0.value.flightID != flightID }
+    }
+
+    private func removeUserInFlightSquares() {
+        inFlightSquares = inFlightSquares.filter { !$0.value.isUser }
+    }
+
+    private func fetchSquaresBatch(targets: [String]) async -> [SquareFetchResult] {
+        let day = selectedDayOffset > 0 ? dayString(offset: selectedDayOffset) : nil
+        let tags = tagFilterParam
+        return await withTaskGroup(of: SquareFetchResult?.self) { group in
+            for id in targets {
+                group.addTask {
+                    await Self.fetchSquare(id: id, day: day, tags: tags)
+                }
+            }
+            var collected: [SquareFetchResult] = []
+            for await case let result? in group {
+                collected.append(result)
+            }
+            return collected
+        }
+    }
+
+    private func applySquareResults(_ results: [SquareFetchResult], visible: Set<String>) -> [Post] {
+        var fetched: [Post] = []
+        for result in results {
+            squares[result.id] = Dictionary(result.stories.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
+            fetched.append(contentsOf: result.stories)
+        }
+        let didPrune = pruneSquares(keeping: visible)
+        if !results.isEmpty || didPrune {
+            posts = allPosts
+        }
         return fetched
     }
 
     private var feedToken: String {
-        "\(selectedDayOffset)|\(tagFilterParam ?? "all")"
+        "\(feedGeneration)|\(selectedDayOffset)|\(tagFilterParam ?? "all")"
     }
 
-    @discardableResult
-    private func fetchSquare(_ id: String, token: String) async -> [Post] {
-        guard let box = Self.squareBox(id) else { return [] }
+    nonisolated private static func fetchSquare(id: String, day: String?, tags: String?) async -> SquareFetchResult? {
+        guard !Task.isCancelled, let box = squareBox(id) else { return nil }
+        let params = squareParams(box: box, day: day, tags: tags)
+        let resp: PostListResponse
+        do {
+            resp = try await APIClient.get("/stories", params: params)
+        } catch {
+            handleSquareError(error)
+            return nil
+        }
+        guard !Task.isCancelled else { return nil }
+        return SquareFetchResult(id: id, stories: resp.stories)
+    }
+
+    nonisolated private static func squareParams(box: MapBBox, day: String?, tags: String?) -> [String: String] {
         var params = [
             "sw_lat": String(box.swLat),
             "sw_lng": String(box.swLng),
@@ -322,39 +411,31 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
             "category": AppConstants.categoryEvents,
             "limit": "1000",
         ]
-        if selectedDayOffset > 0 {
-            params["day"] = dayString(offset: selectedDayOffset)
-        }
-        if let tagFilterParam {
-            params["tags"] = tagFilterParam
-        }
-        do {
-            let resp: PostListResponse = try await APIClient.get("/stories", params: params)
-            guard token == feedToken else { return [] } // filter changed mid-flight
-            var dict: [String: Post] = [:]
-            for post in resp.stories { dict[post.id] = post }
-            squares[id] = dict
-            posts = allPosts
-            return resp.stories
-        } catch {
-            print("Failed to load stories:", error)
-            return []
-        }
+        if let day { params["day"] = day }
+        if let tags { params["tags"] = tags }
+        return params
     }
 
-    /// Keep every visible square and drop only the oldest OFF-SCREEN ones beyond
-    /// the cap. A visible square is never evicted, so a zoom-out can never blank
-    /// the pins that are already on screen.
-    private func pruneSquares(keeping visible: Set<String>) {
+    nonisolated private static func handleSquareError(_ error: Error) {
+        if error is CancellationError { return }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return }
+        print("Failed to load stories:", error)
+    }
+
+    private func pruneSquares(keeping visible: Set<String>) -> Bool {
         squaresOrder.removeAll { visible.contains($0) }
         squaresOrder.insert(contentsOf: visible, at: 0)
+        var didPrune = false
         while squaresOrder.count > Self.maxSquares, let last = squaresOrder.last, !visible.contains(last) {
             squaresOrder.removeLast()
-            squares.removeValue(forKey: last)
+            let removed = squares.removeValue(forKey: last) != nil
+            didPrune = didPrune || removed
         }
+        return didPrune
     }
 
     private func clearFeed() {
+        feedGeneration += 1
         squares.removeAll()
         squaresOrder.removeAll()
         extraPosts.removeAll()
@@ -367,14 +448,13 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         let la1 = Int(floor(box.neLat / squareSize))
         let lo0 = Int(floor(box.swLng / squareSize))
         let lo1 = Int(floor(box.neLng / squareSize))
-        var out: [String] = []
-        for la in la0...la1 {
-            for lo in lo0...lo1 { out.append("\(la)_\(lo)") }
+        guard la0 <= la1, lo0 <= lo1 else { return [] }
+        return (la0...la1).flatMap { la in
+            (lo0...lo1).map { lo in "\(la)_\(lo)" }
         }
-        return out
     }
 
-    private static func squareBox(_ id: String) -> MapBBox? {
+    nonisolated private static func squareBox(_ id: String) -> MapBBox? {
         let parts = id.split(separator: "_")
         guard parts.count == 2, let la = Int(parts[0]), let lo = Int(parts[1]) else { return nil }
         let swLat = Double(la) * squareSize
@@ -391,8 +471,6 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         )
     }
 
-    // MARK: - User-load indicator (day/city/tag changes — never the poll)
-
     private var loadingSince: Date?
 
     private func startUserLoad() {
@@ -400,19 +478,27 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         if !isLoading { isLoading = true }
     }
 
-    /// Keep the indicator up for at least `minLoadingIndicatorMs` so a fast
-    /// response does not flash the spinner.
-    private func finishUserLoad() async {
-        guard isLoading else { return }
+    private func endUserLoadIfNeeded(trackLoad: Bool, userSeq: Int?) async {
+        guard trackLoad else { return }
+        await finishUserLoad(userSeq: userSeq)
+    }
+
+    // Hold the indicator briefly so fast responses do not flash the spinner.
+    private func finishUserLoad(userSeq: Int?) async {
+        guard isLoading, userSeq == nil || userSeq == fetchSequence else { return }
         if let since = loadingSince {
-            let minS = Double(AppConstants.minLoadingIndicatorMs) / 1000
-            let elapsed = Date().timeIntervalSince(since)
-            if elapsed < minS {
-                try? await Task.sleep(nanoseconds: UInt64((minS - elapsed) * 1_000_000_000))
-            }
+            await sleepMinimumIndicator(since: since)
         }
+        guard userSeq == nil || userSeq == fetchSequence else { return }
         loadingSince = nil
         isLoading = false
+    }
+
+    private func sleepMinimumIndicator(since: Date) async {
+        let minS = Double(AppConstants.minLoadingIndicatorMs) / 1000
+        let elapsed = Date().timeIntervalSince(since)
+        guard elapsed < minS else { return }
+        try? await Task.sleep(nanoseconds: UInt64((minS - elapsed) * 1_000_000_000))
     }
 
     private static let pollInterval: UInt64 = 20_000_000_000
@@ -422,8 +508,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: Self.pollInterval)
-                guard !Task.isCancelled else { return }
-                guard let self else { return }
+                guard !Task.isCancelled, let self else { return }
                 await self.pollStories()
             }
         }
@@ -439,8 +524,7 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         let fetched = await fetchVisibleSquares(refresh: true, trackLoad: false)
         guard !Task.isCancelled, !fetched.isEmpty else { return }
         let hasNew = fetched.contains {
-            !knownPostIds.contains($0.id)
-                && $0.user_id != currentUserId
+            !knownPostIds.contains($0.id) && $0.user_id != currentUserId
         }
         knownPostIds.formUnion(fetched.map(\.id))
         if hasNew {
@@ -449,15 +533,18 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     }
 
     private func replacePost(_ post: Post) {
+        var didUpdate = false
         for (id, dict) in squares where dict[post.id] != nil {
-            var updated = dict
-            updated[post.id] = post
-            squares[id] = updated
-            posts = allPosts
-            return
+            var next = dict
+            next[post.id] = post
+            squares[id] = next
+            didUpdate = true
         }
         if extraPosts[post.id] != nil {
             extraPosts[post.id] = post
+            didUpdate = true
+        }
+        if didUpdate {
             posts = allPosts
         }
     }
@@ -465,24 +552,22 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
     func markWatched(_ postId: String) async {
         do {
             try await APIClient.postEmpty("/actions/\(postId)/watched")
-            if let post = posts.first(where: { $0.id == postId }) {
-                replacePost(post.with(watched: true))
-            }
+            applyWatched(postId: postId)
         } catch {
             print("Failed to mark watched:", error)
         }
+    }
+
+    private func applyWatched(postId: String) {
+        guard let post = posts.first(where: { $0.id == postId }) else { return }
+        replacePost(post.with(watched: true))
     }
 
     func toggleLike(_ postId: String) async -> Bool {
         do {
             struct LikeResp: Codable { let liked: Bool }
             let resp: LikeResp = try await APIClient.postEmptyBody("/actions/\(postId)/like")
-            if let post = posts.first(where: { $0.id == postId }) {
-                replacePost(post.with(
-                    liked: resp.liked,
-                    likesCount: resp.liked ? post.likes_count + 1 : max(0, post.likes_count - 1)
-                ))
-            }
+            applyLike(postId: postId, liked: resp.liked)
             return resp.liked
         } catch {
             print("Failed to toggle like:", error)
@@ -490,21 +575,28 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         }
     }
 
+    private func applyLike(postId: String, liked: Bool) {
+        guard let post = posts.first(where: { $0.id == postId }) else { return }
+        let count = liked ? post.likes_count + 1 : max(0, post.likes_count - 1)
+        replacePost(post.with(liked: liked, likesCount: count))
+    }
+
     func toggleDislike(_ postId: String) async -> Bool {
         do {
             struct DislikeResp: Codable { let disliked: Bool }
             let resp: DislikeResp = try await APIClient.postEmptyBody("/actions/\(postId)/dislike")
-            if let post = posts.first(where: { $0.id == postId }) {
-                replacePost(post.with(
-                    disliked: resp.disliked,
-                    dislikesCount: resp.disliked ? post.dislikes_count + 1 : max(0, post.dislikes_count - 1)
-                ))
-            }
+            applyDislike(postId: postId, disliked: resp.disliked)
             return resp.disliked
         } catch {
             print("Failed to toggle dislike:", error)
             return false
         }
+    }
+
+    private func applyDislike(postId: String, disliked: Bool) {
+        guard let post = posts.first(where: { $0.id == postId }) else { return }
+        let count = disliked ? post.dislikes_count + 1 : max(0, post.dislikes_count - 1)
+        replacePost(post.with(disliked: disliked, dislikesCount: count))
     }
 
     func sharePost(_ postId: String) async {
@@ -519,15 +611,16 @@ class MapViewModel: ObservableObject, MapContentProvider, StoryActions {
         if let existing = posts.first(where: { $0.id == id }) {
             return existing
         }
+        let post: Post
         do {
-            let post: Post = try await APIClient.get("/posts/\(id)")
-            extraPosts[post.id] = post
-            posts = allPosts
-            return post
+            post = try await APIClient.get("/posts/\(id)")
         } catch {
             print("Failed to fetch post \(id):", error)
             return nil
         }
+        extraPosts[post.id] = post
+        posts = allPosts
+        return post
     }
 
 }

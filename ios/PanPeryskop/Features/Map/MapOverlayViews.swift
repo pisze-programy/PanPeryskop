@@ -35,10 +35,22 @@ struct AirportPinBadge: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .allowsHitTesting(false)
-        .onAppear {
-            withAnimation(.linear(duration: 1.1).repeatForever(autoreverses: false)) {
-                shimmerPhase = 1.6
-            }
+        .onAppear { startShimmer() }
+        .onDisappear { resetShimmer() }
+    }
+
+    private func startShimmer() {
+        resetShimmer()
+        withAnimation(.linear(duration: 1.1).repeatForever(autoreverses: false)) {
+            shimmerPhase = 1.6
+        }
+    }
+
+    private func resetShimmer() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            shimmerPhase = -1
         }
     }
 }

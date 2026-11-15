@@ -2,23 +2,26 @@ import SwiftUI
 import MapKit
 
 struct MapScreen: View {
-    @StateObject private var mapViewModel = MapViewModel()
-    let category: MapCategory
-    let onSelectCategory: (MapCategory) -> Void
-    let onProfile: () -> Void
+    @ObservedObject var mapViewModel: MapViewModel
     @ObservedObject var tripsViewModel: TripsViewModel
-    @StateObject private var cameraController = MapCameraController()
+    let category: MapCategory
+    let isActiveTab: Bool
+    let onSelectCity: (City) -> Void
 
     @Binding var showStoryViewer: Bool
     @Binding var selectedStoryIndex: Int
     @Binding var storyPosts: [Post]
+
+    @StateObject private var cameraController = MapCameraController()
     @EnvironmentObject private var authManager: AuthManager
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var showCityList = false
     @State private var showDayList = false
     @State private var showTripsDayList = false
-
-    @Environment(\.scenePhase) private var scenePhase
+    @State private var hasRequestedInitialEvents = false
+    @State private var activeMapCategory: MapCategory?
+    @State private var syncedCityId: String?
 
     var body: some View {
         ZStack {
@@ -40,18 +43,7 @@ struct MapScreen: View {
             )
             .ignoresSafeArea()
 
-            if AppConstants.showsFPS {
-                VStack {
-                    Spacer()
-                    HStack {
-                        FPSOverlay()
-                        Spacer()
-                    }
-                    .padding(.leading, Theme.Spacing.l)
-                    .padding(.bottom, 4)
-                }
-                .allowsHitTesting(false)
-            }
+            fpsOverlay
 
             VStack(spacing: 0) {
                 MapFilterBar(
@@ -65,37 +57,11 @@ struct MapScreen: View {
                 Spacer()
             }
 
-            if !showStoryViewer {
-                VStack(spacing: 12) {
-                    Spacer()
-                    ToastView()
-                    CategoryPill(
-                        selection: category,
-                        eventsLoading: mapViewModel.isLoading,
-                        tripsLoading: tripsViewModel.isLoading,
-                        onSelect: onSelectCategory
-                    )
-                    AppTabBar(
-                        onHome: { onSelectCategory(.events) },
-                        onProfile: onProfile
-                    )
-                    .padding(.bottom, 32)
-                }
-            }
-
             rightSlider
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.82), value: category)
         .onAppear {
-            mapViewModel.currentUserId = authManager.userId
-            mapViewModel.startPolling()
-            let region = mapViewModel.initialRegion
-            mapViewModel.fetchStories(
-                swLat: region.center.latitude - region.span.latitudeDelta / 2,
-                swLng: region.center.longitude - region.span.longitudeDelta / 2,
-                neLat: region.center.latitude + region.span.latitudeDelta / 2,
-                neLng: region.center.longitude + region.span.longitudeDelta / 2
-            )
+            handleAppear()
         }
         .onDisappear {
             mapViewModel.stopPolling()
@@ -103,26 +69,18 @@ struct MapScreen: View {
         .onChange(of: authManager.userId) { _, newValue in
             mapViewModel.currentUserId = newValue
         }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active, category == .events else {
-                mapViewModel.stopPolling()
-                return
-            }
-            mapViewModel.startPolling()
+        .onChange(of: scenePhase) { _, _ in
+            syncPolling()
+        }
+        .onChange(of: isActiveTab) { _, active in
+            handleActiveTabChange(active)
         }
         .onChange(of: category) { _, newCategory in
-            tripsViewModel.clearSelectionPublic()
-            switch newCategory {
-            case .events:
-                mapViewModel.startPolling()
-                cameraController.fly(to: mapViewModel.selectedCity.region)
-            case .trips:
-                mapViewModel.stopPolling()
-                tripsViewModel.syncCity(mapViewModel.selectedCity)
-                cameraController.fly(to: tripsViewModel.initialRegion, distance: tripsViewModel.initialDistance)
-                Task { await CatalogueStore.shared.refresh() }
-                tripsViewModel.refresh(showLoader: true)
-            }
+            handleCategoryChange(newCategory)
+        }
+        .onChange(of: tripsViewModel.selectionId) { _, _ in
+            guard isActiveTab, let coordinate = tripsViewModel.selectionCoordinate else { return }
+            cameraController.flyToAboveSheet(coordinate)
         }
         .sheet(isPresented: $showCityList) {
             CityListView(selectedCity: sharedCity) { city in
@@ -145,23 +103,6 @@ struct MapScreen: View {
                 onSelect: { tripsViewModel.commitDay($0) }
             )
         }
-        .sheet(item: $tripsViewModel.selectedEventGroup) { _ in
-            ClusterSheet(viewModel: tripsViewModel)
-                .trackScreen("cluster")
-        }
-        .onChange(of: tripsViewModel.selectionId) { _, _ in
-            guard let coordinate = tripsViewModel.selectionCoordinate else { return }
-            cameraController.flyToAboveSheet(coordinate)
-        }
-        .onChange(of: tripsViewModel.selectedEventGroup?.id) { _, id in
-            guard id == nil else { return }
-            tripsViewModel.clearSelectionPublic()
-        }
-        .onChange(of: tripsViewModel.selectedEventGroup?.id) { _, id in
-            guard id != nil, let group = tripsViewModel.selectedEventGroup else { return }
-            MetaSignals.content(kind: .event, id: group.contentId, name: group.events.first?.title ?? group.contentId)
-            ProductAnalytics.contentOpened(kind: .event, id: group.contentId)
-        }
     }
 
     private var activeProvider: any MapContentProvider {
@@ -171,22 +112,23 @@ struct MapScreen: View {
         }
     }
 
-    /// One selected city for both scopes — picking it in the local scope also
-    /// sets the departure city.
     private var sharedCity: City {
         category == .trips ? tripsViewModel.selectedCity : mapViewModel.selectedCity
     }
 
-    private func selectCity(_ city: City) {
-        MetaSignals.content(kind: .city, id: city.id, name: city.name)
-        ProductAnalytics.contentOpened(kind: .city, id: city.id)
-        mapViewModel.selectCity(city)
-        switch category {
-        case .events:
-            cameraController.fly(to: city.region)
-        case .trips:
-            tripsViewModel.selectCity(city)
-            cameraController.fly(to: tripsViewModel.initialRegion, distance: tripsViewModel.initialDistance)
+    @ViewBuilder
+    private var fpsOverlay: some View {
+        if AppConstants.showsFPS {
+            VStack {
+                Spacer()
+                HStack {
+                    FPSOverlay()
+                    Spacer()
+                }
+                .padding(.leading, Theme.Spacing.l)
+                .padding(.bottom, 4)
+            }
+            .allowsHitTesting(false)
         }
     }
 
@@ -208,6 +150,126 @@ struct MapScreen: View {
         }
     }
 
+    private func handleAppear() {
+        mapViewModel.currentUserId = authManager.userId
+        activeMapCategory = category
+        syncedCityId = mapViewModel.selectedCity.id
+        syncPolling()
+        loadInitialScopeIfNeeded()
+    }
+
+    private func handleActiveTabChange(_ active: Bool) {
+        syncPolling()
+        guard active else { return }
+        syncDeferredMapUpdates()
+    }
+
+    private func handleCategoryChange(_ newCategory: MapCategory) {
+        guard isActiveTab else {
+            syncPolling()
+            return
+        }
+        applyCategoryTransition(to: newCategory)
+    }
+
+    private func syncPolling() {
+        guard isActiveTab, category == .events, scenePhase == .active else {
+            mapViewModel.stopPolling()
+            return
+        }
+        mapViewModel.startPolling()
+    }
+
+    private func loadInitialScopeIfNeeded() {
+        guard isActiveTab else { return }
+        switch category {
+        case .events:
+            fetchInitialEventsIfNeeded()
+        case .trips:
+            enterTripsMode(forceRefresh: true)
+        }
+    }
+
+    private func syncDeferredMapUpdates() {
+        if activeMapCategory != category {
+            applyCategoryTransition(to: category, forceTripsRefresh: false)
+            return
+        }
+        let cityChanged = syncedCityId != mapViewModel.selectedCity.id
+        syncedCityId = mapViewModel.selectedCity.id
+        switch category {
+        case .events:
+            refreshEventsIfCityChanged(cityChanged)
+        case .trips:
+            refreshTripsIfNeeded(cityChanged: cityChanged)
+        }
+    }
+
+    private func refreshEventsIfCityChanged(_ cityChanged: Bool) {
+        guard cityChanged else { return }
+        cameraController.fly(to: mapViewModel.initialRegion)
+    }
+
+    private func refreshTripsIfNeeded(cityChanged: Bool) {
+        if cityChanged {
+            cameraController.fly(to: tripsViewModel.initialRegion, distance: tripsViewModel.initialDistance)
+        }
+        guard !tripsViewModel.showPins, !tripsViewModel.isLoading else { return }
+        tripsViewModel.refresh(showLoader: true)
+    }
+
+    private func applyCategoryTransition(to newCategory: MapCategory, forceTripsRefresh: Bool = true) {
+        activeMapCategory = newCategory
+        syncedCityId = mapViewModel.selectedCity.id
+        tripsViewModel.clearSelectionPublic()
+        syncPolling()
+        switch newCategory {
+        case .events:
+            enterEventsMode()
+        case .trips:
+            enterTripsMode(forceRefresh: forceTripsRefresh)
+        }
+    }
+
+    private func enterEventsMode() {
+        cameraController.fly(to: mapViewModel.initialRegion)
+        fetchInitialEventsIfNeeded()
+    }
+
+    private func enterTripsMode(forceRefresh: Bool) {
+        tripsViewModel.syncCity(mapViewModel.selectedCity)
+        cameraController.fly(to: tripsViewModel.initialRegion, distance: tripsViewModel.initialDistance)
+        Task { await CatalogueStore.shared.refresh() }
+        guard forceRefresh || (!tripsViewModel.showPins && !tripsViewModel.isLoading) else { return }
+        tripsViewModel.refresh(showLoader: true)
+    }
+
+    private func fetchInitialEventsIfNeeded() {
+        guard !hasRequestedInitialEvents else { return }
+        hasRequestedInitialEvents = true
+        let region = mapViewModel.initialRegion
+        mapViewModel.fetchStories(
+            swLat: region.center.latitude - region.span.latitudeDelta / 2,
+            swLng: region.center.longitude - region.span.longitudeDelta / 2,
+            neLat: region.center.latitude + region.span.latitudeDelta / 2,
+            neLng: region.center.longitude + region.span.longitudeDelta / 2
+        )
+    }
+
+    private func selectCity(_ city: City) {
+        syncedCityId = city.id
+        onSelectCity(city)
+        flyAfterCitySelect()
+    }
+
+    private func flyAfterCitySelect() {
+        switch category {
+        case .events:
+            cameraController.fly(to: mapViewModel.selectedCity.region)
+        case .trips:
+            cameraController.fly(to: tripsViewModel.initialRegion, distance: tripsViewModel.initialDistance)
+        }
+    }
 
     private func handleTap(_ overlay: MapOverlay) {
         switch overlay {
@@ -255,6 +317,4 @@ struct MapScreen: View {
         selectedStoryIndex = 0
         showStoryViewer = true
     }
-
-
 }

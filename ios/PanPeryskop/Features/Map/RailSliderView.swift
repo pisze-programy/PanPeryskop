@@ -1,17 +1,11 @@
 import SwiftUI
 
-/// Vertical "scroll" rail picker — the mechanics of the day/week slider. The CENTER
-/// of the rail is the selected index (the scale scrolls under it); major ticks for
-/// minIndex…maxIndex with `minorDivisions` graduations between them. Drag up = next
-/// index; release snaps with direction-aware clamp. `label(for:)` renders the value
-/// above the rail (weekday for days, "DD.MM – DD.MM" for weeks).
 struct RailSliderView: View {
     let minIndex: Int
     let maxIndex: Int
     let minorDivisions: Int
     let currentIndex: Int
     let label: (Int) -> String
-    /// Optional label below the wheel ("do DD.MM"); nil = none (day slider).
     var bottomLabel: ((Int) -> String)? = nil
     let onCommit: (Int) -> Void
 
@@ -22,35 +16,27 @@ struct RailSliderView: View {
     @State private var lastTickIndex = -2
     @State private var lastDragDelta: CGFloat = 0
     @State private var lastRawOffset: CGFloat = 0
+    @State private var isPastWall = false
 
     private static let spacing: CGFloat = 72
     private static let railHeight: CGFloat = 150
 
-    private var minorSteps: Set<CGFloat> {
-        var out = Set<CGFloat>()
-        for m in minIndex...(maxIndex - 1) {
-            for k in 1...minorDivisions {
-                out.insert(CGFloat(m) + CGFloat(k) / CGFloat(minorDivisions + 1))
-            }
-        }
-        return out
-    }
+    private var upperBound: Int { max(minIndex, maxIndex) }
 
     private var clampedOffset: CGFloat {
-        min(max(offset, CGFloat(minIndex)), CGFloat(maxIndex))
+        min(max(offset, CGFloat(minIndex)), CGFloat(upperBound))
     }
     private var selectedIndex: Int { Int(clampedOffset.rounded()) }
     private var labelIndex: Int { isScrubbing ? selectedIndex : currentIndex }
 
-    private var majorRange: ClosedRange<Int> { minIndex...maxIndex }
+    private var majorRange: ClosedRange<Int> { minIndex...upperBound }
     private var minorPositions: [CGFloat] {
-        var out: [CGFloat] = []
-        for m in minIndex...(maxIndex - 1) {
-            for k in 1...minorDivisions {
-                out.append(CGFloat(m) + CGFloat(k) / CGFloat(minorDivisions + 1))
+        guard upperBound > minIndex, minorDivisions > 0 else { return [] }
+        return (minIndex..<upperBound).flatMap { major in
+            (1...minorDivisions).map { step in
+                CGFloat(major) + CGFloat(step) / CGFloat(minorDivisions + 1)
             }
         }
-        return out
     }
 
     var body: some View {
@@ -63,11 +49,14 @@ struct RailSliderView: View {
         }
         .onAppear { offset = CGFloat(currentIndex) }
         .onChange(of: currentIndex) { _, newValue in
-            if !isScrubbing {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                    offset = CGFloat(newValue)
-                }
-            }
+            syncOffset(to: newValue)
+        }
+    }
+
+    private func syncOffset(to newValue: Int) {
+        guard !isScrubbing else { return }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+            offset = CGFloat(newValue)
         }
     }
 
@@ -149,54 +138,96 @@ struct RailSliderView: View {
     private var drag: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                if !isScrubbing {
-                    isScrubbing = true
-                    dragStartOffset = clampedOffset
-                    lastTickOffset = clampedOffset
-                    lastTickIndex = Int(clampedOffset.rounded())
-                    lastRawOffset = clampedOffset
-                }
-                lastDragDelta = value.translation.height
-                let raw = dragStartOffset - value.translation.height / Self.spacing
-                let clamped = min(max(raw, CGFloat(minIndex)), CGFloat(maxIndex))
-                offset = raw
-
-                let prevRaw = lastRawOffset
-                lastRawOffset = raw
-                let lo = min(prevRaw, raw), hi = max(prevRaw, raw)
-                var crossed = 0
-                for p in minorSteps where p > lo && p < hi { crossed += 1 }
-                if crossed > 0 { Haptics.sliderMinor(steps: crossed) }
-
-                let newIndex = Int(clamped.rounded())
-                if raw != clamped {
-                    Haptics.sliderWall()
-                } else if newIndex != lastTickIndex {
-                    let jump = abs(clamped - lastTickOffset)
-                    lastTickOffset = clamped
-                    lastTickIndex = newIndex
-                    Haptics.sliderTick(intensity: 0.9 + min(0.1, jump * 0.3))
-                }
+                handleDragChanged(value)
             }
             .onEnded { _ in
-                let frac = clampedOffset.truncatingRemainder(dividingBy: 1)
-                let movingFuture = lastDragDelta < 0
-                let finalRaw: Int
-                if frac > 0.4, movingFuture {
-                    finalRaw = Int(clampedOffset.rounded(.up))
-                } else if frac < 0.6, !movingFuture {
-                    finalRaw = Int(clampedOffset.rounded(.down))
-                } else {
-                    finalRaw = Int(clampedOffset.rounded())
-                }
-                let final = min(max(finalRaw, minIndex), maxIndex)
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
-                    offset = CGFloat(final)
-                }
-                isScrubbing = false
-                lastTickIndex = -2
-                lastDragDelta = 0
-                onCommit(final)
+                handleDragEnded()
             }
+    }
+
+    private func handleDragChanged(_ value: DragGesture.Value) {
+        beginScrubbingIfNeeded()
+        lastDragDelta = value.translation.height
+        let raw = dragStartOffset - value.translation.height / Self.spacing
+        let clamped = min(max(raw, CGFloat(minIndex)), CGFloat(upperBound))
+        offset = raw
+
+        let prevRaw = lastRawOffset
+        lastRawOffset = raw
+        let crossed = crossedMinorCount(from: min(prevRaw, raw), to: max(prevRaw, raw))
+        if crossed > 0 {
+            Haptics.sliderMinor(steps: crossed)
+        }
+        handleTickHaptics(raw: raw, clamped: clamped)
+    }
+
+    private func beginScrubbingIfNeeded() {
+        guard !isScrubbing else { return }
+        isScrubbing = true
+        isPastWall = false
+        dragStartOffset = clampedOffset
+        lastTickOffset = clampedOffset
+        lastTickIndex = Int(clampedOffset.rounded())
+        lastRawOffset = clampedOffset
+    }
+
+    private func handleTickHaptics(raw: CGFloat, clamped: CGFloat) {
+        guard raw == clamped else {
+            triggerWallHapticIfNeeded()
+            return
+        }
+        isPastWall = false
+        let newIndex = Int(clamped.rounded())
+        guard newIndex != lastTickIndex else { return }
+        let jump = abs(clamped - lastTickOffset)
+        lastTickOffset = clamped
+        lastTickIndex = newIndex
+        Haptics.sliderTick(intensity: 0.9 + min(0.1, jump * 0.3))
+    }
+
+    private func triggerWallHapticIfNeeded() {
+        guard !isPastWall else { return }
+        isPastWall = true
+        Haptics.sliderWall()
+    }
+
+    private func crossedMinorCount(from lo: CGFloat, to hi: CGFloat) -> Int {
+        guard upperBound > minIndex, minorDivisions > 0 else { return 0 }
+        let a = max(lo, CGFloat(minIndex)) - CGFloat(minIndex)
+        let b = min(hi, CGFloat(upperBound)) - CGFloat(minIndex)
+        guard b > a else { return 0 }
+        let divisions = minorDivisions + 1
+        let scale = CGFloat(divisions)
+        let first = Int(floor(a * scale)) + 1
+        let last = Int(ceil(b * scale)) - 1
+        guard last >= first else { return 0 }
+        let multiples = (last / divisions) - ((first - 1) / divisions)
+        return max(0, (last - first + 1) - multiples)
+    }
+
+    private func handleDragEnded() {
+        let final = snappedFinalIndex()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+            offset = CGFloat(final)
+        }
+        isScrubbing = false
+        isPastWall = false
+        lastTickIndex = -2
+        lastDragDelta = 0
+        onCommit(final)
+    }
+
+    private func snappedFinalIndex() -> Int {
+        let frac = clampedOffset.truncatingRemainder(dividingBy: 1)
+        let movingFuture = lastDragDelta < 0
+        let raw: Int
+        if frac > 0.4, movingFuture {
+            raw = Int(clampedOffset.rounded(.up))
+        } else if frac < 0.6, !movingFuture {
+            raw = Int(clampedOffset.rounded(.down))
+        } else {
+            raw = Int(clampedOffset.rounded())
+        }
+        return min(max(raw, minIndex), upperBound)
     }
 }

@@ -68,17 +68,13 @@ struct CityBreakPage: View {
                 LazyVStack(spacing: 0) {
                     Color.clear.frame(height: 0).id(Self.topId)
                     ForEach(CityBreakSection.sections(for: city)) { section in
-                        sectionView(section, proxy: proxy)
+                        sectionView(section)
                     }
                 }
                 .padding(.bottom, Theme.Spacing.xl)
             }
             .scrollBounceBehavior(.basedOnSize)
             .onChange(of: city.id) { _, _ in
-                NotificationCenter.default.post(
-                    name: .centerMapOnCoordinate,
-                    object: MapCenterPayload(lat: city.lat, lng: city.lng)
-                )
                 withAnimation(AppConstants.springStandard) {
                     proxy.scrollTo(Self.topId, anchor: .top)
                 }
@@ -125,7 +121,7 @@ struct CityBreakPage: View {
     }
 
     @ViewBuilder
-    private func sectionView(_ section: CityBreakSection, proxy: ScrollViewProxy) -> some View {
+    private func sectionView(_ section: CityBreakSection) -> some View {
         switch section {
         case .hero:
             CityHeroSection(city: city) { url in

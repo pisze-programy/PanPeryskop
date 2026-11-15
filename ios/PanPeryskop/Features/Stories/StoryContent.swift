@@ -95,15 +95,12 @@ struct StoryContent: View {
         }
     }
 
-    /// The lineup is the hero. A night without a lineup falls back to the club.
     private var clubHero: String {
         if let lineup = post.clubNight?.lineup, !lineup.isEmpty { return cappedLineup(lineup) }
         if let venue = post.clubNight?.venue, !venue.isEmpty { return venue }
         return post.eventInfo.title
     }
 
-    /// Keep the hero to three names, then a count — a long bill must never
-    /// overflow the band.
     private func cappedLineup(_ lineup: [String]) -> String {
         guard lineup.count > 3 else { return lineup.joined(separator: " · ") }
         return "\(lineup.prefix(3).joined(separator: " · "))  +\(lineup.count - 3)"
@@ -121,5 +118,7 @@ struct StoryContent: View {
             Text("Nie można załadować")
                 .font(.caption).foregroundColor(.white.opacity(0.5))
         }
+        .onAppear { onLoaded(post) }
+        .onChange(of: post.id) { _, _ in onLoaded(post) }
     }
 }

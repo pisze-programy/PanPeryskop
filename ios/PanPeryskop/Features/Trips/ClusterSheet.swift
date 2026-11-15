@@ -24,10 +24,10 @@ struct ClusterSheet: View {
     @State private var expanded: PlaceKind?
     @State private var browserItem: BrowserItem?
     @State private var mapPicker: MapPickerRequest?
-    @State private var airportCoordinate: CLLocationCoordinate2D?
-    @State private var pageWidth: CGFloat = UIScreen.main.bounds.width
+    @State private var pageWidth: CGFloat = defaultPageWidth
     @State private var scrollTopToken = 0
 
+    private static let defaultPageWidth: CGFloat = 400
     private static let warmupDelayMilliseconds = 600
 
     private var events: [TravelEvent] { viewModel.selectedEventGroup?.events ?? [] }
@@ -130,11 +130,7 @@ struct ClusterSheet: View {
                 onOpenMap: { coordinate, title in
                     mapPicker = MapPickerRequest(coordinate: coordinate, title: title)
                 },
-                onExpand: expandPlaces,
-                onPlannerChange: { coord in
-                    guard (activeIndex ?? 0) == index else { return }
-                    airportCoordinate = coord
-                }
+                onExpand: expandPlaces
             )
         case .city(let city):
             CityBreakPage(
@@ -154,8 +150,26 @@ struct ClusterSheet: View {
     }
 
     private func openBrowser(_ url: URL, access: BrowserAccess) {
+        guard isAllowedInApp(url, access: access) else {
+            openExternally(url)
+            return
+        }
         browserItem = BrowserItem(url: url, access: access)
         detent = .large
+    }
+
+    private func isAllowedInApp(_ url: URL, access: BrowserAccess) -> Bool {
+        let scheme = url.scheme?.lowercased()
+        guard scheme == "http" || scheme == "https" else { return false }
+        if access == .open { return true }
+        guard let host = url.host else { return false }
+        return AllowedWebDomains.isAllowed(host)
+    }
+
+    private func openExternally(_ url: URL) {
+        MetaSignals.outbound(url: url)
+        ProductAnalytics.outbound(url: url)
+        UIApplication.shared.open(url)
     }
 }
 
@@ -171,7 +185,6 @@ struct ClusterEventPage: View {
     let onOpenURL: (URL, BrowserAccess) -> Void
     let onOpenMap: (CLLocationCoordinate2D, String) -> Void
     let onExpand: (PlaceKind) -> Void
-    let onPlannerChange: (CLLocationCoordinate2D?) -> Void
     @StateObject private var planner = TripsEventPlanner()
 
     private static let topId = "trips-page-top"
@@ -237,16 +250,6 @@ struct ClusterEventPage: View {
                 }
             }
         }
-        .onAppear { report() }
-        .onChange(of: isActive) { _, _ in report() }
-        .onChange(of: planner.outbound?.date) { _, _ in report() }
-        .onChange(of: planner.returning?.date) { _, _ in report() }
-        .onChange(of: planner.destination?.iata) { _, _ in report() }
-    }
-
-    private func report() {
-        guard isActive else { return }
-        onPlannerChange(airportCoordinate)
     }
 
     @ViewBuilder
@@ -255,21 +258,7 @@ struct ClusterEventPage: View {
         case .hero:
             heroDetails
         case .flights:
-            if destinations.isEmpty {
-                noAirportHint
-            } else {
-                EventFlightSection(
-                    event: event,
-                    origins: origins,
-                    destinations: destinations,
-                    reachableAirports: reachableAirports,
-                    reachableCarriers: event.reachableCarriers,
-                    onSelectDestination: { planner.destination = $0 },
-                    planner: planner,
-                    viewModel: viewModel,
-                    isActive: isActive
-                )
-            }
+            flightsSection
         case .nearby:
             CityNearbySection(
                 cities: viewModel.nearbyCities(for: event),
@@ -299,6 +288,25 @@ struct ClusterEventPage: View {
         TripsSectionFooter(text: "Ceny są orientacyjne i mogą się zmienić u dostawcy", showsPriceInfo: true)
             .padding(.horizontal, Theme.Spacing.l)
             .padding(.top, Theme.Spacing.section)
+    }
+
+    @ViewBuilder
+    private var flightsSection: some View {
+        if destinations.isEmpty {
+            noAirportHint
+        } else {
+            EventFlightSection(
+                event: event,
+                origins: origins,
+                destinations: destinations,
+                reachableAirports: reachableAirports,
+                reachableCarriers: event.reachableCarriers,
+                onSelectDestination: { planner.destination = $0 },
+                planner: planner,
+                viewModel: viewModel,
+                isActive: isActive
+            )
+        }
     }
 
     private var heroDetails: some View {

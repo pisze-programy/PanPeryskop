@@ -36,15 +36,12 @@ struct PlaceRowView: View {
     }
 
     private var image: some View {
-        AsyncImage(url: URL(string: place.image)) { phase in
-            switch phase {
-            case .success(let img): img.resizable().scaledToFill()
-            case .failure: Color(.systemGray5).overlay(Image(systemName: "photo").foregroundColor(.secondary))
-            default: Color(.systemGray5)
+        Color(.systemGray5)
+            .overlay {
+                RemoteImage(url: URL(string: place.image))
             }
-        }
-        .frame(width: Self.imageWidth, height: Self.height)
-        .clipped()
+            .frame(width: Self.imageWidth, height: Self.height)
+            .clipped()
     }
 
     private var details: some View {

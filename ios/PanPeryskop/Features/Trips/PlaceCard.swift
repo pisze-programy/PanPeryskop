@@ -119,15 +119,12 @@ struct PlaceCard: View {
     }
 
     private var image: some View {
-        AsyncImage(url: URL(string: place.image)) { phase in
-            switch phase {
-            case .success(let img): img.resizable().scaledToFill()
-            case .failure: Color(.systemGray5).overlay(Image(systemName: "photo").foregroundColor(.secondary))
-            default: Color(.systemGray5)
+        Color(.systemGray5)
+            .overlay {
+                RemoteImage(url: URL(string: place.image))
             }
-        }
-        .frame(height: Self.imageHeight)
-        .frame(maxWidth: .infinity)
-        .clipped()
+            .frame(height: Self.imageHeight)
+            .frame(maxWidth: .infinity)
+            .clipped()
     }
 }

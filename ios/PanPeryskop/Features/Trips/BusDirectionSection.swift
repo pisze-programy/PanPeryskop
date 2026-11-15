@@ -67,15 +67,20 @@ struct BusDirectionSection: View {
             }
             .padding(.horizontal, Theme.Spacing.l)
         } else if let window {
-            if window.offers.isEmpty {
-                BusEmptyState(from: fromCity, to: toCity)
-                    .padding(.horizontal, Theme.Spacing.l)
-            } else {
-                card(window)
-            }
+            loadedContent(for: window)
         } else {
             BusSkeleton()
                 .padding(.horizontal, Theme.Spacing.l)
+        }
+    }
+
+    @ViewBuilder
+    private func loadedContent(for window: BusWindowResponse) -> some View {
+        if window.offers.isEmpty {
+            BusEmptyState(from: fromCity, to: toCity)
+                .padding(.horizontal, Theme.Spacing.l)
+        } else {
+            card(window)
         }
     }
 
@@ -106,7 +111,7 @@ struct BusDirectionSection: View {
                 .font(.subheadline.weight(.semibold))
                 .frame(width: 46, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
-                Text(offer.transfers > 0 ? "\(offer.transfers) przesiadka" : "bez przesiadek")
+                Text(Self.transfersLabel(offer.transfers))
                     .font(.caption)
                     .foregroundColor(.secondary)
                 badge(offer, isFastest: isFastest, isCheapest: isCheapest)
@@ -160,5 +165,14 @@ struct BusDirectionSection: View {
         let h = minutes / 60
         let m = minutes % 60
         return m == 0 ? "\(h) h" : "\(h) h \(m) min"
+    }
+
+    private static func transfersLabel(_ count: Int) -> String {
+        if count <= 0 { return "bez przesiadek" }
+        if count == 1 { return "1 przesiadka" }
+        let mod10 = count % 10
+        let mod100 = count % 100
+        let isFew = (2...4).contains(mod10) && !(12...14).contains(mod100)
+        return "\(count) \(isFew ? "przesiadki" : "przesiadek")"
     }
 }

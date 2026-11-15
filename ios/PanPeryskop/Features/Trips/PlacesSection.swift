@@ -9,19 +9,39 @@ struct PlacesSection: View {
 
     @StateObject private var loader = PlacePreviewLoader()
 
+    private struct TaskKey: Equatable {
+        let kind: PlaceKind
+        let lat: Int
+        let lng: Int
+        let day: String
+    }
+
+    private var taskKey: TaskKey {
+        TaskKey(
+            kind: kind,
+            lat: PlacePreviewLoader.coordBucket(event.lat),
+            lng: PlacePreviewLoader.coordBucket(event.lng),
+            day: event.isoDay
+        )
+    }
+
     var body: some View {
         if isLoadingEmpty {
             EmptyView()
         } else {
-            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-                TripsSectionHeader(title: kind.label, info: info)
-                    .padding(.horizontal, Theme.Spacing.l)
-                content
-            }
-            .padding(.top, Theme.Spacing.section)
-            .task {
-                await loader.load(kind: kind, lat: event.lat, lng: event.lng, day: event.isoDay)
-            }
+            sectionBody
+        }
+    }
+
+    private var sectionBody: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            TripsSectionHeader(title: kind.label, info: info)
+                .padding(.horizontal, Theme.Spacing.l)
+            content
+        }
+        .padding(.top, Theme.Spacing.section)
+        .task(id: taskKey) {
+            await loader.load(kind: kind, lat: event.lat, lng: event.lng, day: event.isoDay)
         }
     }
 

@@ -5,6 +5,8 @@ extension AppConstants {
     static let isoDayFormatter: DateFormatter = {
         let f = DateFormatter()
         f.calendar = warsawCalendar
+        f.timeZone = warsawTimeZone
+        f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd"
         return f
     }()
@@ -80,6 +82,8 @@ extension AppConstants {
     static let hourFormatter: DateFormatter = {
         let f = DateFormatter()
         f.calendar = warsawCalendar
+        f.timeZone = warsawTimeZone
+        f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "HH:mm"
         return f
     }()

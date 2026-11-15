@@ -1,7 +1,7 @@
 import Foundation
 
 /// One bus offer between the origin city and the event city.
-struct BusOffer: Decodable, Identifiable {
+struct BusOffer: Decodable, Identifiable, Equatable {
     let price: Int
     let hour: String
     let durationMinutes: Int
@@ -9,10 +9,10 @@ struct BusOffer: Decodable, Identifiable {
     let departureCityId: String
     let arrivalCityId: String
 
-    var id: String { "\(departureCityId)|\(arrivalCityId)|\(hour)|\(price)" }
+    var id: String { "\(departureCityId)|\(arrivalCityId)|\(hour)|\(price)|\(durationMinutes)|\(transfers)" }
 }
 
-struct BusCity: Decodable {
+struct BusCity: Decodable, Equatable {
     let id: String
     let name: String
     let lat: Double?
@@ -20,7 +20,7 @@ struct BusCity: Decodable {
     let isNode: Bool
 }
 
-struct BusWindowResponse: Decodable {
+struct BusWindowResponse: Decodable, Equatable {
     let offers: [BusOffer]
     let from: BusCity?
     let to: BusCity?

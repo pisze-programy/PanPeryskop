@@ -56,8 +56,11 @@ extension TravelPlace {
     }
 
     var badgeLabel: String? {
-        guard let badges, let first = badges.first else { return nil }
-        switch first {
+        badges?.lazy.compactMap(Self.label(forBadge:)).first
+    }
+
+    private static func label(forBadge badge: String) -> String? {
+        switch badge {
         case "best_seller": return "Bestseller"
         case "special_offer": return "Oferta specjalna"
         case "new": return "Nowość"

@@ -26,8 +26,15 @@ struct TravelEvent: Codable, Identifiable, Equatable {
 
     var isRun: Bool { tag == AppConstants.runTag }
 
+    private static let metaCache = MetaCache(limit: 1024)
+
     var metaData: TravelEventMeta? {
-        guard let meta, let data = meta.data(using: .utf8) else { return nil }
+        guard let meta else { return nil }
+        return Self.metaCache.value(for: meta) { Self.decodeMeta(meta) }
+    }
+
+    private static func decodeMeta(_ meta: String) -> TravelEventMeta? {
+        guard let data = meta.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(TravelEventMeta.self, from: data)
     }
 
@@ -55,8 +62,60 @@ struct TravelEvent: Codable, Identifiable, Equatable {
     var isoDay: String { AppConstants.isoDayFormatter.string(from: displayDate) }
 
     var nightBeforeCheckin: String {
-        guard let day = Calendar.current.date(byAdding: .day, value: -1, to: displayDate) else { return isoDay }
+        guard let day = AppConstants.warsawCalendar.date(byAdding: .day, value: -1, to: displayDate) else { return isoDay }
         return AppConstants.isoDayFormatter.string(from: day)
+    }
+
+    private final class MetaCache: @unchecked Sendable {
+        private struct Entry: Sendable {
+            let value: TravelEventMeta?
+        }
+
+        private let lock = NSLock()
+        private let limit: Int
+        private var entries: [String: Entry] = [:]
+        private var order: [String] = []
+        private var cursor = 0
+
+        init(limit: Int = 1024) {
+            self.limit = max(1, limit)
+        }
+
+        func value(for key: String, compute: () -> TravelEventMeta?) -> TravelEventMeta? {
+            if let hit = cached(for: key) {
+                return hit.value
+            }
+            let computed = compute()
+            return insertIfAbsent(computed, for: key)
+        }
+
+        private func cached(for key: String) -> Entry? {
+            lock.lock()
+            defer { lock.unlock() }
+            return entries[key]
+        }
+
+        private func insertIfAbsent(_ value: TravelEventMeta?, for key: String) -> TravelEventMeta? {
+            lock.lock()
+            defer { lock.unlock() }
+            if let existing = entries[key] {
+                return existing.value
+            }
+            evictSlotIfFull(replacingWith: key)
+            entries[key] = Entry(value: value)
+            return value
+        }
+
+        private func evictSlotIfFull(replacingWith key: String) {
+            guard order.count >= limit else {
+                order.append(key)
+                return
+            }
+            let victim = order[cursor]
+            entries.removeValue(forKey: victim)
+            order[cursor] = key
+            cursor = (cursor + 1) % limit
+        }
     }
 }
 
@@ -65,7 +124,7 @@ struct TravelEventsResponse: Codable {
     let enriched: Bool?
 }
 
-struct TravelEventMeta: Decodable {
+struct TravelEventMeta: Decodable, Equatable {
     let distance: String?
     let distances: [String]?
     let surface: String?
@@ -79,6 +138,8 @@ struct TravelEventMeta: Decodable {
     let awayCode: String?
     let homeColor: String?
     let awayColor: String?
+    let homeId: String?
+    let awayId: String?
     let website: String?
     let countryCode: String?
     let matchUrl: String?
@@ -107,7 +168,7 @@ struct Destination: Codable, Identifiable, Hashable {
     var id: String { iata }
 }
 
-struct EventGroup: Identifiable {
+struct EventGroup: Identifiable, Equatable {
     var events: [TravelEvent]
     var cities: [TravelCity] = []
 
@@ -131,7 +192,7 @@ extension TravelEvent {
     }
 }
 
-struct FlightWindowResponse: Codable {
+struct FlightWindowResponse: Codable, Equatable {
     let outbound: [FlightWindowCell]
     let returning: [FlightWindowCell]
     /// The airports the carrier really flies. Wizzair sells by metro area, so it
@@ -145,7 +206,7 @@ struct FlightStation: Codable, Equatable {
     let to: String
 }
 
-struct FlightWindowCell: Codable {
+struct FlightWindowCell: Codable, Equatable {
     let date: String
     let hour: String?
     let price: Double?

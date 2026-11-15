@@ -1,6 +1,6 @@
 import Foundation
 
-struct ClubNightMeta: Decodable {
+struct ClubNightMeta: Decodable, Equatable {
     let lineup: [String]?
     let genres: [String]?
     let venue: String?

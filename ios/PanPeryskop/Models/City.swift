@@ -30,9 +30,21 @@ struct City: Identifiable, Hashable {
         MKCoordinateRegion(center: center, span: span)
     }
 
-    static func == (lhs: City, rhs: City) -> Bool { lhs.id == rhs.id }
+    static func == (lhs: City, rhs: City) -> Bool {
+        lhs.id == rhs.id
+            && lhs.name == rhs.name
+            && lhs.lat == rhs.lat
+            && lhs.lng == rhs.lng
+            && lhs.span.latitudeDelta == rhs.span.latitudeDelta
+            && lhs.span.longitudeDelta == rhs.span.longitudeDelta
+    }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(name)
+        hasher.combine(lat)
+        hasher.combine(lng)
+        hasher.combine(span.latitudeDelta)
+        hasher.combine(span.longitudeDelta)
     }
 }

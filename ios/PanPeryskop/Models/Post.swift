@@ -40,8 +40,19 @@ struct Post: Codable, Identifiable, Equatable {
     let source: String?
     let meta: String?
 
+    private static let eventInfoRegex = try! NSRegularExpression(
+        pattern: #"^(.+?):\s*(\d{1,2}):(\d{2}),\s*(.+)$"#
+    )
+    private static let eventInfoCache = ValueCache<EventInfo>(limit: 1024)
+    private static let clubNightCache = ValueCache<ClubNightMeta?>(limit: 512)
+
     var clubNight: ClubNightMeta? {
-        guard let meta, let data = meta.data(using: .utf8) else { return nil }
+        guard let meta else { return nil }
+        return Self.clubNightCache.value(for: meta) { Self.decodeClubNight(meta) }
+    }
+
+    private static func decodeClubNight(_ meta: String) -> ClubNightMeta? {
+        guard let data = meta.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(ClubNightMeta.self, from: data)
     }
 
@@ -71,27 +82,26 @@ struct Post: Codable, Identifiable, Equatable {
         return String(venue[venue.index(after: open)..<close]).trimmingCharacters(in: .whitespaces)
     }
 
-    /// Seed events encode `Tytuł: HH:MM, Lokalizacja` in the description — parse it
-    /// for the calendar/timer panel. `00:00` means the start time is unknown.
     var eventInfo: EventInfo {
-        let pattern = #"^(.+?):\s*(\d{1,2}):(\d{2}),\s*(.+)$"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+        Self.eventInfoCache.value(for: description) { Self.parseEventInfo(description) }
+    }
+
+    private static func parseEventInfo(_ description: String) -> EventInfo {
+        let ns = description as NSString
+        let range = NSRange(location: 0, length: ns.length)
+        guard let match = eventInfoRegex.firstMatch(in: description, range: range) else {
             return EventInfo(title: description, time: nil, venue: nil)
         }
-        let ns = description as NSString
-        if let m = regex.firstMatch(in: description, range: NSRange(location: 0, length: ns.length)) {
-            let title = ns.substring(with: m.range(at: 1)).trimmingCharacters(in: .whitespaces)
-            let hh = Int(ns.substring(with: m.range(at: 2))) ?? 0
-            let mm = Int(ns.substring(with: m.range(at: 3))) ?? 0
-            let venue = ns.substring(with: m.range(at: 4)).trimmingCharacters(in: .whitespaces)
-            let time = String(format: "%02d:%02d", hh, mm)
-            return EventInfo(
-                title: title.isEmpty ? description : title,
-                time: time == AppConstants.unknownTime ? nil : time,
-                venue: venue.isEmpty ? nil : venue
-            )
-        }
-        return EventInfo(title: description, time: nil, venue: nil)
+        let title = ns.substring(with: match.range(at: 1)).trimmingCharacters(in: .whitespaces)
+        let hh = Int(ns.substring(with: match.range(at: 2))) ?? 0
+        let mm = Int(ns.substring(with: match.range(at: 3))) ?? 0
+        let venue = ns.substring(with: match.range(at: 4)).trimmingCharacters(in: .whitespaces)
+        let time = String(format: "%02d:%02d", hh, mm)
+        return EventInfo(
+            title: title.isEmpty ? description : title,
+            time: time == AppConstants.unknownTime ? nil : time,
+            venue: venue.isEmpty ? nil : venue
+        )
     }
 
     static let ttlMs: Int64 = AppConstants.postTTLMs
@@ -179,8 +189,6 @@ struct Post: Codable, Identifiable, Equatable {
         }
     }
 
-    static func == (lhs: Post, rhs: Post) -> Bool { lhs.id == rhs.id }
-
     /// Rebuild a copy with mutated engagement/flags — single source for the
     /// otherwise-triplicated field-by-field rebuilds in MapViewModel.
     func with(
@@ -240,6 +248,58 @@ struct Post: Codable, Identifiable, Equatable {
     enum MediaType: String, Codable {
         case photo
     }
+
+    private final class ValueCache<Value: Sendable>: @unchecked Sendable {
+        private struct Entry: Sendable {
+            let value: Value
+        }
+
+        private let lock = NSLock()
+        private let limit: Int
+        private var entries: [String: Entry] = [:]
+        private var order: [String] = []
+        private var cursor = 0
+
+        init(limit: Int = 1024) {
+            self.limit = max(1, limit)
+        }
+
+        func value(for key: String, compute: () -> Value) -> Value {
+            if let hit = cached(for: key) {
+                return hit
+            }
+            let computed = compute()
+            return insertIfAbsent(computed, for: key)
+        }
+
+        private func cached(for key: String) -> Value? {
+            lock.lock()
+            defer { lock.unlock() }
+            return entries[key]?.value
+        }
+
+        private func insertIfAbsent(_ value: Value, for key: String) -> Value {
+            lock.lock()
+            defer { lock.unlock() }
+            if let existing = entries[key] {
+                return existing.value
+            }
+            evictSlotIfFull(replacingWith: key)
+            entries[key] = Entry(value: value)
+            return value
+        }
+
+        private func evictSlotIfFull(replacingWith key: String) {
+            guard order.count >= limit else {
+                order.append(key)
+                return
+            }
+            let victim = order[cursor]
+            entries.removeValue(forKey: victim)
+            order[cursor] = key
+            cursor = (cursor + 1) % limit
+        }
+    }
 }
 
 /// Per-showtime booking identity. Cinema kinds let the app compose a deep booking
@@ -265,8 +325,7 @@ struct TagsResponse: Codable {
     let tags: [TagPill]
 }
 
-/// Parsed seed-event details (from the `Tytuł: HH:MM, Lokalizacja` description).
-struct EventInfo {
+struct EventInfo: Equatable {
     let title: String
     let time: String?
     let venue: String?

@@ -1,8 +1,30 @@
 import Foundation
 
 enum CountryNames {
+    private static let localeCache = LocaleCache()
+
     static func name(_ code: String, language: String) -> String? {
-        Locale(identifier: language).localizedString(forRegionCode: code.uppercased())
+        localeCache.locale(for: language).localizedString(forRegionCode: code.uppercased())
+    }
+
+    private final class LocaleCache: @unchecked Sendable {
+        private let lock = NSLock()
+        private let limit = 32
+        private var locales: [String: Locale] = [:]
+
+        func locale(for identifier: String) -> Locale {
+            lock.lock()
+            defer { lock.unlock() }
+            if let cached = locales[identifier] {
+                return cached
+            }
+            if locales.count >= limit {
+                locales.removeAll(keepingCapacity: true)
+            }
+            let created = Locale(identifier: identifier)
+            locales[identifier] = created
+            return created
+        }
     }
 
     private static let byEnglishName: [String: String] = [

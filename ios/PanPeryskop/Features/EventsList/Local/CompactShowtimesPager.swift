@@ -7,11 +7,16 @@ struct CompactShowtimesPager: View {
 
     @State private var page: Int? = 0
 
+    private static let indicatorBottomPadding: CGFloat = 7
+    private static let clockBottomPadding: CGFloat = 17
+
     var body: some View {
-        VStack(spacing: 5) {
+        ZStack(alignment: .bottom) {
             timesScroller
             indicatorView
+                .padding(.bottom, Self.indicatorBottomPadding)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onChange(of: page) { old, new in
             handlePageChange(old: old, new: new)
         }
@@ -44,12 +49,13 @@ struct CompactShowtimesPager: View {
         }
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: $page)
-        .frame(height: 29)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func pageItem(index: Int, time: String) -> some View {
         CompactFlipClockView(time: time)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.bottom, Self.clockBottomPadding)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .contentShape(Rectangle())
             .onTapGesture {
                 Haptics.selection()

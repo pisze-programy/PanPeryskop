@@ -46,19 +46,40 @@ struct EventRowCard: View {
             Haptics.selection()
             onSelect(post, effectiveSelectedTime)
         } label: {
-            textColumn
-                .frame(maxWidth: .infinity, minHeight: EventRowThumbnail.posterHeight, alignment: .topLeading)
-                .contentShape(Rectangle())
+            HStack(alignment: .center, spacing: Theme.Spacing.s) {
+                textColumn
+                trailingChevron
+            }
+            .frame(maxWidth: .infinity, minHeight: EventRowThumbnail.posterHeight, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private var trailingChevron: some View {
+        Image(systemName: "chevron.right")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.tertiary)
+            .accessibilityHidden(true)
     }
 
     private var textColumn: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             titleText
             runDistanceLine
-            venueLine
-            badgesLine
+            Spacer(minLength: Theme.Spacing.s)
+            bottomMetadataGroup
+        }
+        .frame(maxWidth: .infinity, minHeight: EventRowThumbnail.posterHeight, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private var bottomMetadataGroup: some View {
+        if hasBottomMetadata {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                venueLine
+                badgesLine
+            }
         }
     }
 
@@ -79,7 +100,7 @@ struct EventRowCard: View {
 
     private var titleText: some View {
         Text(post.eventInfo.title)
-            .font(.subheadline.weight(.semibold))
+            .font(.headline)
             .foregroundStyle(.primary)
             .lineLimit(3)
             .multilineTextAlignment(.leading)
@@ -94,6 +115,10 @@ struct EventRowCard: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
+    }
+
+    private var hasBottomMetadata: Bool {
+        resolvedVenue != nil || showsBadges
     }
 
     private var validShowtimes: [String] {

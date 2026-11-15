@@ -658,6 +658,7 @@ final class EventsListTests: XCTestCase {
         let clockPagerScroll = scrollViews.first { $0.contentSize.width > $0.frame.width }
         XCTAssertNotNil(clockPagerScroll)
         XCTAssertLessThanOrEqual(clockPagerScroll?.frame.width ?? 999, EventRowThumbnail.posterWidth + 2)
+        XCTAssertEqual(clockPagerScroll?.frame.height ?? 0, EventRowThumbnail.posterHeight, accuracy: 2)
         let labels = accessibilityStrings(in: host.view)
         XCTAssertTrue(labels.contains { $0.contains("18:30") })
         XCTAssertFalse(labels.contains { $0.contains("21:00") })

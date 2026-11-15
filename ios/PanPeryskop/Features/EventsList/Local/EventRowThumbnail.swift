@@ -25,17 +25,27 @@ struct EventRowThumbnail: View {
         .overlay(shape.stroke(Color.primary.opacity(0.08), lineWidth: 0.5))
     }
 
+    @ViewBuilder
     private var artworkLayer: some View {
+        if hasMultipleShowtimes {
+            artworkVisual
+                .allowsHitTesting(false)
+        } else {
+            artworkVisual
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    Haptics.selection()
+                    onTap()
+                }
+        }
+    }
+
+    private var artworkVisual: some View {
         ZStack {
             fallbackBackground
             remotePhoto
         }
         .frame(width: Self.posterWidth, height: Self.posterHeight)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            Haptics.selection()
-            onTap()
-        }
         .accessibilityHidden(true)
     }
 
@@ -63,19 +73,22 @@ struct EventRowThumbnail: View {
 
     @ViewBuilder
     private var clockOverlay: some View {
-        if showtimes.count > 1 {
+        if hasMultipleShowtimes {
             CompactShowtimesPager(
                 times: showtimes,
                 selectedTime: $selectedTime,
                 onTap: onTap
             )
             .id(post.id)
-            .padding(.bottom, 7)
         } else {
             CompactFlipClockView(time: showtimes.first ?? fallbackTime)
                 .padding(.bottom, 8)
                 .allowsHitTesting(false)
         }
+    }
+
+    private var hasMultipleShowtimes: Bool {
+        showtimes.count > 1
     }
 
     private var fallbackBackground: some View {

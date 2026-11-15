@@ -5,12 +5,21 @@ import espnLeaguesJson from './data/espn-leagues.json';
 import { resolveTravelGeo } from './geo';
 import { localDateTime } from './localTime';
 import { googleAiSearchUrl, matchSearchQuery } from './searchLink';
+import { validTeamId } from './espnCrests';
 import { TravelEvent } from './store';
 import type { TravelSource } from './run';
 
+interface EspnTeam {
+  id?: string;
+  displayName?: string;
+  abbreviation?: string;
+  color?: string;
+  logo?: string;
+}
+
 interface EspnCompetition {
   venue?: { fullName?: string; address?: { city?: string; country?: string } } | null;
-  competitors?: Array<{ team?: { displayName?: string; abbreviation?: string; color?: string } }>;
+  competitors?: Array<{ team?: EspnTeam }>;
 }
 interface EspnEvent {
   id: string;
@@ -95,6 +104,21 @@ function eventStartMs(e: EspnEvent): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
+function teamCrestId(team: EspnTeam | undefined): string | null {
+  if (!team?.logo) return null;
+  return validTeamId(team.id);
+}
+
+function recordTeamCrest(team: EspnTeam | undefined, crests: Map<string, string>): void {
+  const id = teamCrestId(team);
+  if (id && team?.logo) crests.set(id, team.logo);
+}
+
+function collectEventCrests(raw: EspnEvent, crests: Map<string, string> | undefined): void {
+  if (!crests) return;
+  for (const competitor of raw.competitions?.[0]?.competitors ?? []) recordTeamCrest(competitor.team, crests);
+}
+
 /** Parse one fixture into a geo-less TravelEvent; null when not a European
  *  airport-city event or when the start time is missing. */
 export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> | null {
@@ -107,6 +131,8 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
   // abbreviations (BEL, FRA, …) come straight from ESPN — never generated.
   const local = localDateTime(startMs, geo.country, geo.city);
   const competitors = e.competitions?.[0]?.competitors ?? [];
+  const home = competitors[0]?.team;
+  const away = competitors[1]?.team;
   const venueName = e.competitions?.[0]?.venue?.fullName ?? null;
   const year = (local?.date ?? '').slice(0, 4) || String(new Date(startMs).getUTCFullYear());
   const matchUrl = eventLink(e);
@@ -114,10 +140,12 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
     ...(local ?? {}),
     venue: venueName,
     league: leagueName(e.uid),
-    homeCode: competitors[0]?.team?.abbreviation ?? null,
-    awayCode: competitors[1]?.team?.abbreviation ?? null,
-    homeColor: competitors[0]?.team?.color ?? null,
-    awayColor: competitors[1]?.team?.color ?? null,
+    homeCode: home?.abbreviation ?? null,
+    awayCode: away?.abbreviation ?? null,
+    homeColor: home?.color ?? null,
+    awayColor: away?.color ?? null,
+    homeId: teamCrestId(home),
+    awayId: teamCrestId(away),
     matchUrl,
   };
   return {
@@ -134,12 +162,13 @@ export function parseEspnEvent(e: EspnEvent): Omit<TravelEvent, 'lat' | 'lng'> |
 }
 
 /** Fetch one day, keep European airport-city events, resolve geo. */
-export async function fetchEspnDay(day: string, opts: EspnFetchOptions & { store?: GeoStore }): Promise<TravelEvent[]> {
+export async function fetchEspnDay(day: string, opts: EspnFetchOptions & { store?: GeoStore; crests?: Map<string, string> }): Promise<TravelEvent[]> {
   const events = await fetchScoreboard(day, opts);
   const out: TravelEvent[] = [];
   for (const raw of events) {
     const parsed = parseEspnEvent(raw);
     if (!parsed) continue;
+    collectEventCrests(raw, opts.crests);
     const geo = await resolveTravelGeo({
       name: raw.competitions?.[0]?.venue?.fullName ?? parsed.city,
       city: parsed.city,
@@ -154,5 +183,5 @@ export async function fetchEspnDay(day: string, opts: EspnFetchOptions & { store
 /** ESPN travel source — soccer matches (tag `pilka-nozna`). */
 export const ESPN_SOURCE: TravelSource = {
   id: CONFIG.travel.provider,
-  fetchDay: (day, opts) => fetchEspnDay(day, { store: opts.store }),
+  fetchDay: (day, opts) => fetchEspnDay(day, { store: opts.store, crests: opts.crests }),
 };

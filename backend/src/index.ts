@@ -78,14 +78,52 @@ app.route('/travel', travelRoutes);
 app.route('/plan', planRoutes);
 app.route('/', contentRoutes);
 
+function edgeCache(): Cache | null {
+  return (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default ?? null;
+}
+
+function isStaticMediaKey(key: string): boolean {
+  return key.startsWith('partners/') || key.startsWith('crests/');
+}
+
+interface WaitUntilContext {
+  executionCtx: { waitUntil(promise: Promise<unknown>): void };
+}
+
+function storeInEdgeCache(c: WaitUntilContext, req: Request | null, res: Response): void {
+  const cache = edgeCache();
+  if (!cache || !req) return;
+  try {
+    c.executionCtx.waitUntil(cache.put(req, res));
+  } catch {
+    void cache.put(req, res);
+  }
+}
+
+function cachedCrestNotFound(c: WaitUntilContext, cacheReq: Request): Response {
+  const res = new Response('404 Not Found', {
+    status: 404,
+    headers: { 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' },
+  });
+  storeInEdgeCache(c, cacheReq, res.clone());
+  return res;
+}
+
 app.all('/media/*', async (c) => {
   const key = c.req.path.replace(/^\/media\//, '');
+  const staticAsset = isStaticMediaKey(key);
+  const cacheReq = staticAsset && c.req.method === 'GET' && !c.req.header('Range')
+    ? new Request(c.req.url, { method: 'GET' })
+    : null;
+  const edgeHit = cacheReq ? await edgeCache()?.match(cacheReq) : undefined;
+  if (edgeHit) return edgeHit;
+
   const object = await c.env.MEDIA.get(key);
-  if (!object) return c.notFound();
+  if (!object) return cacheReq && key.startsWith('crests/') ? cachedCrestNotFound(c, cacheReq) : c.notFound();
 
   const headers = new Headers();
   object.writeHttpMetadata(headers);
-  headers.set('Cache-Control', key.startsWith('partners/') ? 'public, max-age=2592000, immutable' : 'public, max-age=3600');
+  headers.set('Cache-Control', staticAsset ? 'public, max-age=2592000, immutable' : 'public, max-age=3600');
   headers.set('Access-Control-Allow-Origin', '*');
   headers.set('Accept-Ranges', 'bytes');
 
@@ -114,7 +152,9 @@ app.all('/media/*', async (c) => {
   }
 
   headers.set('Content-Length', String(size));
-  return new Response(object.body, { status: 200, headers });
+  const response = new Response(object.body, { status: 200, headers });
+  storeInEdgeCache(c, cacheReq, response.clone());
+  return response;
 });
 
 app.get('/health', (c) => c.json({ ok: true, ts: Date.now() }));

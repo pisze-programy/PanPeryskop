@@ -13,7 +13,8 @@
     "db:migrate": "wrangler d1 migrations apply panperyskop-db --config wrangler.toml",
     "db:create": "wrangler d1 execute panperyskop-db --file=./schema/schema.sql --config wrangler.toml",
     "cf-typegen": "wrangler types --config wrangler.toml",
-    "set:photos": "tsx src/travel/set-city-photos.ts"
+    "set:photos": "tsx src/travel/set-city-photos.ts",
+    "set:crests": "tsx src/travel/fetch-espn-crests.ts"
   },
   "dependencies": {
     "@cloudflare/puppeteer": "^1.3.0",

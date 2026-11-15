@@ -101,11 +101,11 @@ struct CityEventsSection: View {
             }
             HStack(spacing: Theme.Spacing.s) {
                 Spacer(minLength: 0)
-                crest(event.home, code: event.metaData?.homeCode, color: event.metaData?.homeColor)
+                crest(event.home, code: event.metaData?.homeCode, color: event.metaData?.homeColor, teamId: event.metaData?.homeId)
                 Text("vs")
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.secondary)
-                crest(event.away, code: event.metaData?.awayCode, color: event.metaData?.awayColor)
+                crest(event.away, code: event.metaData?.awayCode, color: event.metaData?.awayColor, teamId: event.metaData?.awayId)
                 Spacer(minLength: 0)
             }
             Spacer(minLength: 0)
@@ -118,8 +118,8 @@ struct CityEventsSection: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func crest(_ name: String?, code: String?, color: String?) -> some View {
-        TeamCrest(name: name ?? "", code: code, colorHex: color, size: Self.crestSize)
+    private func crest(_ name: String?, code: String?, color: String?, teamId: String?) -> some View {
+        TeamCrest(name: name ?? "", code: code, colorHex: color, teamId: teamId, size: Self.crestSize)
     }
 
     private func runContent(_ event: TravelEvent) -> some View {

@@ -16,6 +16,7 @@ import { ProviderId } from '../seed/core/types';
 import { ingestMtpEvent, MtpEventInput } from '../seed/manual/mtp';
 import { ingestRestaurants } from '../seed/manual/restaurants';import { getLastSeedDay, seedDue } from '../seed/cadence';
 import { upsertTravelEvents, sanitizeManifest, TravelManifest, TravelEvent } from '../travel/store';
+import { crestKeyForTeamId, validTeamId } from '../travel/espnCrests';
 import { refreshViatorDestinations } from '../travel/viator';
 import { buildDueRoutes, saveRouteDays, routeDaysHorizon } from '../travel/routeDays';
 import { CITY_ENTRIES, saveCities } from '../travel/cities';
@@ -689,10 +690,14 @@ adminRoutes.get('/travel/missing-meta', async (c) => {
   if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
   const provider = c.req.query('provider');
   if (!provider) return c.json({ error: 'provider required' }, 400);
+  const cutoffMs = Date.now() - 86_400_000;
   const rows = await c.env.DB
     .prepare(`SELECT DISTINCT date(start_ms / 1000, 'unixepoch', '+2 hours') AS day
-              FROM travel_events WHERE provider = ? AND meta IS NULL ORDER BY day`)
-    .bind(provider)
+              FROM travel_events
+              WHERE provider = ? AND start_ms >= ?
+              AND (meta IS NULL OR (? = 'espn' AND instr(meta, '"homeId":') = 0))
+              ORDER BY day`)
+    .bind(provider, cutoffMs, provider)
     .all<{ day: string }>();
   return c.json({ days: (rows.results ?? []).map((r) => r.day) });
 });
@@ -745,5 +750,93 @@ adminRoutes.post('/travel/route-days', async (c) => {
   if (!entries || entries.length === 0) return c.json({ error: 'entries[] required' }, 400);
   if (entries.length > 400) return c.json({ error: 'too many entries' }, 400);
   const saved = await saveRouteDays(c.env.DB, entries as never);
+  return c.json({ ok: true, saved });
+});
+
+function addPageKeys(keys: Set<string>, objects: R2Object[]): void {
+  for (const obj of objects) keys.add(obj.key);
+}
+
+async function existingEspnCrestKeys(bucket: R2Bucket): Promise<Set<string>> {
+  const keys = new Set<string>();
+  let cursor: string | undefined;
+  do {
+    const page = await bucket.list({ prefix: CONFIG.travel.espn.crests.prefix, cursor });
+    addPageKeys(keys, page.objects);
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+  return keys;
+}
+
+function decodeBase64(b64: string): Uint8Array | null {
+  try {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  } catch {
+    return null;
+  }
+}
+
+async function evictCrestEdgeCache(origin: string, key: string): Promise<void> {
+  const cache = (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default;
+  if (!cache) return;
+  await cache.delete(new Request(`${origin}/media/${key}`, { method: 'GET' })).catch(() => false);
+}
+
+interface ParsedCrestUpload {
+  key: string;
+  bytes: Uint8Array;
+  contentType: string;
+}
+
+function parseCrestUpload(raw: unknown): ParsedCrestUpload | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const item = raw as Record<string, unknown>;
+  const key = typeof item.id === 'string' ? crestKeyForTeamId(item.id) : null;
+  if (!key || typeof item.dataBase64 !== 'string' || typeof item.contentType !== 'string') return null;
+  if (!item.contentType.startsWith('image/')) return null;
+  const bytes = decodeBase64(item.dataBase64);
+  if (!bytes || bytes.length === 0 || bytes.length > CONFIG.travel.espn.crests.maxBytes) return null;
+  return { key, bytes, contentType: item.contentType };
+}
+
+async function storeCrestItem(bucket: R2Bucket, origin: string, raw: unknown): Promise<boolean> {
+  const parsed = parseCrestUpload(raw);
+  if (!parsed) return false;
+  await bucket.put(parsed.key, parsed.bytes, { httpMetadata: { contentType: parsed.contentType } });
+  await evictCrestEdgeCache(origin, parsed.key);
+  return true;
+}
+
+adminRoutes.post('/travel/crests/missing', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ ids?: unknown }>().catch(() => null);
+  const ids = Array.isArray(body?.ids)
+    ? body.ids.filter((id): id is string => typeof id === 'string' && validTeamId(id) !== null)
+    : null;
+  if (!ids) return c.json({ error: 'ids[] required' }, 400);
+  if (ids.length === 0) return c.json({ missing: [] });
+  const existing = await existingEspnCrestKeys(c.env.MEDIA);
+  const missing = ids.filter((id) => {
+    const key = crestKeyForTeamId(id);
+    return Boolean(key) && !existing.has(key!);
+  });
+  return c.json({ missing });
+});
+
+adminRoutes.post('/travel/crests', async (c) => {
+  if (!adminAuth(c)) return c.json({ error: 'Forbidden' }, 403);
+  const body = await c.req.json<{ items?: unknown }>().catch(() => null);
+  const items = Array.isArray(body?.items) ? body.items : null;
+  if (!items || items.length === 0) return c.json({ error: 'items[] required' }, 400);
+  if (items.length > 30) return c.json({ error: 'too many items' }, 400);
+  const origin = new URL(c.req.url).origin;
+  let saved = 0;
+  for (const raw of items) {
+    const ok = await storeCrestItem(c.env.MEDIA, origin, raw);
+    saved += ok ? 1 : 0;
+  }
   return c.json({ ok: true, saved });
 });

@@ -104,6 +104,7 @@ struct TripsGamestrip: View {
                 name: event.home,
                 code: meta?.homeCode,
                 colorHex: meta?.homeColor,
+                teamId: meta?.homeId,
                 isLeading: true
             )
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -114,6 +115,7 @@ struct TripsGamestrip: View {
                 name: event.away,
                 code: meta?.awayCode,
                 colorHex: meta?.awayColor,
+                teamId: meta?.awayId,
                 isLeading: false
             )
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -196,6 +198,7 @@ struct TripsGamestrip: View {
         let name: String?
         let code: String?
         let colorHex: String?
+        var teamId: String? = nil
         let isLeading: Bool
 
         var body: some View {
@@ -211,7 +214,7 @@ struct TripsGamestrip: View {
         }
 
         private var crest: some View {
-            TeamCrest(name: name ?? "", code: code, colorHex: colorHex, size: TripsGamestrip.crestSize)
+            TeamCrest(name: name ?? "", code: code, colorHex: colorHex, teamId: teamId, size: TripsGamestrip.crestSize)
         }
 
         private var label: some View {

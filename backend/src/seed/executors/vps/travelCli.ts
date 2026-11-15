@@ -14,6 +14,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runTravelProvider, TravelSource } from '../../../../src/travel/run';
 import { ESPN_SOURCE } from '../../../../src/travel/espn';
+import { syncEspnCrests } from '../../../../src/travel/espnCrests';
 import { WORLDSMARATHONS_SOURCE } from '../../../../src/travel/worldsmarathons';
 import { checkpointGeoStore, loadCp, saveCp } from './runtime';
 import { runRouteDaysJob } from './routeDaysJob';
@@ -106,8 +107,14 @@ async function main(): Promise<void> {
   const runType = backfill ? 'backfill' : 'replenish';
   log(provider, `start ${runType}${force ? ' --force' : ''} (${coveredDays.size} covered days)`);
 
-  const manifest = await runTravelProvider(source, { runType, store, coveredDays });
+  const crests = provider === 'espn' ? new Map<string, string>() : undefined;
+  const manifest = await runTravelProvider(source, { runType, store, coveredDays, crests });
   log(provider, `fetched ${manifest.events.length} events over ${manifest.days.length} days`);
+
+  if (crests && crests.size > 0) {
+    const stats = await syncEspnCrests(base, secret, crests);
+    log(provider, `crests: ${stats.uploaded} uploaded, ${stats.failed} failed (${stats.missing} missing of ${crests.size})`);
+  }
 
   if (manifest.events.length > 0) {
     const res = await fetch(`${base}/admin/travel/ingest`, {

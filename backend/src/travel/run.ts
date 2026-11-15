@@ -7,7 +7,7 @@ import { TravelManifest, TravelEvent } from './store';
  *  call returns that day's events already mapped to `TravelEvent`. */
 export interface TravelSource {
   id: string;
-  fetchDay(day: string, opts: { store?: GeoStore }): Promise<TravelEvent[]>;
+  fetchDay(day: string, opts: { store?: GeoStore; crests?: Map<string, string> }): Promise<TravelEvent[]>;
 }
 
 export interface TravelRunOptions {
@@ -15,6 +15,7 @@ export interface TravelRunOptions {
   store?: GeoStore;
   /** Days already covered (e.g. from a checkpoint) — skipped to close gaps. */
   coveredDays?: Set<string>;
+  crests?: Map<string, string>;
 }
 
 /**
@@ -39,14 +40,14 @@ function travelDays(runType: TravelRunType, coveredDays?: Set<string>): string[]
 /** Fetch a source's travel window day-by-day, skipping already-covered days.
  *  Returns a manifest ready for POST /admin/travel/ingest. */
 export async function runTravelProvider(source: TravelSource, opts: TravelRunOptions): Promise<TravelManifest> {
-  const { runType, store, coveredDays } = opts;
+  const { runType, store, coveredDays, crests } = opts;
   const days = travelDays(runType, coveredDays);
   const refresh = runType === 'replenish' ? refreshWindow() : null;
   const events: TravelEvent[] = [];
   const seen = new Set<string>();
   for (const day of days) {
     if (coveredDays?.has(day) && !refresh?.has(day)) continue;
-    for (const e of await source.fetchDay(day, { store })) {
+    for (const e of await source.fetchDay(day, { store, crests })) {
       if (seen.has(e.externalId)) continue;
       seen.add(e.externalId);
       events.push(e);

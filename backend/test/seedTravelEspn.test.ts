@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseEspnEvent } from '../src/travel/espn';
+import { crestKeyForTeamId, crestThumbnailUrl, validTeamId } from '../src/travel/espnCrests';
 import { resolveZone, localParts } from '../src/travel/localTime';
 
 const row = (over: Record<string, unknown> = {}) => ({
@@ -46,4 +47,35 @@ test('localParts: converts an instant to the venue wall clock', () => {
   const ms = Date.parse('2026-09-20T18:30:00Z');
   assert.deepEqual(localParts(ms, 'Europe/Lisbon'), { date: '2026-09-20', time: '19:30' });
   assert.deepEqual(localParts(ms, 'Europe/Athens'), { date: '2026-09-20', time: '21:30' });
+});
+
+test('parseEspnEvent: stores homeId and awayId only when id and logo exist', () => {
+  const e = parseEspnEvent(
+    row({
+      competitions: [
+        {
+          venue: { fullName: 'Emirates Stadium', address: { city: 'London', country: 'England' } },
+          competitors: [
+            { team: { id: '359', displayName: 'Arsenal', logo: 'https://a.espncdn.com/i/teamlogos/soccer/500/359.png' } },
+            { team: { id: '363', displayName: 'Chelsea' } },
+          ],
+        },
+      ],
+    }),
+  );
+  assert.ok(e);
+  const meta = JSON.parse(e!.meta!);
+  assert.equal(meta.homeId, '359');
+  assert.equal(meta.awayId, null);
+});
+
+test('espnCrests: teamId validation and 138x138 thumbnail URL', () => {
+  assert.equal(validTeamId('359'), '359');
+  assert.equal(validTeamId('../bad'), null);
+  assert.equal(crestKeyForTeamId('359'), 'crests/espn/359.png');
+  assert.equal(crestKeyForTeamId('../bad'), null);
+  assert.equal(
+    crestThumbnailUrl('https://a.espncdn.com/i/teamlogos/soccer/500/359.png'),
+    'https://a.espncdn.com/combiner/i?img=%2Fi%2Fteamlogos%2Fsoccer%2F500%2F359.png&w=138&h=138',
+  );
 });

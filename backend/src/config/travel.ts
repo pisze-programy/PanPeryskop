@@ -17,10 +17,27 @@ export const travel = {
   espn: {
     host: 'https://site.api.espn.com',
     backupHost: 'https://site.web.api.espn.com',
+    cdnHost: 'a.espncdn.com',
     limit: 1000,
     timeoutMs: 30_000,
     retries: 3,
     retryDelayMs: 5_000,
+    crests: {
+      prefix: 'crests/espn/',
+      // Largest iOS crest (46pt) at @3x scale.
+      pixelSize: 138,
+      maxBytes: 200_000,
+      uploadBatchSize: 15,
+      downloadConcurrency: 2,
+      timeoutMs: 15_000,
+      europeanLeagueSlugs: [
+        'eng.1', 'eng.2', 'esp.1', 'esp.2', 'ger.1', 'ger.2',
+        'ita.1', 'ita.2', 'fra.1', 'fra.2', 'ned.1', 'por.1',
+        'bel.1', 'sco.1', 'aut.1', 'den.1', 'nor.1', 'swe.1',
+        'sui.1', 'gre.1', 'tur.1', 'pol.1', 'uefa.champions',
+        'uefa.europa', 'uefa.europa.conf', 'fifa.worldq.uefa', 'uefa.nations',
+      ],
+    },
   },
   worldsmarathons: {
     provider: 'worldsmarathons',

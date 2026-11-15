@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// Club crest mark. Uses the provider's three-letter code (BEL, FRA, …) and its
-/// colour when present; falls back to the name's initials and a generated colour.
 struct TeamCrest: View {
     let name: String
     var code: String?
     var colorHex: String?
+    var teamId: String? = nil
     var size: CGFloat = TeamCrest.defaultSize
+
+    @State private var loadedImage: UIImage?
+    @State private var loadedTeamId: String?
 
     private static let defaultSize: CGFloat = 46
     private static let gradientTopOpacity: Double = 0.92
@@ -22,6 +24,20 @@ struct TeamCrest: View {
     private static let byteMax = 255.0
 
     var body: some View {
+        Group {
+            if let image = displayedImage {
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size, height: size)
+            } else {
+                fallbackShield
+            }
+        }
+        .task(id: normalizedTeamId) { await loadCrest() }
+    }
+
+    private var fallbackShield: some View {
         ZStack {
             Image(systemName: "shield.fill")
                 .font(.system(size: size))
@@ -41,6 +57,47 @@ struct TeamCrest: View {
                 .padding(.horizontal, Self.codeHorizontalPadding)
                 .foregroundColor(Self.isLight(colorHex) ? .black : .white)
         }
+    }
+
+    private var normalizedTeamId: String? {
+        guard let trimmed = teamId?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else { return nil }
+        return trimmed
+    }
+
+    private var crestURL: URL? {
+        guard let id = normalizedTeamId else { return nil }
+        return URL(string: "\(APIClient.baseURL)/media/crests/espn/\(id).png")
+    }
+
+    private var displayedImage: Image? {
+        if let id = normalizedTeamId, loadedTeamId == id, let loadedImage {
+            return Image(uiImage: loadedImage)
+        }
+        guard let url = crestURL, let cached = RemoteImageStore.shared.cached(url) else {
+            return nil
+        }
+        return Image(uiImage: cached)
+    }
+
+    private func loadCrest() async {
+        guard let targetId = normalizedTeamId, let url = crestURL else {
+            apply(nil, for: nil)
+            return
+        }
+        if let hit = RemoteImageStore.shared.cached(url) {
+            apply(hit, for: targetId)
+            return
+        }
+        apply(nil, for: nil)
+        let image = await RemoteImageStore.shared.load(url)
+        guard !Task.isCancelled else { return }
+        apply(image, for: targetId)
+    }
+
+    private func apply(_ image: UIImage?, for targetId: String?) {
+        loadedTeamId = targetId
+        loadedImage = image
     }
 
     private var outlineColor: Color {

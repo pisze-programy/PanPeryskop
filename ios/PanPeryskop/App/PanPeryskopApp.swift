@@ -7,42 +7,60 @@ struct PanPeryskopApp: App {
     @StateObject private var regionStore = RegionStore.shared
     @State private var pendingStoryId: String?
 
+    init() {
+        URLCache.shared = URLCache(
+            memoryCapacity: 32 * 1024 * 1024,
+            diskCapacity: 150 * 1024 * 1024
+        )
+    }
+
     var body: some Scene {
         WindowGroup {
-            Group {
-                if authManager.isAuthenticated {
-                    ContentView(pendingStoryId: $pendingStoryId)
-                        .environmentObject(authManager)
-                } else {
-                    OnboardingView(pendingStoryId: $pendingStoryId)
-                        .environmentObject(authManager)
+            rootView
+                .environment(\.region, regionStore.current)
+                .environmentObject(regionStore)
+                .background(MeshGradientWarmup())
+                .overlay(alignment: .bottom) {
+                    debugBar
                 }
-            }
-            .environment(\.region, regionStore.current)
-            .environmentObject(regionStore)
-            .background(MeshGradientWarmup())
-            .overlay(alignment: .bottom) {
-                #if DEBUG
-                DevelopmentModeBar()
-                #endif
-            }
-            .onOpenURL { url in
-                if let id = DeepLink.storyId(from: url) {
-                    pendingStoryId = id
+                .onOpenURL(perform: handleOpenURL)
+                .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+                    handleAuthChange(isAuthenticated)
                 }
-            }
-            .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
-                guard isAuthenticated, authManager.consumeJustRegistered() else { return }
-                MetaSignals.registered()
-                ProductAnalytics.registered()
-            }
         }
+    }
+
+    @ViewBuilder
+    private var rootView: some View {
+        if authManager.isAuthenticated {
+            ContentView(pendingStoryId: $pendingStoryId)
+                .environmentObject(authManager)
+        } else {
+            OnboardingView(pendingStoryId: $pendingStoryId)
+                .environmentObject(authManager)
+        }
+    }
+
+    @ViewBuilder
+    private var debugBar: some View {
+        #if DEBUG
+        DevelopmentModeBar()
+        #endif
+    }
+
+    private func handleOpenURL(_ url: URL) {
+        guard let id = DeepLink.storyId(from: url) else { return }
+        pendingStoryId = id
+    }
+
+    private func handleAuthChange(_ isAuthenticated: Bool) {
+        guard isAuthenticated, authManager.consumeJustRegistered() else { return }
+        MetaSignals.registered()
+        ProductAnalytics.registered()
     }
 }
 
 #if DEBUG
-/// Full-width red DEV bar pinned to the bottom edge — DEBUG builds only, compiled
-/// out of Release so it never ships to the store.
 struct DevelopmentModeBar: View {
     var body: some View {
         Text("DEVELOPMENT MODE")
